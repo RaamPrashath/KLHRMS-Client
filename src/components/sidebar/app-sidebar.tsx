@@ -43,9 +43,9 @@ type NavGroup = {
 function slugify(value: string) {
     return value
         .toLowerCase()
-        .replace(/&/g, "and")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
+        .replaceAll("&", "and")
+        .replaceAll(/[^a-z0-9]+/g, "-")
+        .replaceAll(/^-+|-+$/g, "");
 }
 
 function buildNav(orgSlug: string): NavGroup[] {
@@ -53,7 +53,7 @@ function buildNav(orgSlug: string): NavGroup[] {
         {
             title: "People",
             icon: <UsersIcon />,
-            items: ["Employees", "Organization"],
+            items: ["Employees", "Organization", "Departments", "Permissions"],
         },
         {
             title: "Time & Attendance",
@@ -101,17 +101,22 @@ function buildNav(orgSlug: string): NavGroup[] {
     }));
 }
 
-export function AppSidebar({ orgSlug, orgName, user, ...props }: AppSidebarProps) {
+export function AppSidebar({
+    orgSlug,
+    orgName,
+    user,
+    ...props
+}: AppSidebarProps) {
     const navItems = React.useMemo(() => buildNav(orgSlug), [orgSlug]);
 
     return (
         <Sidebar collapsible="icon" {...props}>
-            <SidebarHeader className="border-b border-[var(--color-sidebar-divider)] pb-3">
+            <SidebarHeader className="border-b border-(--color-sidebar-divider) pb-3">
                 <div className="px-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.8px] text-[var(--color-sidebar-label)]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.8px] text-(--color-sidebar-label)">
                         Organization
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-[var(--color-sidebar-text-hover)]">
+                    <p className="mt-1 text-sm font-semibold text-(--color-sidebar-text-hover)">
                         {orgName}
                     </p>
                 </div>

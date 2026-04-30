@@ -45,7 +45,7 @@ export default async function OrganizationsPage() {
                         ) : (
                             <div className="grid gap-3">
                                 {orgs.map((org) => {
-                                    const memberRole = org.members[0]?.role ?? "EMPLOYEE";
+                                    const memberRole = org.members[0].role?.name ?? "EMPLOYEE";
 
                                     return (
                                         <Link
@@ -80,9 +80,6 @@ export default async function OrganizationsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Create organization</CardTitle>
-                        <CardDescription>
-                            The slug is generated from the name and will be used as the URL.
-                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form action={createOrganizationAction} className="flex flex-col gap-5">
@@ -97,11 +94,6 @@ export default async function OrganizationsPage() {
                                     required
                                 />
                             </Field>
-
-                            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-                                Slugs are lowercase, spaces become hyphens, and duplicates get a
-                                six-character suffix automatically.
-                            </div>
 
                             <Button type="submit" className="w-full sm:w-fit">
                                 Create organization

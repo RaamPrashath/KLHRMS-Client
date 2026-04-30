@@ -29,7 +29,7 @@ export type NavMainItem = {
     }[];
 };
 
-export function NavMain({ items }: { items: NavMainItem[] }) {
+export function NavMain({ items }: { readonly items: NavMainItem[] }) {
     const pathname = usePathname();
 
     return (

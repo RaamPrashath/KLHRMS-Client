@@ -27,8 +27,8 @@ import {
 import { LogOutIcon, SettingsIcon, ChevronsUpDownIcon } from "lucide-react";
 
 export type NavUserProps = {
-    orgSlug: string;
-    user: {
+    readonly orgSlug: string;
+    readonly user: {
         name?: string | null;
         email?: string | null;
         image?: string | null;

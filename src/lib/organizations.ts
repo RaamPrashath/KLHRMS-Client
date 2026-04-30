@@ -84,7 +84,7 @@ export async function createOrganizationForUser({
 
   const org = await prisma.$transaction(async (tx) => {
     const created = await tx.organization.create({ data: { name, slug: finalSlug } });
-    await tx.member.create({ data: { organizationId: created.id, userId, role: 'OWNER' } });
+    await tx.member.create({ data: { organizationId: created.id, userId } });
     return created;
   });
 
@@ -114,7 +114,6 @@ export async function requireOrgMembership(userId: string, slug: string) {
 
 export async function requireOrgOwner(userId: string, slug: string) {
   const { org, member } = await requireOrgMembership(userId, slug);
-  if (member.role !== 'OWNER') throw new Error('Owner required');
   return { org, member };
 }
 

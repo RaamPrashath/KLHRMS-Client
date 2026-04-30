@@ -78,24 +78,22 @@ model Organization {
     logo String?
 
     createdAt DateTime @default(now())
-    members   Member[]
-}
 
-enum MemberRole {
-    OWNER
-    EMPLOYEE
+    members Member[]
+    roles   Role[]
 }
 
 model Member {
-    id             String       @id @default(uuid())
+    id             String   @id @default(uuid())
     organizationId String
-    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     userId         String
-    user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-    role           MemberRole
-    createdAt      DateTime     @default(now())
-    HRMSRole       Role?        @relation(fields: [roleId], references: [id])
-    roleId         String?
+    createdAt      DateTime @default(now())
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    roleId String?
+    role   Role?   @relation(fields: [organizationId, roleId], references: [organizationId, id])
 
     @@unique([organizationId, userId])
     @@index([organizationId])
@@ -107,12 +105,13 @@ model Role {
     organizationId String
     name           String
     permissions    Json
-    isDefault      Boolean  @default(false)
     createdAt      DateTime @default(now())
     updatedAt      DateTime @updatedAt
 
-    members Member[]
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    members      Member[]
 
+    @@unique([organizationId, id])
     @@unique([organizationId, name])
     @@index([organizationId])
 }
