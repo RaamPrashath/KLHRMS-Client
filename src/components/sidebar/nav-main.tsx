@@ -47,7 +47,7 @@ export function NavMain({ items }: { readonly items: NavMainItem[] }) {
                         <Collapsible
                             key={item.title}
                             asChild
-                            defaultOpen={isGroupActive}
+                            defaultOpen
                             className="group/collapsible"
                         >
                             <SidebarMenuItem>
@@ -55,15 +55,17 @@ export function NavMain({ items }: { readonly items: NavMainItem[] }) {
                                     <SidebarMenuButton
                                         tooltip={item.title}
                                         isActive={isGroupActive}
-                                        className="text-[var(--color-sidebar-text)] hover:bg-white/5 hover:text-[var(--color-sidebar-text-hover)] data-active:bg-[var(--color-sidebar-active-bg)] data-active:text-[var(--color-sidebar-active-text)] data-active:border-l-[3px] data-active:border-l-[var(--color-sidebar-active-border)]"
+                                        className="text-[var(--color-sidebar-text-hover)] hover:bg-white/5 data-active:bg-transparent data-active:text-[var(--color-sidebar-text-hover)]"
                                     >
                                         {item.icon}
-                                        <span>{item.title}</span>
+                                        <span className="text-[var(--color-sidebar-text-hover)] group-data-[active=true]/menu-button:text-[var(--color-sidebar-active-text)]">
+                                            {item.title}
+                                        </span>
                                         <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                    <SidebarMenuSub className="border-[var(--color-sidebar-divider)]">
+                                <CollapsibleContent className="overflow-hidden data-[state=open]:animate-[collapsible-down_180ms_ease-out] data-[state=closed]:animate-[collapsible-up_180ms_ease-in]">
+                                    <SidebarMenuSub className="border-(--color-sidebar-divider)">
                                         {item.items.map((subItem) => {
                                             const isActive = pathname === subItem.url;
 
@@ -72,7 +74,7 @@ export function NavMain({ items }: { readonly items: NavMainItem[] }) {
                                                     <SidebarMenuSubButton
                                                         asChild
                                                         isActive={isActive}
-                                                        className="text-[13px] text-[var(--color-sidebar-label)] hover:text-[var(--color-sidebar-text-hover)] data-active:bg-transparent data-active:text-[var(--color-sidebar-active-text)] data-active:font-medium"
+                                                        className="text-[13px] text-(--color-sidebar-text-hover) hover:text-(--color-sidebar-text-hover) data-active:bg-transparent data-active:text-[var(--color-sidebar-active-text)] data-active:font-medium"
                                                     >
                                                         <Link href={subItem.url}>
                                                             <span>{subItem.title}</span>
