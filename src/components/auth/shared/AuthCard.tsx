@@ -5,14 +5,13 @@ interface AuthCardProps {
     readonly className?: string;
 }
 
+/**
+ * Auth surface — no card border on the right panel; the canvas itself is the surface.
+ * Keeps the max-width constraint and vertical rhythm.
+ */
 export function AuthCard({ children, className }: AuthCardProps) {
     return (
-        <div
-            className={cn(
-                "w-full max-w-sm bg-card border border-border rounded-2xl shadow-sm p-8",
-                className
-            )}
-        >
+        <div className={cn("w-full", className)}>
             {children}
         </div>
     );

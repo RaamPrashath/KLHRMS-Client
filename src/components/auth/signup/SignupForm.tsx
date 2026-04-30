@@ -19,7 +19,6 @@ import { authClient } from "@/lib/auth-client";
 export function SignupForm() {
     const router = useRouter();
     const [formError, setFormError] = useState<string | null>(null);
-    // Track password value in local state for live rule checking
     const [passwordValue, setPasswordValue] = useState("");
 
     const {
@@ -60,7 +59,6 @@ export function SignupForm() {
                 return;
             }
 
-            // Send OTP for email verification
             await authClient.emailOtp.sendVerificationOtp({
                 email: data.email,
                 type: "email-verification",
@@ -76,7 +74,7 @@ export function SignupForm() {
         <div className="w-full">
             <AuthHeader
                 title="Create an account"
-                subtitle="Get started with KL HRMS today"
+                subtitle="Get started with KL HRMS today."
             />
 
             <SocialButtons onError={setFormError} />
@@ -87,32 +85,34 @@ export function SignupForm() {
                 {formError && (
                     <div
                         role="alert"
-                        className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+                        className="rounded-lg border border-destructive-border bg-destructive-bg px-3 py-2.5 text-sm text-destructive-text"
                     >
                         {formError}
                     </div>
                 )}
 
                 <Field>
-                    <FieldLabel htmlFor="email">Email</FieldLabel>
+                    <FieldLabel htmlFor="signup-email">Email</FieldLabel>
                     <Input
-                        id="email"
+                        id="signup-email"
                         type="email"
                         placeholder="you@example.com"
                         autoComplete="email"
                         aria-invalid={!!errors.email}
+                        className="h-10 bg-surface border-neutral-200 rounded-md text-sm focus:border-primary focus:ring-[3px] focus:ring-primary/10"
                         {...register("email")}
                     />
                     {errors.email && <FieldError>{errors.email.message}</FieldError>}
                 </Field>
 
                 <Field>
-                    <FieldLabel htmlFor="password">Password</FieldLabel>
+                    <FieldLabel htmlFor="signup-password">Password</FieldLabel>
                     <PasswordInput
-                        id="password"
+                        id="signup-password"
                         placeholder="Create a strong password"
                         autoComplete="new-password"
                         aria-invalid={!!errors.password}
+                        className="h-10 bg-surface border-neutral-200 rounded-md text-sm focus:border-primary focus:ring-[3px] focus:ring-primary/10"
                         showGenerator
                         value={passwordValue}
                         onChange={handlePasswordChange}
@@ -123,12 +123,13 @@ export function SignupForm() {
                 </Field>
 
                 <Field>
-                    <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
+                    <FieldLabel htmlFor="signup-confirm-password">Confirm password</FieldLabel>
                     <PasswordInput
-                        id="confirmPassword"
+                        id="signup-confirm-password"
                         placeholder="Repeat your password"
                         autoComplete="new-password"
                         aria-invalid={!!errors.confirmPassword}
+                        className="h-10 bg-surface border-neutral-200 rounded-md text-sm focus:border-primary focus:ring-[3px] focus:ring-primary/10"
                         {...register("confirmPassword")}
                     />
                     {errors.confirmPassword && (
@@ -138,7 +139,7 @@ export function SignupForm() {
 
                 <Button
                     type="submit"
-                    className="w-full mt-2"
+                    className="w-full h-10 mt-1 bg-primary hover:bg-primary-hover active:bg-primary-press text-white text-sm font-medium rounded-md focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 focus-visible:shadow-[var(--shadow-focus)]"
                     disabled={isSubmitting}
                 >
                     {isSubmitting ? "Creating account..." : "Create account"}
@@ -147,7 +148,7 @@ export function SignupForm() {
 
             <AuthFooterLink
                 text="Already have an account?"
-                linkText="Login"
+                linkText="Sign in"
                 href="/login"
             />
         </div>

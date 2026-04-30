@@ -16,13 +16,13 @@ export function PasswordRules({ password }: PasswordRulesProps) {
                     key={rule.id}
                     className={cn(
                         "flex items-center gap-1.5 text-xs transition-colors",
-                        rule.passed ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+                        rule.passed ? "text-success-text" : "text-neutral-400"
                     )}
                 >
                     {rule.passed ? (
-                        <CheckCircle2 className="size-3.5 shrink-0" />
+                        <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
                     ) : (
-                        <Circle className="size-3.5 shrink-0" />
+                        <Circle className="size-3.5 shrink-0" aria-hidden="true" />
                     )}
                     <span>{rule.label}</span>
                 </div>

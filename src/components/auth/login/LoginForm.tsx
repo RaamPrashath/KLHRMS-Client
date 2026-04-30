@@ -25,9 +25,7 @@ export function LoginForm() {
                 globalThis.location.reload();
             }
         };
-
         window.addEventListener("pageshow", handlePageShow);
-
         return () => {
             window.removeEventListener("pageshow", handlePageShow);
         };
@@ -50,8 +48,7 @@ export function LoginForm() {
             });
 
             if (result.error) {
-                const errorCode = result.error.code;
-                if (errorCode === "EMAIL_NOT_VERIFIED") {
+                if (result.error.code === "EMAIL_NOT_VERIFIED") {
                     router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
                     return;
                 }
@@ -59,7 +56,6 @@ export function LoginForm() {
                 return;
             }
 
-            // Check onboarding status
             const session = await authClient.getSession();
             if (session.data?.user) {
                 const user = session.data.user as { onboarded?: boolean };
@@ -78,7 +74,7 @@ export function LoginForm() {
         <div className="w-full">
             <AuthHeader
                 title="Welcome back"
-                subtitle="Sign in to your account to continue"
+                subtitle="Please enter your credentials to sign in."
             />
 
             <SocialButtons onError={setFormError} />
@@ -89,32 +85,48 @@ export function LoginForm() {
                 {formError && (
                     <div
                         role="alert"
-                        className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+                        className="rounded-lg border border-destructive-border bg-destructive-bg px-3 py-2.5 text-sm text-destructive-text"
                     >
                         {formError}
                     </div>
                 )}
 
                 <Field>
-                    <FieldLabel htmlFor="email">Email</FieldLabel>
+                    <FieldLabel htmlFor="login-email">Email</FieldLabel>
                     <Input
-                        id="email"
+                        id="login-email"
                         type="email"
                         placeholder="you@example.com"
                         autoComplete="email"
                         aria-invalid={!!errors.email}
+                        className="h-10 bg-surface border-neutral-200 rounded-md text-sm focus:border-primary focus:ring-[3px] focus:ring-primary/10"
                         {...register("email")}
                     />
                     {errors.email && <FieldError>{errors.email.message}</FieldError>}
                 </Field>
 
                 <Field>
-                    <FieldLabel htmlFor="password">Password</FieldLabel>
+                    <div className="flex items-center justify-between mb-1.5">
+                        <label
+                            htmlFor="login-password"
+                            className="text-[13px] font-medium text-neutral-700"
+                        >
+                            Password
+                        </label>
+                        <button
+                            type="button"
+                            className="text-xs text-neutral-500 hover:text-primary transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 rounded-sm"
+                            onClick={() => setFormError("Password reset coming soon.")}
+                        >
+                            Forgot password?
+                        </button>
+                    </div>
                     <PasswordInput
-                        id="password"
+                        id="login-password"
                         placeholder="Enter your password"
                         autoComplete="current-password"
                         aria-invalid={!!errors.password}
+                        className="h-10 bg-surface border-neutral-200 rounded-md text-sm focus:border-primary focus:ring-[3px] focus:ring-primary/10"
                         {...register("password")}
                     />
                     {errors.password && <FieldError>{errors.password.message}</FieldError>}
@@ -122,7 +134,7 @@ export function LoginForm() {
 
                 <Button
                     type="submit"
-                    className="w-full mt-2"
+                    className="w-full h-10 mt-1 bg-primary hover:bg-primary-hover active:bg-primary-press text-white text-sm font-medium rounded-md focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 focus-visible:shadow-[var(--shadow-focus)]"
                     disabled={isSubmitting}
                 >
                     {isSubmitting ? "Signing in..." : "Sign in"}
@@ -130,8 +142,8 @@ export function LoginForm() {
             </form>
 
             <AuthFooterLink
-                text="Don't have an account?"
-                linkText="Sign up"
+                text="Don't have an account yet?"
+                linkText="Create an account"
                 href="/signup"
             />
         </div>
