@@ -30,9 +30,12 @@ export function PasswordInput({
             <Input
                 {...props}
                 type={showPassword ? "text" : "password"}
-                className={cn("pr-20", className)}
+                className={cn(
+                    showGenerator ? "pr-[4.5rem]" : "pr-10",
+                    className
+                )}
             />
-            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                 {showGenerator && (
                     <Button
                         type="button"
@@ -40,21 +43,25 @@ export function PasswordInput({
                         size="icon-sm"
                         onClick={handleGenerate}
                         title="Generate strong password"
+                        aria-label="Generate strong password"
+                        className="size-8 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50"
                     >
-                        <Shuffle className="size-4" />
+                        <Shuffle className="size-3.5" aria-hidden="true" />
                     </Button>
                 )}
                 <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowPassword((v) => !v)}
                     title={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="size-8 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50"
                 >
                     {showPassword ? (
-                        <EyeOff className="size-4" />
+                        <EyeOff className="size-3.5" aria-hidden="true" />
                     ) : (
-                        <Eye className="size-4" />
+                        <Eye className="size-3.5" aria-hidden="true" />
                     )}
                 </Button>
             </div>
