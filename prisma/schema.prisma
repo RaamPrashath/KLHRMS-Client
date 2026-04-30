@@ -18,6 +18,7 @@ model User {
     updatedAt     DateTime  @updatedAt
     sessions      Session[]
     accounts      Account[]
+    members       Member[]
 
     @@map("user")
 }
@@ -59,7 +60,7 @@ model Account {
 }
 
 model Verification {
-    id         String   @id @default(uuid()) 
+    id         String   @id @default(uuid())
     identifier String
     value      String
     expiresAt  DateTime
@@ -68,4 +69,50 @@ model Verification {
 
     @@index([identifier])
     @@map("verification")
+}
+
+model Organization {
+    id   String  @id @default(uuid())
+    name String
+    slug String  @unique
+    logo String?
+
+    createdAt DateTime @default(now())
+    members   Member[]
+}
+
+enum MemberRole {
+    OWNER
+    EMPLOYEE
+}
+
+model Member {
+    id             String       @id @default(uuid())
+    organizationId String
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    userId         String
+    user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    role           MemberRole
+    createdAt      DateTime     @default(now())
+    HRMSRole       Role?        @relation(fields: [roleId], references: [id])
+    roleId         String?
+
+    @@unique([organizationId, userId])
+    @@index([organizationId])
+    @@index([userId])
+}
+
+model Role {
+    id             String   @id @default(cuid())
+    organizationId String
+    name           String
+    permissions    Json
+    isDefault      Boolean  @default(false)
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+
+    members Member[]
+
+    @@unique([organizationId, name])
+    @@index([organizationId])
 }
