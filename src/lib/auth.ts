@@ -36,13 +36,13 @@ export const auth = betterAuth({
             async sendVerificationOTP({ email, otp }) {
                 await resend.emails.send({
                     from: process.env.EMAIL_FROM || "onboarding@resend.dev",
-                    to: "raamprashatht07@gmail.com",
+                    to: email,
                     subject: "Verify your email",
                     html: `<p>Your verification code is: <strong>${otp}</strong></p><p>This code will expire in 10 minutes.</p>`,
                 });
             },
             otpLength: 6,
-            expiresIn: 600, // 10 minutes
+            expiresIn: 600,
         }),
     ],
     databaseHooks: {

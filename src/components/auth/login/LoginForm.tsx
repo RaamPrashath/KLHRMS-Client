@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,20 @@ import { authClient } from "@/lib/auth-client";
 export function LoginForm() {
     const router = useRouter();
     const [formError, setFormError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const handlePageShow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                globalThis.location.reload();
+            }
+        };
+
+        window.addEventListener("pageshow", handlePageShow);
+
+        return () => {
+            window.removeEventListener("pageshow", handlePageShow);
+        };
+    }, [router]);
 
     const {
         register,

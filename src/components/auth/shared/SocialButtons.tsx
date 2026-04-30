@@ -14,10 +14,14 @@ export function SocialButtons({ onError }: SocialButtonsProps) {
     const handleSocialLogin = async (provider: "microsoft" | "github" | "google") => {
         try {
             setLoading(provider);
-            const callbackURL = new URL("/organizations", globalThis.location.origin).toString();
+
+            // Sign out any existing session first so Better Auth doesn't
+            // short-circuit the OAuth redirect when a session cookie is present.
+            await authClient.signOut();
+
             const result = await authClient.signIn.social({
                 provider,
-                callbackURL,
+                callbackURL: "/organizations",
             });
 
             if (result.error) {
