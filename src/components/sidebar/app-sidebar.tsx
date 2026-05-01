@@ -58,7 +58,7 @@ function buildNav(orgSlug: string): NavGroup[] {
         {
             title: "Time & Attendance",
             icon: <ClockIcon />,
-            items: ["Attendance", "Leaves", "Timesheet", "Projects"],
+            items: ["Attendance", "Leaves", "Timesheet", "Projects", "Weekly Plan"],
         },
         {
             title: "Recruitment",
@@ -110,24 +110,27 @@ export function AppSidebar({
     const navItems = React.useMemo(() => buildNav(orgSlug), [orgSlug]);
 
     return (
-        <Sidebar collapsible="icon" {...props}>
-            <SidebarHeader className="border-b border-(--color-sidebar-divider) pb-3">
-                <div className="px-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.8px] text-(--color-sidebar-label)">
-                        Organization
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-(--color-sidebar-text-hover)">
-                        {orgName}
-                    </p>
+        <Sidebar collapsible="none" className="border-r border-sidebar-border" {...props}>
+            <SidebarHeader className="border-b border-sidebar-border bg-sidebar px-4 py-4">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                        <span className="text-sm font-bold">{orgName.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                        <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                            {orgName}
+                        </p>
+                        {/* 12px minimum — was 10px */}
+                        <p className="text-xs text-sidebar-foreground/50">HR Management</p>
+                    </div>
                 </div>
             </SidebarHeader>
-            <SidebarContent>
+            <SidebarContent className="bg-sidebar px-3 py-4">
                 <NavMain items={navItems} />
             </SidebarContent>
-            <SidebarFooter>
+            <SidebarFooter className="border-t border-sidebar-border bg-sidebar px-3 py-3">
                 <NavUser orgSlug={orgSlug} user={user} />
             </SidebarFooter>
-            <SidebarRail />
         </Sidebar>
     );
 }

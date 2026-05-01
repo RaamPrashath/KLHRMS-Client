@@ -75,26 +75,26 @@ export function NavUser({ orgSlug, user }: NavUserProps) {
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            className="text-[var(--color-sidebar-text)] hover:bg-white/5 hover:text-[var(--color-sidebar-text-hover)] data-[state=open]:bg-white/5 data-[state=open]:text-[var(--color-sidebar-text-hover)]"
+                            className="h-12 justify-start gap-3 px-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-foreground"
                         >
-                            <Avatar className="h-8 w-8 rounded-lg">
+                            <Avatar className="h-8 w-8 rounded-md border border-sidebar-border">
                                 <AvatarImage
                                     src={user.image ?? undefined}
                                     alt={displayName}
                                 />
-                                <AvatarFallback className="rounded-lg">
+                                <AvatarFallback className="rounded-md bg-sidebar-accent text-xs font-medium">
                                     {initials}
                                 </AvatarFallback>
                             </Avatar>
-                            <div className="grid flex-1 text-left text-sm leading-tight">
-                                <span className="truncate font-medium">
+                            <div className="grid flex-1 min-w-0 text-left leading-tight">
+                                <span className="truncate text-sm font-medium text-sidebar-foreground">
                                     {displayName}
                                 </span>
-                                <span className="truncate text-xs">
+                                <span className="truncate text-xs text-sidebar-foreground/55">
                                     {user.email}
                                 </span>
                             </div>
-                            <ChevronsUpDownIcon className="ml-auto size-4" />
+                            <ChevronsUpDownIcon className="ml-auto size-4 shrink-0 text-muted-foreground" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
