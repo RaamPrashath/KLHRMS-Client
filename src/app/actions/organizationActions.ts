@@ -23,6 +23,21 @@ export async function createOrganizationAction(formData: FormData) {
   redirect(`/${org.slug}`);
 }
 
+export async function joinOrganizationAction(organizationId: string) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  await organizations.joinOrganization(session.user.id, organizationId);
+
+  const { prisma } = await import('@/lib/prisma');
+  const org = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { slug: true },
+  });
+
+  redirect(`/${org?.slug ?? 'organizations'}`);
+}
+
 export async function updateOrganizationAction(slug: string, formData: FormData) {
   const name = formData.get('name');
 

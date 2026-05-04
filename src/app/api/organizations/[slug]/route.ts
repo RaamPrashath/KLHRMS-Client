@@ -19,7 +19,7 @@ export async function GET(
     return NextResponse.json({
       organization: org,
       membership: {
-        role: member.role,
+        role: member.hrmsRole,
       },
     });
   } catch (error) {
