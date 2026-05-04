@@ -1,53 +1,76 @@
 "use client";
 
-import { addDays, format, startOfISOWeek } from "date-fns";
-import { DayCell } from "./DayCell";
-import type { WeeklyPlanEntry, SetDayInput } from "@/types/weekly_plan";
+import { addDays, addWeeks, format, startOfISOWeek } from "date-fns";
+import { DayColumn } from "./DayColumn";
+import type { DayDraft } from "./DayColumn";
+import type { WeeklyPlanEntry } from "@/types/weekly_plan";
+import { WorkLocationType } from "@/types/weekly_plan";
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 
 export interface WeeklyPlanGridProps {
-  year:         number;
-  week:         number;
-  entries:      WeeklyPlanEntry[];
-  readOnly?:    boolean;
-  onDayChange?: (date: string, input: SetDayInput) => void;
+  year: number;
+  week: number;
+  /** Saved entries from the API (used to initialise drafts and for read-only display) */
+  entries: WeeklyPlanEntry[];
+  /** Local draft state — controlled by parent when editable */
+  drafts?: Record<string, DayDraft>;
+  readOnly?: boolean;
+  onDraftChange?: (date: string, draft: DayDraft) => void;
+}
+
+/** Build the ISO date string for each weekday of the given ISO year+week. */
+function getWeekDays(year: number, week: number): { iso: string; label: string }[] {
+  // Jan 4 is always in ISO week 1 — walk forward (week-1) full weeks from there
+  const jan4 = new Date(year, 0, 4);
+  const monday = addWeeks(startOfISOWeek(jan4), week - 1);
+
+  return WEEKDAY_LABELS.map((day, i) => {
+    const d = addDays(monday, i);
+    return {
+      iso: format(d, "yyyy-MM-dd"),
+      label: `${day} ${format(d, "d")}`,
+    };
+  });
 }
 
 export function WeeklyPlanGrid({
   year,
   week,
   entries,
+  drafts,
   readOnly = false,
-  onDayChange,
+  onDraftChange,
 }: WeeklyPlanGridProps) {
-  const monday = startOfISOWeek(new Date(year, 0, 1 + (week - 1) * 7));
-
-  const days = WEEKDAYS.map((label, i) => {
-    const d    = addDays(monday, i);
-    const iso  = format(d, "yyyy-MM-dd");
-    const entry = entries.find((e) => e.date === iso);
-    return { label, iso, dayNum: format(d, "d"), entry };
-  });
+  const days = getWeekDays(year, week);
 
   return (
     <div className="grid grid-cols-5 gap-3">
-      {days.map(({ label, iso, dayNum, entry }) => (
-        <div key={iso} className="flex flex-col gap-1.5">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            {label}
-            <span className="ml-1 font-normal">{dayNum}</span>
-          </div>
-          <div className="rounded-md border bg-card p-2.5 min-h-[80px]">
-            <DayCell
-              date={iso}
-              entry={entry}
-              readOnly={readOnly}
-              onDayChange={onDayChange}
-            />
-          </div>
-        </div>
-      ))}
+      {days.map(({ iso, label }) => {
+        // For read-only (team view), derive display from saved entries
+        const savedEntry = entries.find((e) => e.date === iso);
+
+        const displayDraft: DayDraft = readOnly
+          ? {
+              work_location: (savedEntry?.work_location as WorkLocationType) ?? "",
+              project: savedEntry?.project ?? "",
+            }
+          : (drafts?.[iso] ?? {
+              work_location: (savedEntry?.work_location as WorkLocationType) ?? "",
+              project: savedEntry?.project ?? "",
+            });
+
+        return (
+          <DayColumn
+            key={iso}
+            date={iso}
+            dayLabel={label}
+            draft={displayDraft}
+            readOnly={readOnly}
+            onChange={onDraftChange}
+          />
+        );
+      })}
     </div>
   );
 }

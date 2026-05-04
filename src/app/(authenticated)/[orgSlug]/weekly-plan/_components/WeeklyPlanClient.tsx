@@ -1,100 +1,170 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getISOWeek, getISOWeekYear } from "date-fns";
+import { Save } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { WeekNavigator } from "./WeekNavigator";
 import { WeeklyPlanGrid } from "./WeeklyPlanGrid";
 import { useMyWeeklyPlanQuery, useTeamWeeklyPlanQuery } from "@/hooks/queries/weekly_plan";
 import { useSetWeeklyPlanDayMutation } from "@/hooks/mutations/weekly_plan";
-import type { SetDayInput, WeeklyPlanEntry } from "@/types/weekly_plan";
+import type { DayDraft } from "./DayColumn";
+import type { WeeklyPlanEntry } from "@/types/weekly_plan";
+import { WorkLocationType } from "@/types/weekly_plan";
 
 export interface WeeklyPlanClientProps {
-  orgSlug:     string;
+  orgSlug: string;
+  orgId: string;
   canViewTeam: boolean;
 }
 
-export function WeeklyPlanClient({ orgSlug, canViewTeam }: WeeklyPlanClientProps) {
-  const now  = new Date();
-  const [year, setYear] = useState(() => getISOWeekYear(now));
-  const [week, setWeek] = useState(() => getISOWeek(now));
+function buildDraftsFromEntries(entries: WeeklyPlanEntry[]): Record<string, DayDraft> {
+  return entries.reduce<Record<string, DayDraft>>((acc, entry) => {
+    acc[entry.date] = {
+      work_location: entry.work_location as WorkLocationType,
+      project: entry.project ?? "",
+    };
+    return acc;
+  }, {});
+}
 
-  const { data: myEntries = [], isFetching: myFetching } =
-    useMyWeeklyPlanQuery(orgSlug, year, week);
+/**
+ * Compute the current ISO year+week safely inside a lazy useState initializer.
+ * Calling new Date() inside the initializer function means it only runs once
+ * on the client — never during SSR — which prevents hydration mismatches.
+ */
+function getCurrentWeek(): { year: number; week: number } {
+  const now = new Date();
+  return { year: getISOWeekYear(now), week: getISOWeek(now) };
+}
 
-  const { data: teamEntries = [], isFetching: teamFetching } =
-    useTeamWeeklyPlanQuery(orgSlug, year, week);
+export function WeeklyPlanClient({ orgSlug, orgId, canViewTeam }: WeeklyPlanClientProps) {
+  // Lazy initializer — runs only on the client, never during SSR
+  const [{ year, week }, setYearWeek] = useState(getCurrentWeek);
+  const [drafts, setDrafts] = useState<Record<string, DayDraft>>({});
+  // Use a ref for isDirty so the useEffect below never needs it as a dep
+  const isDirtyRef = useRef(false);
+  // Separate state just for the Save button disabled logic
+  const [isDirty, setIsDirty] = useState(false);
 
-  const { mutate: setDay } = useSetWeeklyPlanDayMutation(orgSlug, year, week);
+  const {
+    data: myEntries = [],
+  } = useMyWeeklyPlanQuery(orgSlug, orgId, year, week);
 
-  function handleDayChange(date: string, input: SetDayInput) {
-    setDay(
-      { date, input },
-      {
-        onSuccess: () => toast.success("Plan saved"),
-        onError:   (err) => toast.error(err instanceof Error ? err.message : "Failed to save"),
-      },
-    );
+  const {
+    data: teamEntries = [],
+  } = useTeamWeeklyPlanQuery(orgSlug, orgId, year, week);
+
+  const { mutateAsync: setDay, isPending: isSaving } =
+    useSetWeeklyPlanDayMutation(orgSlug, orgId, year, week);
+
+  // Reset drafts to saved state when fresh data arrives — but only when the
+  // user hasn't made unsaved edits. We read isDirty from a ref so this effect
+  // doesn't need isDirty in its dependency array (which would cause an infinite
+  // loop: setDrafts → re-render → new myEntries reference → effect fires again).
+  useEffect(() => {
+    if (!isDirtyRef.current) {
+      setDrafts(buildDraftsFromEntries(myEntries));
+    }
+  }, [myEntries]);
+
+  function handleDraftChange(date: string, draft: DayDraft) {
+    setDrafts((prev) => ({ ...prev, [date]: draft }));
+    isDirtyRef.current = true;
+    setIsDirty(true);
   }
 
   function handleWeekChange(y: number, w: number) {
-    setYear(y);
-    setWeek(w);
+    setYearWeek({ year: y, week: w });
+    isDirtyRef.current = false;
+    setIsDirty(false);
+    setDrafts({});
   }
 
-  // Group team entries by userId for the team view
-  const teamByUser = teamEntries.reduce<Record<string, WeeklyPlanEntry[]>>(
-    (acc, entry) => {
-      if (!acc[entry.userId]) acc[entry.userId] = [];
-      acc[entry.userId].push(entry);
-      return acc;
-    },
-    {},
-  );
+  async function handleSave() {
+    const daysToSave = Object.entries(drafts).filter(
+      ([, d]) => d.work_location !== "",
+    );
+
+    if (daysToSave.length === 0) {
+      toast.info("Select a location for at least one day first.");
+      return;
+    }
+
+    try {
+      await Promise.all(
+        daysToSave.map(([date, draft]) =>
+          setDay({
+            date,
+            input: {
+              work_location: draft.work_location as WorkLocationType,
+              project: draft.project.trim() || null,
+            },
+          }),
+        ),
+      );
+      toast.success("Weekly plan saved");
+      isDirtyRef.current = false;
+      setIsDirty(false);
+    } catch {
+      // Individual errors are already toasted by the mutation's onError
+    }
+  }
+
+  const teamByUser = teamEntries.reduce<
+    Record<string, { name: string | null; entries: WeeklyPlanEntry[] }>
+  >((acc, entry) => {
+    const uid = entry.user_id;
+    if (!acc[uid]) acc[uid] = { name: entry.user_name, entries: [] };
+    acc[uid].entries.push(entry);
+    return acc;
+  }, {});
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Week navigation */}
-      <WeekNavigator year={year} week={week} onChange={handleWeekChange} />
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <WeekNavigator year={year} week={week} onChange={handleWeekChange} />
+        <Button
+          onClick={handleSave}
+          disabled={!isDirty || isSaving}
+          size="sm"
+          className="gap-1.5"
+        >
+          <Save className="h-4 w-4" />
+          {isSaving ? "Saving…" : "Save Plan"}
+        </Button>
+      </div>
 
       {/* My plan */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">My Plan</h2>
-          {myFetching && (
-            <span className="text-xs text-muted-foreground">Updating…</span>
-          )}
-        </div>
+        <h2 className="text-sm font-semibold">My Plan</h2>
         <WeeklyPlanGrid
           year={year}
           week={week}
           entries={myEntries}
-          onDayChange={handleDayChange}
+          drafts={drafts}
+          onDraftChange={handleDraftChange}
         />
       </div>
 
-      {/* Team plan — managers / HR / admin / super_admin only */}
+      {/* Team plan */}
       {canViewTeam && (
         <>
           <Separator />
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Team Plans</h2>
-              {teamFetching && (
-                <span className="text-xs text-muted-foreground">Updating…</span>
-              )}
-            </div>
-
+            <h2 className="text-sm font-semibold">Team Plans</h2>
             {Object.keys(teamByUser).length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No team plans submitted for this week yet.
               </p>
             ) : (
-              Object.entries(teamByUser).map(([userId, userEntries]) => (
+              Object.entries(teamByUser).map(([userId, { name, entries: userEntries }]) => (
                 <div key={userId} className="flex flex-col gap-2">
                   <p className="text-xs font-medium text-muted-foreground truncate">
-                    {userId}
+                    {name || userId}
                   </p>
                   <WeeklyPlanGrid
                     year={year}

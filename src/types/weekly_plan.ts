@@ -1,38 +1,16 @@
-// ── Work location enum ────────────────────────────────────────────────────────
-// Must stay in sync with WorkLocationType StrEnum in KLhrms-api/app/utils/enums.py
+/**
+ * Re-exports from the canonical source of truth.
+ * Types and constants are defined in hooks/functions/weekly_plan.ts.
+ * Components import from here — never from hooks/functions/ directly.
+ */
 
-export const WorkLocationType = {
-  HOME:    "home",
-  OFFICE:  "office",
-  HYBRID:  "hybrid",
-  LEAVE:   "leave",
-  HOLIDAY: "holiday",
-} as const;
+export {
+  WorkLocationType,
+  WORK_LOCATION_LABELS,
+  WORK_LOCATION_COLORS,
+} from "@/hooks/functions/weekly_plan";
 
-export type WorkLocationType = (typeof WorkLocationType)[keyof typeof WorkLocationType];
-
-export const WORK_LOCATION_LABELS: Record<WorkLocationType, string> = {
-  home:    "Home",
-  office:  "Office",
-  hybrid:  "Hybrid",
-  leave:   "Leave",
-  holiday: "Holiday",
-};
-
-// ── Domain model (mirrors WeeklyPlanRead from the API) ────────────────────────
-
-export interface WeeklyPlanEntry {
-  id:              string;
-  organizationId:  string;
-  userId:          string;
-  date:            string; // ISO date string "YYYY-MM-DD"
-  workLocation:    WorkLocationType;
-  project:         string | null;
-}
-
-// ── API input types ───────────────────────────────────────────────────────────
-
-export interface SetDayInput {
-  work_location: WorkLocationType;
-  project?:      string | null;
-}
+export type {
+  WeeklyPlanEntry,
+  SetDayInput,
+} from "@/hooks/functions/weekly_plan";

@@ -15,17 +15,15 @@ export default async function WeeklyPlanPage({
 
   const { orgSlug } = await params;
 
+  let org: Awaited<ReturnType<typeof requireOrgMembership>>["org"];
   let member: Awaited<ReturnType<typeof requireOrgMembership>>["member"];
   try {
-    ({ member } = await requireOrgMembership(session.user.id, orgSlug));
+    ({ org, member } = await requireOrgMembership(session.user.id, orgSlug));
   } catch {
     redirect("/organizations");
   }
 
   const role = member.hrmsRole as HrmsRole | null;
-
-  // All roles can view their own plan; nav already restricts who sees the link
-  // but we still guard here in case of direct URL access
   if (!role) redirect(`/${orgSlug}/attendance`);
 
   const canViewTeam =
@@ -42,7 +40,11 @@ export default async function WeeklyPlanPage({
           Set your work location and project for each day of the week.
         </p>
       </div>
-      <WeeklyPlanClient orgSlug={orgSlug} canViewTeam={canViewTeam} />
+      <WeeklyPlanClient
+        orgSlug={orgSlug}
+        orgId={org.id}
+        canViewTeam={canViewTeam}
+      />
     </div>
   );
 }

@@ -88,7 +88,7 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
             {
                 title: "Weekly Plan",
                 urlSuffix: "weekly-plan",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN", "MANAGER"],
+                roles: ["SUPER_ADMIN", "HR", "ADMIN", "MANAGER", "EMPLOYEE"],
             },
         ],
     },
