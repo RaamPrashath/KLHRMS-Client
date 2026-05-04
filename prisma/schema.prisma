@@ -77,10 +77,15 @@ model Organization {
     slug String  @unique
     logo String?
 
+    latitude  Float?
+    longitude Float?
+
     createdAt DateTime @default(now())
 
     members Member[]
     roles   Role[]
+
+    @@map("organization")
 }
 
 model Member {
@@ -98,6 +103,7 @@ model Member {
     @@unique([organizationId, userId])
     @@index([organizationId])
     @@index([userId])
+    @@map("member")
 }
 
 model Role {
@@ -114,4 +120,39 @@ model Role {
     @@unique([organizationId, id])
     @@unique([organizationId, name])
     @@index([organizationId])
+    @@map("role")
+}
+
+model AttendanceRecord {
+    id                 String    @id @default(cuid())
+    employeeId         String
+    organizationId     String
+    date               DateTime  @db.Date
+    clockIn            DateTime?
+    clockOut           DateTime?
+    totalHours         Float?
+    overtimeHours      Float?
+    status             String    @default("ABSENT")
+    enteredByManagerId String?
+    createdAt          DateTime  @default(now())
+
+    @@unique([employeeId, date])
+    @@index([organizationId])
+    @@index([organizationId, date])
+    @@index([organizationId, employeeId])
+    @@map("attendanceRecord")
+}
+
+model WorkHourPolicy {
+    id                   String @id @default(cuid())
+    organizationId       String @unique
+    standardHoursPerDay  Float  @default(8)
+    overtimeThreshold    Float  @default(8)
+    lateThresholdMinutes Int    @default(15)
+    workStartHour        Int    @default(9)
+    workStartMinute      Int    @default(0)
+    halfDayMaxHours      Float  @default(4)
+    absentAfterHour      Int    @default(18)
+
+    @@map("workHourPolicy")
 }
