@@ -7,6 +7,7 @@ import {
     FolderIcon,
     LifeBuoyIcon,
     ReceiptTextIcon,
+    ShieldCheckIcon,
     TargetIcon,
     UsersIcon,
 } from "lucide-react";
@@ -48,12 +49,22 @@ function slugify(value: string) {
         .replaceAll(/^-+|-+$/g, "");
 }
 
+// Custom URL overrides for items whose slugified name doesn't match the route
+const URL_OVERRIDES: Record<string, string> = {
+    'roles-and-permissions': 'roles',
+};
+
 function buildNav(orgSlug: string): NavGroup[] {
     const groups = [
         {
             title: "People",
             icon: <UsersIcon />,
-            items: ["Employees", "Organization", "Departments", "Permissions"],
+            items: ["Employees", "Organization", "Departments"],
+        },
+        {
+            title: "Access Control",
+            icon: <ShieldCheckIcon />,
+            items: ["Roles & Permissions"],
         },
         {
             title: "Time & Attendance",
@@ -94,10 +105,14 @@ function buildNav(orgSlug: string): NavGroup[] {
 
     return groups.map((group) => ({
         ...group,
-        items: group.items.map((item) => ({
-            title: item,
-            url: `/${orgSlug}/${slugify(item)}`,
-        })),
+        items: group.items.map((item) => {
+            const slug = slugify(item);
+            const resolvedSlug = URL_OVERRIDES[slug] ?? slug;
+            return {
+                title: item,
+                url: `/${orgSlug}/${resolvedSlug}`,
+            };
+        }),
     }));
 }
 
