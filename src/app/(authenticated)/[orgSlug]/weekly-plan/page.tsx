@@ -33,9 +33,9 @@ export default async function WeeklyPlanPage({
     role === HrmsRole.MANAGER;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Weekly Plan</h1>
+    <div className="flex flex-col gap-0 -mt-6">
+      <div className="px-0 pt-0 pb-4">
+        <h1 className="text-xl font-semibold tracking-tight">Weekly Plan</h1>
         <p className="text-sm text-muted-foreground">
           Set your work location and project for each day of the week.
         </p>
