@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
+import Link from "next/link";
+import { CalendarDays } from "lucide-react";
 
 import { fetchMemberPermissionsAction } from "@/modules/attendance/api/attendanceServerActions";
 import {
@@ -151,15 +153,30 @@ export function AttendancePageShell({
                 <div className="px-6 py-6 flex flex-col gap-6 max-w-6xl">
                     {/* Page heading */}
                     <section aria-labelledby="attendance-heading">
-                        <h1
-                            id="attendance-heading"
-                            className="text-2xl font-semibold text-neutral-900 tracking-tight"
-                        >
-                            Attendance
-                        </h1>
-                        <p className="text-sm text-neutral-500 mt-1">
-                            Track and manage attendance records.
-                        </p>
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h1
+                                    id="attendance-heading"
+                                    className="text-2xl font-semibold text-neutral-900 tracking-tight"
+                                >
+                                    Attendance
+                                </h1>
+                                <p className="text-sm text-neutral-500 mt-1">
+                                    Track and manage attendance records.
+                                </p>
+                            </div>
+
+                            {/* Bulk attendance link — shown when user has create permission */}
+                            {isOperativeScope(permissions.create) && (
+                                <Link
+                                    href={`/${orgSlug}/attendance/bulk`}
+                                    className="inline-flex items-center gap-2 h-9 px-4 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary-ghost transition-colors duration-100 shrink-0"
+                                >
+                                    <CalendarDays className="size-4" strokeWidth={1.5} />
+                                    Bulk attendance
+                                </Link>
+                            )}
+                        </div>
                     </section>
 
                     {/* Summary panel */}
@@ -184,7 +201,7 @@ export function AttendancePageShell({
 
                     {/* Manual entry */}
                     <AttendancePermissionGate scope={permissions.edit}>
-                        <div className="flex justify-end">
+                        {/* <div className="flex justify-end">
                             <button
                                 type="button"
                                 onClick={() => setManualFormOpen(true)}
@@ -192,7 +209,7 @@ export function AttendancePageShell({
                             >
                                 Manual Entry
                             </button>
-                        </div>
+                        </div> */}
                         <ManualAttendanceForm
                             orgSlug={orgSlug}
                             memberId={memberId}

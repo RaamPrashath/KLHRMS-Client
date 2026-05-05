@@ -7,6 +7,7 @@ datasource db {
     provider = "postgresql"
 }
 
+
 model User {
     id            String    @id @default(uuid())
     email         String    @unique
@@ -108,7 +109,7 @@ model Member {
 }
 
 model Role {
-    id             String   @id @default(cuid())
+    id             String   @id @default(uuid())
     organizationId String
     name           String
     permissions    Json
@@ -137,11 +138,35 @@ model AttendanceRecord {
     enteredByManagerId String?
     createdAt          DateTime  @default(now())
 
+    workLog AttendanceWorkLog[]
+
     @@unique([employeeId, date])
     @@index([organizationId])
     @@index([organizationId, date])
     @@index([organizationId, employeeId])
     @@map("attendanceRecord")
+}
+
+// Add this new model:
+model AttendanceWorkLog {
+    id                 String    @id @default(cuid())
+    attendanceRecordId String
+    organizationId     String
+    employeeId         String
+    date               DateTime  @db.Date
+    startTime          DateTime?
+    endTime            DateTime?
+    title              String? // ← add this
+    notes              String?
+    createdAt          DateTime  @default(now())
+
+    attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
+
+    @@index([attendanceRecordId])
+    @@index([organizationId])
+    @@index([organizationId, employeeId])
+    @@index([organizationId, date])
+    @@map("attendanceWorkLog")
 }
 
 model WorkHourPolicy {
@@ -182,7 +207,7 @@ model Department {
 model DepartmentMember {
     id           String   @id @default(cuid())
     departmentId String
-    memberId     String 
+    memberId     String
     joinedAt     DateTime @default(now())
 
     department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
@@ -193,4 +218,3 @@ model DepartmentMember {
     @@index([memberId])
     @@map("departmentMember")
 }
-
