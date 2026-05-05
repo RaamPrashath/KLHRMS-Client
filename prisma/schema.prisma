@@ -7,6 +7,7 @@ datasource db {
     provider = "postgresql"
 }
 
+
 model User {
     id            String    @id @default(uuid())
     email         String    @unique
@@ -106,8 +107,9 @@ model Member {
     organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    roleId String?
-    role   Role?   @relation(fields: [organizationId, roleId], references: [organizationId, id])
+    roleId            String?
+    role              Role?              @relation(fields: [organizationId, roleId], references: [organizationId, id])
+    departmentMembers DepartmentMember[]
 
     @@unique([organizationId, userId])
     @@index([organizationId])
@@ -116,7 +118,7 @@ model Member {
 }
 
 model Role {
-    id             String   @id @default(cuid())
+    id             String   @id @default(uuid())
     organizationId String
     name           String
     permissions    Json
@@ -145,11 +147,35 @@ model AttendanceRecord {
     enteredByManagerId String?
     createdAt          DateTime  @default(now())
 
+    workLog AttendanceWorkLog[]
+
     @@unique([employeeId, date])
     @@index([organizationId])
     @@index([organizationId, date])
     @@index([organizationId, employeeId])
     @@map("attendanceRecord")
+}
+
+// Add this new model:
+model AttendanceWorkLog {
+    id                 String    @id @default(cuid())
+    attendanceRecordId String
+    organizationId     String
+    employeeId         String
+    date               DateTime  @db.Date
+    startTime          DateTime?
+    endTime            DateTime?
+    title              String? // ← add this
+    notes              String?
+    createdAt          DateTime  @default(now())
+
+    attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
+
+    @@index([attendanceRecordId])
+    @@index([organizationId])
+    @@index([organizationId, employeeId])
+    @@index([organizationId, date])
+    @@map("attendanceWorkLog")
 }
 
 model WorkHourPolicy {
@@ -164,4 +190,40 @@ model WorkHourPolicy {
     absentAfterHour      Int    @default(18)
 
     @@map("workHourPolicy")
+}
+
+model Department {
+    id                 String   @id @default(cuid())
+    organizationId     String
+    name               String
+    parentDepartmentId String?
+    headMemberId       String?
+    status             String   @default("ACTIVE")
+    createdAt          DateTime @default(now())
+    updatedAt          DateTime @updatedAt
+
+    parentDepartment Department?        @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    childDepartments Department[]       @relation("DepartmentHierarchy")
+    members          DepartmentMember[]
+
+    @@index([organizationId])
+    @@index([organizationId, status])
+    @@index([parentDepartmentId])
+    @@index([headMemberId])
+    @@map("department")
+}
+
+model DepartmentMember {
+    id           String   @id @default(cuid())
+    departmentId String
+    memberId     String
+    joinedAt     DateTime @default(now())
+
+    department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+    member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+    @@unique([departmentId, memberId])
+    @@index([departmentId])
+    @@index([memberId])
+    @@map("departmentMember")
 }
