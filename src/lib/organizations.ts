@@ -53,10 +53,53 @@ export async function getOrganizationsForUser(userId: string) {
       },
       members: {
         where: { userId },
-        select: { role: true },
+        select: { hrmsRole: true },
       },
     },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Returns ALL organizations on the platform — used for the discovery/join list.
+ * Excludes orgs the user is already a member of.
+ */
+export async function getDiscoverableOrganizations(userId: string) {
+  return prisma.organization.findMany({
+    where: {
+      members: {
+        none: {
+          userId,
+        },
+      },
+    },
+    include: {
+      _count: {
+        select: {
+          members: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Adds a user to an organization as an EMPLOYEE (default join role).
+ * Throws if already a member.
+ */
+export async function joinOrganization(userId: string, organizationId: string) {
+  const existing = await prisma.member.findUnique({
+    where: { organizationId_userId: { organizationId, userId } },
+  });
+  if (existing) throw new Error("Already a member of this organization");
+
+  return prisma.member.create({
+    data: {
+      organizationId,
+      userId,
+      hrmsRole: "EMPLOYEE",
+    },
   });
 }
 
@@ -84,7 +127,13 @@ export async function createOrganizationForUser({
 
   const org = await prisma.$transaction(async (tx) => {
     const created = await tx.organization.create({ data: { name, slug: finalSlug } });
-    await tx.member.create({ data: { organizationId: created.id, userId } });
+    await tx.member.create({
+      data: {
+        organizationId: created.id,
+        userId,
+        hrmsRole: "SUPER_ADMIN", // creator is always the org's super admin
+      },
+    });
     return created;
   });
 
@@ -107,7 +156,10 @@ export async function deleteOrganizationBySlug(slug: string) {
 export async function requireOrgMembership(userId: string, slug: string) {
   const org = await getOrganizationBySlug(slug);
   if (!org) throw new Error('Organization not found');
-  const member = await prisma.member.findFirst({ where: { organizationId: org.id, userId } });
+  const member = await prisma.member.findFirst({
+    where: { organizationId: org.id, userId },
+    select: { id: true, organizationId: true, userId: true, createdAt: true, hrmsRole: true, roleId: true },
+  });
   if (!member) throw new Error('Forbidden');
   return { org, member };
 }
@@ -123,6 +175,8 @@ const organizations = {
   getOrganizationBySlug,
   getOrganizationWithMembers,
   getOrganizationsForUser,
+  getDiscoverableOrganizations,
+  joinOrganization,
   createOrganizationForUser,
   updateOrganizationNameBySlug,
   deleteOrganizationBySlug,

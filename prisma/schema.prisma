@@ -88,11 +88,20 @@ model Organization {
     @@map("organization")
 }
 
+enum HrmsRole {
+    SUPER_ADMIN
+    HR
+    ADMIN
+    MANAGER
+    EMPLOYEE
+}
+
 model Member {
-    id             String   @id @default(uuid())
+    id             String    @id @default(uuid())
     organizationId String
     userId         String
-    createdAt      DateTime @default(now())
+    createdAt      DateTime  @default(now())
+    hrmsRole       HrmsRole?
 
     organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { requireOrgMembership } from "@/lib/organizations";
 import { OrgSidebarShell } from "@/components/sidebar/org-sidebar-shell";
+import { type HrmsRole } from "@/lib/hrms-roles";
 
 export default async function OrganizationLayout({
     children,
@@ -19,9 +20,10 @@ export default async function OrganizationLayout({
 
     const { orgSlug } = await params;
     let org: Awaited<ReturnType<typeof requireOrgMembership>>["org"];
+    let member: Awaited<ReturnType<typeof requireOrgMembership>>["member"];
 
     try {
-        ({ org } = await requireOrgMembership(session.user.id, orgSlug));
+        ({ org, member } = await requireOrgMembership(session.user.id, orgSlug));
     } catch {
         redirect("/organizations");
     }
@@ -32,6 +34,7 @@ export default async function OrganizationLayout({
         <OrgSidebarShell
             orgSlug={org.slug}
             orgName={org.name}
+            hrmsRole={(member.hrmsRole as HrmsRole) ?? null}
             user={{
                 name: session.user.name ?? null,
                 email: session.user.email ?? null,

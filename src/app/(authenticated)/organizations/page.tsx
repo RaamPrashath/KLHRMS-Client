@@ -3,12 +3,17 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
-import { createOrganizationAction } from "@/app/actions/organizationActions";
+import {
+    createOrganizationAction,
+    joinOrganizationAction,
+} from "@/app/actions/organizationActions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import organizations from "@/lib/organizations";
+import { HRMS_ROLE_LABELS, HRMS_ROLE_BADGE_COLORS, type HrmsRole } from "@/lib/hrms-roles";
+import { cn } from "@/lib/utils";
 
 export default async function OrganizationsPage() {
     const session = await auth.api.getSession({
@@ -19,7 +24,10 @@ export default async function OrganizationsPage() {
         redirect("/login");
     }
 
-    const orgs = await organizations.getOrganizationsForUser(session.user.id);
+    const [myOrgs, discoverableOrgs] = await Promise.all([
+        organizations.getOrganizationsForUser(session.user.id),
+        organizations.getDiscoverableOrganizations(session.user.id),
+    ]);
 
     return (
         <main className="min-h-screen px-6 py-10 sm:px-8 lg:px-12">
@@ -32,20 +40,21 @@ export default async function OrganizationsPage() {
                     </p>
                 </div>
 
+                {/* ── Your organizations ── */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Your organizations</CardTitle>
-                        <CardDescription>Access your existing tenants.</CardDescription>
+                        <CardDescription>Organizations you are a member of.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {orgs.length === 0 ? (
+                        {myOrgs.length === 0 ? (
                             <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-                                You are not a member of any organization yet.
+                                You are not a member of any organization yet. Join one below or create your own.
                             </div>
                         ) : (
                             <div className="grid gap-3">
-                                {orgs.map((org) => {
-                                    const memberRole = org.members[0].role?.name ?? "EMPLOYEE";
+                                {myOrgs.map((org) => {
+                                    const hrmsRole = org.members[0]?.hrmsRole as HrmsRole | null;
 
                                     return (
                                         <Link
@@ -63,10 +72,17 @@ export default async function OrganizationsPage() {
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                                    <span className="rounded-full border border-border px-2 py-1 text-[11px] font-medium text-foreground/80">
-                                                        {memberRole}
-                                                    </span>
-                                                    <span>{org._count.members} members</span>
+                                                    {hrmsRole && (
+                                                        <span
+                                                            className={cn(
+                                                                "rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                                                                HRMS_ROLE_BADGE_COLORS[hrmsRole],
+                                                            )}
+                                                        >
+                                                            {HRMS_ROLE_LABELS[hrmsRole]}
+                                                        </span>
+                                                    )}
+                                                    <span>{org._count.members} member{org._count.members !== 1 ? "s" : ""}</span>
                                                 </div>
                                             </div>
                                         </Link>
@@ -77,9 +93,54 @@ export default async function OrganizationsPage() {
                     </CardContent>
                 </Card>
 
+                {/* ── Discover & join ── */}
+                {discoverableOrgs.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Discover organizations</CardTitle>
+                            <CardDescription>
+                                Join an existing organization. You will be added as an Employee.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-3">
+                                {discoverableOrgs.map((org) => (
+                                    <div
+                                        key={org.id}
+                                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background px-4 py-3"
+                                    >
+                                        <div>
+                                            <p className="text-sm font-medium text-foreground">
+                                                {org.name}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                /{org.slug} · {org._count.members} member{org._count.members !== 1 ? "s" : ""}
+                                            </p>
+                                        </div>
+                                        <form
+                                            action={async () => {
+                                                "use server";
+                                                await joinOrganizationAction(org.id);
+                                            }}
+                                        >
+                                            <Button type="submit" variant="outline" size="sm">
+                                                Join
+                                            </Button>
+                                        </form>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* ── Create organization ── */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Create organization</CardTitle>
+                        <CardDescription>
+                            Start a new organization. You will be assigned as Super Admin.
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form action={createOrganizationAction} className="flex flex-col gap-5">
