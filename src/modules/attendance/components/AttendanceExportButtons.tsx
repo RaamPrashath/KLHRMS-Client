@@ -129,21 +129,21 @@ const FORMAT_CONFIG: {
 }[] = [
   {
     format: 'xlsx',
-    label: 'Excel',
+    label: 'Export as .xlsx',
     ext: 'xlsx',
-    icon: <FileSpreadsheet className="size-3.5" aria-hidden="true" />,
+    icon: <FileSpreadsheet className="size-4" aria-hidden="true" />,
   },
   {
     format: 'pdf',
-    label: 'PDF',
+    label: 'Export as .pdf',
     ext: 'pdf',
-    icon: <FileText className="size-3.5" aria-hidden="true" />,
+    icon: <FileText className="size-4" aria-hidden="true" />,
   },
   {
     format: 'csv',
-    label: 'CSV',
+    label: 'Export as .csv',
     ext: 'csv',
-    icon: <FileDown className="size-3.5" aria-hidden="true" />,
+    icon: <FileDown className="size-4" aria-hidden="true" />,
   },
 ];
 
@@ -234,14 +234,13 @@ export function AttendanceExportButtons({
               disabled={isDisabled}
               aria-label={`Export as ${label}`}
               title={isEmpty ? 'No records to export' : `Export as ${label}`}
-              className="inline-flex items-center gap-1.5 h-8 px-3 text-[12px] font-medium rounded-md border transition-all duration-150 select-none
-                bg-surface border-neutral-200 text-neutral-600
-                hover:border-neutral-300 hover:text-neutral-900 hover:bg-neutral-50
-                disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface disabled:hover:border-neutral-200 disabled:hover:text-neutral-600
+              className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium text-neutral-500 transition-all duration-200
+                hover:bg-neutral-100 hover:text-neutral-900 border border-transparent hover:border-black/[0.04]
+                disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-neutral-500 disabled:hover:border-transparent
                 active:scale-[0.97]"
             >
               {isLoading ? (
-                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : (
                 icon
               )}

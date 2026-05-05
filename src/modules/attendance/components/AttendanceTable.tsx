@@ -122,32 +122,34 @@ function TableBody({
 }: Readonly<BodyProps>) {
   if (isLoading) {
     return (
-      <>
+      <tbody className="divide-y divide-black/[0.04] bg-white">
         {SKELETON_IDS.slice(0, pageSize).map((id) => (
-          <tr key={id} className="border-b border-neutral-100">
-            {Array.from({ length: columnCount }, (_, j) => (
-              <td key={j} className="px-4 py-2">
-                <Skeleton className="h-4 w-full" />
-              </td>
-            ))}
+          <tr key={id} className="border-b border-black/[0.04]">
+            <td colSpan={columnCount} className="p-4 lg:px-6">
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </td>
           </tr>
         ))}
-      </>
+      </tbody>
     );
   }
 
   if (items.length === 0) {
     return (
-      <tr>
-        <td colSpan={columnCount}>
-          <AttendanceEmptyState />
-        </td>
-      </tr>
+      <tbody className="bg-white">
+        <tr>
+          <td colSpan={columnCount}>
+            <div className="w-full">
+              <AttendanceEmptyState />
+            </div>
+          </td>
+        </tr>
+      </tbody>
     );
   }
 
   return (
-    <>
+    <tbody className="divide-y divide-black/[0.04] bg-white">
       {items.map((record) => (
         <AttendanceRow
           key={record.id}
@@ -159,7 +161,7 @@ function TableBody({
           onDelete={onDelete}
         />
       ))}
-    </>
+    </tbody>
   );
 }
 
@@ -355,43 +357,40 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="bg-surface border border-neutral-200 rounded-2xl shadow-(--shadow-1) overflow-hidden flex flex-col transition-all duration-200 hover:shadow-(--shadow-2)">
-
+<div className="bg-surface rounded-xl border border-black/[0.03] shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
         {/* ── Table header ──────────────────────────────────────────────── */}
-        <div className="px-6 py-5 border-b border-neutral-100 bg-surface flex flex-col gap-4 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-0.5 bg-linear-to-r from-primary/20 via-primary/10 to-transparent" />
-
+        <div className="p-4 border-b border-neutral-100 bg-surface flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
             {/* Title + view toggle */}
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-1">
                 <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight flex items-center gap-2">
                   {showEmployeeColumn ? 'Team Attendance' : 'Attendance Records'}
                 </h2>
-
-                {/* View mode toggle */}
-                <div className="flex items-center rounded-lg border border-neutral-200 bg-canvas/60 p-0.5 gap-0.5">
-                  {VIEW_MODES.map(({ mode, icon, label }) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => handleViewModeChange(mode)}
-                      aria-label={`${label} view`}
-                      aria-pressed={viewMode === mode}
-                      className={cn(
-                        'inline-flex items-center gap-1.5 h-6 px-2.5 text-[11px] font-medium rounded-md transition-all duration-150',
-                        viewMode === mode
-                          ? 'bg-surface text-neutral-900 shadow-sm border border-neutral-200'
-                          : 'text-neutral-500 hover:text-neutral-700',
-                      )}
-                    >
-                      {icon}
-                      {label}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-sm text-neutral-500">{tableDescription}</p>
               </div>
-              <p className="text-sm text-neutral-500">{tableDescription}</p>
+
+              {/* View mode toggle - Blocky styled */}
+              <div className="mt-2 flex items-center self-start rounded-xl bg-neutral-50 p-1 border border-black/[0.04]">
+                {VIEW_MODES.map(({ mode, icon, label }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handleViewModeChange(mode)}
+                    aria-label={`${label} view`}
+                    aria-pressed={viewMode === mode}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg transition-all duration-200 ease-out',
+                      viewMode === mode
+                        ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                        : 'text-neutral-500 hover:text-neutral-900',
+                    )}
+                  >
+                    {icon}
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Export buttons */}
@@ -438,7 +437,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="text-xs font-medium bg-surface border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-4 py-2 rounded-md shadow-sm transition-all"
+                  className="text-sm font-normal bg-transparent border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-4 py-2 rounded-md transition-colors"
                 >
                   Retry Connection
                 </button>
@@ -448,39 +447,46 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
           if (viewMode === 'list') {
             return (
-              <div className="overflow-x-auto w-full">
-                <table className="w-full min-w-[600px] text-left border-collapse">
+              <div className="overflow-x-auto w-full bg-white">
+                <table className="w-full text-center border-collapse table-fixed min-w-[800px]">
                   <thead>
-                    <tr className="bg-canvas/50">
-                      {table.getHeaderGroups().map((headerGroup) =>
-                        headerGroup.headers.map((header, i) => (
-                          <th
-                            key={header.id}
-                            className={`text-xs font-semibold font-sans text-neutral-500 uppercase tracking-wider px-6 py-3.5 border-b border-neutral-200 ${
-                              i === 0 ? 'pl-6' : ''
-                            } ${i === headerGroup.headers.length - 1 ? 'pr-6' : ''}`}
-                          >
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(header.column.columnDef.header, header.getContext())}
-                          </th>
-                        )),
+                    <tr>
+                      {showEmployeeColumn && (
+                        <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center w-1/6">Employee</th>
                       )}
+                      <th className={cn(
+                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
+                        showEmployeeColumn ? "w-1/6" : "w-1/5"
+                      )}>Date</th>
+                      <th className={cn(
+                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
+                        showEmployeeColumn ? "w-1/6" : "w-1/5"
+                      )}>Clock In</th>
+                      <th className={cn(
+                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
+                        showEmployeeColumn ? "w-1/6" : "w-1/5"
+                      )}>Clock Out</th>
+                      <th className={cn(
+                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
+                        showEmployeeColumn ? "w-1/6" : "w-1/5"
+                      )}>Work Time</th>
+                      <th className={cn(
+                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
+                        showEmployeeColumn ? "w-1/6" : "w-1/5"
+                      )}>Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-100 bg-surface">
-                    <TableBody
-                      isLoading={isLoading}
-                      items={items}
-                      pageSize={pageSize}
-                      columnCount={columns.length}
-                      canEdit={canEdit}
-                      canDelete={canDelete}
-                      showEmployeeColumn={showEmployeeColumn}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                    />
-                  </tbody>
+                  <TableBody
+                    isLoading={isLoading}
+                    items={items}
+                    pageSize={pageSize}
+                    columnCount={showEmployeeColumn ? 6 : 5}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    showEmployeeColumn={showEmployeeColumn}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
                 </table>
               </div>
             );
@@ -500,35 +506,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
           );
         })()}
 
-        {/* ── Pagination — list mode only ───────────────────────────────── */}
-        {!isError && viewMode === 'list' && (
-          <div className="px-6 py-4 border-t border-neutral-100 bg-canvas/30 flex items-center justify-between">
-            <p className="text-[13px] text-neutral-500 font-medium">
-              Page{' '}
-              <span className="text-neutral-900 font-semibold">{currentPage}</span>{' '}
-              of{' '}
-              <span className="text-neutral-900 font-semibold">{totalPages}</span>
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onFiltersChange({ ...filters, page: currentPage - 1 })}
-                disabled={currentPage <= 1 || isLoading}
-                className="inline-flex items-center justify-center text-xs font-medium h-8 px-3 rounded-md bg-surface border border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all duration-200 active:scale-[0.98]"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => onFiltersChange({ ...filters, page: currentPage + 1 })}
-                disabled={currentPage >= totalPages || isLoading}
-                className="inline-flex items-center justify-center text-xs font-medium h-8 px-3 rounded-md bg-surface border border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all duration-200 active:scale-[0.98]"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

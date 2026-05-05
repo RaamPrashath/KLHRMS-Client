@@ -160,9 +160,9 @@ export function AttendancePageShell({
                             <div>
                                 <h1
                                     id="attendance-heading"
-                                    className="text-2xl font-semibold text-neutral-900 tracking-tight"
+                                    className="text-4xl font-semibold text-neutral-900 tracking-tight"
                                 >
-                                    Attendance
+                                    Who&apos;s in today?
                                 </h1>
                             </div>
 
@@ -186,6 +186,7 @@ export function AttendancePageShell({
                                 <ClockWidget
                                     orgSlug={orgSlug}
                                     memberId={memberId}
+            
                                 />
                             </motion.div>
                         </AttendancePermissionGate>

@@ -1,5 +1,6 @@
 'use client';
 
+import { Filter, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -69,7 +70,6 @@ const PRESETS: { value: AttendanceTimePreset; label: string }[] = [
   { value: 'last_week', label: 'Last 7 days' },
   { value: 'last_month', label: 'Last 30 days' },
   { value: 'all_time', label: 'All time' },
-  { value: 'custom', label: 'Custom' },
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -116,98 +116,78 @@ export function AttendanceFilters({
     filters.status != null ||
     filters.employeeNameSearch != null;
 
-  const isCustom = filters.timePreset === 'custom';
-
   return (
     <div className="flex flex-col gap-3">
-      {/* ── Time preset pills ─────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {PRESETS.map((p) => (
-          <button
-            key={p.value}
-            type="button"
-            onClick={() => handlePresetChange(p.value)}
-            className={cn(
-              'h-7 px-3 text-[12px] font-medium rounded-full border transition-all duration-150',
-              filters.timePreset === p.value
-                ? 'bg-primary text-white border-primary shadow-sm'
-                : 'bg-surface text-neutral-600 border-neutral-200 hover:border-neutral-300 hover:text-neutral-900',
-            )}
+      {/* ── Main filters row ─────────────────────────────────────────── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {PRESETS.map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => handlePresetChange(p.value)}
+              className={cn(
+                'h-8 px-3.5 text-[13px] font-medium rounded-lg transition-all duration-200 ease-out border',
+                filters.timePreset === p.value
+                  ? 'bg-[#00874A] text-white border-[#00874A] shadow-sm'
+                  : 'bg-white text-neutral-500 border-black/[0.04] shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:text-neutral-900 hover:bg-neutral-50 hover:border-black/[0.08]',
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Employee name search — org-scope only */}
+          {showMemberFilter && (
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-neutral-400" />
+              <Input
+                type="text"
+                placeholder="Search employee…"
+                value={filters.employeeNameSearch ?? ''}
+                onChange={(e) =>
+                  update({ employeeNameSearch: e.target.value || undefined })
+                }
+                className="h-8 w-[180px] pl-8 text-[13px] bg-white border border-black/[0.04] shadow-[0_2px_8px_rgba(0,0,0,0.02)] focus-visible:ring-1 focus-visible:ring-[#00874A]/20 rounded-lg text-neutral-700 placeholder:text-neutral-400"
+                aria-label="Search by employee name"
+              />
+            </div>
+          )}
+
+          {/* Status filter */}
+          <Select
+            value={filters.status ?? 'ALL'}
+            onValueChange={(val) =>
+              update({ status: val === 'ALL' ? undefined : (val as AttendanceStatus) })
+            }
           >
-            {p.label}
-          </button>
-        ))}
-      </div>
+            <SelectTrigger className="h-8 w-[120px] text-[13px] bg-white border border-black/[0.04] shadow-[0_2px_8px_rgba(0,0,0,0.02)] focus:ring-1 focus:ring-[#00874A]/20 rounded-lg text-neutral-700">
+              <div className="flex items-center gap-1.5">
+                <Filter className="size-3.5 text-neutral-400" />
+                <SelectValue placeholder="Status" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="text-[13px] border border-black/[0.04] shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-xl">
+              <SelectItem value="ALL">All Status</SelectItem>
+              <SelectItem value="PRESENT">Present</SelectItem>
+              <SelectItem value="HALF_DAY">Half Day</SelectItem>
+              <SelectItem value="ABSENT">Absent</SelectItem>
+            </SelectContent>
+          </Select>
 
-      {/* ── Secondary filters row ─────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Custom date range — only shown when preset is "custom" */}
-        {isCustom && (
-          <>
-            <Input
-              type="date"
-              value={filters.dateFrom ?? ''}
-              onChange={(e) => update({ dateFrom: e.target.value || undefined })}
-              className="h-8 w-[130px] text-xs bg-surface border-neutral-200 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/20 rounded-md"
-              aria-label="From date"
-            />
-            <span className="text-neutral-300 text-xs select-none">–</span>
-            <Input
-              type="date"
-              value={filters.dateTo ?? ''}
-              onChange={(e) => update({ dateTo: e.target.value || undefined })}
-              className="h-8 w-[130px] text-xs bg-surface border-neutral-200 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/20 rounded-md"
-              aria-label="To date"
-            />
-            <div className="w-px h-4 bg-neutral-200 hidden sm:block" />
-          </>
-        )}
-
-        {/* Status filter */}
-        <Select
-          value={filters.status ?? 'ALL'}
-          onValueChange={(val) =>
-            update({ status: val === 'ALL' ? undefined : (val as AttendanceStatus) })
-          }
-        >
-          <SelectTrigger className="h-8 w-[110px] text-xs bg-surface border-neutral-200 shadow-sm focus:ring-1 focus:ring-primary/20 rounded-md">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent className="text-xs">
-            <SelectItem value="ALL">All Status</SelectItem>
-            <SelectItem value="PRESENT">Present</SelectItem>
-            <SelectItem value="HALF_DAY">Half Day</SelectItem>
-            <SelectItem value="ABSENT">Absent</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Employee name search — org-scope only */}
-        {showMemberFilter && (
-          <>
-            <div className="w-px h-4 bg-neutral-200 hidden sm:block" />
-            <Input
-              type="text"
-              placeholder="Search employee…"
-              value={filters.employeeNameSearch ?? ''}
-              onChange={(e) =>
-                update({ employeeNameSearch: e.target.value || undefined })
-              }
-              className="h-8 w-[180px] text-xs bg-surface border-neutral-200 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/20 rounded-md"
-              aria-label="Search by employee name"
-            />
-          </>
-        )}
-
-        {/* Clear extra filters */}
-        {hasExtraFilters && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="h-8 px-2.5 text-[11px] font-medium text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors duration-150"
-          >
-            Clear
-          </button>
-        )}
+          {/* Clear extra filters */}
+          {hasExtraFilters && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="h-8 px-3 text-[13px] font-medium text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors duration-150"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

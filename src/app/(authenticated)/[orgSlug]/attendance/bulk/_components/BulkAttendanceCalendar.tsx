@@ -86,6 +86,16 @@ function logsToEvents(dayMap: Map<string, BulkDayState>): CalendarWorkLogEvent[]
   return events;
 }
 
+function formatMins(totalMins: number): string {
+  if (totalMins <= 0) return '0h';
+  if (totalMins >= 60) {
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${totalMins}m`;
+}
+
 // ─── Custom day header ────────────────────────────────────────────────────────
 
 interface DayHeaderProps {
@@ -104,46 +114,94 @@ function DayColumnHeader({ date, dayMap, onAddLog }: Readonly<DayHeaderProps>) {
     return sum + Math.round(diff / 60_000);
   }, 0) ?? 0;
 
-  const totalLabel = totalMins > 0
-    ? totalMins >= 60
-      ? `${Math.floor(totalMins / 60)}h${totalMins % 60 > 0 ? ` ${totalMins % 60}m` : ''}`
-      : `${totalMins}m`
-    : null;
+  const hasLogs = totalMins > 0;
 
   return (
-    <div className="flex flex-col items-center gap-0.5 py-2 px-1 relative group">
-      {/* Weekday */}
-      <span className={`text-[11px] font-medium uppercase tracking-wider ${isToday ? 'text-primary' : 'text-neutral-500'}`}>
-        {format(date, 'EEE')}
-      </span>
+    <div className="flex flex-col h-full relative group">
+      {/* Date section */}
+      <div className="flex flex-col items-center pt-3 pb-2 px-1 gap-1">
+        <span
+          className="text-[10px] font-semibold uppercase tracking-widest"
+          style={{ color: isToday ? 'var(--color-primary)' : 'var(--color-neutral-400)' }}
+        >
+          {format(date, 'EEE')}
+        </span>
 
-      {/* Date number */}
-      <span
-        className={[
-          'text-[17px] font-semibold leading-none',
-          isToday
-            ? 'size-8 flex items-center justify-center rounded-full bg-primary text-white'
-            : 'text-neutral-900',
-        ].join(' ')}
+        <span
+          className="text-[18px] font-semibold leading-none flex items-center justify-center"
+          style={
+            isToday
+              ? {
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--color-primary)',
+                  color: '#fff',
+                  fontSize: 16,
+                }
+              : { color: 'var(--color-neutral-900)' }
+          }
+        >
+          {format(date, 'd')}
+        </span>
+      </div>
+
+      {/* Total time row — flush to the bottom of the header */}
+      <div
+        className="flex flex-col items-center justify-center h-9 border-t"
+        style={{
+          borderTopColor: 'var(--color-neutral-100)',
+          backgroundColor: isToday ? 'var(--color-primary-ghost)' : 'var(--color-canvas)',
+        }}
       >
-        {format(date, 'd')}
-      </span>
+        <span
+          className="font-mono text-[13px] font-semibold leading-none"
+          style={{ color: hasLogs ? 'var(--color-neutral-900)' : 'var(--color-neutral-300)' }}
+        >
+          {formatMins(totalMins)}
+        </span>
+      </div>
 
-      {/* Total span summary */}
-      {totalLabel && (
-        <span className="text-[10px] font-mono text-neutral-400 mt-0.5">{totalLabel}</span>
-      )}
-
-      {/* Add button — div to avoid nested <button> inside RBC's header button */}
+      {/* Add button */}
       <div
         role="button"
         tabIndex={0}
         aria-label={`Add work log for ${format(date, 'EEEE d MMMM')}`}
         onClick={(e) => { e.stopPropagation(); onAddLog(dateStr); }}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onAddLog(dateStr); } }}
-        className="absolute top-1 right-1 size-5 flex items-center justify-center rounded bg-transparent text-neutral-300 hover:bg-primary-ghost hover:text-primary opacity-0 group-hover:opacity-100 transition-all duration-100 cursor-pointer"
+        className="absolute top-2.5 right-2 size-5 flex items-center justify-center rounded text-neutral-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer"
       >
-        <Plus className="size-3" strokeWidth={2.5} />
+        <Plus className="size-3.5" strokeWidth={2.5} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Time gutter header — shows the week total ────────────────────────────────
+
+interface GutterHeaderProps {
+  totalWeekLabel: string;
+}
+
+function TimeGutterHeader({ totalWeekLabel }: Readonly<GutterHeaderProps>) {
+  return (
+    <div
+      className="flex flex-col h-full"
+      style={{ backgroundColor: 'var(--color-canvas)' }}
+    >
+      {/* Spacer that matches the date + day-name area */}
+      <div className="flex-1" />
+      {/* Week total — aligns with the per-day total row */}
+      <div
+        className="flex flex-col items-center justify-center h-9 border-t"
+        style={{ borderTopColor: 'var(--color-neutral-100)' }}
+      >
+        <span
+          className="font-mono text-[13px] font-semibold"
+          style={{ color: 'var(--color-primary)' }}
+        >
+          {totalWeekLabel}
+        </span>
       </div>
     </div>
   );
@@ -177,7 +235,15 @@ export function BulkAttendanceCalendar({
   const events = useMemo(() => logsToEvents(dayMap), [dayMap]);
   const hasAnyLogs = events.length > 0;
 
-  // ── Custom components ────────────────────────────────────────────────────────
+  const totalWeekMins = useMemo(() => {
+    return Array.from(dayMap.values()).reduce((sum, day) => {
+      return sum + day.logs.reduce((s, l) => s + Math.round((l.endTime.getTime() - l.startTime.getTime()) / 60_000), 0);
+    }, 0);
+  }, [dayMap]);
+
+  const totalWeekLabel = formatMins(totalWeekMins);
+
+  // ── Custom components ───────────────────────────────────────────────────────
   const components = useMemo(
     () => ({
       event: ({ event }: { event: CalendarWorkLogEvent }) => (
@@ -193,7 +259,6 @@ export function BulkAttendanceCalendar({
           }}
         />
       ),
-      // week.header = the column header cell in the week time-grid
       week: {
         header: ({ date }: { date: Date }) => (
           <DayColumnHeader
@@ -203,13 +268,15 @@ export function BulkAttendanceCalendar({
           />
         ),
       },
-      // Hide the default toolbar — we use our own
+      timeGutterHeader: () => (
+        <TimeGutterHeader totalWeekLabel={totalWeekLabel} />
+      ),
       toolbar: () => null,
     }),
-    [dayMap, onOpenCreate, onOpenEdit, onDeleteLog],
+    [dayMap, onOpenCreate, onOpenEdit, onDeleteLog, totalWeekLabel],
   );
 
-  // ── Drag and drop handler ────────────────────────────────────────────────────
+  // ── Drag handlers ───────────────────────────────────────────────────────────
   const handleEventDrop = useCallback(
     ({ event, start, end }: { event: CalendarWorkLogEvent; start: Date | string; end: Date | string }) => {
       const newStart = start instanceof Date ? start : new Date(start);
@@ -230,7 +297,6 @@ export function BulkAttendanceCalendar({
     [onDragLog],
   );
 
-  // ── Slot selection (click/drag on empty slot) ────────────────────────────────
   const handleSelectSlot = useCallback(
     ({ start, end }: { start: Date | string; end: Date | string; slots: Date[] | string[] }) => {
       const startDate = start instanceof Date ? start : new Date(start);
@@ -241,64 +307,188 @@ export function BulkAttendanceCalendar({
     [onOpenCreate],
   );
 
-  // ── Calendar range ───────────────────────────────────────────────────────────
-  const calendarDate = weekStart;
-
   return (
-    <div className="bg-surface border border-neutral-100 rounded-xl shadow-(--shadow-1) overflow-hidden">
-      {/* react-big-calendar styles override wrapper */}
+    <div
+      className="border border-neutral-100 rounded-xl overflow-hidden"
+      style={{ backgroundColor: 'var(--color-surface)', boxShadow: 'var(--shadow-1)' }}
+    >
       <style>{`
-        /* ── Force time-grid layout ── */
-        .rbc-calendar { font-family: var(--font-sans) !important; background: transparent !important; }
-        .rbc-time-view { border: none !important; display: flex; flex-direction: column; }
-        .rbc-time-header { border-bottom: 1px solid var(--color-neutral-100) !important; }
-        .rbc-time-header-content { border-left: 1px solid var(--color-neutral-100) !important; }
-        .rbc-time-header-gutter { background: var(--color-canvas) !important; }
-        .rbc-header { border-bottom: none !important; padding: 0 !important; background: var(--color-canvas) !important; border-left: 1px solid var(--color-neutral-100) !important; }
-        .rbc-header:first-child { border-left: none !important; }
-        .rbc-time-content { border-top: 1px solid var(--color-neutral-100) !important; flex: 1; overflow-y: auto; }
-        .rbc-time-gutter { background: var(--color-canvas) !important; }
-        .rbc-timeslot-group { border-bottom: 1px solid var(--color-neutral-100) !important; min-height: 48px !important; }
-        .rbc-time-slot { border-top: 1px solid var(--color-neutral-50) !important; }
-        .rbc-day-slot { border-left: 1px solid var(--color-neutral-100) !important; }
-        .rbc-day-slot .rbc-time-slot { border-top: 1px solid var(--color-neutral-50) !important; }
-        .rbc-current-time-indicator { background-color: var(--color-primary) !important; height: 2px !important; }
-        .rbc-label { font-size: 11px !important; font-family: var(--font-mono) !important; color: var(--color-neutral-400) !important; padding: 0 8px !important; }
-        .rbc-event {
-          background: #dbeafe !important;
-          border: 1px solid #2563eb !important;
-          color: #000 !important;
-          padding: 0 !important;
-          border-radius: 6px !important;
-          min-height: 18px !important;
-          display: flex !important;
-          flex-direction: column !important;
-          box-shadow: 0 1px 3px rgb(0 0 0 / 0.18) !important;
+        /* ── Reset & base ── */
+        .rbc-calendar {
+          font-family: var(--font-sans) !important;
+          background: transparent !important;
+          color: var(--color-neutral-900) !important;
         }
+
+        /* ── Time view shell ── */
+        .rbc-time-view {
+          border: none !important;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* ── Header area ── */
+        .rbc-time-header {
+          border-bottom: 1px solid var(--color-neutral-100) !important;
+          align-items: stretch !important;
+          background: var(--color-canvas) !important;
+        }
+        .rbc-time-header-gutter {
+          background: var(--color-canvas) !important;
+          border-right: 1px solid var(--color-neutral-100) !important;
+          flex-shrink: 0;
+        }
+        .rbc-time-header-content {
+          border-left: none !important;
+        }
+
+        /* ── Column headers ── */
+        .rbc-header {
+          height: 100% !important;
+          border-bottom: none !important;
+          padding: 0 !important;
+          background: var(--color-canvas) !important;
+          border-left: 1px solid var(--color-neutral-100) !important;
+          overflow: visible !important;
+        }
+        .rbc-header:first-child {
+          border-left: none !important;
+        }
+        /* RBC wraps headers in a button — strip all button styles */
+        .rbc-header > button {
+          all: unset;
+          display: block !important;
+          width: 100% !important;
+          height: 100% !important;
+          cursor: default !important;
+        }
+
+        /* ── All-day row — hide it, we don't use it ── */
+        .rbc-allday-cell { display: none !important; }
+        .rbc-time-header-content > .rbc-row.rbc-row-resource { display: none !important; }
+
+        /* ── Time body ── */
+        .rbc-time-content {
+          border-top: none !important;
+          flex: 1;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: var(--color-neutral-200) transparent;
+        }
+        .rbc-time-content::-webkit-scrollbar { width: 6px; }
+        .rbc-time-content::-webkit-scrollbar-thumb {
+          background: var(--color-neutral-200);
+          border-radius: 9999px;
+        }
+
+        /* ── Time gutter (labels) ── */
+        .rbc-time-gutter {
+          background: var(--color-canvas) !important;
+          border-right: 1px solid var(--color-neutral-100) !important;
+        }
+        .rbc-label {
+          font-size: 11px !important;
+          font-family: var(--font-mono) !important;
+          color: var(--color-neutral-400) !important;
+          padding: 0 10px 0 4px !important;
+          line-height: 1 !important;
+        }
+
+        /* ── Slot rows ── */
+        .rbc-timeslot-group {
+          border-bottom: 1px solid var(--color-neutral-100) !important;
+          min-height: 48px !important;
+        }
+        .rbc-time-slot {
+          border-top: 1px solid var(--color-neutral-50) !important;
+        }
+        .rbc-day-slot {
+          border-left: 1px solid var(--color-neutral-100) !important;
+        }
+        .rbc-day-slot .rbc-time-slot {
+          border-top: 1px solid var(--color-neutral-50) !important;
+        }
+
+        /* ── Today column ── */
+        .rbc-today { background: var(--color-primary-ghost) !important; }
+
+        /* ── Current time indicator ── */
+        .rbc-current-time-indicator {
+          background-color: var(--color-primary) !important;
+          height: 2px !important;
+          border-radius: 9999px !important;
+        }
+        .rbc-current-time-indicator::before {
+          content: '';
+          position: absolute;
+          left: -4px;
+          top: -3px;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--color-primary);
+        }
+
+        /* ── Events ── */
+        .rbc-event {
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          outline: none !important;
+        }
+        .rbc-event:focus { outline: none !important; }
         .rbc-event-label { display: none !important; }
         .rbc-event-content {
           flex: 1 1 auto !important;
           height: 100% !important;
-          min-height: 100% !important;
           width: 100% !important;
-          color: #000 !important;
+          overflow: hidden !important;
         }
-        .rbc-event-content * { color: #000 !important; }
-        .rbc-event:focus { outline: 2px solid var(--color-primary) !important; outline-offset: 1px !important; }
-        .rbc-event.rbc-selected { background: #bfdbfe !important; border-color: #1d4ed8 !important; box-shadow: 0 1px 4px rgb(0 0 0 / 0.22) !important; }
-        .rbc-slot-selection { background: var(--color-primary-ghost) !important; border: 1px solid var(--color-primary-subtle) !important; }
-        .rbc-today { background: var(--color-primary-ghost) !important; }
-        .rbc-off-range-bg { background: var(--color-canvas) !important; }
-        .rbc-show-more { color: var(--color-primary) !important; font-size: 11px !important; }
-        /* DnD addon */
-        .rbc-addons-dnd .rbc-addons-dnd-drag-preview { opacity: 0.8; }
-        .rbc-addons-dnd-resizable { display: flex; flex-direction: column; height: 100%; width: 100%; }
+        .rbc-event.rbc-selected {
+          background: transparent !important;
+          box-shadow: none !important;
+        }
+
+        /* ── Slot selection ── */
+        .rbc-slot-selection {
+          background: var(--color-primary-ghost) !important;
+          border: 1px dashed var(--color-primary-subtle) !important;
+          border-radius: 4px !important;
+        }
+
+        /* ── DnD ── */
+        .rbc-addons-dnd .rbc-addons-dnd-drag-preview { opacity: 0.75; }
+        .rbc-addons-dnd-resizable {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          width: 100%;
+        }
         .rbc-addons-dnd-resizable > .rbc-event-content { flex: 1 1 auto; width: 100%; }
         .rbc-addons-dnd-resizable > div:not(.rbc-addons-dnd-resize-ns-anchor) { min-height: 0; width: 100%; }
-        .rbc-addons-dnd-resize-ns-anchor { height: 6px; cursor: ns-resize; }
-        .rbc-addons-dnd-resize-ns-anchor .rbc-addons-dnd-resize-ns-icon { display: block; width: 20px; height: 3px; background: var(--color-primary); border-radius: 2px; margin: 0 auto; }
-        /* Remove default toolbar if it sneaks through */
+        .rbc-addons-dnd-resize-ns-anchor {
+          height: 6px;
+          cursor: ns-resize;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .rbc-addons-dnd-resize-ns-anchor .rbc-addons-dnd-resize-ns-icon {
+          display: block;
+          width: 20px;
+          height: 2px;
+          background: var(--color-primary);
+          border-radius: 2px;
+          opacity: 0.5;
+        }
+
+        /* ── Kill default toolbar ── */
         .rbc-toolbar { display: none !important; }
+
+        /* ── Off-range ── */
+        .rbc-off-range-bg { background: var(--color-canvas) !important; }
       `}</style>
 
       <DnDCalendar
@@ -306,7 +496,7 @@ export function BulkAttendanceCalendar({
         events={events}
         defaultView={Views.WEEK}
         view={Views.WEEK}
-        date={calendarDate}
+        date={weekStart}
         onNavigate={() => {/* controlled externally */}}
         step={15}
         timeslots={4}
@@ -331,7 +521,7 @@ export function BulkAttendanceCalendar({
         popup={false}
       />
 
-      {/* Empty state overlay */}
+      {/* Empty state */}
       {!hasAnyLogs && (
         <div className="border-t border-neutral-100 bg-canvas/50">
           <BulkAttendanceEmptyState />

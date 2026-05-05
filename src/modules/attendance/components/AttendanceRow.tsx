@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { ArrowRight, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
 import {
   formatDate,
   formatTime,
@@ -15,17 +15,11 @@ interface AttendanceRowProps {
   onDelete: (record: AttendanceRecord) => void;
 }
 
-const STATUS_LABELS: Record<AttendanceStatus, string> = {
-  PRESENT: 'Present',
-  HALF_DAY: 'Half Day',
-  ABSENT: 'Absent',
-};
-
-function getStatusClasses(status: AttendanceStatus): string {
-  if (status === 'PRESENT') return 'bg-success-bg text-success-text ring-success-text/20';
-  if (status === 'ABSENT') return 'bg-destructive-bg text-destructive-text ring-destructive-text/20';
-  if (status === 'HALF_DAY') return 'bg-warning-bg text-warning-text ring-warning-text/20';
-  return 'bg-neutral-50 text-neutral-600 ring-neutral-500/20';
+function getStatusInfo(status: AttendanceStatus) {
+  if (status === 'PRESENT') return { text: 'Present', color: '#00874A' };
+  if (status === 'ABSENT') return { text: 'Absent', color: '#EA4335' };
+  if (status === 'HALF_DAY') return { text: 'Half Day', color: '#FBBC05' };
+  return { text: status, color: '#6E6E73' };
 }
 
 function EmployeeAvatar({ name }: { readonly name: string | null }) {
@@ -33,13 +27,15 @@ function EmployeeAvatar({ name }: { readonly name: string | null }) {
     ? name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
     : '?';
   return (
-    <div className="flex items-center gap-2.5 min-w-0">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+    <div className="flex items-center justify-center gap-3.5 min-w-0 max-w-[90%] mx-auto">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00874A]/[0.06] text-[#00874A] text-[13px] font-semibold border border-[#00874A]/10">
         {initials}
       </div>
-      <span className="truncate text-[13px] font-medium text-neutral-900">
-        {name ?? <span className="text-neutral-400 italic">Unknown</span>}
-      </span>
+      <div className="flex flex-col min-w-0 text-left justify-center">
+        <span className="truncate text-[14.5px] font-medium text-neutral-900 tracking-tight pr-2" title={name || 'Unknown'}>
+          {name ?? <span className="text-neutral-400 italic">Unknown</span>}
+        </span>
+      </div>
     </div>
   );
 }
@@ -52,74 +48,57 @@ export function AttendanceRow({
   onEdit,
   onDelete,
 }: Readonly<AttendanceRowProps>) {
-  const statusLabel = STATUS_LABELS[record.status] ?? record.status;
-  const statusClasses = getStatusClasses(record.status);
+  const statusInfo = getStatusInfo(record.status);
 
   return (
-    <tr className="group hover:bg-canvas/80 transition-colors duration-150">
-      {/* Employee name — org-scope only */}
+    <tr className="group hover:bg-[#00874A]/[0.02] transition-colors duration-200">
+      {/* 1. Employee (if shown) */}
       {showEmployeeColumn && (
-        <td className="px-6 py-3.5 whitespace-nowrap max-w-[200px]">
+        <td className="px-6 py-4 align-middle border-b border-black/[0.04] text-center overflow-hidden">
           <EmployeeAvatar name={record.employeeName} />
         </td>
       )}
 
-      {/* Date */}
-      <td className="px-6 py-3.5 text-[13px] font-medium text-neutral-900 whitespace-nowrap">
-        {formatDate(record.date)}
-      </td>
-
-      {/* Clock In */}
-      <td className="px-6 py-3.5 text-[13px] text-neutral-600 font-mono whitespace-nowrap">
-        {formatTime(record.clockIn)}
-      </td>
-
-      {/* Clock Out */}
-      <td className="px-6 py-3.5 text-[13px] text-neutral-600 font-mono whitespace-nowrap">
-        {formatTime(record.clockOut)}
-      </td>
-
-      {/* Total hours */}
-      <td className="px-6 py-3.5 font-mono text-[13px] text-right text-neutral-900 font-medium">
-        {formatHours(record.totalHours)}
-      </td>
-
-      {/* Status badge */}
-      <td className="px-6 py-3.5 whitespace-nowrap">
-        <span
-          className={`inline-flex items-center justify-center text-[11px] font-semibold tracking-wide uppercase rounded-full px-2.5 py-1 ring-1 ring-inset ${statusClasses}`}
-        >
-          {statusLabel}
+      {/* 2. Date */}
+      <td className="px-6 py-4 align-middle border-b border-black/[0.04] text-center">
+        <span className="text-[14.5px] font-medium text-neutral-700">
+          {formatDate(record.date)}
         </span>
       </td>
 
-      {/* Actions */}
-      {(canEdit || canDelete) && (
-        <td className="px-6 py-3.5 text-right w-[100px]">
-          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            {canEdit && (
-              <button
-                type="button"
-                onClick={() => onEdit(record)}
-                aria-label={`Edit record for ${record.date}`}
-                className="bg-transparent text-neutral-400 hover:bg-surface hover:text-primary hover:shadow-sm hover:ring-1 hover:ring-neutral-200 p-1.5 rounded-md transition-all duration-200"
-              >
-                <Pencil className="size-4" aria-hidden="true" />
-              </button>
-            )}
-            {canDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(record)}
-                aria-label={`Delete record for ${record.date}`}
-                className="bg-transparent text-neutral-400 hover:bg-destructive-bg hover:text-destructive-text hover:shadow-sm hover:ring-1 hover:ring-destructive-text/20 p-1.5 rounded-md transition-all duration-200"
-              >
-                <Trash2 className="size-4" aria-hidden="true" />
-              </button>
-            )}
+      {/* 3. Clock In */}
+      <td className="px-6 py-4 align-middle border-b border-black/[0.04] text-center">
+        <span className="text-[14.5px] font-medium text-neutral-700">
+          {formatTime(record.clockIn) || '—'}
+        </span>
+      </td>
+
+      {/* 4. Clock Out */}
+      <td className="px-6 py-4 align-middle border-b border-black/[0.04] text-center">
+        <span className="text-[14.5px] font-medium text-neutral-700">
+          {formatTime(record.clockOut) || '—'}
+        </span>
+      </td>
+
+      {/* 5. Work Time */}
+      <td className="px-6 py-4 align-middle border-b border-black/[0.04] text-center">
+        <span className="text-[14.5px] font-semibold text-neutral-900 font-sans tracking-tight">
+          {record.totalHours != null ? `${record.totalHours.toFixed(1)}h` : '—'}
+        </span>
+      </td>
+
+      {/* 6. Status Pill */}
+      <td className="px-6 py-4 align-middle border-b border-black/[0.04] text-center">
+        <div className="flex items-center justify-center">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-black/[0.03] w-max"
+               style={{ backgroundColor: `${statusInfo.color}0D` }}>
+            <div className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: statusInfo.color }} />
+            <span className="text-[12.5px] font-medium truncate" style={{ color: statusInfo.color }}>
+               {statusInfo.text}
+            </span>
           </div>
-        </td>
-      )}
+        </div>
+      </td>
     </tr>
   );
 }

@@ -299,8 +299,8 @@ export function BulkAttendancePageClient({
   // ── Permission loading ───────────────────────────────────────────────────────
   if (permLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-sm text-neutral-500">Loading…</p>
+      <div className="flex items-center justify-center py-24">
+        <span className="text-sm text-neutral-400">Loading…</span>
       </div>
     );
   }
@@ -333,11 +333,12 @@ export function BulkAttendancePageClient({
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <p className="text-sm text-destructive-text">Failed to load attendance data.</p>
+        <p className="text-sm font-medium text-neutral-900">Failed to load attendance data.</p>
+        <p className="text-xs text-neutral-500">There was a problem fetching your work logs.</p>
         <button
           type="button"
           onClick={refetch}
-          className="text-xs font-medium text-primary hover:text-primary-hover underline underline-offset-2"
+          className="mt-1 text-sm font-medium bg-transparent border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-4 py-2 rounded-md transition-colors"
         >
           Retry
         </button>
@@ -346,7 +347,7 @@ export function BulkAttendancePageClient({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {/* Toolbar */}
       <BulkAttendanceToolbar
         weekStart={currentWeekStart}
