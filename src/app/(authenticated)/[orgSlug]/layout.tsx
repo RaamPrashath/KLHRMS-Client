@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { requireOrgMembership } from "@/lib/organizations";
 import { OrgSidebarShell } from "@/components/sidebar/org-sidebar-shell";
-import { type HrmsRole } from "@/lib/hrms-roles";
+import { type RolePermissions } from "@/lib/hrms-roles";
 
 export default async function OrganizationLayout({
     children,
@@ -34,7 +34,8 @@ export default async function OrganizationLayout({
         <OrgSidebarShell
             orgSlug={org.slug}
             orgName={org.name}
-            hrmsRole={(member.hrmsRole as HrmsRole) ?? null}
+            roleName={member.role?.name ?? null}
+            permissions={(member.role?.permissions as RolePermissions) ?? null}
             user={{
                 name: session.user.name ?? null,
                 email: session.user.email ?? null,

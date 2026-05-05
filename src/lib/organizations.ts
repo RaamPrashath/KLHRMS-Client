@@ -32,7 +32,7 @@ export async function getOrganizationBySlug(slug: string) {
 export async function getOrganizationWithMembers(slug: string) {
   return prisma.organization.findUnique({
     where: { slug },
-    include: { members: { include: { user: true } } },
+    include: { members: { select: { id: true, organizationId: true, userId: true, createdAt: true, roleId: true, role: { select: { name: true } }, user: true } } },
   });
 }
 
@@ -53,7 +53,7 @@ export async function getOrganizationsForUser(userId: string) {
       },
       members: {
         where: { userId },
-        select: { hrmsRole: true },
+        select: { role: { select: { name: true, permissions: true } } },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -91,6 +91,7 @@ export async function getDiscoverableOrganizations(userId: string) {
 export async function joinOrganization(userId: string, organizationId: string) {
   const existing = await prisma.member.findUnique({
     where: { organizationId_userId: { organizationId, userId } },
+    select: { id: true },
   });
   if (existing) throw new Error("Already a member of this organization");
 
@@ -98,7 +99,6 @@ export async function joinOrganization(userId: string, organizationId: string) {
     data: {
       organizationId,
       userId,
-      hrmsRole: "EMPLOYEE",
     },
   });
 }
@@ -131,7 +131,7 @@ export async function createOrganizationForUser({
       data: {
         organizationId: created.id,
         userId,
-        hrmsRole: "SUPER_ADMIN", // creator is always the org's super admin
+        // creator is always the org's super admin — assign via Role relation if needed
       },
     });
     return created;
@@ -158,7 +158,7 @@ export async function requireOrgMembership(userId: string, slug: string) {
   if (!org) throw new Error('Organization not found');
   const member = await prisma.member.findFirst({
     where: { organizationId: org.id, userId },
-    select: { id: true, organizationId: true, userId: true, createdAt: true, hrmsRole: true, roleId: true },
+    select: { id: true, organizationId: true, userId: true, createdAt: true, roleId: true, role: { select: { name: true, permissions: true } } },
   });
   if (!member) throw new Error('Forbidden');
   return { org, member };

@@ -216,7 +216,7 @@ export async function fetchMemberPermissionsAction(params: {
 }): Promise<Record<string, Record<string, string>>> {
   const member = await prisma.member.findFirst({
     where: { id: params.memberId },
-    include: { role: true },
+    select: { role: { select: { permissions: true } } },
   });
   if (!member?.role) return {};
   return (member.role.permissions as Record<string, Record<string, string>>) ?? {};

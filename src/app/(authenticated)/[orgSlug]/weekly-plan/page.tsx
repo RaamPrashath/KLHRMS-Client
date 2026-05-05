@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { requireOrgMembership } from "@/lib/organizations";
-import { HrmsRole } from "@/lib/hrms-roles";
+import { getScope, type RolePermissions } from "@/lib/hrms-roles";
 import { WeeklyPlanClient } from "./_components/WeeklyPlanClient";
 
 export default async function WeeklyPlanPage({
@@ -23,14 +23,15 @@ export default async function WeeklyPlanPage({
     redirect("/organizations");
   }
 
-  const role = member.hrmsRole as HrmsRole | null;
-  if (!role) redirect(`/${orgSlug}/attendance`);
+  const permissions = (member.role?.permissions as RolePermissions) ?? null;
 
-  const canViewTeam =
-    role === HrmsRole.SUPER_ADMIN ||
-    role === HrmsRole.HR ||
-    role === HrmsRole.ADMIN ||
-    role === HrmsRole.MANAGER;
+  // No access — redirect away
+  if (getScope(permissions, "weeklyPlan", "view") === "none") {
+    redirect(`/${orgSlug}/attendance`);
+  }
+
+  // Can view team = org-scoped view
+  const canViewTeam = getScope(permissions, "weeklyPlan", "view") === "org";
 
   return (
     <div className="flex flex-col gap-0 -mt-6">

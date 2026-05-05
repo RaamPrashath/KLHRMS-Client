@@ -18,15 +18,15 @@ import { useCalendarEventsQuery, useHolidaysQuery } from "@/hooks/queries/leave"
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-import { HrmsRole } from "@/lib/hrms-roles";
 
 interface LeaveCalendarViewProps {
   orgSlug: string;
   orgId: string;
-  role: HrmsRole | null;
+  /** true when the user can see all team members' leaves (org-scoped view) */
+  isAdminView: boolean;
 }
 
-export function LeaveCalendarView({ orgSlug, orgId, role }: LeaveCalendarViewProps) {
+export function LeaveCalendarView({ orgSlug, orgId, isAdminView }: LeaveCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
 
   const monthStart = startOfMonth(currentDate);
@@ -41,12 +41,6 @@ export function LeaveCalendarView({ orgSlug, orgId, role }: LeaveCalendarViewPro
     orgSlug, orgId, dateFrom, dateTo,
   );
   const { data: holidays = [], isLoading: holidaysLoading } = useHolidaysQuery(orgSlug, orgId);
-
-  const isAdminView =
-    role === HrmsRole.SUPER_ADMIN ||
-    role === HrmsRole.HR ||
-    role === HrmsRole.ADMIN ||
-    role === HrmsRole.MANAGER;
 
   const calendarDays = useMemo(() => {
     const days: Date[] = [];

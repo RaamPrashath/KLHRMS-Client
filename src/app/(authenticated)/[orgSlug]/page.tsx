@@ -41,7 +41,7 @@ export default async function OrganizationPage({
             <CardDescription>Current membership for this tenant.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Badge variant="secondary">{member.role}</Badge>
+            <Badge variant="secondary">{member.role?.name ?? 'No role'}</Badge>
           </CardContent>
         </Card>
 

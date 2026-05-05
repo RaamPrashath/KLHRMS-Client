@@ -15,8 +15,11 @@ import {
     DotsHorizontalIcon,
     GearIcon,
     ExitIcon,
+    MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
 import {
+    // General
+    LayoutDashboard,
     // People
     Users,
     Building2,
@@ -58,17 +61,16 @@ import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
 import {
-    type HrmsRole,
-    filterNavByRole,
-    HRMS_ROLE_LABELS,
-    HRMS_ROLE_BADGE_COLORS,
+    type RolePermissions,
+    filterNavByPermissions,
 } from "@/lib/hrms-roles";
 
 // ─── Types ───────────────────────────────────────────────────
 export interface AppSidebarProps {
     orgSlug: string;
     orgName: string;
-    hrmsRole: HrmsRole | null;
+    roleName: string | null;
+    permissions: RolePermissions | null;
     user: {
         name?: string | null;
         email?: string | null;
@@ -81,6 +83,7 @@ export interface AppSidebarProps {
 const ic = "h-4 w-4 shrink-0";
 
 const NAV_ICONS: Record<string, React.ReactElement<{ className?: string }>> = {
+    "":                    <LayoutDashboard className={ic} />,
     "employees":           <Users         className={ic} />,
     "organization":        <Building2     className={ic} />,
     "departments":         <Network       className={ic} />,
@@ -201,16 +204,71 @@ function LogoRow({ orgName, orgSlug }: { orgName: string; orgSlug: string }) {
     );
 }
 
-// ─── Role Badge ───────────────────────────────────────────────
-function RoleBadge({ role }: { role: HrmsRole }) {
+// ─── Nav Search ───────────────────────────────────────────────
+function NavSearch({
+    value,
+    onChange,
+}: {
+    readonly value: string;
+    readonly onChange: (v: string) => void;
+}) {
+    const { open, setOpen } = useSidebar();
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    function handleCollapsedClick() {
+        setOpen(true);
+        // focus after the open animation settles
+        setTimeout(() => inputRef.current?.focus(), 240);
+    }
+
+    if (!open) {
+        return (
+            <button
+                onClick={handleCollapsedClick}
+                aria-label="Search navigation"
+                className="flex items-center justify-center h-8 w-8 rounded-md mx-auto text-[var(--color-sidebar-label)] hover:text-[var(--color-sidebar-text-hover)] hover:bg-[rgba(255,255,255,0.07)] transition-colors duration-150"
+            >
+                <MagnifyingGlassIcon className="h-3.5 w-3.5" />
+            </button>
+        );
+    }
+
     return (
-        <span
-            className={cn(
-                "inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide leading-none",
-                HRMS_ROLE_BADGE_COLORS[role],
+        <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-sidebar-label)] pointer-events-none" />
+            <input
+                ref={inputRef}
+                type="text"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="Search…"
+                aria-label="Search navigation"
+                className={cn(
+                    "w-full h-8 rounded-md pl-8 pr-3 text-xs",
+                    "bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.08)]",
+                    "text-[var(--color-sidebar-text-hover)] placeholder:text-[var(--color-sidebar-label)]",
+                    "focus:outline-none focus:border-[rgba(255,255,255,0.2)] focus:bg-[rgba(255,255,255,0.09)]",
+                    "transition-colors duration-150",
+                )}
+            />
+            {value && (
+                <button
+                    onClick={() => onChange("")}
+                    aria-label="Clear search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-sidebar-label)] hover:text-[var(--color-sidebar-text-hover)] transition-colors"
+                >
+                    <span className="text-[10px] leading-none">✕</span>
+                </button>
             )}
-        >
-            {HRMS_ROLE_LABELS[role]}
+        </div>
+    );
+}
+
+
+function RoleBadge({ roleName }: { readonly roleName: string }) {
+    return (
+        <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide leading-none bg-[rgba(174,174,178,0.15)] text-[var(--color-sidebar-label)]">
+            {roleName}
         </span>
     );
 }
@@ -219,11 +277,11 @@ function RoleBadge({ role }: { role: HrmsRole }) {
 function UserFooter({
     user,
     orgSlug,
-    hrmsRole,
+    roleName,
 }: {
     user: AppSidebarProps["user"];
     orgSlug: string;
-    hrmsRole: HrmsRole | null;
+    roleName: string | null;
 }) {
     const { open } = useSidebar();
     const router = useRouter();
@@ -300,8 +358,8 @@ function UserFooter({
                         {displayName}
                     </span>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                        {hrmsRole ? (
-                            <RoleBadge role={hrmsRole} />
+                        {roleName ? (
+                            <RoleBadge roleName={roleName} />
                         ) : (
                             user.email && (
                                 <span className="truncate text-xs text-[var(--color-sidebar-label)] leading-tight whitespace-nowrap">
@@ -341,8 +399,8 @@ function UserFooter({
                         <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
                             <p className="text-sm font-medium text-[var(--color-sidebar-text-hover)] truncate">{displayName}</p>
                             <div className="flex items-center gap-1.5 mt-1">
-                                {hrmsRole ? (
-                                    <RoleBadge role={hrmsRole} />
+                                {roleName ? (
+                                    <RoleBadge roleName={roleName} />
                                 ) : (
                                     user.email && (
                                         <p className="text-xs text-[var(--color-sidebar-label)] truncate">{user.email}</p>
@@ -377,25 +435,39 @@ function UserFooter({
 }
 
 // ─── Main Sidebar ────────────────────────────────────────────
-export function AppSidebar({ orgSlug, orgName, hrmsRole, user }: AppSidebarProps) {
+export function AppSidebar({ orgSlug, orgName, roleName, permissions, user }: AppSidebarProps) {
     const [open, setOpen] = useState(true);
     const pathname = usePathname();
+    const [search, setSearch] = useState("");
 
-    // Filter nav groups based on the user's HRMS role
-    const navGroups = filterNavByRole(hrmsRole);
+    const allNavGroups = filterNavByPermissions(permissions);
+
+    // Filter nav items by search query
+    const navGroups = search.trim()
+        ? allNavGroups.reduce<typeof allNavGroups>((acc, group) => {
+            const term = search.toLowerCase();
+            const items = group.items.filter((item) =>
+                item.title.toLowerCase().includes(term)
+            );
+            if (items.length > 0) acc.push({ ...group, items });
+            return acc;
+        }, [])
+        : allNavGroups;
 
     return (
         <Sidebar open={open} setOpen={setOpen} animate={true}>
             <SidebarBody className="justify-between gap-4 bg-[var(--color-sidebar-bg)] border-r border-[var(--color-sidebar-divider)]">
                 <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto no-scrollbar gap-3">
                     <LogoRow orgName={orgName} orgSlug={orgSlug} />
+                    <NavSearch value={search} onChange={setSearch} />
 
                     {navGroups.length === 0 ? (
-                        // No role assigned yet — show a placeholder
                         <div className="px-2 py-4 text-xs text-[var(--color-sidebar-label)] text-center leading-relaxed">
-                            No role assigned.
-                            <br />
-                            Contact your admin.
+                            {search.trim() ? (
+                                <>No results for &ldquo;{search}&rdquo;</>
+                            ) : (
+                                <>No role assigned.<br />Contact your admin.</>
+                            )}
                         </div>
                     ) : (
                         <nav className="flex flex-col gap-3.5 mt-1">
@@ -403,7 +475,9 @@ export function AppSidebar({ orgSlug, orgName, hrmsRole, user }: AppSidebarProps
                                 <div key={group.title} className="flex flex-col gap-0.5">
                                     <SidebarLabel>{group.title}</SidebarLabel>
                                     {group.items.map((item) => {
-                                        const url = `/${orgSlug}/${item.urlSuffix}`;
+                                        const url = item.urlSuffix
+                                            ? `/${orgSlug}/${item.urlSuffix}`
+                                            : `/${orgSlug}`;
                                         const isActive = pathname === url;
                                         const icon = NAV_ICONS[item.urlSuffix];
 
@@ -434,7 +508,7 @@ export function AppSidebar({ orgSlug, orgName, hrmsRole, user }: AppSidebarProps
                     )}
                 </div>
 
-                <UserFooter user={user} orgSlug={orgSlug} hrmsRole={hrmsRole} />
+                <UserFooter user={user} orgSlug={orgSlug} roleName={roleName} />
             </SidebarBody>
         </Sidebar>
     );

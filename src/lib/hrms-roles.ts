@@ -1,34 +1,37 @@
 /**
- * HRMS Role & Permission System
- * Single source of truth for role definitions and nav access matrix.
- * Derived from .kiro/steering/role_permission.md
+ * HRMS Permission System
+ * Navigation and access control is driven entirely by the `permissions` JSON
+ * stored in the `role` table — not by a role name enum.
  *
- * NOTE: The enum is defined here directly (not imported from generated/prisma)
- * because the generated folder lives outside src/ and is not reachable via @/*.
- * The string values match the Prisma schema enum exactly.
+ * Permission JSON shape (example):
+ * {
+ *   "attendance": { "view": "org", "edit": "self", "create": "self", "delete": "none" },
+ *   "leaves":     { "view": "self", "approve": "org" },
+ *   "weeklyPlan": { "view": "org", "edit": "self" },
+ *   "permission": { "view": "self" }
+ * }
+ *
+ * A nav item is visible when the user has ANY non-"none" action on the
+ * corresponding permission key.
  */
 
-// ─── HrmsRole enum ───────────────────────────────────────────
-// Must stay in sync with the HrmsRole enum in prisma/schema.prisma
+// ─── Permission types ─────────────────────────────────────────────────────────
 
-export const HrmsRole = {
-    SUPER_ADMIN: "SUPER_ADMIN",
-    HR:          "HR",
-    ADMIN:       "ADMIN",
-    MANAGER:     "MANAGER",
-    EMPLOYEE:    "EMPLOYEE",
-} as const;
+export type PermissionScope = "none" | "self" | "org";
 
-export type HrmsRole = (typeof HrmsRole)[keyof typeof HrmsRole];
+export type ModulePermissions = Record<string, PermissionScope>;
 
-// ─── Nav Access Matrix ────────────────────────────────────────────────────────
-// Each nav item declares which roles can see it.
-// SUPER_ADMIN always sees everything — enforced in filterNavByRole, not here.
+export type RolePermissions = Record<string, ModulePermissions>;
+
+// ─── Nav config ───────────────────────────────────────────────────────────────
+// Each nav item declares which permission key gates its visibility.
+// If permissionKey is undefined the item is always shown (e.g. a home page).
 
 export interface HrmsNavItem {
     title: string;
-    urlSuffix: string; // appended to /{orgSlug}/
-    roles: HrmsRole[]; // roles that can see this item (SUPER_ADMIN implicit)
+    urlSuffix: string;
+    /** Key in the permissions JSON that gates this item. */
+    permissionKey?: string;
 }
 
 export interface HrmsNavGroup {
@@ -38,201 +41,112 @@ export interface HrmsNavGroup {
 
 export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
     {
+        title: "General",
+        items: [
+            { title: "Dashboard", urlSuffix: "" }, // base /{orgSlug} route — always visible
+        ],
+    },
+    {
         title: "People",
         items: [
-            {
-                title: "Employees",
-                urlSuffix: "employees",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN"],
-            },
-            {
-                title: "Organization",
-                urlSuffix: "organization",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
-            {
-                title: "Departments",
-                urlSuffix: "departments",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
-            {
-                title: "Permissions",
-                urlSuffix: "permissions",
-                roles: ["SUPER_ADMIN"],
-            },
+            { title: "Employees",          urlSuffix: "employees",           permissionKey: "employees"   },
+            { title: "Organization",       urlSuffix: "organization",        permissionKey: "organization" },
+            { title: "Departments",        urlSuffix: "departments",         permissionKey: "departments" },
+            { title: "Permissions",        urlSuffix: "permissions",         permissionKey: "permission"  },
         ],
     },
     {
         title: "Time & Attendance",
         items: [
-            {
-                title: "Attendance",
-                urlSuffix: "attendance",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN", "MANAGER", "EMPLOYEE"],
-            },
-            {
-                title: "Leaves",
-                urlSuffix: "leaves",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN", "MANAGER", "EMPLOYEE"],
-            },
-            {
-                title: "Timesheet",
-                urlSuffix: "timesheet",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN", "MANAGER", "EMPLOYEE"],
-            },
-            {
-                title: "Projects",
-                urlSuffix: "projects",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN", "MANAGER"],
-            },
-            {
-                title: "Weekly Plan",
-                urlSuffix: "weekly-plan",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN", "MANAGER", "EMPLOYEE"],
-            },
+            { title: "Attendance",         urlSuffix: "attendance",          permissionKey: "attendance"  },
+            { title: "Leaves",             urlSuffix: "leaves",              permissionKey: "leaves"      },
+            { title: "Timesheet",          urlSuffix: "timesheet",           permissionKey: "timesheet"   },
+            { title: "Projects",           urlSuffix: "projects",            permissionKey: "projects"    },
+            { title: "Weekly Plan",        urlSuffix: "weekly-plan",         permissionKey: "weeklyPlan"  },
         ],
     },
     {
         title: "Recruitment",
         items: [
-            {
-                title: "Jobs",
-                urlSuffix: "jobs",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
-            {
-                title: "Candidates",
-                urlSuffix: "candidates",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
-            {
-                title: "Interviews",
-                urlSuffix: "interviews",
-                // MANAGER can give feedback — they see this item
-                roles: ["SUPER_ADMIN", "HR", "MANAGER"],
-            },
-            {
-                title: "Offers",
-                urlSuffix: "offers",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
+            { title: "Jobs",               urlSuffix: "jobs",                permissionKey: "jobs"        },
+            { title: "Candidates",         urlSuffix: "candidates",          permissionKey: "candidates"  },
+            { title: "Interviews",         urlSuffix: "interviews",          permissionKey: "interviews"  },
+            { title: "Offers",             urlSuffix: "offers",              permissionKey: "offers"      },
         ],
     },
     {
         title: "Lifecycle",
         items: [
-            {
-                title: "Onboarding",
-                urlSuffix: "onboarding",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
-            {
-                title: "Document Collection",
-                urlSuffix: "document-collection",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN"],
-            },
-            {
-                title: "Offboarding",
-                urlSuffix: "offboarding",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
-            {
-                title: "Knowledge Transfer",
-                urlSuffix: "knowledge-transfer",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
+            { title: "Onboarding",         urlSuffix: "onboarding",          permissionKey: "onboarding"         },
+            { title: "Document Collection",urlSuffix: "document-collection", permissionKey: "documentCollection" },
+            { title: "Offboarding",        urlSuffix: "offboarding",         permissionKey: "offboarding"        },
+            { title: "Knowledge Transfer", urlSuffix: "knowledge-transfer",  permissionKey: "knowledgeTransfer"  },
         ],
     },
     {
         title: "Payroll & Finance",
         items: [
-            {
-                title: "Salary Structures",
-                urlSuffix: "salary-structures",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
-            {
-                title: "Payroll",
-                urlSuffix: "payroll",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
-            {
-                title: "Payslips",
-                urlSuffix: "payslips",
-                // ADMIN read-only, EMPLOYEE own — both see the page, access scoped server-side
-                roles: ["SUPER_ADMIN", "HR", "ADMIN", "EMPLOYEE"],
-            },
-            {
-                title: "Tax",
-                urlSuffix: "tax",
-                roles: ["SUPER_ADMIN", "HR"],
-            },
+            { title: "Salary Structures",  urlSuffix: "salary-structures",   permissionKey: "salaryStructures" },
+            { title: "Payroll",            urlSuffix: "payroll",             permissionKey: "payroll"          },
+            { title: "Payslips",           urlSuffix: "payslips",            permissionKey: "payslips"         },
+            { title: "Tax",                urlSuffix: "tax",                 permissionKey: "tax"              },
         ],
     },
     {
         title: "Operations",
         items: [
-            {
-                title: "Assets",
-                urlSuffix: "assets",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN"],
-            },
-            {
-                title: "Helpdesk",
-                urlSuffix: "helpdesk",
-                // Everyone can submit/view helpdesk tickets
-                roles: ["SUPER_ADMIN", "HR", "ADMIN", "MANAGER", "EMPLOYEE"],
-            },
-            {
-                title: "Documents",
-                urlSuffix: "documents",
-                roles: ["SUPER_ADMIN", "HR", "ADMIN"],
-            },
+            { title: "Assets",             urlSuffix: "assets",              permissionKey: "assets"    },
+            { title: "Helpdesk",           urlSuffix: "helpdesk",            permissionKey: "helpdesk"  },
+            { title: "Documents",          urlSuffix: "documents",           permissionKey: "documents" },
         ],
     },
 ];
 
-// ─── Filter helper ────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Returns nav groups filtered to what `role` is allowed to see.
- * SUPER_ADMIN bypasses all checks and sees every item.
- * Groups with no visible items are dropped entirely.
- * If role is null (not yet assigned), returns empty — no nav shown.
+ * Returns true if the user has at least one non-"none" action on the given
+ * permission key.
  */
-export function filterNavByRole(
-    role: HrmsRole | null | undefined,
-): HrmsNavGroup[] {
-    if (!role) return [];
+export function hasPermission(
+    permissions: RolePermissions | null | undefined,
+    key: string,
+): boolean {
+    if (!permissions) return false;
+    const module = permissions[key];
+    if (!module) return false;
+    return Object.values(module).some((scope) => scope !== "none");
+}
 
-    // SUPER_ADMIN sees everything
-    if (role === "SUPER_ADMIN") return HRMS_NAV_CONFIG;
+/**
+ * Returns the scope for a specific action on a module, or "none" if absent.
+ */
+export function getScope(
+    permissions: RolePermissions | null | undefined,
+    key: string,
+    action: string,
+): PermissionScope {
+    if (!permissions) return "none";
+    return (permissions[key]?.[action] as PermissionScope) ?? "none";
+}
+
+/**
+ * Filters the nav config to items the user has access to based on their
+ * permissions JSON. Groups with no visible items are dropped.
+ */
+export function filterNavByPermissions(
+    permissions: RolePermissions | null | undefined,
+): HrmsNavGroup[] {
+    if (!permissions) return [];
 
     return HRMS_NAV_CONFIG.reduce<HrmsNavGroup[]>((acc, group) => {
-        const visibleItems = group.items.filter((item) =>
-            item.roles.includes(role),
-        );
+        const visibleItems = group.items.filter((item) => {
+            if (!item.permissionKey) return true; // always visible
+            return hasPermission(permissions, item.permissionKey);
+        });
         if (visibleItems.length > 0) {
             acc.push({ ...group, items: visibleItems });
         }
         return acc;
     }, []);
 }
-
-// ─── Role display helpers ─────────────────────────────────────────────────────
-
-export const HRMS_ROLE_LABELS: Record<HrmsRole, string> = {
-    SUPER_ADMIN: "Super Admin",
-    HR: "HR",
-    ADMIN: "Admin",
-    MANAGER: "Manager",
-    EMPLOYEE: "Employee",
-};
-
-export const HRMS_ROLE_BADGE_COLORS: Record<HrmsRole, string> = {
-    SUPER_ADMIN: "bg-[rgba(234,67,53,0.12)] text-[#ea4335]",
-    HR:          "bg-[rgba(0,135,74,0.12)]  text-[#00874a]",
-    ADMIN:       "bg-[rgba(66,133,244,0.12)] text-[#4285f4]",
-    MANAGER:     "bg-[rgba(251,188,5,0.12)]  text-[#a07000]",
-    EMPLOYEE:    "bg-[rgba(174,174,178,0.12)] text-[#6e6e73]",
-};

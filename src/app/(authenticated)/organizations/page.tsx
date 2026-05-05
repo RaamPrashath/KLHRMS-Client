@@ -12,7 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import organizations from "@/lib/organizations";
-import { HRMS_ROLE_LABELS, HRMS_ROLE_BADGE_COLORS, type HrmsRole } from "@/lib/hrms-roles";
 import { cn } from "@/lib/utils";
 
 export default async function OrganizationsPage() {
@@ -54,7 +53,7 @@ export default async function OrganizationsPage() {
                         ) : (
                             <div className="grid gap-3">
                                 {myOrgs.map((org) => {
-                                    const hrmsRole = org.members[0]?.hrmsRole as HrmsRole | null;
+                                    const roleName = org.members[0]?.role?.name ?? null;
 
                                     return (
                                         <Link
@@ -72,14 +71,12 @@ export default async function OrganizationsPage() {
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                                    {hrmsRole && (
-                                                        <span
-                                                            className={cn(
-                                                                "rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
-                                                                HRMS_ROLE_BADGE_COLORS[hrmsRole],
-                                                            )}
-                                                        >
-                                                            {HRMS_ROLE_LABELS[hrmsRole]}
+                                                    {roleName && (
+                                                        <span className={cn(
+                                                            "rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                                                            "bg-[rgba(174,174,178,0.12)] text-[#6e6e73]",
+                                                        )}>
+                                                            {roleName}
                                                         </span>
                                                     )}
                                                     <span>{org._count.members} member{org._count.members !== 1 ? "s" : ""}</span>

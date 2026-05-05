@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { requireOrgMembership } from "@/lib/organizations";
-import { HrmsRole } from "@/lib/hrms-roles";
+import { getScope, type RolePermissions } from "@/lib/hrms-roles";
 import { LeaveClient } from "./_components/LeaveClient";
 
 export default async function LeavesPage({
@@ -23,24 +23,20 @@ export default async function LeavesPage({
     redirect("/organizations");
   }
 
-  const role = member.hrmsRole as HrmsRole | null;
-  if (!role) redirect(`/${orgSlug}/attendance`);
+  const permissions = (member.role?.permissions as RolePermissions) ?? null;
+  const roleName = member.role?.name ?? null;
 
-  const canManageTypes =
-    role === HrmsRole.SUPER_ADMIN ||
-    role === HrmsRole.HR ||
-    role === HrmsRole.ADMIN;
+  // Derive capability flags from the permissions JSON
+  const viewScope   = getScope(permissions, "leaves", "view");
+  const editScope   = getScope(permissions, "leaves", "edit");
+  const approveScope = getScope(permissions, "leaves", "approve");
 
-  const canApprove =
-    role === HrmsRole.SUPER_ADMIN ||
-    role === HrmsRole.HR ||
-    role === HrmsRole.ADMIN ||
-    role === HrmsRole.MANAGER;
+  // No access at all — redirect away
+  if (viewScope === "none") redirect(`/${orgSlug}/attendance`);
 
+  const canManageTypes    = editScope === "org";
+  const canApprove        = approveScope !== "none";
   const canManageHolidays = canManageTypes;
-
-  // Balance management: HR and ADMIN can allocate/edit balances for any employee.
-  // SUPER_ADMIN inherits this via canManageTypes already being true.
   const canManageBalances = canManageTypes;
 
   return (
@@ -54,7 +50,7 @@ export default async function LeavesPage({
       <LeaveClient
         orgSlug={orgSlug}
         orgId={org.id}
-        role={role}
+        role={roleName}
         canManageTypes={canManageTypes}
         canApprove={canApprove}
         canManageHolidays={canManageHolidays}

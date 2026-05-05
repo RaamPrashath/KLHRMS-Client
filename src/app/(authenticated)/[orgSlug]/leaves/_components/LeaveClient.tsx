@@ -10,13 +10,12 @@ import { LeaveCalendarView } from "./LeaveCalendarView";
 import { LeaveRequestForm } from "./LeaveRequestForm";
 import { LeaveTypeManager } from "./LeaveTypeManager";
 import { HolidayManager } from "./HolidayManager";
-import { HrmsRole } from "@/lib/hrms-roles";
 import { CalendarDays, LayoutList, BarChart3, Settings2, Palmtree, Wallet } from "lucide-react";
 
 export interface LeaveClientProps {
   orgSlug: string;
   orgId: string;
-  role: HrmsRole | null;
+  role: string | null;
   canManageTypes: boolean;
   canApprove: boolean;
   canManageHolidays: boolean;
@@ -114,7 +113,7 @@ export function LeaveClient({
         )}
 
         <TabsContent value="calendar" className="mt-0">
-          <LeaveCalendarView orgSlug={orgSlug} orgId={orgId} role={role} />
+          <LeaveCalendarView orgSlug={orgSlug} orgId={orgId} isAdminView={canApprove} />
         </TabsContent>
 
         {canManageTypes && (
