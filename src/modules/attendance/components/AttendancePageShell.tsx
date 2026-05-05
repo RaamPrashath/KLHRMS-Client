@@ -17,10 +17,10 @@ import { useMyAttendanceQuery } from "@/modules/attendance/hooks/useMyAttendance
 import { useDeleteAttendanceMutation } from "@/modules/attendance/hooks/useDeleteAttendanceMutation";
 
 import { AttendancePermissionGate } from "@/modules/attendance/components/AttendancePermissionGate";
-import { AttendanceReportPanel } from "@/modules/attendance/components/AttendanceReportPanel";
 import { ClockWidget } from "@/modules/attendance/components/ClockWidget";
 import { ManualAttendanceForm } from "@/modules/attendance/components/ManualAttendanceForm";
 import { AttendanceTable } from "@/modules/attendance/components/AttendanceTable";
+import { getTodayIST } from "@/modules/attendance/utils/attendanceFormatters";
 
 import {
     AlertDialog,
@@ -44,14 +44,19 @@ interface AttendancePageShellProps {
     memberId: string;
 }
 
-const DEFAULT_FILTERS: AttendanceFiltersState = {
-    dateFrom: undefined,
-    dateTo: undefined,
-    status: undefined,
-    targetMemberId: undefined,
-    page: 1,
-    pageSize: 20,
-};
+function buildDefaultFilters(): AttendanceFiltersState {
+    const today = getTodayIST();
+    return {
+        timePreset: 'today',
+        dateFrom: today,
+        dateTo: today,
+        status: undefined,
+        targetMemberId: undefined,
+        employeeNameSearch: undefined,
+        page: 1,
+        pageSize: 20,
+    };
+}
 
 export function AttendancePageShell({
     orgSlug,
@@ -70,10 +75,10 @@ export function AttendancePageShell({
     const isOrgScope = permissions.view === "organization";
 
     // ── Filter state ───────────────────────────────────────────────────────────
-    const [filters, setFilters] =
-        useState<AttendanceFiltersState>(DEFAULT_FILTERS);
+    const [filters, setFilters] = useState<AttendanceFiltersState>(buildDefaultFilters);
 
     // ── Query selection ────────────────────────────────────────────────────────
+    // Org-scope uses the general list endpoint; self-scope uses /me
     const orgQuery = useAttendanceQuery(orgSlug, memberId, filters);
     const myQuery = useMyAttendanceQuery(orgSlug, memberId, filters);
 
@@ -93,14 +98,6 @@ export function AttendancePageShell({
     // ── Manual form state ──────────────────────────────────────────────────────
     const [manualFormOpen, setManualFormOpen] = useState(false);
 
-    // ── Latest record for ClockWidget ──────────────────────────────────────────
-    const latestRecord: AttendanceRecord | null =
-        queryData?.items && queryData.items.length > 0
-            ? ([...queryData.items].sort((a, b) =>
-                  b.date.localeCompare(a.date),
-              )[0] ?? null)
-            : null;
-
     // ── Delete handler ─────────────────────────────────────────────────────────
     async function handleDelete() {
         if (!deleteTarget) return;
@@ -113,10 +110,16 @@ export function AttendancePageShell({
             });
             setDeleteTarget(null);
         } catch (err: unknown) {
-            const apiErr = err as ApiError;
-            if (apiErr.status === 404) {
+            let status = 0;
+            let message = '';
+            if (err instanceof Error) {
+                try { ({ status, message } = JSON.parse(err.message) as ApiError); } catch { /* ignore */ }
+            }
+            if (status === 404) {
                 toast.error("Record not found");
                 setDeleteTarget(null);
+            } else if (message) {
+                toast.error(message);
             }
         }
     }
@@ -161,9 +164,6 @@ export function AttendancePageShell({
                                 >
                                     Attendance
                                 </h1>
-                                <p className="text-sm text-neutral-500 mt-1">
-                                    Track and manage attendance records.
-                                </p>
                             </div>
 
                             {/* Bulk attendance link — shown when user has create permission */}
@@ -179,37 +179,20 @@ export function AttendancePageShell({
                         </div>
                     </section>
 
-                    {/* Summary panel */}
-                    <motion.div {...motionProps}>
-                        <AttendanceReportPanel
-                            items={queryData?.items}
-                            isLoading={isLoading}
-                            isError={isError}
-                        />
-                    </motion.div>
+                    {/* Clock widget — only for self-scope users */}
+                    {!isOrgScope && (
+                        <AttendancePermissionGate scope={permissions.create}>
+                            <motion.div {...motionProps}>
+                                <ClockWidget
+                                    orgSlug={orgSlug}
+                                    memberId={memberId}
+                                />
+                            </motion.div>
+                        </AttendancePermissionGate>
+                    )}
 
-                    {/* Clock widget */}
-                    <AttendancePermissionGate scope={permissions.create}>
-                        <motion.div {...motionProps}>
-                            <ClockWidget
-                                orgSlug={orgSlug}
-                                memberId={memberId}
-                                initialRecord={latestRecord}
-                            />
-                        </motion.div>
-                    </AttendancePermissionGate>
-
-                    {/* Manual entry */}
+                    {/* Manual entry form (sheet) */}
                     <AttendancePermissionGate scope={permissions.edit}>
-                        {/* <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setManualFormOpen(true)}
-                                className="bg-surface border border-primary text-primary hover:bg-primary-ghost text-sm font-medium px-4 py-2 rounded-md transition-colors duration-100"
-                            >
-                                Manual Entry
-                            </button>
-                        </div> */}
                         <ManualAttendanceForm
                             orgSlug={orgSlug}
                             memberId={memberId}
@@ -218,9 +201,11 @@ export function AttendancePageShell({
                         />
                     </AttendancePermissionGate>
 
-                    {/* Table */}
+                    {/* Attendance history table */}
                     <motion.div {...motionProps}>
                         <AttendanceTable
+                            orgSlug={orgSlug}
+                            memberId={memberId}
                             data={queryData}
                             isLoading={isLoading}
                             isError={isError}

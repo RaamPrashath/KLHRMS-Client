@@ -1,102 +1,105 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useClockInMutation } from '@/modules/attendance/hooks/useClockInMutation';
-import { useClockOutMutation } from '@/modules/attendance/hooks/useClockOutMutation';
+import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { useClockInMutation } from "@/modules/attendance/hooks/useClockInMutation";
+import { useClockOutMutation } from "@/modules/attendance/hooks/useClockOutMutation";
+import { fetchMyAttendanceAction } from "@/modules/attendance/api/attendanceServerActions";
 import {
   formatElapsed,
   formatTime,
   formatWorkedDuration,
   formatTodayLabel,
   getTodayIST,
-} from '@/modules/attendance/utils/attendanceFormatters';
-import { ClockInButton } from '@/modules/attendance/components/ClockInButton';
-import { ClockOutButton } from '@/modules/attendance/components/ClockOutButton';
-import type { AttendanceRecord, ApiError } from '@/modules/attendance/types/attendanceTypes';
+} from "@/modules/attendance/utils/attendanceFormatters";
+import { ClockInButton } from "@/modules/attendance/components/ClockInButton";
+import { ClockOutButton } from "@/modules/attendance/components/ClockOutButton";
+import type {
+  AttendanceRecord,
+  ApiError,
+} from "@/modules/attendance/types/attendanceTypes";
 
-// ─── Widget states ────────────────────────────────────────────────────────────
-// NOT_CLOCKED_IN  — no record for today, or record has no clockIn
-// CLOCKED_IN      — active session (clockIn set, clockOut null)
-// COMPLETED       — session finished today (clockIn + clockOut both set)
-// OTHER_DAY       — latest record is from a previous day (show clock-in)
-
-type WidgetState = 'NOT_CLOCKED_IN' | 'CLOCKED_IN' | 'COMPLETED';
+type WidgetState = "LOADING" | "NOT_CLOCKED_IN" | "CLOCKED_IN" | "COMPLETED";
 
 interface ClockWidgetProps {
   orgSlug: string;
   memberId: string;
-  initialRecord: AttendanceRecord | null;
 }
 
-/**
- * Derive the widget state from the latest attendance record.
- * "Today" is determined in IST so the boundary is correct for Indian users.
- */
-function deriveWidgetState(record: AttendanceRecord | null): WidgetState {
-  if (!record) return 'NOT_CLOCKED_IN';
-
-  const todayIST = getTodayIST(); // "YYYY-MM-DD" in Asia/Kolkata
-
-  // Record is from a previous day — treat as not clocked in today
-  if (record.date !== todayIST) return 'NOT_CLOCKED_IN';
-
-  if (record.clockIn != null && record.clockOut == null) return 'CLOCKED_IN';
-  if (record.clockIn != null && record.clockOut != null) return 'COMPLETED';
-
-  return 'NOT_CLOCKED_IN';
+function deriveWidgetState(
+  record: AttendanceRecord | null | undefined
+): Exclude<WidgetState, "LOADING"> {
+  if (!record) return "NOT_CLOCKED_IN";
+  const todayIST = getTodayIST();
+  if (record.date !== todayIST) return "NOT_CLOCKED_IN";
+  if (record.clockIn != null && record.clockOut == null) return "CLOCKED_IN";
+  if (record.clockIn != null && record.clockOut != null) return "COMPLETED";
+  return "NOT_CLOCKED_IN";
 }
 
-export function ClockWidget({
-  orgSlug,
-  memberId,
-  initialRecord,
-}: Readonly<ClockWidgetProps>) {
-  const [widgetState, setWidgetState] = useState<WidgetState>(() =>
-    deriveWidgetState(initialRecord),
+function findTodayRecord(records: AttendanceRecord[]): AttendanceRecord | null {
+  const todayIST = getTodayIST();
+  return records.find((r) => r.date === todayIST) ?? null;
+}
+
+export function ClockWidget({ orgSlug, memberId }: Readonly<ClockWidgetProps>) {
+  const { data: todayData, isLoading } = useQuery({
+    queryKey: ["attendance-today", orgSlug, memberId],
+    queryFn: () =>
+      fetchMyAttendanceAction({
+        orgSlug,
+        memberId,
+        filters: {
+          date_from: getTodayIST(),
+          date_to: getTodayIST(),
+          page: 1,
+          page_size: 1,
+        },
+      }),
+    enabled: !!orgSlug && !!memberId,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+
+  const todayRecord = todayData ? findTodayRecord(todayData.items) : undefined;
+
+  const [widgetState, setWidgetState] = useState<WidgetState>("LOADING");
+  const [activeClockIn, setActiveClockIn] = useState<string | null>(null);
+  const [completedRecord, setCompletedRecord] = useState<AttendanceRecord | null>(
+    null
   );
-
-  // ISO string of the active clock-in — used only for elapsed timer math
-  const [activeClockIn, setActiveClockIn] = useState<string | null>(() => {
-    if (!initialRecord) return null;
-    const todayIST = getTodayIST();
-    if (
-      initialRecord.date === todayIST &&
-      initialRecord.clockIn != null &&
-      initialRecord.clockOut == null
-    ) {
-      return initialRecord.clockIn;
-    }
-    return null;
-  });
-
-  // Completed session data — shown in COMPLETED state
-  const [completedRecord, setCompletedRecord] = useState<AttendanceRecord | null>(() => {
-    if (!initialRecord) return null;
-    const todayIST = getTodayIST();
-    if (
-      initialRecord.date === todayIST &&
-      initialRecord.clockIn != null &&
-      initialRecord.clockOut != null
-    ) {
-      return initialRecord;
-    }
-    return null;
-  });
-
-  // Live elapsed display — updated every second, pure ms arithmetic
-  const [elapsedDisplay, setElapsedDisplay] = useState<string>('00:00:00');
+  const [elapsedDisplay, setElapsedDisplay] = useState<string>("00:00:00");
+  const [currentTime, setCurrentTime] = useState<string>("");
   const [inlineError, setInlineError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isLoading) {
+      setWidgetState("LOADING");
+      return;
+    }
+    const derived = deriveWidgetState(todayRecord);
+    setWidgetState(derived);
+
+    if (derived === "CLOCKED_IN" && todayRecord?.clockIn) {
+      setActiveClockIn(todayRecord.clockIn);
+    } else if (derived === "COMPLETED" && todayRecord) {
+      setActiveClockIn(null);
+      setCompletedRecord(todayRecord);
+    } else {
+      setActiveClockIn(null);
+    }
+  }, [isLoading, todayRecord?.date, todayRecord?.clockIn, todayRecord?.clockOut]);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clockInMutation = useClockInMutation(orgSlug, memberId);
   const clockOutMutation = useClockOutMutation(orgSlug, memberId);
 
-  // ── Elapsed timer ────────────────────────────────────────────────────────────
-  // Only runs when CLOCKED_IN. Uses raw ms diff — timezone has no effect here.
+  // Elapsed timer for active session
   useEffect(() => {
-    if (widgetState === 'CLOCKED_IN' && activeClockIn) {
-      // Set immediately so there's no 1-second blank
+    if (widgetState === "CLOCKED_IN" && activeClockIn) {
       setElapsedDisplay(formatElapsed(activeClockIn));
       intervalRef.current = setInterval(() => {
         setElapsedDisplay(formatElapsed(activeClockIn));
@@ -115,114 +118,246 @@ export function ClockWidget({
     };
   }, [widgetState, activeClockIn]);
 
-  // ── Clock-in handler ─────────────────────────────────────────────────────────
+  // Current time ticking for not clocked in state
+  useEffect(() => {
+    if (widgetState === "NOT_CLOCKED_IN") {
+      const updateTime = () => {
+        const now = new Date();
+        setCurrentTime(
+          now.toLocaleTimeString("en-US", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })
+        );
+      };
+      updateTime();
+      timeIntervalRef.current = setInterval(updateTime, 1000);
+    } else {
+      if (timeIntervalRef.current) {
+        clearInterval(timeIntervalRef.current);
+        timeIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (timeIntervalRef.current) {
+        clearInterval(timeIntervalRef.current);
+        timeIntervalRef.current = null;
+      }
+    };
+  }, [widgetState]);
+
   function handleClockIn() {
     setInlineError(null);
     clockInMutation
       .mutateAsync({})
       .then((record) => {
-        setWidgetState('CLOCKED_IN');
+        setWidgetState("CLOCKED_IN");
         setActiveClockIn(record.clockIn);
-        setElapsedDisplay('00:00:00');
+        setElapsedDisplay("00:00:00");
         setInlineError(null);
       })
       .catch((err: unknown) => {
-        const apiErr = err as ApiError;
-        setInlineError(apiErr.message ?? 'Clock-in failed.');
-        // If already clocked in (409/400), keep NOT_CLOCKED_IN state so button stays visible
+        let message = "Clock-in failed.";
+        if (err instanceof Error) {
+          try {
+            message = (JSON.parse(err.message) as ApiError).message;
+          } catch {
+            message = err.message;
+          }
+        }
+        setInlineError(message);
       });
   }
 
-  // ── Clock-out handler ────────────────────────────────────────────────────────
   function handleClockOut() {
     setInlineError(null);
     clockOutMutation
       .mutateAsync({})
       .then((records) => {
-        // Backend returns an array (may be split across midnight)
         const todayIST = getTodayIST();
-        const todayRecord = records.find((r) => r.date === todayIST) ?? records[0] ?? null;
-        setWidgetState('COMPLETED');
+        const record =
+          records.find((r) => r.date === todayIST) ?? records[0] ?? null;
+        setWidgetState("COMPLETED");
         setActiveClockIn(null);
-        setCompletedRecord(todayRecord);
+        setCompletedRecord(record);
         setInlineError(null);
       })
       .catch((err: unknown) => {
-        const apiErr = err as ApiError;
-        const msg = apiErr.message ?? 'Clock-out failed.';
-        setInlineError(msg);
-        // No active session — revert to not-clocked-in
-        if (msg.includes('No active clock-in session found')) {
-          setWidgetState('NOT_CLOCKED_IN');
+        let message = "Clock-out failed.";
+        if (err instanceof Error) {
+          try {
+            message = (JSON.parse(err.message) as ApiError).message;
+          } catch {
+            message = err.message;
+          }
+        }
+        setInlineError(message);
+        if (message.includes("No active clock-in session found")) {
+          setWidgetState("NOT_CLOCKED_IN");
           setActiveClockIn(null);
         }
-        // "clock_out must be after clock_in" — keep CLOCKED_IN state
       });
   }
 
   const todayLabel = formatTodayLabel();
 
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-surface border border-neutral-100 rounded-xl shadow-(--shadow-1) p-6">
-      <p className="text-sm text-neutral-500 mb-4">{todayLabel}</p>
+    <div className="relative overflow-hidden bg-surface border border-neutral-200 rounded-2xl shadow-none">
+      {/* Decorative background glow */}
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] to-transparent pointer-events-none" />
 
-      {/* State A: Not clocked in */}
-      {widgetState === 'NOT_CLOCKED_IN' && (
-        <div className="flex items-center gap-3">
-          <ClockInButton onClockIn={handleClockIn} isPending={clockInMutation.isPending} />
+      <div className="relative p-6 md:p-8 flex flex-col items-center justify-center min-h-[240px]">
+        <div className="absolute top-4 left-5 text-xs font-medium text-neutral-400 uppercase tracking-wider">
+          {todayLabel}
         </div>
-      )}
 
-      {/* State B: Currently clocked in */}
-      {widgetState === 'CLOCKED_IN' && (
-        <div className="flex flex-col gap-4">
-          <p className="font-mono text-2xl font-semibold text-neutral-900" aria-live="polite" aria-label="Elapsed work time">
-            {elapsedDisplay}
-          </p>
-          <div className="flex items-center gap-3">
-            <ClockOutButton onClockOut={handleClockOut} isPending={clockOutMutation.isPending} />
-          </div>
-        </div>
-      )}
+        <AnimatePresence mode="wait">
+          {widgetState === "LOADING" && (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col items-center gap-6"
+            >
+              <div className="h-16 w-64 rounded-xl bg-neutral-100 animate-pulse" />
+              <div className="h-12 w-40 rounded-full bg-neutral-100 animate-pulse" />
+            </motion.div>
+          )}
 
-      {/* State C: Completed — read-only summary, no clock-in button */}
-      {widgetState === 'COMPLETED' && completedRecord && (
-        <div className="flex flex-col gap-3">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success-bg text-success-text text-xs font-medium w-fit">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
-              <path d="M8.5 2.5L4 7.5 1.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            Day complete
-          </div>
-          <div className="grid grid-cols-3 gap-4 mt-1">
-            <div>
-              <p className="text-xs text-neutral-500 mb-0.5">Worked</p>
-              <p className="font-mono text-sm font-semibold text-neutral-900">
-                {formatWorkedDuration(completedRecord.totalHours)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-neutral-500 mb-0.5">Clock In</p>
-              <p className="font-mono text-sm font-semibold text-neutral-900">
-                {formatTime(completedRecord.clockIn)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-neutral-500 mb-0.5">Clock Out</p>
-              <p className="font-mono text-sm font-semibold text-neutral-900">
-                {formatTime(completedRecord.clockOut)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+          {widgetState === "NOT_CLOCKED_IN" && (
+            <motion.div
+              key="not_clocked_in"
+              initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -16, filter: "blur(4px)" }}
+              transition={{ type: "spring", duration: 0.6, bounce: 0 }}
+              className="flex flex-col items-center gap-8 w-full"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm font-medium text-neutral-500">
+                  Ready to start your day?
+                </p>
+                <p className="font-mono text-5xl md:text-6xl font-medium tracking-tight text-neutral-300 tabular-nums">
+                  {currentTime || "00:00:00"}
+                </p>
+              </div>
+              <ClockInButton
+                onClockIn={handleClockIn}
+                isPending={clockInMutation.isPending}
+              />
+            </motion.div>
+          )}
 
-      {inlineError && (
-        <p className="text-xs text-destructive-text mt-3" role="alert">
-          {inlineError}
-        </p>
-      )}
+          {widgetState === "CLOCKED_IN" && (
+            <motion.div
+              key="clocked_in"
+              initial={{ opacity: 0, scale: 0.9, filter: "blur(4px)" }}
+              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+              exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+              transition={{ type: "spring", duration: 0.7, bounce: 0 }}
+              className="flex flex-col items-center gap-8 w-full"
+            >
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-2 px-3 py-1 bg-primary-ghost text-primary text-xs font-semibold uppercase tracking-wide rounded-full ring-1 ring-primary/20">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                  Session Active
+                </div>
+                <p
+                  className="font-mono text-6xl md:text-7xl font-bold tracking-tighter text-neutral-900 tabular-nums"
+                  aria-live="polite"
+                  aria-label="Elapsed work time"
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  {elapsedDisplay}
+                </p>
+              </div>
+              <ClockOutButton
+                onClockOut={handleClockOut}
+                isPending={clockOutMutation.isPending}
+              />
+            </motion.div>
+          )}
+
+          {widgetState === "COMPLETED" && completedRecord && (
+            <motion.div
+              key="completed"
+              initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -16, filter: "blur(4px)" }}
+              transition={{ type: "spring", duration: 0.6, bounce: 0 }}
+              className="flex flex-col items-center gap-8 w-full max-w-lg"
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center justify-center size-12 rounded-full bg-success-bg text-success-text mb-2">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-neutral-900">
+                  Day Complete
+                </h3>
+                <p className="text-neutral-500 text-center text-sm max-w-xs">
+                  You&apos;ve successfully logged your hours for today. Great job!
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 w-full gap-4 p-5 rounded-xl bg-canvas border border-neutral-100">
+                <div className="flex flex-col items-center">
+                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">
+                    Clock In
+                  </p>
+                  <p className="font-mono text-base font-semibold text-neutral-900">
+                    {formatTime(completedRecord.clockIn)}
+                  </p>
+                </div>
+                <div className="flex flex-col items-center border-x border-neutral-200">
+                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">
+                    Clock Out
+                  </p>
+                  <p className="font-mono text-base font-semibold text-neutral-900">
+                    {formatTime(completedRecord.clockOut)}
+                  </p>
+                </div>
+                <div className="flex flex-col items-center">
+                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">
+                    Worked
+                  </p>
+                  <p className="font-mono text-base font-semibold text-primary">
+                    {formatWorkedDuration(completedRecord.totalHours)}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {inlineError && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute bottom-6 px-4 py-2 bg-destructive-bg text-destructive-text text-sm font-medium rounded-lg"
+            role="alert"
+          >
+            {inlineError}
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }

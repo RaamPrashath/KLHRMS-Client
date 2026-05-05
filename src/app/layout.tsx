@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
+import Script from "next/script";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -40,7 +41,7 @@ export default function RootLayout({
                 <Providers>{children}</Providers>
 
                 <Toaster position="bottom-right"/>
-            </body>
+</body>
         </html>
     );
 }

@@ -1,6 +1,5 @@
 'use client';
 
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -9,22 +8,91 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { AttendanceFiltersState, AttendanceStatus } from '@/modules/attendance/types/attendanceTypes';
+import { cn } from '@/lib/utils';
+import type {
+  AttendanceFiltersState,
+  AttendanceStatus,
+  AttendanceTimePreset,
+} from '@/modules/attendance/types/attendanceTypes';
+import { getTodayIST } from '@/modules/attendance/utils/attendanceFormatters';
+
+// ─── Preset date range resolver ───────────────────────────────────────────────
+
+function getPresetRange(preset: AttendanceTimePreset): {
+  dateFrom: string | undefined;
+  dateTo: string | undefined;
+} {
+  const today = getTodayIST();
+
+  if (preset === 'today') {
+    return { dateFrom: today, dateTo: today };
+  }
+
+  if (preset === 'yesterday') {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 1);
+    const ymd = d.toISOString().slice(0, 10);
+    return { dateFrom: ymd, dateTo: ymd };
+  }
+
+  if (preset === 'last_week') {
+    const end = new Date(today);
+    end.setDate(end.getDate() - 1); // yesterday
+    const start = new Date(today);
+    start.setDate(start.getDate() - 7);
+    return {
+      dateFrom: start.toISOString().slice(0, 10),
+      dateTo: end.toISOString().slice(0, 10),
+    };
+  }
+
+  if (preset === 'last_month') {
+    const end = new Date(today);
+    end.setDate(end.getDate() - 1);
+    const start = new Date(today);
+    start.setDate(start.getDate() - 30);
+    return {
+      dateFrom: start.toISOString().slice(0, 10),
+      dateTo: end.toISOString().slice(0, 10),
+    };
+  }
+
+  // all_time or custom — no date bounds
+  return { dateFrom: undefined, dateTo: undefined };
+}
+
+// ─── Preset button labels ─────────────────────────────────────────────────────
+
+const PRESETS: { value: AttendanceTimePreset; label: string }[] = [
+  { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
+  { value: 'last_week', label: 'Last 7 days' },
+  { value: 'last_month', label: 'Last 30 days' },
+  { value: 'all_time', label: 'All time' },
+  { value: 'custom', label: 'Custom' },
+];
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface AttendanceFiltersProps {
   filters: AttendanceFiltersState;
   onFiltersChange: (f: AttendanceFiltersState) => void;
+  /** Show employee name search — only for org-scope (manager) views */
   showMemberFilter: boolean;
 }
 
 const DEFAULT_FILTERS: AttendanceFiltersState = {
-  dateFrom: undefined,
-  dateTo: undefined,
+  timePreset: 'today',
+  dateFrom: getTodayIST(),
+  dateTo: getTodayIST(),
   status: undefined,
   targetMemberId: undefined,
+  employeeNameSearch: undefined,
   page: 1,
   pageSize: 20,
 };
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function AttendanceFilters({
   filters,
@@ -35,96 +103,112 @@ export function AttendanceFilters({
     onFiltersChange({ ...filters, ...patch, page: 1 });
   }
 
-  function handleClear() {
-    onFiltersChange({ ...DEFAULT_FILTERS, pageSize: filters.pageSize });
+  function handlePresetChange(preset: AttendanceTimePreset) {
+    const range = getPresetRange(preset);
+    update({ timePreset: preset, ...range });
   }
 
-  const hasActiveFilters =
-    filters.dateFrom != null ||
-    filters.dateTo != null ||
+  function handleClear() {
+    onFiltersChange({ ...DEFAULT_FILTERS });
+  }
+
+  const hasExtraFilters =
     filters.status != null ||
-    filters.targetMemberId != null;
+    filters.employeeNameSearch != null;
+
+  const isCustom = filters.timePreset === 'custom';
 
   return (
-    <div className="flex flex-wrap gap-3 items-end">
-      {/* Date From */}
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="filter-date-from" className="text-xs text-neutral-500">
-          From
-        </Label>
-        <Input
-          id="filter-date-from"
-          type="date"
-          value={filters.dateFrom ?? ''}
-          onChange={(e) => update({ dateFrom: e.target.value || undefined })}
-          className="h-9 w-36 text-sm"
-        />
+    <div className="flex flex-col gap-3">
+      {/* ── Time preset pills ─────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {PRESETS.map((p) => (
+          <button
+            key={p.value}
+            type="button"
+            onClick={() => handlePresetChange(p.value)}
+            className={cn(
+              'h-7 px-3 text-[12px] font-medium rounded-full border transition-all duration-150',
+              filters.timePreset === p.value
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-surface text-neutral-600 border-neutral-200 hover:border-neutral-300 hover:text-neutral-900',
+            )}
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
 
-      {/* Date To */}
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="filter-date-to" className="text-xs text-neutral-500">
-          To
-        </Label>
-        <Input
-          id="filter-date-to"
-          type="date"
-          value={filters.dateTo ?? ''}
-          onChange={(e) => update({ dateTo: e.target.value || undefined })}
-          className="h-9 w-36 text-sm"
-        />
-      </div>
+      {/* ── Secondary filters row ─────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Custom date range — only shown when preset is "custom" */}
+        {isCustom && (
+          <>
+            <Input
+              type="date"
+              value={filters.dateFrom ?? ''}
+              onChange={(e) => update({ dateFrom: e.target.value || undefined })}
+              className="h-8 w-[130px] text-xs bg-surface border-neutral-200 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/20 rounded-md"
+              aria-label="From date"
+            />
+            <span className="text-neutral-300 text-xs select-none">–</span>
+            <Input
+              type="date"
+              value={filters.dateTo ?? ''}
+              onChange={(e) => update({ dateTo: e.target.value || undefined })}
+              className="h-8 w-[130px] text-xs bg-surface border-neutral-200 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/20 rounded-md"
+              aria-label="To date"
+            />
+            <div className="w-px h-4 bg-neutral-200 hidden sm:block" />
+          </>
+        )}
 
-      {/* Status */}
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="filter-status" className="text-xs text-neutral-500">
-          Status
-        </Label>
+        {/* Status filter */}
         <Select
           value={filters.status ?? 'ALL'}
           onValueChange={(val) =>
             update({ status: val === 'ALL' ? undefined : (val as AttendanceStatus) })
           }
         >
-          <SelectTrigger id="filter-status" className="h-9 w-36 text-sm">
-            <SelectValue placeholder="All" />
+          <SelectTrigger className="h-8 w-[110px] text-xs bg-surface border-neutral-200 shadow-sm focus:ring-1 focus:ring-primary/20 rounded-md">
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All</SelectItem>
+          <SelectContent className="text-xs">
+            <SelectItem value="ALL">All Status</SelectItem>
             <SelectItem value="PRESENT">Present</SelectItem>
             <SelectItem value="HALF_DAY">Half Day</SelectItem>
             <SelectItem value="ABSENT">Absent</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Employee name search — org-scope only */}
+        {showMemberFilter && (
+          <>
+            <div className="w-px h-4 bg-neutral-200 hidden sm:block" />
+            <Input
+              type="text"
+              placeholder="Search employee…"
+              value={filters.employeeNameSearch ?? ''}
+              onChange={(e) =>
+                update({ employeeNameSearch: e.target.value || undefined })
+              }
+              className="h-8 w-[180px] text-xs bg-surface border-neutral-200 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/20 rounded-md"
+              aria-label="Search by employee name"
+            />
+          </>
+        )}
+
+        {/* Clear extra filters */}
+        {hasExtraFilters && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="h-8 px-2.5 text-[11px] font-medium text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors duration-150"
+          >
+            Clear
+          </button>
+        )}
       </div>
-
-      {/* Employee name search — org-scope only, no raw ID input */}
-      {showMemberFilter && (
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="filter-employee-name" className="text-xs text-neutral-500">
-            Employee
-          </Label>
-          <Input
-            id="filter-employee-name"
-            type="text"
-            placeholder="Search by name"
-            value={filters.targetMemberId ?? ''}
-            onChange={(e) => update({ targetMemberId: e.target.value || undefined })}
-            className="h-9 w-44 text-sm"
-          />
-        </div>
-      )}
-
-      {/* Clear */}
-      {hasActiveFilters && (
-        <button
-          type="button"
-          onClick={handleClear}
-          className="h-9 px-3 text-xs font-medium text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 rounded-md border border-neutral-200 transition-colors duration-100"
-        >
-          Clear
-        </button>
-      )}
     </div>
   );
 }

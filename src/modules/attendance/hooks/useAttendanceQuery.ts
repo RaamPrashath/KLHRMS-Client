@@ -26,6 +26,7 @@ export function useAttendanceQuery(
         memberId,
         filters: {
           target_member_id: filters?.targetMemberId,
+          employee_name: filters?.employeeNameSearch,
           date_from: filters?.dateFrom,
           date_to: filters?.dateTo,
           status: filters?.status,

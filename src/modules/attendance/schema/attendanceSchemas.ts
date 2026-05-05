@@ -34,6 +34,7 @@ export const attendanceFiltersSchema = z.object({
   page: z.number().int().min(1).optional(),
   page_size: z.number().int().min(1).max(200).optional(),
   target_member_id: z.string().optional(),
+  employee_name: z.string().optional(),
 });
 
 export type ClockInInput = z.infer<typeof clockInSchema>;

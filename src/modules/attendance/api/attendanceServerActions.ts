@@ -4,7 +4,6 @@ import { prisma } from '@/lib/prisma';
 import type {
   AttendanceRecord,
   AttendanceListResponse,
-  ApiError,
 } from '@/modules/attendance/types/attendanceTypes';
 import {
   clockInSchema,
@@ -47,8 +46,9 @@ async function handleResponse<T>(res: Response): Promise<T> {
   } catch {
     // ignore parse errors — use default message
   }
-  const error: ApiError = { status: res.status, message };
-  throw error;
+  // Throw a real Error so Next.js server actions can serialize it to the client.
+  // Encode status + message as JSON in the Error.message so the client can parse it.
+  throw new Error(JSON.stringify({ status: res.status, message }));
 }
 
 function buildQuery(params: Record<string, string | number | undefined | null>): string {
@@ -91,6 +91,7 @@ export async function fetchAttendanceAction(params: {
   const { orgSlug, memberId, filters = {} } = params;
   const query = buildQuery({
     target_member_id: filters.target_member_id,
+    employee_name: filters.employee_name,
     date_from: filters.date_from,
     date_to: filters.date_to,
     status: filters.status,
@@ -129,11 +130,7 @@ export async function clockInAction(params: {
   const { orgSlug, memberId, data } = params;
   const parsed = clockInSchema.safeParse(data);
   if (!parsed.success) {
-    const error: ApiError = {
-      status: 400,
-      message: parsed.error.issues[0]?.message ?? 'Validation failed',
-    };
-    throw error;
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
   }
   const res = await fetch(`${getApiUrl()}/attendance/clock-in`, {
     method: 'POST',
@@ -151,11 +148,7 @@ export async function clockOutAction(params: {
   const { orgSlug, memberId, data } = params;
   const parsed = clockOutSchema.safeParse(data);
   if (!parsed.success) {
-    const error: ApiError = {
-      status: 400,
-      message: parsed.error.issues[0]?.message ?? 'Validation failed',
-    };
-    throw error;
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
   }
   const res = await fetch(`${getApiUrl()}/attendance/clock-out`, {
     method: 'POST',
@@ -174,11 +167,7 @@ export async function manualAttendanceAction(params: {
   const { orgSlug, memberId, data } = params;
   const parsed = manualEntrySchema.safeParse(data);
   if (!parsed.success) {
-    const error: ApiError = {
-      status: 400,
-      message: parsed.error.issues[0]?.message ?? 'Validation failed',
-    };
-    throw error;
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
   }
   const res = await fetch(`${getApiUrl()}/attendance/day-entry`, {
     method: 'POST',
@@ -196,11 +185,7 @@ export async function deleteAttendanceAction(params: {
   const { orgSlug, memberId, data } = params;
   const parsed = deleteDayEntrySchema.safeParse(data);
   if (!parsed.success) {
-    const error: ApiError = {
-      status: 400,
-      message: parsed.error.issues[0]?.message ?? 'Validation failed',
-    };
-    throw error;
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
   }
   const res = await fetch(`${getApiUrl()}/attendance/day-entry`, {
     method: 'DELETE',
@@ -220,4 +205,76 @@ export async function fetchMemberPermissionsAction(params: {
   });
   if (!member?.role) return {};
   return (member.role.permissions as Record<string, Record<string, string>>) ?? {};
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+
+export interface AttendanceExportRow {
+  id: string;
+  date: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  totalHours: number | null;
+  status: string;
+  employeeName: string | null;
+}
+
+export type AttendanceExportFormat = 'xlsx' | 'pdf' | 'csv';
+
+// Pivot export types
+export interface PivotCell {
+  date: string;
+  totalHours: number | null;
+  status: string | null;
+}
+
+export interface PivotEmployeeRow {
+  employeeName: string;
+  cells: PivotCell[];
+  total: number;
+}
+
+export interface AttendancePivotExportPayload {
+  dateColumns: string[];
+  rows: PivotEmployeeRow[];
+  periodLabel: string;
+}
+
+export async function exportAttendanceAction(params: {
+  orgSlug: string;
+  memberId: string;
+  format: AttendanceExportFormat;
+  // list mode
+  records?: AttendanceExportRow[];
+  showEmployeeColumn?: boolean;
+  title: string;
+  // pivot mode
+  exportMode?: 'list' | 'pivot';
+  pivotData?: AttendancePivotExportPayload;
+}): Promise<Blob> {
+  const {
+    orgSlug, memberId, format, records, showEmployeeColumn,
+    title, exportMode = 'list', pivotData,
+  } = params;
+  const res = await fetch(`${getApiUrl()}/attendance/export`, {
+    method: 'POST',
+    headers: buildHeaders(orgSlug, memberId),
+    body: JSON.stringify({
+      format,
+      exportMode,
+      records: records ?? [],
+      showEmployeeColumn: showEmployeeColumn ?? false,
+      title,
+      pivotData: pivotData ?? null,
+    }),
+  });
+  if (!res.ok) {
+    let message = `Export failed with status ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === 'string') message = body.detail;
+    } catch { /* ignore */ }
+    throw new Error(message);
+  }
+  return res.blob();
 }
