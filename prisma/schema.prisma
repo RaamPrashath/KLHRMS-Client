@@ -97,8 +97,9 @@ model Member {
     organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    roleId String?
-    role   Role?   @relation(fields: [organizationId, roleId], references: [organizationId, id])
+    roleId            String?
+    role              Role?              @relation(fields: [organizationId, roleId], references: [organizationId, id])
+    departmentMembers DepartmentMember[]
 
     @@unique([organizationId, userId])
     @@index([organizationId])
@@ -156,3 +157,40 @@ model WorkHourPolicy {
 
     @@map("workHourPolicy")
 }
+
+model Department {
+    id                 String   @id @default(cuid())
+    organizationId     String
+    name               String
+    parentDepartmentId String?
+    headMemberId       String?
+    status             String   @default("ACTIVE")
+    createdAt          DateTime @default(now())
+    updatedAt          DateTime @updatedAt
+
+    parentDepartment Department?        @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    childDepartments Department[]       @relation("DepartmentHierarchy")
+    members          DepartmentMember[]
+
+    @@index([organizationId])
+    @@index([organizationId, status])
+    @@index([parentDepartmentId])
+    @@index([headMemberId])
+    @@map("department")
+}
+
+model DepartmentMember {
+    id           String   @id @default(cuid())
+    departmentId String
+    memberId     String 
+    joinedAt     DateTime @default(now())
+
+    department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+    member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+    @@unique([departmentId, memberId])
+    @@index([departmentId])
+    @@index([memberId])
+    @@map("departmentMember")
+}
+
