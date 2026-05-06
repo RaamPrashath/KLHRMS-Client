@@ -35,40 +35,42 @@ export function BulkAttendanceToolbar({
 }: Readonly<BulkAttendanceToolbarProps>) {
   return (
     <div className="flex items-center justify-between gap-4 flex-wrap">
-      {/* Left: title */}
+      {/* Left: week label + save state */}
       <div className="flex items-center gap-3">
-        <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight">
+        <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight tabular-nums">
           {formatWeekRange(weekStart)}
         </h2>
 
-        {/* Save state indicator */}
         {saveState === 'saving' && (
-          <span className="flex items-center gap-1 text-xs text-neutral-500">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-400 bg-canvas px-2 py-1 rounded-md">
             <Loader2 className="size-3 animate-spin" />
-            Saving…
+            Saving
           </span>
         )}
         {saveState === 'saved' && (
-          <span className="flex items-center gap-1 text-xs text-success-text">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success-text bg-success-bg px-2 py-1 rounded-md">
             <CheckCircle2 className="size-3" />
             Saved
           </span>
         )}
         {saveState === 'error' && (
-          <span className="flex items-center gap-1 text-xs text-destructive-text" title={saveError ?? undefined}>
+          <span
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive-text bg-destructive-bg px-2 py-1 rounded-md"
+            title={saveError ?? undefined}
+          >
             <AlertCircle className="size-3" />
             Save failed
           </span>
         )}
       </div>
 
-      {/* Right: navigation */}
-      <div className="flex items-center gap-1">
+      {/* Right: navigation controls */}
+      <div className="flex items-center gap-1 bg-canvas border border-neutral-200 rounded-md p-0.5">
         <button
           type="button"
           onClick={onPrev}
           aria-label="Previous week"
-          className="size-8 flex items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 border border-neutral-200 transition-colors duration-100"
+          className="size-7 flex items-center justify-center rounded text-neutral-500 hover:bg-surface hover:text-neutral-900 transition-colors duration-100"
         >
           <ChevronLeft className="size-4" strokeWidth={2} />
         </button>
@@ -76,7 +78,7 @@ export function BulkAttendanceToolbar({
         <button
           type="button"
           onClick={onToday}
-          className="h-8 px-3 text-xs font-medium text-neutral-700 border border-neutral-200 rounded-md hover:bg-neutral-50 transition-colors duration-100 flex items-center gap-1.5"
+          className="h-7 px-2.5 text-xs font-medium text-neutral-700 hover:bg-surface hover:text-neutral-900 rounded transition-colors duration-100 flex items-center gap-1.5"
         >
           <RotateCcw className="size-3" strokeWidth={2} />
           Today
@@ -86,7 +88,7 @@ export function BulkAttendanceToolbar({
           type="button"
           onClick={onNext}
           aria-label="Next week"
-          className="size-8 flex items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 border border-neutral-200 transition-colors duration-100"
+          className="size-7 flex items-center justify-center rounded text-neutral-500 hover:bg-surface hover:text-neutral-900 transition-colors duration-100"
         >
           <ChevronRight className="size-4" strokeWidth={2} />
         </button>

@@ -86,10 +86,11 @@ export function ManualAttendanceForm({
       form.reset();
       onOpenChange(false);
     } catch (err: unknown) {
-      const apiErr = err as ApiError;
-      form.setError('root', {
-        message: apiErr.message ?? 'An unexpected error occurred.',
-      });
+      let message = 'An unexpected error occurred.';
+      if (err instanceof Error) {
+        try { message = (JSON.parse(err.message) as ApiError).message; } catch { message = err.message; }
+      }
+      form.setError('root', { message });
     }
   }
 

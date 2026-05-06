@@ -1,3 +1,5 @@
+import { motion } from "framer-motion";
+
 interface ClockOutButtonProps {
   onClockOut: () => void;
   isPending: boolean;
@@ -5,12 +7,15 @@ interface ClockOutButtonProps {
 
 export function ClockOutButton({ onClockOut, isPending }: Readonly<ClockOutButtonProps>) {
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClockOut}
       disabled={isPending}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
       aria-label="Clock out"
-      className="inline-flex items-center justify-center gap-2 bg-destructive-bg border border-destructive-border text-destructive-text hover:bg-[#f5c6c5] text-sm font-medium px-4 py-2 rounded-md min-h-[44px] min-w-[44px] disabled:opacity-60 disabled:pointer-events-none transition-colors duration-100"
+      className="inline-flex items-center justify-center gap-2 bg-neutral-900 text-white hover:bg-neutral-800 text-sm font-medium px-8 py-3 rounded-xl transition-colors duration-200 shadow-none disabled:opacity-60 disabled:pointer-events-none"
     >
       {isPending ? (
         <svg
@@ -36,6 +41,6 @@ export function ClockOutButton({ onClockOut, isPending }: Readonly<ClockOutButto
         </svg>
       ) : null}
       Clock Out
-    </button>
+    </motion.button>
   );
 }

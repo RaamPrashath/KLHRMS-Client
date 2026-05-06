@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Figtree, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
+import Script from "next/script";
 
-const inter = Inter({
+const figtree = Figtree({
     subsets: ["latin"],
+    weight: ["300", "400", "500", "600", "700", "800", "900"],
     variable: "--font-sans",
+    display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -31,7 +34,7 @@ export default function RootLayout({
             className={cn(
                 "h-full",
                 "antialiased",
-                inter.variable,
+                figtree.variable,
                 jetbrainsMono.variable,
                 "font-sans",
             )}
@@ -40,7 +43,7 @@ export default function RootLayout({
                 <Providers>{children}</Providers>
 
                 <Toaster position="bottom-right"/>
-            </body>
+</body>
         </html>
     );
 }

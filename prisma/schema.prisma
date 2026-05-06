@@ -7,7 +7,6 @@ datasource db {
     provider = "postgresql"
 }
 
-
 model User {
     id            String    @id @default(uuid())
     email         String    @unique
@@ -83,17 +82,21 @@ model Organization {
 
     createdAt DateTime @default(now())
 
-    members Member[]
-    roles   Role[]
+    members       Member[]
+    roles         Role[]
+    leaveTypes    LeaveType[]
+    leaveRequests LeaveRequest[]
+    leaveBalances LeaveBalance[]
+    holidays      Holiday[]
 
     @@map("organization")
 }
 
 model Member {
-    id             String    @id @default(uuid())
+    id             String   @id @default(uuid())
     organizationId String
     userId         String
-    createdAt      DateTime  @default(now())
+    createdAt      DateTime @default(now())
 
     organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -101,6 +104,10 @@ model Member {
     roleId            String?
     role              Role?              @relation(fields: [organizationId, roleId], references: [organizationId, id])
     departmentMembers DepartmentMember[]
+
+    leaveRequests         LeaveRequest[] @relation("LeaveRequestMember")
+    approvedLeaveRequests LeaveRequest[] @relation("LeaveRequestApprover")
+    leaveBalances         LeaveBalance[] @relation("LeaveBalanceMember")
 
     @@unique([organizationId, userId])
     @@index([organizationId])
@@ -217,4 +224,116 @@ model DepartmentMember {
     @@index([departmentId])
     @@index([memberId])
     @@map("departmentMember")
+}
+
+enum LeaveRequestStatus {
+    PENDING
+    APPROVED
+    REJECTED
+    CANCELLED
+}
+
+model LeaveType {
+    id             String  @id @default(cuid())
+    organizationId String
+    name           String
+    quota          Float
+    carryForward   Boolean @default(false)
+    isPaid         Boolean @default(true)
+    color          String?
+
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    deletedAt DateTime?
+
+    organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    balances     LeaveBalance[]
+    requests     LeaveRequest[]
+
+    @@unique([organizationId, name])
+    @@index([organizationId])
+    @@index([organizationId, deletedAt])
+    @@map("leave_type")
+}
+
+    model LeaveRequest {
+    id             String @id @default(cuid())
+    organizationId String
+    memberId       String
+    leaveTypeId    String
+
+    startDate DateTime           @db.Date
+    endDate   DateTime           @db.Date
+    days      Float
+    reason    String?
+    status    LeaveRequestStatus @default(PENDING)
+
+    approvedById    String?
+    approverComment String?
+
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    cancelledAt DateTime?
+    deletedAt   DateTime?
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    member       Member       @relation("LeaveRequestMember", fields: [memberId], references: [id], onDelete: Cascade)
+    leaveType    LeaveType    @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+    approvedBy   Member?      @relation("LeaveRequestApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+
+    @@index([organizationId])
+    @@index([organizationId, memberId])
+    @@index([organizationId, status])
+    @@index([organizationId, leaveTypeId])
+    @@index([organizationId, startDate])
+    @@index([organizationId, startDate, endDate])
+    @@index([approvedById])
+    @@map("leave_request")
+}
+
+model LeaveBalance {
+    id             String @id @default(cuid())
+    organizationId String
+    memberId       String
+    leaveTypeId    String
+    year           Int
+
+    allocated      Float @default(0)
+    used           Float @default(0)
+    remaining      Float @default(0)
+    carriedForward Float @default(0)
+    lapsed         Float @default(0)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    member       Member       @relation("LeaveBalanceMember", fields: [memberId], references: [id], onDelete: Cascade)
+    leaveType    LeaveType    @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+    @@unique([organizationId, memberId, leaveTypeId, year])
+    @@index([organizationId])
+    @@index([organizationId, memberId, year])
+    @@index([organizationId, leaveTypeId, year])
+    @@map("leave_balance")
+}
+
+model Holiday {
+    id             String   @id @default(cuid())
+    organizationId String
+    name           String
+    holidayDate    DateTime @db.Date
+    isRecurring    Boolean  @default(false)
+    description    String?
+
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    deletedAt DateTime?
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    @@index([organizationId])
+    @@index([organizationId, holidayDate])
+    @@index([organizationId, deletedAt])
+    @@map("holiday")
 }

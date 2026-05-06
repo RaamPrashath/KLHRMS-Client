@@ -17,7 +17,7 @@
 
 // ─── Permission types ─────────────────────────────────────────────────────────
 
-export type PermissionScope = "none" | "self" | "org";
+export type PermissionScope = "none" | "self" | "organization" | "team" | "department";
 
 export type ModulePermissions = Record<string, PermissionScope>;
 

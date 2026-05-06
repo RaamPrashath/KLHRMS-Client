@@ -16,6 +16,8 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
   enteredByManagerId: string | null;
   createdAt: string;
+  /** Populated for org-scope list queries; null for self-scope. */
+  employeeName: string | null;
 }
 
 export interface AttendanceListResponse {
@@ -39,11 +41,16 @@ export interface ApiError {
   message: string;
 }
 
+export type AttendanceTimePreset = 'today' | 'yesterday' | 'last_week' | 'last_month' | 'all_time' | 'custom';
+
 export interface AttendanceFiltersState {
+  timePreset: AttendanceTimePreset;
   dateFrom: string | undefined;
   dateTo: string | undefined;
   status: AttendanceStatus | undefined;
   targetMemberId: string | undefined;
+  /** Employee name search — org-scope only, sent as employee_name query param */
+  employeeNameSearch: string | undefined;
   page: number;
   pageSize: number;
 }
