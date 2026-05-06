@@ -1,16 +1,14 @@
 'use client';
 
 import { format, parseISO, startOfMonth } from 'date-fns';
-import { ChevronRight, ListFilter } from 'lucide-react';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { useLeaveBalances } from '@/modules/leave/hooks/useLeaveBalances';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
 import { useLeaveShell } from '@/modules/leave/components/LeaveSectionShell';
+import { LeaveRequestsTable } from '@/modules/leave/components/LeaveRequestsTable';
 import type { HolidayRecord, LeaveBalanceRecord, LeaveTypeRecord } from '@/modules/leave/types/leaveTypes';
 
 function getInitials(name: string | null, email: string | null) {
@@ -65,12 +63,12 @@ function SectionEmpty({
 }
 
 export function LeaveRequestsView() {
-  const { orgSlug, memberId, openRequestDetails } = useLeaveShell();
+  const { orgSlug, memberId, permissions, openRequestDetails } = useLeaveShell();
   const today = new Date();
   const requestsQuery = useLeaveRequests(orgSlug, memberId, {
     fromDate: format(startOfMonth(today), 'yyyy-MM-dd'),
     page: 1,
-    pageSize: 8,
+    pageSize: 100, // Fetch more for client-side filtering
     year: today.getFullYear(),
   });
 
@@ -79,61 +77,30 @@ export function LeaveRequestsView() {
       <div className="border-b border-black/[0.04] px-6 py-5">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-neutral-900">Recent requests</p>
-            <p className="mt-1 text-sm text-neutral-500">Upcoming absences and decisions, stacked for easy scanning.</p>
-          </div>
-          <div className="hidden items-center gap-2 rounded-full border border-black/[0.04] bg-neutral-50 px-3 py-1.5 text-xs text-neutral-500 md:flex">
-            <ListFilter className="size-3.5" />
-            This month
+            <p className="text-lg font-semibold text-neutral-900">Leave Requests</p>
+            <p className="mt-1 text-sm text-neutral-500">A calm, glanceable queue for upcoming time away and approval decisions.</p>
           </div>
         </div>
       </div>
 
-      {requestsQuery.isLoading ? (
-        <SectionEmpty title="Loading requests..." body="Pulling the latest leave activity into view." />
-      ) : requestsQuery.data?.items.length ? (
-        <div className="divide-y divide-black/[0.04]">
-          {requestsQuery.data.items.map((request) => (
-            <button
-              key={request.id}
-              type="button"
-              onClick={() => openRequestDetails(request.id)}
-              className="flex w-full items-center gap-4 px-6 py-4 text-left transition-colors duration-150 hover:bg-neutral-50/80"
-            >
-              <Avatar className="size-11 bg-[#00874A]/[0.08] after:border-black/[0.04]">
-                <AvatarFallback className="bg-[#00874A]/[0.08] text-sm font-medium text-primary">
-                  {getInitials(request.member.name, request.member.email)}
-                </AvatarFallback>
-              </Avatar>
-
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-neutral-900">{request.member.name ?? request.member.email ?? 'Unnamed member'}</p>
-                <p className="truncate text-sm text-neutral-500">{request.leaveType.name}</p>
-              </div>
-
-              <div className="hidden min-w-0 flex-1 md:block">
-                <p className="text-sm font-medium text-neutral-900">{formatRange(request.startDate, request.endDate)}</p>
-                <p className="text-sm text-neutral-500">{request.days} day{request.days === 1 ? '' : 's'}</p>
-              </div>
-
-              <Badge className={cn('rounded-full px-3 py-1 text-xs font-medium shadow-none', statusTone(request.status))}>
-                {request.status === 'APPROVED' ? 'Approved' : request.status}
-              </Badge>
-
-              <ChevronRight className="hidden size-4 text-neutral-300 md:block" />
-            </button>
-          ))}
-        </div>
-      ) : (
-        <SectionEmpty title="No leave requests yet" body="Once people start applying, their requests will collect here in a clean queue." />
-      )}
+      <div className="p-6">
+        <LeaveRequestsTable
+          requests={requestsQuery.data?.items || []}
+          isLoading={requestsQuery.isLoading}
+          onRowClick={openRequestDetails}
+          viewScope={permissions.view}
+        />
+      </div>
     </SurfaceCard>
   );
 }
 
 export function LeaveBalancesView() {
-  const { orgSlug, memberId } = useLeaveShell();
+  const { orgSlug, memberId, permissions } = useLeaveShell();
   const balancesQuery = useLeaveBalances(orgSlug, memberId, { year: new Date().getFullYear() });
+
+  // Hide member column for "self" scope
+  const showMemberColumn = permissions.view !== 'self';
 
   return (
     <SurfaceCard>
@@ -148,7 +115,7 @@ export function LeaveBalancesView() {
         <Table>
           <TableHeader className="border-b border-black/[0.04] bg-neutral-50/60">
             <TableRow className="border-b-0 hover:bg-transparent">
-              <TableHead className="px-6 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Member</TableHead>
+              {showMemberColumn && <TableHead className="px-6 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Member</TableHead>}
               <TableHead className="px-4 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Leave Type</TableHead>
               <TableHead className="px-4 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Allocated</TableHead>
               <TableHead className="px-4 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Used</TableHead>
@@ -159,12 +126,14 @@ export function LeaveBalancesView() {
           <TableBody>
             {balancesQuery.data.items.map((balance: LeaveBalanceRecord) => (
               <TableRow key={balance.id} className="border-black/[0.04] hover:bg-neutral-50/70">
-                <TableCell className="px-6 py-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-neutral-900">{balance.member.name ?? balance.member.email ?? balance.member.memberId}</p>
-                    <p className="truncate text-sm text-neutral-500">{balance.member.email ?? balance.member.memberId}</p>
-                  </div>
-                </TableCell>
+                {showMemberColumn && (
+                  <TableCell className="px-6 py-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-neutral-900">{balance.member.name ?? balance.member.email ?? balance.member.memberId}</p>
+                      <p className="truncate text-sm text-neutral-500">{balance.member.email ?? balance.member.memberId}</p>
+                    </div>
+                  </TableCell>
+                )}
                 <TableCell className="px-4 py-4 text-sm text-neutral-900">{balance.leaveType.name}</TableCell>
                 <TableCell className="px-4 py-4 font-mono text-[13px] text-neutral-900">{balance.allocated}</TableCell>
                 <TableCell className="px-4 py-4 font-mono text-[13px] text-neutral-900">{balance.used}</TableCell>
@@ -214,7 +183,6 @@ export function LeaveTypesView() {
           <TableHeader className="border-b border-black/[0.04] bg-neutral-50/60">
             <TableRow className="border-b-0 hover:bg-transparent">
               <TableHead className="px-6 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Name</TableHead>
-              <TableHead className="px-4 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Color</TableHead>
               <TableHead className="px-4 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Quota</TableHead>
               <TableHead className="px-4 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Carry Forward</TableHead>
               <TableHead className="px-4 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Paid</TableHead>
@@ -229,7 +197,6 @@ export function LeaveTypesView() {
                     <p className="truncate text-sm font-medium text-neutral-900">{leaveType.name}</p>
                   </div>
                 </TableCell>
-                <TableCell className="px-4 py-4 text-sm text-neutral-500">{leaveType.color ?? '#00874A'}</TableCell>
                 <TableCell className="px-4 py-4 font-mono text-[13px] text-neutral-900">{leaveType.quota}</TableCell>
                 <TableCell className="px-4 py-4 text-sm text-neutral-900">{leaveType.carryForward ? 'Enabled' : 'Off'}</TableCell>
                 <TableCell className="px-4 py-4 text-sm text-neutral-900">{leaveType.isPaid ? 'Yes' : 'No'}</TableCell>

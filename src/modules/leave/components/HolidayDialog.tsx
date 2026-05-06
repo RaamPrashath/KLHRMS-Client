@@ -95,11 +95,17 @@ export function HolidayDialog({
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-neutral-100 p-3">
-            <div>
+            <label htmlFor="recurring-switch" className="flex-1 cursor-pointer">
               <p className="text-sm font-medium text-neutral-900">Recurring yearly</p>
               <p className="text-xs text-neutral-500">Keep this holiday repeating every year.</p>
-            </div>
-            <Switch checked={form.watch('isRecurring')} onCheckedChange={(checked) => form.setValue('isRecurring', checked)} />
+            </label>
+            <Switch 
+              id="recurring-switch"
+              checked={form.watch('isRecurring')} 
+              onCheckedChange={(checked) => {
+                form.setValue('isRecurring', checked, { shouldDirty: true });
+              }} 
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">

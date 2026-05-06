@@ -194,7 +194,7 @@ export function LeavePageShell({ orgSlug, memberId }: Readonly<LeavePageShellPro
             </TabsList>
 
             <TabsContent value="requests" className="mt-0">
-              <section className="rounded-xl border border-neutral-100 bg-surface p-4 shadow-[var(--shadow-1)]">
+              <section className="rounded-xl border border-neutral-100 bg-surface p-4 shadow-(--shadow-1)">
                 <div className="mb-4 grid gap-3 md:grid-cols-5">
                   <Select
                     value={requestFilters.status ?? 'all'}

@@ -256,7 +256,7 @@ model LeaveType {
     @@map("leave_type")
 }
 
-    model LeaveRequest {
+model LeaveRequest {
     id             String @id @default(cuid())
     organizationId String
     memberId       String
@@ -336,4 +336,20 @@ model Holiday {
     @@index([organizationId, holidayDate])
     @@index([organizationId, deletedAt])
     @@map("holiday")
+}
+
+model PublicHolidayMaster {
+    id          String   @id @default(cuid())
+    name        String
+    date        DateTime @db.Date
+    year        Int
+    location    String   @default("IN-TN")
+    description String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([date, name, location])
+    @@index([year, location])
+    @@map("public_holiday_master")
 }

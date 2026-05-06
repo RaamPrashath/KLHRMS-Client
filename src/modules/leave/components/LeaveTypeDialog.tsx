@@ -89,33 +89,38 @@ export function LeaveTypeDialog({
             {form.formState.errors.name ? <p className="text-xs text-destructive-text">{form.formState.errors.name.message}</p> : null}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="leave-type-quota">Quota</Label>
-              <Input id="leave-type-quota" type="number" step="0.5" min="0" {...form.register('quota', { valueAsNumber: true })} />
-              {form.formState.errors.quota ? <p className="text-xs text-destructive-text">{form.formState.errors.quota.message}</p> : null}
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="leave-type-color">Color</Label>
-              <Input id="leave-type-color" placeholder="#00874a" {...form.register('color')} />
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="leave-type-quota">Quota</Label>
+            <Input id="leave-type-quota" type="number" step="0.5" min="0" {...form.register('quota', { valueAsNumber: true })} />
+            {form.formState.errors.quota ? <p className="text-xs text-destructive-text">{form.formState.errors.quota.message}</p> : null}
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-neutral-100 p-3">
-            <div>
+            <label htmlFor="carry-forward-switch" className="flex-1 cursor-pointer">
               <p className="text-sm font-medium text-neutral-900">Carry Forward</p>
               <p className="text-xs text-neutral-500">Allow unused days to roll over.</p>
-            </div>
-            <Switch checked={form.watch('carryForward')} onCheckedChange={(checked) => form.setValue('carryForward', checked)} />
+            </label>
+            <Switch 
+              id="carry-forward-switch"
+              checked={form.watch('carryForward')} 
+              onCheckedChange={(checked) => {
+                form.setValue('carryForward', checked, { shouldDirty: true });
+              }} 
+            />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-neutral-100 p-3">
-            <div>
+            <label htmlFor="paid-leave-switch" className="flex-1 cursor-pointer">
               <p className="text-sm font-medium text-neutral-900">Paid Leave</p>
               <p className="text-xs text-neutral-500">Track paid balance for approvals.</p>
-            </div>
-            <Switch checked={form.watch('isPaid')} onCheckedChange={(checked) => form.setValue('isPaid', checked)} />
+            </label>
+            <Switch 
+              id="paid-leave-switch"
+              checked={form.watch('isPaid')} 
+              onCheckedChange={(checked) => {
+                form.setValue('isPaid', checked, { shouldDirty: true });
+              }} 
+            />
           </div>
         </form>
 
