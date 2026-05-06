@@ -1,7 +1,7 @@
 'use client';
 
 import { format, addDays } from 'date-fns';
-import { ChevronLeft, ChevronRight, RotateCcw, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { SaveState } from '@/modules/attendance/types/bulkAttendanceTypes';
 
 interface BulkAttendanceToolbarProps {
@@ -33,6 +33,14 @@ export function BulkAttendanceToolbar({
   saveState,
   saveError,
 }: Readonly<BulkAttendanceToolbarProps>) {
+  const isCurrentWeek = (() => {
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay() + 1);
+    currentWeekStart.setHours(0, 0, 0, 0);
+    return weekStart.getTime() === currentWeekStart.getTime();
+  })();
+
   return (
     <div className="flex items-center justify-between gap-4 flex-wrap">
       {/* Left: week label + save state */}
@@ -64,13 +72,13 @@ export function BulkAttendanceToolbar({
         )}
       </div>
 
-      {/* Right: navigation controls */}
-      <div className="flex items-center gap-1 bg-canvas border border-neutral-200 rounded-md p-0.5">
+      {/* Right: iOS-style segmented control navigation */}
+      <div className="inline-flex items-center gap-0 bg-neutral-50 rounded-lg p-1">
         <button
           type="button"
           onClick={onPrev}
           aria-label="Previous week"
-          className="size-7 flex items-center justify-center rounded text-neutral-500 hover:bg-surface hover:text-neutral-900 transition-colors duration-100"
+          className="size-8 flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-900 transition-colors duration-150"
         >
           <ChevronLeft className="size-4" strokeWidth={2} />
         </button>
@@ -78,9 +86,16 @@ export function BulkAttendanceToolbar({
         <button
           type="button"
           onClick={onToday}
-          className="h-7 px-2.5 text-xs font-medium text-neutral-700 hover:bg-surface hover:text-neutral-900 rounded transition-colors duration-100 flex items-center gap-1.5"
+          disabled={isCurrentWeek}
+          className={[
+            'h-8 px-4 text-xs font-medium rounded-md transition-all duration-150 flex items-center gap-1.5',
+            isCurrentWeek
+              ? 'bg-white text-primary shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-default'
+              : 'text-neutral-700 hover:text-neutral-900',
+          ]
+            .filter(Boolean)
+            .join(' ')}
         >
-          <RotateCcw className="size-3" strokeWidth={2} />
           Today
         </button>
 
@@ -88,7 +103,7 @@ export function BulkAttendanceToolbar({
           type="button"
           onClick={onNext}
           aria-label="Next week"
-          className="size-7 flex items-center justify-center rounded text-neutral-500 hover:bg-surface hover:text-neutral-900 transition-colors duration-100"
+          className="size-8 flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-900 transition-colors duration-150"
         >
           <ChevronRight className="size-4" strokeWidth={2} />
         </button>

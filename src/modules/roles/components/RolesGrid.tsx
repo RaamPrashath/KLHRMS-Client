@@ -1,41 +1,38 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
 import { type RoleResponse } from '@/modules/roles/types/role';
 import { RoleCard } from '@/modules/roles/components/RoleCard';
 
+interface RoleAssignee {
+  memberId: string;
+  name: string;
+  image: string | null;
+}
+
 export interface RolesGridProps {
   roles: RoleResponse[];
+  peopleByRoleId?: Record<string, RoleAssignee[]>;
   onEdit: (role: RoleResponse) => void;
   onDelete: (role: RoleResponse) => void;
 }
 
-export function RolesGrid({ roles, onEdit, onDelete }: Readonly<RolesGridProps>) {
-  const shouldReduceMotion = useReducedMotion();
-
+export function RolesGrid({
+  roles,
+  peopleByRoleId = {},
+  onEdit,
+  onDelete,
+}: Readonly<RolesGridProps>) {
   return (
-    <div
-      className="grid gap-4"
-      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
-    >
-      {roles.map((role, i) => (
-        <motion.div
-          key={role.id}
-          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            type: 'spring',
-            duration: 0.35,
-            bounce: 0,
-            delay: shouldReduceMotion ? 0 : i * 0.04,
-          }}
-        >
+    <div className="bg-white border border-black/[0.03] shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl flex flex-col overflow-hidden">
+      {roles.map((role) => (
+        <div key={role.id} className="border-b border-black/[0.04] last:border-b-0">
           <RoleCard
             role={role}
+            assignees={peopleByRoleId[role.id] ?? []}
             onEdit={onEdit}
             onDelete={onDelete}
           />
-        </motion.div>
+        </div>
       ))}
     </div>
   );

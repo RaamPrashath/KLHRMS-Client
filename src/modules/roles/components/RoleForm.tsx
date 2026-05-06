@@ -91,7 +91,7 @@ export function RoleForm({
       createRole.mutate(data, {
         onSuccess: () => {
           onSuccess?.();
-          router.push(`/${orgSlug}/roles`);
+          router.push(`/${orgSlug}/permissions`);
         },
         onError: handleApiError,
       });
@@ -101,7 +101,7 @@ export function RoleForm({
         {
           onSuccess: () => {
             onSuccess?.();
-            router.push(`/${orgSlug}/roles`);
+            router.push(`/${orgSlug}/permissions`);
           },
           onError: handleApiError,
         },
@@ -113,7 +113,7 @@ export function RoleForm({
     if (onCancel) {
       onCancel();
     } else {
-      router.push(`/${orgSlug}/roles`);
+      router.push(`/${orgSlug}/permissions`);
     }
   }
 

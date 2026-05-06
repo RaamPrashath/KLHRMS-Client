@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ShieldOff, SearchX } from 'lucide-react';
 import { useRolesQuery } from '@/modules/roles/hooks/useRolesQuery';
+import { useEmployeesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { type RoleResponse } from '@/modules/roles/types/role';
 import { RolesSearchInput } from '@/modules/roles/components/RolesSearchInput';
 import { RolesGrid } from '@/modules/roles/components/RolesGrid';
@@ -66,6 +67,34 @@ export function RolesPageShell({ orgSlug, memberId }: Readonly<RolesPageShellPro
     memberId,
     search,
   );
+  const { data: employeesResponse } = useEmployeesQuery(orgSlug, memberId, {
+    page: 1,
+    pageSize: 100,
+  });
+
+  const peopleByRoleId = useMemo(() => {
+    const employees = employeesResponse?.items ?? [];
+
+    return employees.reduce<Record<string, { memberId: string; name: string; image: string | null }[]>>(
+      (acc, employee) => {
+        const roleId = employee.role?.id;
+        if (!roleId) return acc;
+
+        if (!acc[roleId]) {
+          acc[roleId] = [];
+        }
+
+        acc[roleId].push({
+          memberId: employee.member_id,
+          name: employee.name,
+          image: employee.image,
+        });
+
+        return acc;
+      },
+      {},
+    );
+  }, [employeesResponse?.items]);
 
   const roleCount = allRoles?.length ?? 0;
 
@@ -246,6 +275,7 @@ export function RolesPageShell({ orgSlug, memberId }: Readonly<RolesPageShellPro
             >
               <RolesGrid
                 roles={filteredRoles}
+                peopleByRoleId={peopleByRoleId}
                 onEdit={openEdit}
                 onDelete={(role) => setDeleteTarget(role)}
               />

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-export default async function LeavesPage({
+export default async function LegacyLeaveCalendarPage({
   params,
 }: Readonly<{
   params: Promise<{ orgSlug: string }>;
