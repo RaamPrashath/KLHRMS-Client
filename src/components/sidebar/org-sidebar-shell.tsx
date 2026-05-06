@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { type RolePermissions } from "@/lib/hrms-roles";
+import { cn } from "@/lib/utils";
 
 export interface OrgSidebarShellProps {
     readonly children: React.ReactNode;
@@ -25,6 +27,9 @@ export function OrgSidebarShell({
     permissions,
     user,
 }: OrgSidebarShellProps) {
+    const pathname = usePathname();
+    const isLeaveRoute = pathname.includes("/leaves");
+
     return (
         <div className="flex h-dvh overflow-hidden">
             <AppSidebar
@@ -35,7 +40,12 @@ export function OrgSidebarShell({
                 user={user}
             />
             <main className="flex-1 min-h-0 overflow-y-auto">
-                <div className="mx-auto w-full max-w-6xl px-6 py-8 lg:px-8">
+                <div
+                    className={cn(
+                        "w-full",
+                        isLeaveRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                    )}
+                >
                     {children}
                 </div>
             </main>

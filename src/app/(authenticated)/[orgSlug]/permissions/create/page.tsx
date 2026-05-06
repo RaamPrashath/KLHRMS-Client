@@ -32,7 +32,7 @@ export default async function CreateRolePage({
       <div className="px-6 py-6 flex flex-col gap-6 max-w-3xl">
         {/* Back link */}
         <Link
-          href={`/${orgSlug}/roles`}
+          href={`/${orgSlug}/permissions`}
           className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 transition-colors duration-100 motion-reduce:transition-none w-fit"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />

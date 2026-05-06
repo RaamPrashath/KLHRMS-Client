@@ -31,12 +31,12 @@ export default async function BulkAttendancePage({
             <div>
               <h1
                 id="bulk-attendance-heading"
-                className="text-2xl font-semibold text-neutral-900 tracking-tight"
+                className="text-2xl font-bold text-neutral-900 tracking-tight"
               >
-                Bulk Attendance
+                Weekly Focus: Your time, your way
               </h1>
-              <p className="text-sm text-neutral-500 mt-1">
-                Log your work hours for the week using the time-grid planner.
+              <p className="text-sm text-neutral-500 mt-1.5 font-light">
+                Reflect on and log your hours for the week
               </p>
             </div>
           </div>

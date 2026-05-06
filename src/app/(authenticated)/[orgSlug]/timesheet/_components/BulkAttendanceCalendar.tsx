@@ -121,26 +121,23 @@ function DayColumnHeader({ date, dayMap, onAddLog }: Readonly<DayHeaderProps>) {
       {/* Date section */}
       <div className="flex flex-col items-center pt-3 pb-2 px-1 gap-1">
         <span
-          className="text-[10px] font-semibold uppercase tracking-widest"
-          style={{ color: isToday ? 'var(--color-primary)' : 'var(--color-neutral-400)' }}
+          className={[
+            'text-[10px] font-bold uppercase tracking-widest',
+            isToday ? 'text-primary' : 'text-neutral-400',
+          ]
+            .filter(Boolean)
+            .join(' ')}
         >
           {format(date, 'EEE')}
         </span>
 
         <span
-          className="text-[18px] font-semibold leading-none flex items-center justify-center"
-          style={
-            isToday
-              ? {
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--color-primary)',
-                  color: '#fff',
-                  fontSize: 16,
-                }
-              : { color: 'var(--color-neutral-900)' }
-          }
+          className={[
+            'text-[18px] font-bold leading-none',
+            isToday ? 'text-primary' : 'text-neutral-900',
+          ]
+            .filter(Boolean)
+            .join(' ')}
         >
           {format(date, 'd')}
         </span>
@@ -150,13 +147,17 @@ function DayColumnHeader({ date, dayMap, onAddLog }: Readonly<DayHeaderProps>) {
       <div
         className="flex flex-col items-center justify-center h-9 border-t"
         style={{
-          borderTopColor: 'var(--color-neutral-100)',
-          backgroundColor: isToday ? 'var(--color-primary-ghost)' : 'var(--color-canvas)',
+          borderTopColor: 'rgba(0, 0, 0, 0.03)',
+          backgroundColor: isToday ? 'rgba(0, 135, 74, 0.04)' : 'var(--color-canvas)',
         }}
       >
         <span
-          className="font-mono text-[13px] font-semibold leading-none"
-          style={{ color: hasLogs ? 'var(--color-neutral-900)' : 'var(--color-neutral-300)' }}
+          className={[
+            'font-mono text-[13px] font-semibold leading-none',
+            hasLogs ? 'text-primary' : 'text-neutral-300',
+          ]
+            .filter(Boolean)
+            .join(' ')}
         >
           {formatMins(totalMins)}
         </span>
@@ -194,7 +195,7 @@ function TimeGutterHeader({ totalWeekLabel }: Readonly<GutterHeaderProps>) {
       {/* Week total — aligns with the per-day total row */}
       <div
         className="flex flex-col items-center justify-center h-9 border-t"
-        style={{ borderTopColor: 'var(--color-neutral-100)' }}
+        style={{ borderTopColor: 'rgba(0, 0, 0, 0.03)' }}
       >
         <span
           className="font-mono text-[13px] font-semibold"
@@ -309,8 +310,11 @@ export function BulkAttendanceCalendar({
 
   return (
     <div
-      className="border border-neutral-100 rounded-xl overflow-hidden"
-      style={{ backgroundColor: 'var(--color-surface)', boxShadow: 'var(--shadow-1)' }}
+      className="border border-black/[0.03] rounded-2xl overflow-hidden"
+      style={{ 
+        backgroundColor: 'var(--color-surface)', 
+        boxShadow: '0 8px 30px rgb(0,0,0,0.04)'
+      }}
     >
       <style>{`
         /* ── Reset & base ── */
@@ -318,6 +322,7 @@ export function BulkAttendanceCalendar({
           font-family: var(--font-sans) !important;
           background: transparent !important;
           color: var(--color-neutral-900) !important;
+          height: 100% !important;
         }
 
         /* ── Time view shell ── */
@@ -325,18 +330,21 @@ export function BulkAttendanceCalendar({
           border: none !important;
           display: flex;
           flex-direction: column;
+          height: 100% !important;
         }
 
         /* ── Header area ── */
         .rbc-time-header {
-          border-bottom: 1px solid var(--color-neutral-100) !important;
-          align-items: stretch !important;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
           background: var(--color-canvas) !important;
+          flex-shrink: 0 !important;
+        }
+        .rbc-time-header.rbc-overflowing {
+          border-right: none !important;
         }
         .rbc-time-header-gutter {
           background: var(--color-canvas) !important;
-          border-right: 1px solid var(--color-neutral-100) !important;
-          flex-shrink: 0;
+          border-right: 1px solid rgba(0, 0, 0, 0.03) !important;
         }
         .rbc-time-header-content {
           border-left: none !important;
@@ -344,17 +352,14 @@ export function BulkAttendanceCalendar({
 
         /* ── Column headers ── */
         .rbc-header {
-          height: 100% !important;
           border-bottom: none !important;
           padding: 0 !important;
           background: var(--color-canvas) !important;
-          border-left: 1px solid var(--color-neutral-100) !important;
           overflow: visible !important;
         }
-        .rbc-header:first-child {
-          border-left: none !important;
+        .rbc-header + .rbc-header {
+          border-left: 1px solid rgba(0, 0, 0, 0.03) !important;
         }
-        /* RBC wraps headers in a button — strip all button styles */
         .rbc-header > button {
           all: unset;
           display: block !important;
@@ -363,28 +368,25 @@ export function BulkAttendanceCalendar({
           cursor: default !important;
         }
 
-        /* ── All-day row — hide it, we don't use it ── */
+        /* ── All-day row ── */
         .rbc-allday-cell { display: none !important; }
         .rbc-time-header-content > .rbc-row.rbc-row-resource { display: none !important; }
 
         /* ── Time body ── */
         .rbc-time-content {
           border-top: none !important;
-          flex: 1;
-          overflow-y: auto;
-          scrollbar-width: thin;
-          scrollbar-color: var(--color-neutral-200) transparent;
+          flex: 1 !important;
+          overflow-y: scroll !important;
+          scrollbar-width: none !important;
         }
-        .rbc-time-content::-webkit-scrollbar { width: 6px; }
-        .rbc-time-content::-webkit-scrollbar-thumb {
-          background: var(--color-neutral-200);
-          border-radius: 9999px;
+        .rbc-time-content::-webkit-scrollbar {
+          display: none !important;
         }
 
-        /* ── Time gutter (labels) ── */
+        /* ── Time gutter ── */
         .rbc-time-gutter {
           background: var(--color-canvas) !important;
-          border-right: 1px solid var(--color-neutral-100) !important;
+          border-right: 1px solid rgba(0, 0, 0, 0.03) !important;
         }
         .rbc-label {
           font-size: 11px !important;
@@ -396,27 +398,29 @@ export function BulkAttendanceCalendar({
 
         /* ── Slot rows ── */
         .rbc-timeslot-group {
-          border-bottom: 1px solid var(--color-neutral-100) !important;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
           min-height: 48px !important;
         }
         .rbc-time-slot {
-          border-top: 1px solid var(--color-neutral-50) !important;
+          border-top: 1px solid rgba(0, 0, 0, 0.015) !important;
         }
-        .rbc-day-slot {
-          border-left: 1px solid var(--color-neutral-100) !important;
-        }
-        .rbc-day-slot .rbc-time-slot {
-          border-top: 1px solid var(--color-neutral-50) !important;
+
+        /* ── Column dividers ── */
+        .rbc-time-content > * + * > * {
+          border-left: 1px solid rgba(0, 0, 0, 0.03) !important;
         }
 
         /* ── Today column ── */
-        .rbc-today { background: var(--color-primary-ghost) !important; }
+        .rbc-today { 
+          background: rgba(0, 135, 74, 0.02) !important; 
+        }
 
         /* ── Current time indicator ── */
         .rbc-current-time-indicator {
-          background-color: var(--color-primary) !important;
+          background-color: #00874A !important;
           height: 2px !important;
           border-radius: 9999px !important;
+          opacity: 0.6 !important;
         }
         .rbc-current-time-indicator::before {
           content: '';
@@ -426,7 +430,8 @@ export function BulkAttendanceCalendar({
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: var(--color-primary);
+          background: #00874A;
+          opacity: 1;
         }
 
         /* ── Events ── */
@@ -453,8 +458,8 @@ export function BulkAttendanceCalendar({
 
         /* ── Slot selection ── */
         .rbc-slot-selection {
-          background: var(--color-primary-ghost) !important;
-          border: 1px dashed var(--color-primary-subtle) !important;
+          background: rgba(0, 135, 74, 0.08) !important;
+          border: 1px dashed rgba(0, 135, 74, 0.3) !important;
           border-radius: 4px !important;
         }
 
@@ -479,7 +484,7 @@ export function BulkAttendanceCalendar({
           display: block;
           width: 20px;
           height: 2px;
-          background: var(--color-primary);
+          background: #00874A;
           border-radius: 2px;
           opacity: 0.5;
         }
@@ -510,7 +515,7 @@ export function BulkAttendanceCalendar({
         onEventDrop={handleEventDrop}
         onEventResize={handleEventResize}
         components={components}
-        style={{ height: 680 }}
+        className="h-[680px]"
         formats={{
           timeGutterFormat: 'HH:mm',
           eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>

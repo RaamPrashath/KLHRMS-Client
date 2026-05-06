@@ -37,46 +37,40 @@ export function BulkAttendanceEvent({
       className={[
         'group relative h-full w-full overflow-hidden cursor-pointer select-none',
         'transition-all duration-150',
+        'border border-border rounded-lg',
+        'bg-green-500/5',
+        'hover:border-primary/40 hover:shadow-sm hover:bg-green-500/8',
         isOptimistic ? 'opacity-60' : '',
       ]
         .filter(Boolean)
         .join(' ')}
-      style={{
-        backgroundColor: 'var(--color-info-bg)',
-        borderLeft: '2px solid var(--color-info-text)',
-        color: 'var(--color-neutral-900)',
-      }}
       role="button"
       tabIndex={0}
       aria-label={`${title ?? 'Work log'} ${startStr}–${endStr}`}
       onClick={() => onEdit(event)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onEdit(event); }}
     >
-      <div className="px-2 py-1 h-full flex flex-col">
+      <div className="px-3 py-2 h-full flex flex-col gap-1">
         {/* Time + duration */}
-        <p
-          className="font-mono text-[10px] leading-tight truncate font-medium"
-          style={{ color: 'var(--color-info-text)' }}
-        >
-          {startStr}–{endStr} · {durationLabel}
-        </p>
+        <div className="flex items-baseline gap-2">
+          <p className="font-mono text-xs leading-tight font-medium text-foreground">
+            {startStr} - {endStr}
+          </p>
+          <p className="font-mono text-xs leading-tight font-medium text-muted-foreground">
+            {durationLabel}
+          </p>
+        </div>
 
         {/* Title */}
         {title && (
-          <p
-            className="text-[11px] font-semibold leading-tight truncate mt-0.5"
-            style={{ color: 'var(--color-neutral-900)' }}
-          >
+          <p className="text-sm font-semibold leading-tight text-foreground line-clamp-1">
             {title}
           </p>
         )}
 
         {/* Notes */}
         {notes && (
-          <p
-            className="text-[10px] leading-tight truncate mt-0.5"
-            style={{ color: 'var(--color-neutral-500)' }}
-          >
+          <p className="text-xs leading-relaxed text-muted-foreground break-words line-clamp-3">
             {notes}
           </p>
         )}
@@ -91,7 +85,7 @@ export function BulkAttendanceEvent({
           type="button"
           aria-label="Edit work log"
           onClick={(e) => { e.stopPropagation(); onEdit(event); }}
-          className="size-5 flex items-center justify-center rounded-sm bg-white/80 backdrop-blur-sm text-neutral-500 hover:text-primary transition-colors duration-100"
+          className="size-5 flex items-center justify-center rounded-sm bg-white/90 backdrop-blur-sm text-neutral-500 hover:text-primary transition-colors duration-100 shadow-sm"
         >
           <Pencil className="size-2.5" strokeWidth={2} />
         </button>
@@ -99,7 +93,7 @@ export function BulkAttendanceEvent({
           type="button"
           aria-label="Delete work log"
           onClick={(e) => { e.stopPropagation(); onDelete(event); }}
-          className="size-5 flex items-center justify-center rounded-sm bg-white/80 backdrop-blur-sm text-neutral-500 hover:text-destructive-text transition-colors duration-100"
+          className="size-5 flex items-center justify-center rounded-sm bg-white/90 backdrop-blur-sm text-neutral-500 hover:text-destructive-text transition-colors duration-100 shadow-sm"
         >
           <Trash2 className="size-2.5" strokeWidth={2} />
         </button>

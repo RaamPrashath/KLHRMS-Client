@@ -1,167 +1,127 @@
 'use client';
 
-import { Pencil, Trash2, ShieldCheck } from 'lucide-react';
-import { type RoleResponse, type RolePermissions } from '@/modules/roles/types/role';
+import { Shield, UserCog, Users } from 'lucide-react';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+  AvatarImage,
+} from '@/components/ui/avatar';
+import { type RoleResponse } from '@/modules/roles/types/role';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-interface ModulePermissions {
-  module: string;
-  actions: Array<{ action: string; scope: string }>;
+interface RoleAssignee {
+  memberId: string;
+  name: string;
+  image: string | null;
 }
-
-function deriveModuleGroups(permissions: RolePermissions): ModulePermissions[] {
-  return Object.entries(permissions)
-    .map(([module, actions]) => ({
-      module,
-      actions: Object.entries(actions)
-        .filter(([, scope]) => scope !== 'none')
-        .map(([action, scope]) => ({ action, scope })),
-    }))
-    .filter((g) => g.actions.length > 0);
-}
-
-function toTitleCase(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function getScopePillClasses(scope: string): string {
-  switch (scope) {
-    case 'organization':
-      return 'bg-primary-subtle text-primary';
-    case 'department':
-      return 'bg-warning-bg text-warning-text';
-    case 'team':
-      return 'bg-info-bg text-info-text';
-    case 'self':
-      return 'bg-neutral-50 text-neutral-500 border border-neutral-200';
-    default:
-      return 'bg-surface-muted text-neutral-400';
-  }
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export interface RoleCardProps {
   role: RoleResponse;
+  assignees?: RoleAssignee[];
   onEdit: (role: RoleResponse) => void;
   onDelete: (role: RoleResponse) => void;
 }
 
-const MAX_VISIBLE_MODULES = 3;
+function getRoleIcon(roleName: string) {
+  const normalizedRole = roleName.toLowerCase();
 
-export function RoleCard({ role, onEdit, onDelete }: Readonly<RoleCardProps>) {
-  const allPills = deriveModuleGroups(role.permissions);
-  const visibleGroups = allPills.slice(0, MAX_VISIBLE_MODULES);
-  const hiddenCount = allPills.length - MAX_VISIBLE_MODULES;
-  const totalPermissions = allPills.reduce((sum, g) => sum + g.actions.length, 0);
+  if (
+    normalizedRole.includes('owner') ||
+    normalizedRole.includes('admin') ||
+    normalizedRole.includes('security')
+  ) {
+    return Shield;
+  }
 
-  const permissionSuffix = totalPermissions === 1 ? '' : 's';
-  const moduleSuffix = allPills.length === 1 ? '' : 's';
-  const permissionSummary =
-    totalPermissions === 0
-      ? 'No permissions'
-      : `${totalPermissions} permission${permissionSuffix} across ${allPills.length} module${moduleSuffix}`;
-  const hiddenSuffix = hiddenCount === 1 ? '' : 's';
+  if (
+    normalizedRole.includes('manager') ||
+    normalizedRole.includes('lead') ||
+    normalizedRole.includes('hr')
+  ) {
+    return UserCog;
+  }
+
+  return Users;
+}
+
+function renderRoleIcon(roleName: string) {
+  const Icon = getRoleIcon(roleName);
+  return <Icon className="size-[18px] text-primary" strokeWidth={1.9} aria-hidden="true" />;
+}
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+export function RoleCard({ role, assignees = [], onEdit }: Readonly<RoleCardProps>) {
+  const visibleAssignees = assignees.slice(0, 3);
+  const remainingAssigneeCount = Math.max(assignees.length - visibleAssignees.length, 0);
 
   return (
-    <article
-      className="
-        group
-        bg-surface border border-neutral-100 rounded-xl
-        shadow-(--shadow-1) hover:shadow-(--shadow-2)
-        hover:border-neutral-200
-        transition-all duration-150 motion-reduce:transition-none
-        flex flex-col overflow-hidden
-      "
-    >
-      {/* Card header */}
-      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="size-8 rounded-lg bg-primary-ghost flex items-center justify-center shrink-0">
-            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-neutral-900 leading-snug truncate">
-              {role.name}
-            </h3>
-            <p className="text-xs text-neutral-400 mt-0.5">
-              {permissionSummary}
-            </p>
-          </div>
+    <div className="group flex items-center justify-between gap-6 px-6 py-6 transition-colors hover:bg-[#00874A]/[0.02]">
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#00874A]/[0.04]">
+          {renderRoleIcon(role.name)}
         </div>
-
-        {/* Action buttons — visible on hover */}
-        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-100 motion-reduce:opacity-100">
-          <button
-            type="button"
-            onClick={() => onEdit(role)}
-            aria-label={`Edit ${role.name} role`}
-            className="
-              size-7 flex items-center justify-center rounded-md
-              text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50
-              active:scale-95
-              transition-all duration-100 motion-reduce:transition-none
-            "
-          >
-            <Pencil className="size-3.5" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(role)}
-            aria-label={`Delete ${role.name} role`}
-            className="
-              size-7 flex items-center justify-center rounded-md
-              text-neutral-400 hover:text-destructive-text hover:bg-destructive-bg
-              active:scale-95
-              transition-all duration-100 motion-reduce:transition-none
-            "
-          >
-            <Trash2 className="size-3.5" aria-hidden="true" />
-          </button>
+        <div className="min-w-0">
+          <h3 className="truncate font-sans text-[15px] font-medium text-neutral-900">
+            {role.name}
+          </h3>
         </div>
       </div>
 
-      {/* Divider */}
-      {allPills.length > 0 && (
-        <div className="h-px bg-neutral-100 mx-4" />
-      )}
-
-      {/* Module permission groups */}
-      {allPills.length > 0 ? (
-        <div className="px-4 py-3 flex flex-col gap-2.5">
-          {visibleGroups.map((group) => (
-            <div key={group.module} className="flex items-start gap-2">
-              <span className="text-[11px] font-medium text-neutral-400 tracking-wide w-20 shrink-0 pt-0.5 capitalize">
-                {group.module}
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {group.actions.map(({ action, scope }) => (
-                  <span
-                    key={`${group.module}-${action}`}
-                    className={`
-                      text-[11px] font-medium rounded-full px-1.5 py-0.5
-                      ${getScopePillClasses(scope)}
-                    `}
-                  >
-                    {toTitleCase(action)}
-                  </span>
-                ))}
-              </div>
+      <div className="flex shrink-0 items-center gap-4">
+        {assignees.length > 0 ? (
+          assignees.length === 1 ? (
+            <div className="flex items-center gap-3">
+              <Avatar size="sm" className="ring-1 ring-black/[0.04]">
+                <AvatarImage src={assignees[0].image ?? undefined} alt={assignees[0].name} />
+                <AvatarFallback className="bg-[#00874A]/[0.08] text-[11px] font-medium text-primary">
+                  {getInitials(assignees[0].name)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm text-neutral-500">{assignees[0].name}</span>
             </div>
-          ))}
+          ) : (
+            <div className="flex items-center gap-3">
+              <AvatarGroup>
+                {visibleAssignees.map((assignee) => (
+                  <Avatar key={assignee.memberId} size="sm" className="ring-1 ring-white">
+                    <AvatarImage src={assignee.image ?? undefined} alt={assignee.name} />
+                    <AvatarFallback className="bg-[#00874A]/[0.08] text-[11px] font-medium text-primary">
+                      {getInitials(assignee.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+                {remainingAssigneeCount > 0 ? (
+                  <AvatarGroupCount className="size-6 bg-neutral-50 text-[11px] font-medium text-neutral-500">
+                    +{remainingAssigneeCount}
+                  </AvatarGroupCount>
+                ) : null}
+              </AvatarGroup>
+              <span className="text-sm text-neutral-500">
+                {assignees.length} people
+              </span>
+            </div>
+          )
+        ) : (
+          <span className="text-sm text-neutral-400">No one assigned yet</span>
+        )}
 
-          {hiddenCount > 0 && (
-            <p className="text-[11px] text-neutral-400 font-medium">
-              +{hiddenCount} more module{hiddenSuffix}
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="px-4 py-3">
-          <p className="text-xs text-neutral-400 italic">No permissions configured</p>
-        </div>
-      )}
-    </article>
+        <button
+          type="button"
+          onClick={() => onEdit(role)}
+          className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-medium text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] transition-all hover:bg-[#00874A]/[0.05] hover:text-primary focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+        >
+          Edit Role
+        </button>
+      </div>
+    </div>
   );
 }
