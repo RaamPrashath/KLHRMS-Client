@@ -1,63 +1,63 @@
 "use client";
 
-import { addDays, addWeeks, format, getISOWeek, getISOWeekYear, startOfISOWeek } from "date-fns";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getWeekRangeLabel, getWeekStart } from "@/modules/weekly-plan/date";
 
-export interface WeekNavigatorProps {
+interface WeekNavigatorProps {
   year: number;
   week: number;
-  onChange: (year: number, week: number) => void;
+  onPrevious: () => void;
+  onNext: () => void;
 }
 
-function getMondayOfISOWeek(year: number, week: number): Date {
-  const jan4 = new Date(year, 0, 4);
-  const week1Monday = startOfISOWeek(jan4);
-  return addWeeks(week1Monday, week - 1);
-}
-
-export function WeekNavigator({ year, week, onChange }: WeekNavigatorProps) {
-  const monday = getMondayOfISOWeek(year, week);
-  const friday = addDays(monday, 4);
-
-  const monthLabel = format(monday, "MMMM yyyy");
-  const rangeLabel = `${format(monday, "MMM d")} – ${format(friday, "d")}`;
-
-  function go(delta: number) {
-    const nextMonday = addWeeks(monday, delta);
-    onChange(getISOWeekYear(nextMonday), getISOWeek(nextMonday));
-  }
-
+export function WeekNavigator({
+  year,
+  week,
+  onPrevious,
+  onNext,
+}: WeekNavigatorProps) {
   return (
-    <div className="flex items-center gap-1.5">
-      {/* Month label */}
-      <div className="flex items-center gap-2 mr-2">
-        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-semibold text-foreground">{monthLabel}</span>
-        <span className="text-xs text-muted-foreground font-medium">
-          ({rangeLabel})
-        </span>
+    <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-foreground/5 text-foreground border border-foreground/5 shadow-sm">
+          <CalendarDays className="h-5 w-5" />
+        </div>
+        <div className="flex flex-col">
+          <span className="text-lg font-bold text-foreground leading-tight tracking-tight">
+            {getWeekStart(year, week).toLocaleString("en-US", {
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground/60 mt-0.5">
+            Week {week} · {getWeekRangeLabel(year, week)}
+          </span>
+        </div>
       </div>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 rounded-full hover:bg-muted"
-        onClick={() => go(-1)}
-        aria-label="Previous week"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 rounded-full hover:bg-muted"
-        onClick={() => go(1)}
-        aria-label="Next week"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
+      <div className="ml-2 flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-full"
+          onClick={onPrevious}
+          aria-label="Previous week"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-full"
+          onClick={onNext}
+          aria-label="Next week"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

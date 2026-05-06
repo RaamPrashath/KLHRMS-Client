@@ -182,17 +182,21 @@ export const SidebarLink = ({
       href={link.href}
       onClick={onClick}
       className={cn(
-        "flex items-center justify-start gap-2 group/sidebar py-2 px-2 rounded-md transition-colors duration-150 relative",
+        "flex items-center justify-start gap-3 group/sidebar py-2 px-3 rounded-xl transition-all duration-200 relative overflow-hidden",
         isActive
-          ? "bg-[rgba(0,135,74,0.08)] text-[var(--color-sidebar-active-text)] font-medium before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:rounded-full before:bg-[var(--color-sidebar-active-border)]"
-          : "text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-hover)] hover:bg-[rgba(255,255,255,0.05)]",
+          ? "bg-white/10 text-white font-medium"
+          : "text-white/50 hover:text-white hover:bg-white/5",
         className
       )}
       {...props}
     >
-      {link.icon}
+      <div className={cn(
+        "shrink-0 transition-colors duration-200",
+        isActive ? "text-primary" : "text-white/40 group-hover/sidebar:text-white/70"
+      )}>
+        {link.icon}
+      </div>
 
-      {/* Clip container — width collapses to 0, no display toggling */}
       <motion.span
         aria-hidden={!open}
         initial={false}
@@ -205,17 +209,15 @@ export const SidebarLink = ({
             ? { duration: 0 }
             : open
             ? {
-                // Expanding: width first, then opacity fades in
                 opacity: { duration: 0.14, delay: 0.1, ease: "easeOut" },
                 width: { duration: 0.22, ease: [0.4, 0, 0.2, 1] },
               }
             : {
-                // Collapsing: opacity fades first, then width collapses
                 opacity: { duration: 0.1, ease: "easeIn" },
                 width: { duration: 0.22, delay: 0.06, ease: [0.4, 0, 0.2, 1] },
               }
         }
-        className="text-sm whitespace-nowrap overflow-hidden inline-block !p-0 !m-0"
+        className="text-[13.5px] truncate tracking-tight overflow-hidden inline-block"
       >
         {link.label}
       </motion.span>
@@ -254,7 +256,7 @@ export const SidebarLabel = ({
             }
       }
       className={cn(
-        "overflow-hidden px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-sidebar-label)]",
+        "overflow-hidden px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/30",
         className
       )}
     >

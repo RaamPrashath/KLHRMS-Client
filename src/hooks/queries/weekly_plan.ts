@@ -1,59 +1,166 @@
 "use client";
 
-/**
- * weekly_plan — Layer 2a query hooks.
- *
- * orgSlug  — used only in the query key (for cache scoping)
- * orgId    — the org UUID sent to FastAPI via x-organization-id header
- */
-
 import { useQuery } from "@tanstack/react-query";
 import { useApiClient } from "@/hooks/useApiClient";
 import {
+  fetchMyMonthlyPlan,
   fetchMyWeeklyPlan,
+  fetchPlanLocations,
   fetchTeamWeeklyPlan,
+  type PlanApiAuth,
 } from "@/hooks/functions/weekly_plan";
+import { FALLBACK_PLAN_LOCATIONS } from "@/modules/weekly-plan/locations";
 
-// ── Query key factories ───────────────────────────────────────────────────────
+export const weeklyPlanKeys = {
+  all: ["weekly_plan"] as const,
+  locations: (orgSlug: string) =>
+    [...weeklyPlanKeys.all, "locations", orgSlug] as const,
+  myWeek: (orgSlug: string, year: number, week: number) =>
+    [...weeklyPlanKeys.all, "my-week", orgSlug, year, week] as const,
+  teamWeek: (orgSlug: string, year: number, week: number) =>
+    [...weeklyPlanKeys.all, "team-week", orgSlug, year, week] as const,
+  myMonth: (orgSlug: string, year: number, month: number) =>
+    [...weeklyPlanKeys.all, "my-month", orgSlug, year, month] as const,
+};
 
-export const WEEKLY_PLAN_MY_KEY = (
+function makePlanAuth(
+  token: string | undefined,
+  orgSlug: string,
+  memberId: string,
+): PlanApiAuth | null {
+  if (!token || !orgSlug || !memberId) return null;
+  return { token, orgSlug, memberId };
+}
+
+export function getPlanLocationsQueryOptions(auth: PlanApiAuth | null, orgSlug: string) {
+  return {
+    queryKey: weeklyPlanKeys.locations(orgSlug),
+    queryFn: async () => {
+      if (!auth) return FALLBACK_PLAN_LOCATIONS;
+      return fetchPlanLocations(auth).catch(() => FALLBACK_PLAN_LOCATIONS);
+    },
+    enabled: !!orgSlug,
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
+  } as const;
+}
+
+export function getMyWeeklyPlanQueryOptions(
+  auth: PlanApiAuth | null,
   orgSlug: string,
   year: number,
   week: number,
-) => ["weekly_plan", "my", orgSlug, year, week] as const;
+) {
+  return {
+    queryKey: weeklyPlanKeys.myWeek(orgSlug, year, week),
+    queryFn: () => fetchMyWeeklyPlan(auth!, year, week),
+    enabled: !!auth,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  } as const;
+}
 
-export const WEEKLY_PLAN_TEAM_KEY = (
+export function getTeamWeeklyPlanQueryOptions(
+  auth: PlanApiAuth | null,
   orgSlug: string,
   year: number,
   week: number,
-) => ["weekly_plan", "team", orgSlug, year, week] as const;
+) {
+  return {
+    queryKey: weeklyPlanKeys.teamWeek(orgSlug, year, week),
+    queryFn: () => fetchTeamWeeklyPlan(auth!, year, week),
+    enabled: !!auth,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 15,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  } as const;
+}
 
-// ── Hooks ─────────────────────────────────────────────────────────────────────
+export function getMyMonthlyPlanQueryOptions(
+  auth: PlanApiAuth | null,
+  orgSlug: string,
+  year: number,
+  month: number,
+) {
+  return {
+    queryKey: weeklyPlanKeys.myMonth(orgSlug, year, month),
+    queryFn: () => fetchMyMonthlyPlan(auth!, year, month),
+    enabled: !!auth,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 45,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  } as const;
+}
+
+export function usePlanLocationsQuery(orgSlug: string, orgId: string, memberId: string) {
+  const auth = useApiClient(orgId);
+  return useQuery(
+    getPlanLocationsQueryOptions(
+      makePlanAuth(auth?.token, orgSlug, memberId),
+      orgSlug,
+    ),
+  );
+}
 
 export function useMyWeeklyPlanQuery(
   orgSlug: string,
   orgId: string,
+  memberId: string,
   year: number,
   week: number,
 ) {
   const auth = useApiClient(orgId);
-  return useQuery({
-    queryKey: WEEKLY_PLAN_MY_KEY(orgSlug, year, week),
-    queryFn: () => fetchMyWeeklyPlan(auth!.token, auth!.orgId, year, week),
-    enabled: !!auth,
-  });
+  return useQuery(
+    getMyWeeklyPlanQueryOptions(
+      makePlanAuth(auth?.token, orgSlug, memberId),
+      orgSlug,
+      year,
+      week,
+    ),
+  );
 }
 
 export function useTeamWeeklyPlanQuery(
   orgSlug: string,
   orgId: string,
+  memberId: string,
   year: number,
   week: number,
+  enabled = true,
 ) {
   const auth = useApiClient(orgId);
-  return useQuery({
-    queryKey: WEEKLY_PLAN_TEAM_KEY(orgSlug, year, week),
-    queryFn: () => fetchTeamWeeklyPlan(auth!.token, auth!.orgId, year, week),
-    enabled: !!auth,
-  });
+  return useQuery(
+    {
+      ...getTeamWeeklyPlanQueryOptions(
+        makePlanAuth(auth?.token, orgSlug, memberId),
+        orgSlug,
+        year,
+        week,
+      ),
+      enabled: enabled && !!auth,
+    },
+  );
+}
+
+export function useMyMonthlyPlanQuery(
+  orgSlug: string,
+  orgId: string,
+  memberId: string,
+  year: number,
+  month: number,
+) {
+  const auth = useApiClient(orgId);
+  return useQuery(
+    getMyMonthlyPlanQueryOptions(
+      makePlanAuth(auth?.token, orgSlug, memberId),
+      orgSlug,
+      year,
+      month,
+    ),
+  );
 }

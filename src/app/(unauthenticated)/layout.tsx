@@ -1,81 +1,60 @@
 import type { ReactNode } from "react";
-import { CheckCircle2 } from "lucide-react";
+import Image from "next/image";
 
 interface UnauthenticatedLayoutProps {
     children: ReactNode;
 }
 
-const features = [
-    "Real-time attendance tracking",
-    "Leave and approval workflows",
-    "Payroll and compliance",
-];
-
 export default function UnauthenticatedLayout({ children }: UnauthenticatedLayoutProps) {
     return (
-        <div className="min-h-screen flex">
-            {/* ── Left panel ─────────────────────────────────────────── */}
+        <div className="min-h-screen flex bg-background">
+            {/* ── Left panel (The Museum Gallery) ───────────────────── */}
             <aside
-                className="hidden lg:flex lg:w-[480px] xl:w-[520px] shrink-0 flex-col justify-between bg-[var(--color-sidebar-bg)] px-12 py-10"
+                className="hidden lg:flex lg:w-1/2 shrink-0 relative overflow-hidden bg-secondary"
             >
-                {/* Logo */}
-                <div className="flex items-center gap-2.5">
-                    <div
-                        className="size-8 rounded-lg bg-primary flex items-center justify-center shrink-0"
-                        aria-hidden="true"
-                    >
-                        {/* 2×2 grid mark — Kovan Labs brand */}
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <rect x="2" y="2" width="5" height="5" rx="1" fill="white" />
-                            <rect x="9" y="2" width="5" height="5" rx="1" fill="white" fillOpacity="0.7" />
-                            <rect x="2" y="9" width="5" height="5" rx="1" fill="white" fillOpacity="0.7" />
-                            <rect x="9" y="9" width="5" height="5" rx="1" fill="white" fillOpacity="0.4" />
-                        </svg>
+                {/* Background Image */}
+                <Image 
+                    src="/login_bg_museum_1778047797888.png" 
+                    alt="Museum Gallery" 
+                    fill
+                    priority
+                    className="object-cover"
+                />
+                {/* Overlay for depth */}
+                <div className="absolute inset-0 bg-black/5" />
+
+                {/* Logo Focus */}
+                <div className="relative z-10 w-full h-full flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-6">
+                        <div
+                            className="size-16 rounded-2xl bg-white shadow-2xl flex items-center justify-center transition-transform hover:scale-105 duration-500"
+                            aria-hidden="true"
+                        >
+                            {/* 2×2 grid mark — Kovan Labs brand */}
+                            <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
+                                <rect x="2" y="2" width="5" height="5" rx="1" fill="var(--primary)" />
+                                <rect x="9" y="2" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.7" />
+                                <rect x="2" y="9" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.7" />
+                                <rect x="9" y="9" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.4" />
+                            </svg>
+                        </div>
+                        <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">
+                            Kovan Labs
+                        </h1>
                     </div>
-                    <span className="text-sm font-semibold text-[var(--color-sidebar-text-hover)] tracking-tight">
-                        Kovan Labs
-                    </span>
                 </div>
 
-                {/* Hero copy */}
-                <div className="space-y-7">
-                    <div className="space-y-3">
-                        <h2 className="text-[2.25rem] font-semibold leading-[1.12] tracking-[-0.04em] text-[var(--color-sidebar-text-hover)]">
-                            People operations,{" "}
-                            <span className="text-primary-light">simplified.</span>
-                        </h2>
-                        <p className="text-sm text-[var(--color-sidebar-text)] leading-relaxed max-w-[300px]">
-                            Attendance, payroll, and team management in one place.
-                        </p>
-                    </div>
-
-                    <ul className="space-y-3.5" role="list">
-                        {features.map((feature) => (
-                            <li key={feature} className="flex items-center gap-2.5">
-                                <CheckCircle2
-                                    className="size-4 shrink-0 text-primary-light"
-                                    strokeWidth={2}
-                                    aria-hidden="true"
-                                />
-                                <span className="text-[13px] text-[var(--color-sidebar-text)]">
-                                    {feature}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-
-                {/* Footer */}
-                <p className="text-xs text-[var(--color-sidebar-label)]">
+                {/* Subtle legal anchor */}
+                <p className="absolute bottom-10 left-12 text-xs text-white/60 font-medium">
                     &copy; {new Date().getFullYear()} Kovan Labs. All rights reserved.
                 </p>
             </aside>
 
-            {/* ── Right panel ────────────────────────────────────────── */}
+            {/* ── Right panel (The Interaction Surface) ─────────────── */}
             <main
-                className="flex flex-1 flex-col items-center justify-center min-h-screen px-6 py-12 bg-canvas"
+                className="flex flex-1 flex-col items-center justify-center min-h-screen px-6 py-12 lg:px-20"
             >
-                <div className="w-full max-w-[400px]">
+                <div className="w-full max-w-[420px] transition-all duration-700 animate-in fade-in slide-in-from-bottom-4">
                     {children}
                 </div>
             </main>

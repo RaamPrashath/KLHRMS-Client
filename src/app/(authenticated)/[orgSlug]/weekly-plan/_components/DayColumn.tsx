@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, type ChangeEvent } from "react";
 import {
   Select,
   SelectContent,
@@ -7,150 +8,104 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import {
-  WorkLocationType,
-  WORK_LOCATION_LABELS,
-} from "@/types/weekly_plan";
-import { Home, Building2, Blend, Palmtree, Sun, Plus } from "lucide-react";
+import type { PlanLocationOption, PlanLocationValue } from "@/types/weekly_plan";
+import { PLAN_LOCATION_THEMES } from "@/types/weekly_plan";
 
 export interface DayDraft {
-  work_location: WorkLocationType | "";
+  work_location: PlanLocationValue | "";
   project: string;
 }
 
-export interface DayColumnProps {
+interface DayColumnProps {
   date: string;
   dayLabel: string;
   draft: DayDraft;
+  locations: PlanLocationOption[];
   readOnly?: boolean;
-  onChange?: (date: string, draft: DayDraft) => void;
   isToday?: boolean;
+  onChange?: (date: string, draft: DayDraft) => void;
 }
 
-const LOCATION_OPTIONS = Object.values(WorkLocationType) as WorkLocationType[];
-
-// Planner-style bucket colors — each location gets a distinct hue
-const LOCATION_BUCKET: Record<WorkLocationType, {
-  bg: string;
-  text: string;
-  border: string;
-  dot: string;
-  icon: React.ElementType;
-}> = {
-  home:    { bg: "bg-sky-50",    text: "text-sky-700",    border: "border-sky-200",    dot: "bg-sky-500",    icon: Home },
-  office:  { bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-200", dot: "bg-violet-500", icon: Building2 },
-  hybrid:  { bg: "bg-emerald-50",text: "text-emerald-700",border: "border-emerald-200",dot: "bg-emerald-500",icon: Blend },
-  leave:   { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200",  dot: "bg-amber-500",  icon: Palmtree },
-  holiday: { bg: "bg-rose-50",   text: "text-rose-700",   border: "border-rose-200",   dot: "bg-rose-500",   icon: Sun },
-};
-
-export function DayColumn({
+export const DayColumn = memo(function DayColumn({
   date,
   dayLabel,
   draft,
+  locations,
   readOnly = false,
-  onChange,
   isToday = false,
+  onChange,
 }: DayColumnProps) {
-  const hasLocation = draft.work_location !== "";
-  const bucket = hasLocation ? LOCATION_BUCKET[draft.work_location as WorkLocationType] : null;
-  const LocationIcon = bucket?.icon;
+  const location = draft.work_location || null;
+  const theme = location ? PLAN_LOCATION_THEMES[location] : null;
 
   function handleLocationChange(value: string) {
-    onChange?.(date, { ...draft, work_location: value as WorkLocationType });
-  }
-
-  function handleProjectChange(e: React.ChangeEvent<HTMLInputElement>) {
-    onChange?.(date, { ...draft, project: e.target.value });
+    onChange?.(date, {
+      ...draft,
+      work_location: value as PlanLocationValue,
+    });
   }
 
   return (
-    <div className="flex flex-col gap-0 min-w-0">
-      {/* ── Day header — Planner bucket style ── */}
+    <div className="flex min-w-0 flex-col">
       <div
         className={cn(
-          "rounded-t-lg px-3 py-2.5 flex items-center justify-between",
-          hasLocation && bucket
-            ? `${bucket.bg} ${bucket.border} border-b-0 border`
-            : "bg-muted/50 border border-border border-b-0",
+          "rounded-t-[20px] border border-b-0 px-4 py-3 transition-colors duration-300",
+          theme ? `${theme.bg} ${theme.border}` : "border-border bg-muted/40",
         )}
       >
-        <div className="flex items-center gap-2 min-w-0">
-
-          <div className="flex flex-col min-w-0">
-            <span
-              className={cn(
-                "text-[11px] font-bold uppercase tracking-widest leading-none",
-                isToday ? "text-foreground" : "text-muted-foreground",
-              )}
-            >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               {dayLabel.split(" ")[0]}
             </span>
-            <span
-              className={cn(
-                "text-lg font-black leading-tight tabular-nums",
-                isToday ? "text-foreground" : "text-muted-foreground/70",
-              )}
-            >
+            <span className="text-xl font-semibold text-foreground">
               {dayLabel.split(" ")[1]}
             </span>
           </div>
+          {isToday ? (
+            <span className="rounded-full bg-foreground px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-background">
+              Today
+            </span>
+          ) : null}
         </div>
-
-        {/* Today indicator */}
-        {isToday && (
-          <span className="h-1.5 w-1.5 rounded-full bg-foreground shrink-0" />
-        )}
       </div>
 
-      {/* ── Location selector / badge ── */}
       <div
         className={cn(
-          "border-x",
-          hasLocation && bucket ? bucket.border : "border-border",
+          "border-x px-3 py-3 transition-colors duration-300",
+          theme ? theme.border : "border-border",
         )}
       >
         {readOnly ? (
           <div
             className={cn(
-              "px-3 py-2 text-xs font-semibold flex items-center gap-1.5",
-              hasLocation && bucket
-                ? `${bucket.bg} ${bucket.text}`
-                : "bg-muted/30 text-muted-foreground",
+              "rounded-2xl px-3 py-2 text-xs font-semibold",
+              theme ? `${theme.bg} ${theme.text}` : "bg-muted/50 text-muted-foreground",
             )}
           >
-            
-            {hasLocation
-              ? WORK_LOCATION_LABELS[draft.work_location as WorkLocationType]
-              : <span className="opacity-50">Not set</span>}
+            {location
+              ? locations.find((item) => item.value === location)?.label ?? location
+              : "Unset"}
           </div>
         ) : (
-          <Select value={draft.work_location} onValueChange={handleLocationChange}>
+          <Select value={location ?? undefined} onValueChange={handleLocationChange}>
             <SelectTrigger
               className={cn(
-                "h-8 w-full text-xs font-semibold border-0 rounded-none shadow-none",
-                "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
-                hasLocation && bucket
-                  ? `${bucket.bg} ${bucket.text}`
-                  : "bg-muted/30 text-muted-foreground",
+                "h-10 rounded-2xl border-0 px-3 text-left text-xs font-semibold shadow-none transition-all duration-300",
+                theme ? `${theme.bg} ${theme.text}` : "bg-muted/50 text-muted-foreground",
               )}
             >
-              <div className="flex items-center gap-1.5 min-w-0">
-                <SelectValue placeholder="Set location…" />
-              </div>
+              <SelectValue placeholder="Set location" />
             </SelectTrigger>
             <SelectContent>
-              {LOCATION_OPTIONS.map((loc) => {
-                const b = LOCATION_BUCKET[loc];
-                const Icon = b.icon;
+              {locations.map((item) => {
+                const itemTheme = PLAN_LOCATION_THEMES[item.value];
                 return (
-                  <SelectItem key={loc} value={loc}>
+                  <SelectItem key={item.value} value={item.value}>
                     <div className="flex items-center gap-2">
-                      <span className={cn("h-2 w-2 rounded-full shrink-0", b.dot)} />
-                      {/* <Icon className={cn("h-3.5 w-3.5", b.text)} /> */}
-                      <span>{WORK_LOCATION_LABELS[loc]}</span>
+                      <span className={cn("h-2 w-2 rounded-full", itemTheme.dot)} />
+                      <span>{item.label}</span>
                     </div>
                   </SelectItem>
                 );
@@ -160,71 +115,24 @@ export function DayColumn({
         )}
       </div>
 
-      {/* ── Task card body — Planner card style ── */}
       <div
         className={cn(
-          "rounded-b-lg border flex-1 flex flex-col min-h-[120px]",
-          hasLocation && bucket ? bucket.border : "border-border",
-          "bg-card",
+          "flex min-h-[100px] flex-1 flex-col rounded-b-[20px] border bg-white p-3 transition-colors duration-300",
+          theme ? theme.border : "border-border",
         )}
       >
         {readOnly ? (
-          <div className="p-3 flex-1">
-            {draft.project ? (
-              <div
-                className={cn(
-                  "rounded-md px-2.5 py-2 text-xs font-medium",
-                  hasLocation && bucket
-                    ? `${bucket.bg} ${bucket.text}`
-                    : "bg-muted/40 text-muted-foreground",
-                )}
-              >
-                {draft.project}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground/40 italic">No task</p>
-            )}
+          <div className="flex flex-col items-center justify-center flex-1">
+             <p className="text-[10px] text-muted-foreground/40 uppercase tracking-widest font-bold">Planned</p>
           </div>
         ) : (
-          <div className="p-2.5 flex-1 flex flex-col gap-2">
-            {/* Existing task chip */}
-            {draft.project && (
-              <div
-                className={cn(
-                  "rounded-md px-2.5 py-2 text-xs font-medium",
-                  hasLocation && bucket
-                    ? `${bucket.bg} ${bucket.text}`
-                    : "bg-muted/40 text-muted-foreground",
-                )}
-              >
-                {draft.project}
-              </div>
-            )}
-
-            {/* Add task input */}
-            <div
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors",
-                hasLocation
-                  ? "hover:bg-muted/60 cursor-text"
-                  : "opacity-40 cursor-not-allowed",
-              )}
-            >
-              <Plus className="h-3 w-3 text-muted-foreground shrink-0" />
-              <Input
-                className={cn(
-                  "h-5 text-xs border-0 shadow-none bg-transparent p-0",
-                  "placeholder:text-muted-foreground/50 focus-visible:ring-0",
-                )}
-                placeholder="Add a task"
-                value={draft.project}
-                onChange={handleProjectChange}
-                disabled={!hasLocation}
-              />
-            </div>
+          <div className="flex flex-1 flex-col items-center justify-center">
+            <p className="text-[10px] text-muted-foreground/30 uppercase tracking-widest font-bold">
+              {location ? "Active" : "Pending"}
+            </p>
           </div>
         )}
       </div>
     </div>
   );
-}
+});
