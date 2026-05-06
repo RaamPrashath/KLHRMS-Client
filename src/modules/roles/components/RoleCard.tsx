@@ -66,9 +66,6 @@ export function RoleCard({ role, assignees = [], onEdit }: Readonly<RoleCardProp
   return (
     <div className="group flex items-center justify-between gap-6 px-6 py-6 transition-colors hover:bg-[#00874A]/[0.02]">
       <div className="flex min-w-0 items-center gap-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#00874A]/[0.04]">
-          {renderRoleIcon(role.name)}
-        </div>
         <div className="min-w-0">
           <h3 className="truncate font-sans text-[15px] font-medium text-neutral-900">
             {role.name}
