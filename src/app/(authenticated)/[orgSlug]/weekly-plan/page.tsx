@@ -3,9 +3,9 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { requireOrgMembership } from "@/lib/organizations";
 import { getScope, type RolePermissions } from "@/lib/hrms-roles";
-import { WeeklyPlanClient } from "./_components/WeeklyPlanClient";
+import { PlanClient } from "./_components/PlanClient";
 
-export default async function WeeklyPlanPage({
+export default async function PlanPage({
   params,
 }: {
   params: Promise<{ orgSlug: string }>;
@@ -24,26 +24,32 @@ export default async function WeeklyPlanPage({
   }
 
   const permissions = (member.role?.permissions as RolePermissions) ?? null;
-
-  // No access — redirect away
   if (getScope(permissions, "weeklyPlan", "view") === "none") {
     redirect(`/${orgSlug}/attendance`);
   }
 
-  // Can view team = org-scoped view
-  const canViewTeam = getScope(permissions, "weeklyPlan", "view") === "org";
+  const weeklyPlanScope = getScope(permissions, "weeklyPlan", "view");
+  const canViewTeam = ["org", "organization"].includes(weeklyPlanScope);
 
   return (
-    <div className="flex flex-col gap-0 -mt-6">
-      <div className="px-0 pt-0 pb-4">
-        <h1 className="text-xl font-semibold tracking-tight">Weekly Plan</h1>
-        <p className="text-sm text-muted-foreground">
-          Set your work location and project for each day of the week.
-        </p>
+    <div className="flex flex-col gap-6 ">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Plan
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Capture where you plan to work each day, save in bulk, and switch between
+            a focused weekly flow and a full-month strip view without leaving the page.
+          </p>
+        </div>
       </div>
-      <WeeklyPlanClient
+
+      <PlanClient
         orgSlug={orgSlug}
         orgId={org.id}
+        memberId={member.id}
+        userId={session.user.id}
         canViewTeam={canViewTeam}
       />
     </div>

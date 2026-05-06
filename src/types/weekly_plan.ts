@@ -1,16 +1,15 @@
-/**
- * Re-exports from the canonical source of truth.
- * Types and constants are defined in hooks/functions/weekly_plan.ts.
- * Components import from here — never from hooks/functions/ directly.
- */
+export type {
+  PlanLocationOption,
+  PlanLocationValue,
+} from "@/modules/weekly-plan/locations";
 
 export {
-  WorkLocationType,
-  WORK_LOCATION_LABELS,
-  WORK_LOCATION_COLORS,
-} from "@/hooks/functions/weekly_plan";
+  FALLBACK_PLAN_LOCATIONS,
+  PLAN_LOCATION_MAP,
+  PLAN_LOCATION_THEMES,
+} from "@/modules/weekly-plan/locations";
 
 export type {
+  WeeklyPlanDayInput,
   WeeklyPlanEntry,
-  SetDayInput,
 } from "@/hooks/functions/weekly_plan";

@@ -62,7 +62,7 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
             { title: "Leaves",             urlSuffix: "leaves",              permissionKey: "leaves"      },
             { title: "Timesheet",          urlSuffix: "timesheet",           permissionKey: "timesheet"   },
             { title: "Projects",           urlSuffix: "projects",            permissionKey: "projects"    },
-            { title: "Weekly Plan",        urlSuffix: "weekly-plan",         permissionKey: "weeklyPlan"  },
+            { title: "Plan",               urlSuffix: "weekly-plan",         permissionKey: "weeklyPlan"  },
         ],
     },
     {
@@ -113,9 +113,9 @@ export function hasPermission(
     key: string,
 ): boolean {
     if (!permissions) return false;
-    const module = permissions[key];
-    if (!module) return false;
-    return Object.values(module).some((scope) => scope !== "none");
+    const modulePermissions = permissions[key];
+    if (!modulePermissions) return false;
+    return Object.values(modulePermissions).some((scope) => scope !== "none");
 }
 
 /**

@@ -73,10 +73,10 @@ export function SignupForm() {
                     "WEAK_PASSWORD": "This password is too weak. Please use a stronger password with at least 8 characters, including uppercase, lowercase, numbers, and symbols.",
                     "INVALID_EMAIL": "Please enter a valid email address.",
                 };
-                
+
                 setFormError(
-                    errorMessages[result.error.code ?? ""] ?? 
-                    result.error.message ?? 
+                    errorMessages[result.error.code ?? ""] ??
+                    result.error.message ??
                     "Unable to create your account. Please try again."
                 );
                 return;
@@ -99,107 +99,98 @@ export function SignupForm() {
         <div className="w-full">
             <AuthHeader
                 title="Create an account"
-                subtitle="Get started with KL HRMS today."
+                subtitle="Join Kovan Labs to start managing your team."
             />
 
-            <SocialButtons onError={setFormError} />
-
-            <AuthDivider />
-
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4" aria-label="Sign up form">
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6" aria-label="Sign up form">
                 {/* Error Summary */}
                 {(formError || Object.keys(errors).length > 0) && (
                     <div
                         role="alert"
                         aria-live="polite"
-                        className="rounded-lg border border-destructive-border bg-destructive-bg px-3 py-2.5 text-sm text-destructive-text animate-in fade-in-0 slide-in-from-top-1 duration-200"
+                        className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive animate-in fade-in zoom-in-95 duration-200"
                     >
                         {formError ? (
                             formError
                         ) : (
                             <div>
-                                <p className="font-medium mb-1">Please fix the following errors:</p>
-                                <ul className="list-disc list-inside space-y-0.5">
-                                    {errors.email && <li><a href="#signup-email" className="underline hover:no-underline">Email: {errors.email.message}</a></li>}
-                                    {errors.password && <li><a href="#signup-password" className="underline hover:no-underline">Password: {errors.password.message}</a></li>}
-                                    {errors.confirmPassword && <li><a href="#signup-confirm-password" className="underline hover:no-underline">Confirm password: {errors.confirmPassword.message}</a></li>}
+                                <p className="font-semibold mb-1">Please fix the following:</p>
+                                <ul className="list-disc list-inside space-y-0.5 opacity-90">
+                                    {errors.email && <li>Email: {errors.email.message}</li>}
+                                    {errors.password && <li>Password: {errors.password.message}</li>}
+                                    {errors.confirmPassword && <li>Confirm: {errors.confirmPassword.message}</li>}
                                 </ul>
                             </div>
                         )}
                     </div>
                 )}
 
-                <Field>
-                    <FieldLabel htmlFor="signup-email">Email address</FieldLabel>
-                    <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        autoComplete="email"
-                        aria-invalid={!!errors.email}
-                        aria-describedby={errors.email ? "signup-email-error" : undefined}
-                        className="h-10 bg-surface border-neutral-200 rounded-md text-sm focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-colors"
-                        {...register("email")}
-                        ref={(e) => {
-                            register("email").ref(e);
-                            emailRef.current = e;
-                        }}
-                    />
-                    {errors.email && <FieldError id="signup-email-error">{errors.email.message}</FieldError>}
-                </Field>
+                <div className="space-y-5">
+                    <Field>
+                        <FieldLabel htmlFor="signup-email">Email address</FieldLabel>
+                        <Input
+                            id="signup-email"
+                            type="email"
+                            placeholder="name@company.com"
+                            autoComplete="email"
+                            aria-invalid={!!errors.email}
+                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            {...register("email")}
+                            ref={(e) => {
+                                register("email").ref(e);
+                                emailRef.current = e;
+                            }}
+                        />
+                        {errors.email && <FieldError id="signup-email-error">{errors.email.message}</FieldError>}
+                    </Field>
 
-                <Field>
-                    <FieldLabel htmlFor="signup-password">Password</FieldLabel>
-                    <PasswordInput
-                        id="signup-password"
-                        placeholder="Create a strong password"
-                        autoComplete="new-password"
-                        aria-invalid={!!errors.password}
-                        aria-describedby={`signup-password-rules ${errors.password ? "signup-password-error" : ""}`}
-                        className="h-10 bg-surface border-neutral-200 rounded-md text-sm focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-colors"
-                        showGenerator
-                        value={passwordValue}
-                        onChange={handlePasswordChange}
-                        onGenerate={handleGeneratePassword}
-                        ref={(e) => {
-                            passwordRef.current = e;
-                        }}
-                    />
-                    {errors.password && <FieldError id="signup-password-error">{errors.password.message}</FieldError>}
-                    <div id="signup-password-rules">
-                        <PasswordRules password={passwordValue} />
-                    </div>
-                </Field>
+                    <Field>
+                        <FieldLabel htmlFor="signup-password">Password</FieldLabel>
+                        <PasswordInput
+                            id="signup-password"
+                            placeholder="••••••••"
+                            autoComplete="new-password"
+                            aria-invalid={!!errors.password}
+                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            showGenerator
+                            value={passwordValue}
+                            onChange={handlePasswordChange}
+                            onGenerate={handleGeneratePassword}
+                            ref={(e) => {
+                                passwordRef.current = e;
+                            }}
+                        />
+                        {errors.password && <FieldError id="signup-password-error">{errors.password.message}</FieldError>}
+                        <div className="pt-2">
+                            <PasswordRules password={passwordValue} />
+                        </div>
+                    </Field>
 
-                <Field>
-                    <FieldLabel htmlFor="signup-confirm-password">Confirm password</FieldLabel>
-                    <PasswordInput
-                        id="signup-confirm-password"
-                        placeholder="Repeat your password"
-                        autoComplete="new-password"
-                        aria-invalid={!!errors.confirmPassword}
-                        aria-describedby={errors.confirmPassword ? "signup-confirm-password-error" : undefined}
-                        className="h-10 bg-surface border-neutral-200 rounded-md text-sm focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-colors"
-                        {...register("confirmPassword")}
-                        ref={(e) => {
-                            register("confirmPassword").ref(e);
-                            confirmPasswordRef.current = e;
-                        }}
-                    />
-                    {errors.confirmPassword && (
-                        <FieldError id="signup-confirm-password-error">{errors.confirmPassword.message}</FieldError>
-                    )}
-                </Field>
+                    <Field>
+                        <FieldLabel htmlFor="signup-confirm-password">Confirm password</FieldLabel>
+                        <PasswordInput
+                            id="signup-confirm-password"
+                            placeholder="••••••••"
+                            autoComplete="new-password"
+                            aria-invalid={!!errors.confirmPassword}
+                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            {...register("confirmPassword")}
+                        />
+                        {errors.confirmPassword && (
+                            <FieldError id="signup-confirm-password-error">{errors.confirmPassword.message}</FieldError>
+                        )}
+                    </Field>
+                </div>
 
                 <Button
                     type="submit"
-                    className="w-full h-10 mt-1 bg-primary hover:bg-primary-hover active:bg-primary-press text-white text-sm font-medium rounded-md focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 focus-visible:shadow-[var(--shadow-focus)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-pill-primary h-12 w-full text-[17px] shadow-sm hover:shadow-md active:scale-[0.98] mt-2"
                     disabled={isSubmitting}
                     aria-busy={isSubmitting}
                 >
                     {isSubmitting ? (
                         <span className="flex items-center justify-center gap-2">
-                            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                            <Loader2 className="size-5 animate-spin" aria-hidden="true" />
                             <span>Creating account...</span>
                         </span>
                     ) : (
@@ -208,11 +199,17 @@ export function SignupForm() {
                 </Button>
             </form>
 
-            <AuthFooterLink
-                text="Already have an account?"
-                linkText="Sign in"
-                href="/login"
-            />
+            <AuthDivider />
+
+            <SocialButtons onError={setFormError} />
+
+            <div className="mt-10 text-center">
+                <AuthFooterLink
+                    text="Already have an account?"
+                    linkText="Sign in"
+                    href="/login"
+                />
+            </div>
         </div>
     );
 }

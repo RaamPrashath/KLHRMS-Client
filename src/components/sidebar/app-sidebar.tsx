@@ -114,6 +114,18 @@ const NAV_ICONS: Record<string, React.ReactElement<{ className?: string }>> = {
     "documents":           <FileStack     className={ic} />,
 };
 
+const MAX_DISPLAY_NAME_LENGTH = 18;
+
+function normalizeLabel(value: string) {
+    return value.trim().replace(/\s+/g, " ");
+}
+
+function truncateLabel(value: string, maxLength: number) {
+    if (value.length <= maxLength) return value;
+    if (maxLength <= 3) return value.slice(0, maxLength);
+    return value.slice(0, maxLength - 3).trimEnd() + "...";
+}
+
 function getInitials(name?: string | null, email?: string | null) {
     if (name) {
         const parts = name.split(" ").filter(Boolean);
@@ -145,7 +157,7 @@ function LogoRow({ orgName, orgSlug }: { orgName: string; orgSlug: string }) {
             onClick={() => setOpen(!open)}
             whileTap={{ scale: 0.88 }}
             aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-            className="hidden md:flex items-center justify-center h-7 w-7 rounded-md shrink-0 transition-colors duration-150 text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-hover)] hover:bg-[rgba(255,255,255,0.07)]"
+            className="flex items-center justify-center h-8 w-8 rounded-full shrink-0 transition-all duration-200 text-white/40 hover:text-white hover:bg-white/10 active:scale-95"
         >
             <motion.span
                 initial={false}
@@ -153,44 +165,43 @@ function LogoRow({ orgName, orgSlug }: { orgName: string; orgSlug: string }) {
                 transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
                 className="flex items-center justify-center"
             >
-                <ChevronLeftIcon className="h-3.5 w-3.5" />
+                <ChevronLeftIcon className="h-4 w-4" />
             </motion.span>
         </motion.button>
     ) : null;
 
     return (
-        <div className="flex flex-col gap-1.5 py-1">
-            <div className="flex items-center min-w-0">
-                <a
-                    href={`/${orgSlug}`}
-                    aria-label={orgName}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white text-sm font-bold shadow-sm"
-                >
-                    {orgName.charAt(0).toUpperCase()}
-                </a>
+        <div className="flex flex-col gap-4 py-2">
+            <div className="flex items-center justify-between min-w-0 px-1">
+                <div className="flex items-center min-w-0">
+                    <Link
+                        href={`/${orgSlug}`}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    >
+                        {/* Brand Grid Mark */}
+                        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                            <rect x="2" y="2" width="5" height="5" rx="1" fill="var(--primary)" />
+                            <rect x="9" y="2" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.7" />
+                            <rect x="2" y="9" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.7" />
+                            <rect x="9" y="9" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.4" />
+                        </svg>
+                    </Link>
 
-                <motion.div
-                    initial={false}
-                    animate={{ opacity: open ? 1 : 0, width: open ? "auto" : 0 }}
-                    transition={labelTransition}
-                    className="overflow-hidden flex flex-col min-w-0 ml-3"
-                    aria-hidden={!open}
-                >
-                    <span className="truncate text-sm font-semibold text-[var(--color-sidebar-text-hover)] whitespace-nowrap">
-                        {orgName}
-                    </span>
-                    <span className="truncate text-xs text-[var(--color-sidebar-label)] whitespace-nowrap">
-                        HR Management
-                    </span>
-                </motion.div>
-
-                <motion.div
-                    initial={false}
-                    animate={{ width: open ? "auto" : 0 }}
-                    transition={labelTransition}
-                    className="overflow-hidden flex-1"
-                    aria-hidden
-                />
+                    <motion.div
+                        initial={false}
+                        animate={{ opacity: open ? 1 : 0, width: open ? "auto" : 0 }}
+                        transition={labelTransition}
+                        className="overflow-hidden flex flex-col min-w-0 ml-3"
+                        aria-hidden={!open}
+                    >
+                        <span className="truncate text-[15px] font-semibold text-white tracking-tight">
+                            Kovan Labs
+                        </span>
+                        <span className="truncate text-[11px] font-medium text-white/40 uppercase tracking-[0.05em]">
+                            {orgName}
+                        </span>
+                    </motion.div>
+                </div>
 
                 {open && toggleBtn}
             </div>
@@ -226,38 +237,38 @@ function NavSearch({
             <button
                 onClick={handleCollapsedClick}
                 aria-label="Search navigation"
-                className="flex items-center justify-center h-8 w-8 rounded-md mx-auto text-[var(--color-sidebar-label)] hover:text-[var(--color-sidebar-text-hover)] hover:bg-[rgba(255,255,255,0.07)] transition-colors duration-150"
+                className="flex items-center justify-center h-9 w-9 rounded-full mx-auto text-white/40 hover:text-white hover:bg-white/10 transition-all duration-200 active:scale-95"
             >
-                <MagnifyingGlassIcon className="h-3.5 w-3.5" />
+                <MagnifyingGlassIcon className="h-4 w-4" />
             </button>
         );
     }
 
     return (
-        <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-sidebar-label)] pointer-events-none" />
+        <div className="relative group px-1">
+            <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40 group-focus-within:text-white transition-colors pointer-events-none" />
             <input
                 ref={inputRef}
                 type="text"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                placeholder="Search…"
+                placeholder="Search"
                 aria-label="Search navigation"
                 className={cn(
-                    "w-full h-8 rounded-md pl-8 pr-3 text-xs",
-                    "bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.08)]",
-                    "text-[var(--color-sidebar-text-hover)] placeholder:text-[var(--color-sidebar-label)]",
-                    "focus:outline-none focus:border-[rgba(255,255,255,0.2)] focus:bg-[rgba(255,255,255,0.09)]",
-                    "transition-colors duration-150",
+                    "w-full h-9 rounded-full pl-9 pr-8 text-[13px]",
+                    "bg-white/5 border border-white/5",
+                    "text-white placeholder:text-white/30",
+                    "focus:outline-none focus:border-white/10 focus:bg-white/10",
+                    "transition-all duration-200",
                 )}
             />
             {value && (
                 <button
                     onClick={() => onChange("")}
                     aria-label="Clear search"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-sidebar-label)] hover:text-[var(--color-sidebar-text-hover)] transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
                 >
-                    <span className="text-[10px] leading-none">✕</span>
+                    <span className="text-[14px] leading-none">×</span>
                 </button>
             )}
         </div>
@@ -267,7 +278,7 @@ function NavSearch({
 
 function RoleBadge({ roleName }: { readonly roleName: string }) {
     return (
-        <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide leading-none bg-[rgba(174,174,178,0.15)] text-[var(--color-sidebar-label)]">
+        <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none bg-white/10 text-white/50 border border-white/5">
             {roleName}
         </span>
     );
@@ -328,25 +339,24 @@ function UserFooter({
     };
 
     return (
-        <div ref={dropdownRef} className="relative border-t border-[var(--color-sidebar-divider)] pt-3">
+        <div ref={dropdownRef} className="relative border-t border-white/5 pt-4">
             <button
                 onClick={() => setDropdownOpen((v) => !v)}
                 className={cn(
-                    "flex items-center w-full rounded-md px-2 py-2 transition-colors duration-150 gap-2 hover:bg-[rgba(255,255,255,0.05)] text-left",
-                    dropdownOpen && "bg-[rgba(255,255,255,0.05)]"
+                    "flex items-center w-full rounded-xl px-3 py-2.5 transition-all duration-200 gap-3 hover:bg-white/5 text-left active:scale-[0.98]",
+                    dropdownOpen && "bg-white/5 shadow-inner"
                 )}
                 aria-expanded={dropdownOpen}
                 aria-haspopup="menu"
             >
                 {user.image ? (
-                    <img src={user.image} className="h-7 w-7 shrink-0 rounded-full" alt={displayName} />
+                    <img src={user.image} className="h-8 w-8 shrink-0 rounded-full border border-white/10" alt={displayName} />
                 ) : (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-neutral-700)] text-[10px] font-bold text-white">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-bold text-white/90 border border-white/5">
                         {initials}
                     </div>
                 )}
 
-                {/* Name + role badge — clips when collapsed */}
                 <motion.div
                     initial={false}
                     animate={{ opacity: open ? 1 : 0, width: open ? "auto" : 0 }}
@@ -354,7 +364,7 @@ function UserFooter({
                     className="overflow-hidden flex flex-col min-w-0 flex-1"
                     aria-hidden={!open}
                 >
-                    <span className="truncate capitalize mb-1 text-sm font-medium text-[var(--color-sidebar-text-hover)] leading-tight whitespace-nowrap">
+                    <span className="truncate capitalize text-[13.5px] font-medium text-white leading-tight">
                         {displayName}
                     </span>
                     <div className="flex items-center gap-1.5 mt-0.5">
@@ -362,7 +372,7 @@ function UserFooter({
                             <RoleBadge roleName={roleName} />
                         ) : (
                             user.email && (
-                                <span className="truncate text-xs text-[var(--color-sidebar-label)] leading-tight whitespace-nowrap">
+                                <span className="truncate text-[11px] text-white/40 leading-tight">
                                     {user.email}
                                 </span>
                             )
@@ -370,7 +380,6 @@ function UserFooter({
                     </div>
                 </motion.div>
 
-                {/* Dots icon — clips when collapsed */}
                 <motion.div
                     initial={false}
                     animate={{ opacity: open ? 1 : 0, width: open ? "auto" : 0 }}
@@ -378,55 +387,50 @@ function UserFooter({
                     className="overflow-hidden shrink-0"
                     aria-hidden={!open}
                 >
-                    <DotsHorizontalIcon className="h-3.5 w-3.5 text-[var(--color-sidebar-label)]" />
+                    <DotsHorizontalIcon className="h-4 w-4 text-white/30" />
                 </motion.div>
             </button>
 
             <AnimatePresence>
                 {dropdownOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 6, scale: 0.97 }}
-                        transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
+                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                         role="menu"
                         className={cn(
-                            "absolute z-50 bottom-full mb-2 rounded-lg overflow-hidden",
-                            "bg-[#2a2a2c] border border-[rgba(255,255,255,0.08)] shadow-[0_8px_24px_rgba(0,0,0,0.4)]",
-                            open ? "left-0 right-0" : "left-0 w-52"
+                            "absolute z-50 bottom-full mb-3 rounded-2xl overflow-hidden p-1.5",
+                            "bg-[#2a2a2c] border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.5)]",
+                            open ? "left-0 right-0" : "left-0 w-56"
                         )}
                     >
-                        <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
-                            <p className="text-sm font-medium text-[var(--color-sidebar-text-hover)] truncate">{displayName}</p>
-                            <div className="flex items-center gap-1.5 mt-1">
-                                {roleName ? (
-                                    <RoleBadge roleName={roleName} />
-                                ) : (
-                                    user.email && (
-                                        <p className="text-xs text-[var(--color-sidebar-label)] truncate">{user.email}</p>
-                                    )
-                                )}
-                            </div>
+                        <div className="px-3 py-3 mb-1">
+                            <p className="text-[13px] font-semibold text-white truncate">{displayName}</p>
+                            <p className="text-[11px] text-white/40 truncate mt-0.5">{user.email}</p>
                         </div>
-                        <Link
-                            href={`/${orgSlug}/settings`}
-                            role="menuitem"
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-hover)] hover:bg-[rgba(255,255,255,0.06)] transition-colors duration-100"
-                        >
-                            <GearIcon className="h-4 w-4 shrink-0" />
-                            Settings
-                        </Link>
-                        <div className="h-px bg-[rgba(255,255,255,0.06)] mx-2" />
-                        <button
-                            role="menuitem"
-                            onClick={handleSignOut}
-                            disabled={isSigningOut}
-                            className="flex items-center gap-2.5 px-3 py-2 w-full text-sm text-[var(--color-sidebar-text)] hover:text-[var(--color-destructive)] hover:bg-[rgba(234,67,53,0.08)] transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <ExitIcon className="h-4 w-4 shrink-0" />
-                            {isSigningOut ? "Signing out..." : "Log out"}
-                        </button>
+                        
+                        <div className="space-y-0.5">
+                            <Link
+                                href={`/${orgSlug}/settings`}
+                                role="menuitem"
+                                onClick={() => setDropdownOpen(false)}
+                                className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                            >
+                                <GearIcon className="h-4 w-4 shrink-0" />
+                                Settings
+                            </Link>
+                            <div className="h-px bg-white/5 mx-2 my-1" />
+                            <button
+                                role="menuitem"
+                                onClick={handleSignOut}
+                                disabled={isSigningOut}
+                                className="flex items-center gap-2.5 px-3 py-2 w-full text-[13px] text-white/70 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                <ExitIcon className="h-4 w-4 shrink-0" />
+                                {isSigningOut ? "Signing out..." : "Log out"}
+                            </button>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

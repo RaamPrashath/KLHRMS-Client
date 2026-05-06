@@ -60,20 +60,20 @@ export function SocialButtons({ onError }: SocialButtonsProps) {
     };
 
     return (
-        <div className="flex items-center gap-2 mb-5" role="group" aria-label="Continue with a provider">
+        <div className="grid grid-cols-3 gap-3" role="group" aria-label="Continue with a provider">
             {providers.map(({ id, label, Icon }) => (
                 <Button
                     key={id}
                     type="button"
                     variant="outline"
-                    className="flex-1 h-10 border-neutral-200 bg-surface hover:bg-neutral-50 text-neutral-700 rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+                    className="h-12 border-border bg-secondary/30 hover:bg-white hover:shadow-sm text-foreground rounded-xl transition-all duration-200 active:scale-[0.98]"
                     onClick={() => handleSocialLogin(id)}
                     disabled={loading !== null}
                     aria-label={`Continue with ${label}`}
                     title={`Continue with ${label}`}
                 >
                     {loading === id ? (
-                        <span className="size-4 rounded-full border-2 border-neutral-300 border-t-neutral-600 animate-spin" aria-hidden="true" />
+                        <span className="size-4 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" aria-hidden="true" />
                     ) : (
                         <Icon />
                     )}

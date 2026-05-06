@@ -1,136 +1,145 @@
-/**
- * weekly_plan — Layer 1 fetch functions.
- *
- * Plain async functions — no React, no hooks.
- * Import baseUrl from api-client. Never read process.env here.
- * Always pass credentials: "include".
- * Always throw on non-ok responses.
- */
-
 import { baseUrl } from "@/lib/api-client";
-
-// ── Domain types ──────────────────────────────────────────────────────────────
+import type {
+  PlanLocationOption,
+  PlanLocationValue,
+} from "@/modules/weekly-plan/locations";
 
 export interface WeeklyPlanEntry {
   id: string;
   organization_id: string;
   user_id: string;
   user_name: string | null;
-  date: string; // "YYYY-MM-DD"
-  work_location: WorkLocationType;
+  date: string;
+  work_location: PlanLocationValue;
   project: string | null;
 }
 
-// Runtime object — use for Object.values() and Select options
-export const WorkLocationType = {
-  HOME: "home",
-  OFFICE: "office",
-  HYBRID: "hybrid",
-  LEAVE: "leave",
-  HOLIDAY: "holiday",
-} as const;
+export interface PlanApiAuth {
+  token: string;
+  orgSlug: string;
+  memberId: string;
+}
 
-export type WorkLocationType =
-  (typeof WorkLocationType)[keyof typeof WorkLocationType];
-
-export const WORK_LOCATION_LABELS: Record<WorkLocationType, string> = {
-  home: "Home",
-  office: "Office",
-  hybrid: "Hybrid",
-  leave: "Leave",
-  holiday: "Holiday",
-};
-
-/** Pastel background colors for each work location — used in day column headers */
-export const WORK_LOCATION_COLORS: Record<WorkLocationType, string> = {
-  home:    "bg-[#e8f4fd] text-[#1a6fa8]",
-  office:  "bg-[#fce8f3] text-[#a8195a]",
-  hybrid:  "bg-[#e8fdf0] text-[#1a8a4a]",
-  leave:   "bg-[#fdf5e8] text-[#a86a1a]",
-  holiday: "bg-[#f0e8fd] text-[#6a1aa8]",
-};
-
-export interface SetDayInput {
-  work_location: WorkLocationType;
+export interface WeeklyPlanDayInput {
+  date: string;
+  work_location: PlanLocationValue | null;
   project?: string | null;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function authHeaders(token: string, orgId: string): Record<string, string> {
+function buildHeaders(auth: PlanApiAuth): Record<string, string> {
   return {
-    Authorization: `Bearer ${token}`,
-    "x-organization-id": orgId,
+    Authorization: `Bearer ${auth.token}`,
+    "x-organization-slug": auth.orgSlug,
+    "x-membership-id": auth.memberId,
     Accept: "application/json",
   };
 }
 
-async function throwIfNotOk(res: Response): Promise<void> {
-  if (!res.ok) {
-    let message = res.statusText;
-    try {
-      const body = (await res.json()) as { detail?: string };
-      if (body.detail) message = body.detail;
-    } catch {
-      // body was not JSON — keep statusText
-    }
-    throw new Error(message);
+async function throwIfNotOk(response: Response): Promise<void> {
+  if (response.ok) return;
+
+  let message = response.statusText;
+  try {
+    const body = (await response.json()) as { detail?: string };
+    if (body.detail) message = body.detail;
+  } catch {
+    // Keep the status text when the body is not JSON.
   }
+
+  throw new Error(message);
 }
 
-// ── GET /weekly-plans?year=&week= ─────────────────────────────────────────────
+export async function fetchPlanLocations(auth: PlanApiAuth): Promise<PlanLocationOption[]> {
+  const response = await fetch(`${baseUrl}/weekly-plans/locations`, {
+    method: "GET",
+    credentials: "include",
+    headers: buildHeaders(auth),
+  });
+  await throwIfNotOk(response);
+  return response.json() as Promise<PlanLocationOption[]>;
+}
 
 export async function fetchMyWeeklyPlan(
-  token: string,
-  orgId: string,
+  auth: PlanApiAuth,
   year: number,
   week: number,
 ): Promise<WeeklyPlanEntry[]> {
-  const qs = new URLSearchParams({ year: String(year), week: String(week) });
-  const res = await fetch(`${baseUrl}/weekly-plans?${qs}`, {
+  const query = new URLSearchParams({ year: String(year), week: String(week) });
+  const response = await fetch(`${baseUrl}/weekly-plans?${query}`, {
     method: "GET",
     credentials: "include",
-    headers: authHeaders(token, orgId),
+    headers: buildHeaders(auth),
   });
-  await throwIfNotOk(res);
-  return res.json() as Promise<WeeklyPlanEntry[]>;
+  await throwIfNotOk(response);
+  return response.json() as Promise<WeeklyPlanEntry[]>;
 }
-
-// ── GET /weekly-plans/team?year=&week= ────────────────────────────────────────
 
 export async function fetchTeamWeeklyPlan(
-  token: string,
-  orgId: string,
+  auth: PlanApiAuth,
   year: number,
   week: number,
 ): Promise<WeeklyPlanEntry[]> {
-  const qs = new URLSearchParams({ year: String(year), week: String(week) });
-  const res = await fetch(`${baseUrl}/weekly-plans/team?${qs}`, {
+  const query = new URLSearchParams({ year: String(year), week: String(week) });
+  const response = await fetch(`${baseUrl}/weekly-plans/team?${query}`, {
     method: "GET",
     credentials: "include",
-    headers: authHeaders(token, orgId),
+    headers: buildHeaders(auth),
   });
-  await throwIfNotOk(res);
-  return res.json() as Promise<WeeklyPlanEntry[]>;
+  await throwIfNotOk(response);
+  return response.json() as Promise<WeeklyPlanEntry[]>;
 }
 
-// ── PUT /weekly-plans/{date} ──────────────────────────────────────────────────
+export async function fetchMyMonthlyPlan(
+  auth: PlanApiAuth,
+  year: number,
+  month: number,
+): Promise<WeeklyPlanEntry[]> {
+  const query = new URLSearchParams({ year: String(year), month: String(month) });
+  const response = await fetch(`${baseUrl}/weekly-plans/month?${query}`, {
+    method: "GET",
+    credentials: "include",
+    headers: buildHeaders(auth),
+  });
+  await throwIfNotOk(response);
+  return response.json() as Promise<WeeklyPlanEntry[]>;
+}
 
-export async function setWeeklyPlanDay(
-  token: string,
-  orgId: string,
-  date: string,
-  body: SetDayInput,
-): Promise<WeeklyPlanEntry> {
-  const res = await fetch(`${baseUrl}/weekly-plans/${date}`, {
-    method: "PUT",
+export async function saveWeeklyPlan(
+  auth: PlanApiAuth,
+  year: number,
+  week: number,
+  days: WeeklyPlanDayInput[],
+): Promise<WeeklyPlanEntry[]> {
+  const query = new URLSearchParams({ year: String(year), week: String(week) });
+  const response = await fetch(`${baseUrl}/weekly-plans/week?${query}`, {
+    method: "POST",
     credentials: "include",
     headers: {
-      ...authHeaders(token, orgId),
+      ...buildHeaders(auth),
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ days }),
   });
-  await throwIfNotOk(res);
-  return res.json() as Promise<WeeklyPlanEntry>;
+  await throwIfNotOk(response);
+  return response.json() as Promise<WeeklyPlanEntry[]>;
+}
+
+export async function saveMonthlyPlan(
+  auth: PlanApiAuth,
+  year: number,
+  month: number,
+  days: WeeklyPlanDayInput[],
+): Promise<WeeklyPlanEntry[]> {
+  const query = new URLSearchParams({ year: String(year), month: String(month) });
+  const response = await fetch(`${baseUrl}/weekly-plans/month?${query}`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...buildHeaders(auth),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ days }),
+  });
+  await throwIfNotOk(response);
+  return response.json() as Promise<WeeklyPlanEntry[]>;
 }

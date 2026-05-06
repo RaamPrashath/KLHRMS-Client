@@ -77,69 +77,68 @@ export function LoginForm() {
         <div className="w-full">
             <AuthHeader
                 title="Welcome back"
-                subtitle="Please enter your credentials to sign in."
+                subtitle="Sign in to your Kovan account to continue."
             />
-
-            <SocialButtons onError={setFormError} />
-
-            <AuthDivider />
 
             <form
                 onSubmit={handleSubmit(onSubmit)}
-                className="flex flex-col gap-4"
+                className="flex flex-col gap-6"
             >
                 {formError && (
-                    <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-600">
+                    <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive animate-in fade-in zoom-in-95 duration-200">
                         {formError}
                     </div>
                 )}
 
-                <Field>
-                    <FieldLabel htmlFor="email">Email address</FieldLabel>
-                    <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@example.com"
-                        autoComplete="email"
-                        {...register("email")}
-                    />
-                    {errors.email && (
-                        <FieldError>{errors.email.message}</FieldError>
-                    )}
-                </Field>
+                <div className="space-y-5">
+                    <Field>
+                        <FieldLabel htmlFor="email">Email address</FieldLabel>
+                        <Input
+                            id="email"
+                            type="email"
+                            placeholder="name@company.com"
+                            autoComplete="email"
+                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            {...register("email")}
+                        />
+                        {errors.email && (
+                            <FieldError>{errors.email.message}</FieldError>
+                        )}
+                    </Field>
 
-                <Field>
-                    <div className="flex items-center justify-between">
-                        <FieldLabel htmlFor="password">Password</FieldLabel>
+                    <Field>
+                        <div className="flex items-center justify-between">
+                            <FieldLabel htmlFor="password">Password</FieldLabel>
+                            <Link
+                                href="/forgot-password"
+                                className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                            >
+                                Forgot password?
+                            </Link>
+                        </div>
 
-                        <Link
-                            href="/forgot-password"
-                            className="text-sm text-muted-foreground hover:underline"
-                        >
-                            Forgot password?
-                        </Link>
-                    </div>
+                        <PasswordInput
+                            id="password"
+                            placeholder="••••••••"
+                            autoComplete="current-password"
+                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            {...register("password")}
+                        />
 
-                    <PasswordInput
-                        id="password"
-                        placeholder="Enter your password"
-                        autoComplete="current-password"
-                        {...register("password")}
-                    />
-
-                    {errors.password && (
-                        <FieldError>{errors.password.message}</FieldError>
-                    )}
-                </Field>
+                        {errors.password && (
+                            <FieldError>{errors.password.message}</FieldError>
+                        )}
+                    </Field>
+                </div>
 
                 <Button
                     type="submit"
-                    className="w-full"
+                    className="btn-pill-primary h-12 w-full text-[17px] shadow-sm hover:shadow-md active:scale-[0.98]"
                     disabled={isSubmitting}
                 >
                     {isSubmitting ? (
                         <span className="flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-5 w-5 animate-spin" />
                             Signing in...
                         </span>
                     ) : (
@@ -148,11 +147,17 @@ export function LoginForm() {
                 </Button>
             </form>
 
-            <AuthFooterLink
-                text="Don't have an account yet?"
-                linkText="Create an account"
-                href="/signup"
-            />
+            <AuthDivider className="my-8" />
+
+            <SocialButtons onError={setFormError} />
+
+            <div className="mt-10 text-center">
+                <AuthFooterLink
+                    text="Don't have an account yet?"
+                    linkText="Create an account"
+                    href="/signup"
+                />
+            </div>
         </div>
     );
-}
+}
