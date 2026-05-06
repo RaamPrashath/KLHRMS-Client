@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useClockInMutation } from "@/modules/attendance/hooks/useClockInMutation";
 import { useClockOutMutation } from "@/modules/attendance/hooks/useClockOutMutation";
-import { fetchMyAttendanceAction } from "@/modules/attendance/api/attendanceServerActions";
 import {
     formatElapsed,
     formatTime,
@@ -13,6 +12,10 @@ import {
     formatTodayLabel,
     getTodayIST,
 } from "@/modules/attendance/utils/attendanceFormatters";
+import { 
+    fetchMyAttendanceAction, 
+    fetchMemberProfileAction 
+} from "@/modules/attendance/api/attendanceServerActions";
 import { ClockInButton } from "@/modules/attendance/components/ClockInButton";
 import { ClockOutButton } from "@/modules/attendance/components/ClockOutButton";
 import type {
@@ -43,6 +46,67 @@ function findTodayRecord(records: AttendanceRecord[]): AttendanceRecord | null {
     return records.find((r) => r.date === todayIST) ?? null;
 }
 
+const GREETINGS = {
+    EARLY_MORNING: [
+        "Early bird catches the worm, {name}! ☀️",
+        "Rising and shining, {name}? 🌅",
+        "Peaceful start to the day, {name}. ✨",
+        "The world is quiet, let's make some noise, {name}! 🚀",
+        "Fueling up for a big day, {name}? ☕"
+    ],
+    MORNING: [
+        "Good morning, {name}! 👋",
+        "Hope you have a productive morning, {name}! 📈",
+        "Ready to crush those goals, {name}? 💪",
+        "Wishing you a wonderful start, {name}! 🌸",
+        "Let's make today count, {name}! ✨"
+    ],
+    AFTERNOON: [
+        "Good afternoon, {name}! ☀️",
+        "Keeping the momentum going, {name}? 🚀",
+        "Hope your day is going great, {name}! ✨",
+        "Time for a quick refresh, {name}? 🥤",
+        "Still going strong, {name}! 💪"
+    ],
+    EVENING: [
+        "Good evening, {name}! 🌆",
+        "Wrapping up something exciting, {name}? ✨",
+        "Sun's going down, but you're still shining, {name}! 🌟",
+        "Great work today, {name}! 👏",
+        "Hope you're having a relaxing evening, {name}! 🌙"
+    ],
+    NIGHT: [
+        "Burning the midnight oil, {name}? 💡",
+        "Still at it? You're a legend, {name}! 🌟",
+        "Working late? Don't forget to rest soon, {name}. 🌙",
+        "Quiet night, busy mind, {name}? ✨",
+        "Making the most of every hour, {name}! 💪"
+    ],
+    LATE_NIGHT: [
+        "Wait, it's late night, {name}! 🌙",
+        "The stars are out and so are you, {name}! ✨",
+        "Coding in the dark? Stay focused, {name}! 💻",
+        "Is it tomorrow already, {name}? 🕰️",
+        "True dedication right here, {name}! 🚀"
+    ]
+} as const;
+
+function getGreeting(name: string) {
+    const hour = new Date().getHours();
+    let category: keyof typeof GREETINGS;
+
+    if (hour >= 4 && hour < 6) category = "EARLY_MORNING";
+    else if (hour >= 6 && hour < 12) category = "MORNING";
+    else if (hour >= 12 && hour < 17) category = "AFTERNOON";
+    else if (hour >= 17 && hour < 21) category = "EVENING";
+    else if (hour >= 21 && hour < 24) category = "NIGHT";
+    else category = "LATE_NIGHT";
+
+    const quotes = GREETINGS[category];
+    const quote = quotes[Math.floor(Math.random() * quotes.length)]!;
+    return quote.replace("{name}", name);
+}
+
 export function ClockWidget({ orgSlug, memberId }: Readonly<ClockWidgetProps>) {
     const { data: todayData, isLoading } = useQuery({
         queryKey: ["attendance-today", orgSlug, memberId],
@@ -61,6 +125,15 @@ export function ClockWidget({ orgSlug, memberId }: Readonly<ClockWidgetProps>) {
         staleTime: 0,
         refetchOnWindowFocus: true,
     });
+
+    const { data: profile } = useQuery({
+        queryKey: ["member-profile", memberId],
+        queryFn: () => fetchMemberProfileAction({ memberId }),
+        enabled: !!memberId,
+    });
+
+    const firstName = profile?.name?.split(" ")[0] ?? "there";
+    const greeting = useMemo(() => getGreeting(firstName), [firstName]);
 
     const todayRecord = todayData
         ? findTodayRecord(todayData.items)
@@ -212,185 +285,107 @@ export function ClockWidget({ orgSlug, memberId }: Readonly<ClockWidgetProps>) {
     const todayLabel = formatTodayLabel();
 
     return (
-        <div className="relative overflow-hidden bg-surface rounded-2xl border border-black/[0.03] shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-            <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] to-transparent pointer-events-none" />
-
-            <div className="relative p-6 md:p-8 flex flex-col items-center justify-center min-h-[240px]">
-                <div className="absolute top-4 left-5 text-xs font-medium text-neutral-400 uppercase tracking-wider">
-                    {todayLabel}
+        <div className="relative overflow-hidden bg-white rounded-2xl border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            <div className="relative p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-0 min-h-[100px]">
+                <div className="flex flex-col text-left w-full md:w-auto min-w-0">
+                    {widgetState === "LOADING" ? (
+                        <>
+                            <div className="h-7 w-48 bg-neutral-100 animate-pulse rounded-lg" />
+                            <div className="h-4 w-32 bg-neutral-100 animate-pulse rounded-lg mt-2" />
+                        </>
+                    ) : (
+                        <>
+                            <h2 className="text-xl font-medium font-sans text-neutral-900 truncate" title={greeting}>
+                                {greeting}
+                            </h2>
+                            <p className="text-neutral-400 text-sm mt-1">{todayLabel}</p>
+                        </>
+                    )}
                 </div>
 
-                <AnimatePresence mode="wait">
-                    {widgetState === "LOADING" && (
-                        <motion.div
-                            key="loading"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{
-                                duration: 0.4,
-                                ease: [0.16, 1, 0.3, 1],
-                            }}
-                            className="flex flex-col items-center gap-6"
-                        >
-                            <div className="h-16 w-64 rounded-xl bg-neutral-100 animate-pulse" />
-                            <div className="h-12 w-40 rounded-full bg-neutral-100 animate-pulse" />
-                        </motion.div>
-                    )}
-
-                    {widgetState === "NOT_CLOCKED_IN" && (
-                        <motion.div
-                            key="not_clocked_in"
-                            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
-                            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                            exit={{ opacity: 0, y: -16, filter: "blur(4px)" }}
-                            transition={{
-                                type: "spring",
-                                duration: 0.6,
-                                bounce: 0,
-                            }}
-                            className="flex flex-col items-center gap-8 w-full"
-                        >
-                            <div className="flex flex-col items-center gap-2">
-                                <p className="text-sm font-medium text-neutral-500">
-                                    Ready to start your day?
-                                </p>
-                                <p className="font-mono text-5xl md:text-6xl font-medium tracking-tight text-neutral-300 tabular-nums">
-                                    {currentTime || "00:00:00"}
-                                </p>
-                            </div>
-                            <ClockInButton
-                                onClockIn={handleClockIn}
-                                isPending={clockInMutation.isPending}
+                <div className="flex items-center shrink-0 min-h-[48px]">
+                    <AnimatePresence mode="wait">
+                        {widgetState === "LOADING" && (
+                            <motion.div
+                                key="loading"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.3 }}
+                                className="h-12 w-32 rounded-xl bg-neutral-100 animate-pulse"
                             />
-                        </motion.div>
-                    )}
+                        )}
 
-                    {widgetState === "CLOCKED_IN" && (
-                        <motion.div
-                            key="clocked_in"
-                            initial={{
-                                opacity: 0,
-                                scale: 0.9,
-                                filter: "blur(4px)",
-                            }}
-                            animate={{
-                                opacity: 1,
-                                scale: 1,
-                                filter: "blur(0px)",
-                            }}
-                            exit={{
-                                opacity: 0,
-                                scale: 0.95,
-                                filter: "blur(4px)",
-                            }}
-                            transition={{
-                                type: "spring",
-                                duration: 0.7,
-                                bounce: 0,
-                            }}
-                            className="flex flex-col items-center gap-8 w-full"
-                        >
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="flex items-center gap-2 px-3 py-1 bg-primary-ghost text-primary text-xs font-semibold uppercase tracking-wide rounded-full ring-1 ring-primary/20">
-                                    <span className="relative flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                                    </span>
-                                    Session Active
-                                </div>
-                                <p
-                                    className="font-mono text-6xl md:text-7xl font-bold tracking-tighter text-neutral-900 tabular-nums"
-                                    aria-live="polite"
-                                    aria-label="Elapsed work time"
-                                    style={{
-                                        fontVariantNumeric: "tabular-nums",
-                                    }}
-                                >
-                                    {elapsedDisplay}
-                                </p>
-                            </div>
-                            <ClockOutButton
-                                onClockOut={handleClockOut}
-                                isPending={clockOutMutation.isPending}
-                            />
-                        </motion.div>
-                    )}
+                        {widgetState === "NOT_CLOCKED_IN" && (
+                            <motion.div
+                                key="not_clocked_in"
+                                initial={{ opacity: 0, filter: "blur(4px)" }}
+                                animate={{ opacity: 1, filter: "blur(0px)" }}
+                                exit={{ opacity: 0, filter: "blur(4px)" }}
+                                transition={{ duration: 0.4 }}
+                            >
+                                <ClockInButton
+                                    onClockIn={handleClockIn}
+                                    isPending={clockInMutation.isPending}
+                                />
+                            </motion.div>
+                        )}
 
-                    {widgetState === "COMPLETED" && completedRecord && (
-                        <motion.div
-                            key="completed"
-                            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
-                            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                            exit={{ opacity: 0, y: -16, filter: "blur(4px)" }}
-                            transition={{
-                                type: "spring",
-                                duration: 0.6,
-                                bounce: 0,
-                            }}
-                            className="flex flex-col items-center gap-8 w-full max-w-lg"
-                        >
-                            <div className="flex flex-col items-center gap-3">
-                                <div className="flex items-center justify-center size-12 rounded-full bg-success-bg text-success-text mb-2">
-                                    <svg
-                                        width="20"
-                                        height="20"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2.5"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
+                        {widgetState === "CLOCKED_IN" && (
+                            <motion.div
+                                key="clocked_in"
+                                initial={{ opacity: 0, filter: "blur(4px)" }}
+                                animate={{ opacity: 1, filter: "blur(0px)" }}
+                                exit={{ opacity: 0, filter: "blur(4px)" }}
+                                transition={{ duration: 0.4 }}
+                                className="flex items-center gap-6"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <p
+                                        className="font-sans text-3xl font-light tracking-tight text-neutral-900 tabular-nums"
+                                        aria-live="polite"
                                     >
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
+                                        {elapsedDisplay}
+                                    </p>
+                                    <div className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00874A] opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00874A]"></span>
+                                    </div>
                                 </div>
-                                <h3 className="text-xl font-semibold text-neutral-900">
-                                    Day Complete
-                                </h3>
-                                <p className="text-neutral-500 text-center text-sm max-w-xs">
-                                    You&apos;ve successfully logged your hours
-                                    for today. Great job!
-                                </p>
-                            </div>
+                                <div className="flex items-center gap-3">
+                                    <button className="px-5 py-3 text-sm font-medium text-neutral-600 bg-neutral-50 hover:bg-neutral-100 rounded-xl transition-colors">
+                                        Take a Break
+                                    </button>
+                                    <ClockOutButton
+                                        onClockOut={handleClockOut}
+                                        isPending={clockOutMutation.isPending}
+                                    />
+                                </div>
+                            </motion.div>
+                        )}
 
-                            <div className="grid grid-cols-3 w-full gap-4 p-5 rounded-xl bg-canvas border border-neutral-100">
-                                <div className="flex flex-col items-center">
-                                    <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">
-                                        Clock In
-                                    </p>
-                                    <p className="font-mono text-base font-semibold text-neutral-900">
-                                        {formatTime(completedRecord.clockIn)}
-                                    </p>
+                        {widgetState === "COMPLETED" && completedRecord && (
+                            <motion.div
+                                key="completed"
+                                initial={{ opacity: 0, filter: "blur(4px)" }}
+                                animate={{ opacity: 1, filter: "blur(0px)" }}
+                                exit={{ opacity: 0, filter: "blur(4px)" }}
+                                transition={{ duration: 0.4 }}
+                                className="flex items-center gap-4"
+                            >
+                                <div className="px-6 py-3 rounded-xl bg-neutral-100 text-neutral-500 text-sm font-medium">
+                                    Day Complete • {formatWorkedDuration(completedRecord.totalHours)} logged
                                 </div>
-                                <div className="flex flex-col items-center border-x border-neutral-200">
-                                    <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">
-                                        Clock Out
-                                    </p>
-                                    <p className="font-mono text-base font-semibold text-neutral-900">
-                                        {formatTime(completedRecord.clockOut)}
-                                    </p>
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">
-                                        Worked
-                                    </p>
-                                    <p className="font-mono text-base font-semibold text-primary">
-                                        {formatWorkedDuration(
-                                            completedRecord.totalHours,
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
 
                 {inlineError && (
                     <motion.div
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="absolute bottom-6 px-4 py-2 bg-destructive-bg text-destructive-text text-sm font-medium rounded-lg"
+                        className="absolute bottom-[-40px] px-4 py-2 bg-destructive-bg text-destructive-text text-sm font-medium rounded-lg"
                         role="alert"
                     >
                         {inlineError}

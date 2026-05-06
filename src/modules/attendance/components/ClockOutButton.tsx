@@ -15,7 +15,7 @@ export function ClockOutButton({ onClockOut, isPending }: Readonly<ClockOutButto
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
       aria-label="Clock out"
-      className="inline-flex items-center justify-center gap-2 bg-surface border border-neutral-200 text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50 text-sm font-medium px-8 py-3 rounded-lg transition-colors duration-200 shadow-none disabled:opacity-60 disabled:pointer-events-none"
+      className="inline-flex items-center justify-center gap-2 bg-neutral-900 text-white hover:bg-neutral-800 text-sm font-medium px-8 py-3 rounded-xl transition-colors duration-200 shadow-none disabled:opacity-60 disabled:pointer-events-none"
     >
       {isPending ? (
         <svg
@@ -39,18 +39,7 @@ export function ClockOutButton({ onClockOut, isPending }: Readonly<ClockOutButto
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-      ) : (
-        <svg
-          className="size-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 10h6v4H9z" />
-        </svg>
-      )}
+      ) : null}
       Clock Out
     </motion.button>
   );

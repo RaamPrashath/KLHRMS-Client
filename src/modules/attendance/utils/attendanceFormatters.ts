@@ -88,7 +88,6 @@ export function formatTodayLabel(): string {
   return new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
     weekday: 'long',
-    year: 'numeric',
     month: 'long',
     day: 'numeric',
   }).format(new Date());

@@ -207,6 +207,16 @@ export async function fetchMemberPermissionsAction(params: {
   return (member.role.permissions as Record<string, Record<string, string>>) ?? {};
 }
 
+export async function fetchMemberProfileAction(params: {
+  memberId: string;
+}): Promise<{ name: string | null }> {
+  const member = await prisma.member.findUnique({
+    where: { id: params.memberId },
+    select: { user: { select: { name: true } } },
+  });
+  return { name: member?.user?.name ?? null };
+}
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 export interface AttendanceExportRow {
