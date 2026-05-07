@@ -60,7 +60,6 @@ export async function fetchEmployeesAction(params: {
 
   const query = buildQuery({
     search: filters.search || undefined,
-    department_id: filters.departmentId,
     role_id: filters.roleId,
     attendance_status: filters.attendanceStatus,
     page: filters.page ?? 1,
@@ -74,18 +73,6 @@ export async function fetchEmployeesAction(params: {
   });
 
   return handleResponse<EmployeeListResponse>(res);
-}
-
-export async function fetchEmployeeDepartmentsAction(params: {
-  orgSlug: string;
-  memberId: string;
-}): Promise<EmployeeFilterOption[]> {
-  const res = await fetch(`${getApiUrl()}/employees/departments`, {
-    method: 'GET',
-    headers: buildHeaders(params.orgSlug, params.memberId),
-    cache: 'no-store',
-  });
-  return handleResponse<EmployeeFilterOption[]>(res);
 }
 
 export async function fetchEmployeeRolesAction(params: {

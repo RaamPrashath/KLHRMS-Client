@@ -18,11 +18,6 @@ export interface RoleBrief {
   name: string;
 }
 
-export interface DepartmentBrief {
-  id: string;
-  name: string;
-}
-
 export interface EmployeeListItem {
   member_id: string;
   user_id: string;
@@ -30,7 +25,6 @@ export interface EmployeeListItem {
   email: string;
   image: string | null;
   role: RoleBrief | null;
-  department: DepartmentBrief | null;
   joined_at: string;
   attendance_today: AttendanceTodayInfo;
 }
@@ -50,7 +44,6 @@ export interface EmployeeFilterOption {
 
 export interface EmployeeFilters {
   search: string;
-  departmentId: string | undefined;
   roleId: string | undefined;
   attendanceStatus: AttendanceTodayStatus | undefined;
   page: number;

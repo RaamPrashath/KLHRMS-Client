@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 export const employeeFiltersSchema = z.object({
   search: z.string().optional().default(''),
-  departmentId: z.string().optional(),
   roleId: z.string().optional(),
   attendanceStatus: z
     .enum(['PRESENT', 'ABSENT', 'WORK_FROM_HOME', 'HALF_DAY', 'NO_RECORD'])

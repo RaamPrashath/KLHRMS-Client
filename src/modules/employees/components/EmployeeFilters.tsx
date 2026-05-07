@@ -16,13 +16,10 @@ import type {
 
 interface EmployeeFiltersProps {
   search: string;
-  departmentId: string | undefined;
   roleId: string | undefined;
   attendanceStatus: AttendanceTodayStatus | undefined;
-  departments: EmployeeFilterOption[];
   roles: EmployeeFilterOption[];
   onSearchChange: (value: string) => void;
-  onDepartmentChange: (value: string | undefined) => void;
   onRoleChange: (value: string | undefined) => void;
   onAttendanceStatusChange: (value: AttendanceTodayStatus | undefined) => void;
   onClearAll: () => void;
@@ -40,19 +37,16 @@ const ALL_VALUE = '__all__';
 
 export function EmployeeFilters({
   search,
-  departmentId,
   roleId,
   attendanceStatus,
-  departments,
   roles,
   onSearchChange,
-  onDepartmentChange,
   onRoleChange,
   onAttendanceStatusChange,
   onClearAll,
 }: EmployeeFiltersProps) {
   const hasActiveFilters =
-    search || departmentId || roleId || attendanceStatus;
+    search || roleId || attendanceStatus;
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
@@ -66,26 +60,6 @@ export function EmployeeFilters({
           className="pl-9 bg-neutral-50 border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
         />
       </div>
-
-      {/* Department filter */}
-      <Select
-        value={departmentId ?? ALL_VALUE}
-        onValueChange={(v) => onDepartmentChange(v === ALL_VALUE ? undefined : v)}
-      >
-        <SelectTrigger className="h-9 w-[180px] text-sm border-neutral-200">
-          <SelectValue placeholder="All Departments" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL_VALUE} className="text-sm">
-            All Departments
-          </SelectItem>
-          {departments.map((d) => (
-            <SelectItem key={d.id} value={d.id} className="text-sm">
-              {d.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
 
       {/* Role filter */}
       <Select
