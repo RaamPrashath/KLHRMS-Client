@@ -357,7 +357,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
   return (
     <div className="flex flex-col gap-6">
-<div className="bg-surface rounded-xl border border-black/[0.03] shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
+<div className="bg-surface rounded-xl border border-black/3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
         {/* ── Table header ──────────────────────────────────────────────── */}
         <div className="p-4 border-b border-neutral-100 bg-surface flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
@@ -365,12 +365,10 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-1">
                 <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight flex items-center gap-2">
-                  {showEmployeeColumn ? 'Team Attendance' : 'Attendance Records'}
+                  {showEmployeeColumn && 'Attendance Records'}
                 </h2>
-                <p className="text-sm text-neutral-500">{tableDescription}</p>
               </div>
 
-              {/* View mode toggle - Blocky styled */}
               <div className="mt-2 flex items-center self-start rounded-xl bg-neutral-50 p-1 border border-black/[0.04]">
                 {VIEW_MODES.map(({ mode, icon, label }) => (
                   <button

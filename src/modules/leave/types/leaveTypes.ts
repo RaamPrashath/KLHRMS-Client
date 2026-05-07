@@ -31,10 +31,18 @@ export interface HolidayRecord {
   organizationId: string;
   name: string;
   holidayDate: string;
+  isHoliday: boolean;
   isRecurring: boolean;
   description: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface HolidayListResponse {
+  items: HolidayRecord[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 export interface LeaveRequestRecord {

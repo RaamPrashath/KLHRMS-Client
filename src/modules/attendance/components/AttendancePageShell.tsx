@@ -169,7 +169,7 @@ export function AttendancePageShell({
                             {/* Bulk attendance link — shown when user has create permission */}
                             {isOperativeScope(permissions.create) && (
                                 <Link
-                                    href={`/${orgSlug}/attendance/bulk`}
+                                    href={`/${orgSlug}/timesheet`}
                                     className="inline-flex items-center gap-2 h-9 px-4 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary-ghost transition-colors duration-100 shrink-0"
                                 >
                                     <CalendarDays className="size-4" strokeWidth={1.5} />

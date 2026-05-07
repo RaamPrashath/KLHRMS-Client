@@ -15,9 +15,10 @@ import { LeaveTypeDialog } from '@/modules/leave/components/LeaveTypeDialog';
 import { useDeleteHoliday } from '@/modules/leave/hooks/useDeleteHoliday';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 import { useLeaveTypes } from '@/modules/leave/hooks/useLeaveTypes';
+import { useSyncHolidays } from '@/modules/leave/hooks/useSyncHolidays';
 import type { HolidayRecord, LeaveMemberSummary, LeavePermissions, LeaveTypeRecord } from '@/modules/leave/types/leaveTypes';
 import { getLeaveErrorMessage } from '@/modules/leave/utils/errorMessage';
-import { canApproveLeaves, canCreateLeaves, resolveLeavePermissions } from '@/modules/leave/utils/leavePermissions';
+import { canApproveLeaves, canCreateLeaves, canSyncHolidays, resolveLeavePermissions } from '@/modules/leave/utils/leavePermissions';
 
 interface LeaveSectionShellProps {
   orgSlug: string;
@@ -36,6 +37,7 @@ interface LeaveShellContextValue {
   permissions: LeavePermissions;
   canApprove: boolean;
   canCreate: boolean;
+  canSync: boolean;
   leaveTypes: LeaveTypeRecord[];
   leaveTypesLoading: boolean;
   holidays: HolidayRecord[];
@@ -45,6 +47,7 @@ interface LeaveShellContextValue {
   openHolidayDialog: (holiday?: HolidayRecord | null) => void;
   openRequestDetails: (requestId: string) => void;
   deleteHoliday: (holidayId: string) => Promise<void>;
+  syncHolidays: () => Promise<void>;
 }
 
 const LeaveShellContext = createContext<LeaveShellContextValue | null>(null);
@@ -107,10 +110,12 @@ export function LeaveSectionShell({
     year: calendarMonth.getFullYear(),
   });
   const deleteHolidayMutation = useDeleteHoliday(orgSlug, memberId);
+  const syncHolidaysMutation = useSyncHolidays(orgSlug, memberId);
 
   const permissions: LeavePermissions = resolveLeavePermissions(initialPermissions);
   const canCreate = canCreateLeaves(permissions.create);
   const canApprove = canApproveLeaves(permissions.approve);
+  const canSync = canSyncHolidays(permissions.create);
   const leaveTypes = leaveTypesQuery.data ?? EMPTY_LEAVE_TYPES;
   const holidays = holidaysQuery.data ?? EMPTY_HOLIDAYS;
 
@@ -121,6 +126,7 @@ export function LeaveSectionShell({
       permissions,
       canApprove,
       canCreate,
+      canSync,
       leaveTypes,
       leaveTypesLoading: leaveTypesQuery.isLoading,
       holidays,
@@ -143,11 +149,25 @@ export function LeaveSectionShell({
           toast.error(getLeaveErrorMessage(error, 'Failed to delete holiday'));
         }
       },
+      syncHolidays: async () => {
+        try {
+          const result = await syncHolidaysMutation.mutateAsync();
+          toast.success(
+            result.rows_inserted > 0
+              ? `Synced ${result.rows_inserted} holiday${result.rows_inserted === 1 ? '' : 's'} from ${result.source === 'api' ? 'public API' : 'master list'}`
+              : 'Holidays already up to date',
+          );
+        } catch (error) {
+          toast.error(getLeaveErrorMessage(error, 'Failed to sync holidays'));
+        }
+      },
     }),
     [
       canApprove,
       canCreate,
+      canSync,
       deleteHolidayMutation,
+      syncHolidaysMutation,
       holidays,
       holidaysQuery.isLoading,
       leaveTypes,
@@ -162,44 +182,48 @@ export function LeaveSectionShell({
 
   return (
     <LeaveShellContext.Provider value={shellContext}>
-      <div className="min-h-dvh bg-white">
-        <div className="flex min-h-dvh flex-col bg-white lg:flex-row">
-          <LeaveSidebar
-            orgSlug={orgSlug}
-            activeSection={activeSection}
-            canApprove={canApprove}
-            month={calendarMonth}
-            onMonthChange={setCalendarMonth}
-            holidays={holidays}
-          />
+      <div className="flex min-h-dvh flex-col bg-white lg:flex-row">
+        <LeaveSidebar
+          orgSlug={orgSlug}
+          activeSection={activeSection}
+          canApprove={canApprove}
+          month={calendarMonth}
+          onMonthChange={setCalendarMonth}
+          holidays={holidays}
+        />
 
-          <main className="min-w-0 flex-1 bg-white p-6 sm:p-8 lg:p-10">
+        <main className="min-w-0 flex-1 bg-canvas">
+          <div className="flex flex-col gap-6 px-6 py-6 sm:px-8 sm:py-7 lg:px-10 lg:py-8">
             <motion.div
               initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
               animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-6"
+              className="flex flex-col gap-6"
             >
-              <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <h1 className="text-3xl font-medium tracking-tight text-neutral-900">{sectionCopy.title}</h1>
-                  <p className="mt-2 max-w-2xl text-sm text-neutral-500">{sectionCopy.description}</p>
-                </div>
-
-                {canCreate ? (
-                  <Button
-                    className="rounded-full bg-primary px-5 text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover"
-                    onClick={() => setApplyOpen(true)}
+              <section aria-labelledby="leave-section-heading">
+                <div className="flex items-start justify-between gap-4">
+                  <h1
+                    id="leave-section-heading"
+                    className="text-4xl font-semibold tracking-tight text-neutral-900"
                   >
-                    Apply Leave
-                  </Button>
-                ) : null}
-              </header>
+                    {sectionCopy.title}
+                  </h1>
+
+                  {canCreate ? (
+                    <Button
+                      className="shrink-0 rounded-full bg-primary px-5 text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover"
+                      onClick={() => setApplyOpen(true)}
+                    >
+                      Apply Leave
+                    </Button>
+                  ) : null}
+                </div>
+              </section>
 
               {children}
             </motion.div>
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
 
       <ApplyLeaveSheet

@@ -323,6 +323,7 @@ model Holiday {
     organizationId String
     name           String
     holidayDate    DateTime @db.Date
+    isHoliday      Boolean  @default(true)
     isRecurring    Boolean  @default(false)
     description    String?
 

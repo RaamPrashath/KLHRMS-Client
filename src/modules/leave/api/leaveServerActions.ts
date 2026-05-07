@@ -12,6 +12,7 @@ import {
   type LeaveTypeInput,
 } from '@/modules/leave/schema/leaveSchemas';
 import type {
+  HolidayListResponse,
   HolidayRecord,
   LeaveBalanceListResponse,
   LeaveCalendarResponse,
@@ -169,14 +170,23 @@ export async function fetchHolidaysAction(params: {
   memberId: string;
   year?: number;
   month?: number;
-}): Promise<HolidayRecord[]> {
-  const query = buildQuery({ year: params.year, month: params.month });
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<HolidayListResponse> {
+  const query = buildQuery({
+    year: params.year,
+    month: params.month,
+    search: params.search,
+    page: params.page,
+    pageSize: params.pageSize,
+  });
   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
     method: 'GET',
     headers: buildHeaders(params.orgSlug, params.memberId),
     cache: 'no-store',
   });
-  return handleResponse<HolidayRecord[]>(res);
+  return handleResponse<HolidayListResponse>(res);
 }
 
 export async function createHolidayAction(params: {
@@ -384,4 +394,22 @@ export async function fetchLeaveCalendarAction(params: {
     cache: 'no-store',
   });
   return handleResponse<LeaveCalendarResponse>(res);
+}
+
+export interface HolidaySyncResult {
+  year: number;
+  organization_id: string;
+  rows_inserted: number;
+  source: string;
+}
+
+export async function syncHolidaysAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<HolidaySyncResult> {
+  const res = await fetch(`${getApiUrl()}/leaves/holidays/sync`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<HolidaySyncResult>(res);
 }

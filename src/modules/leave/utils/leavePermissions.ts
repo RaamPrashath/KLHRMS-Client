@@ -30,3 +30,7 @@ export function canCreateLeaves(scope: LeavePermissionScope): boolean {
 export function canApproveLeaves(scope: LeavePermissionScope): boolean {
   return scope === 'organization';
 }
+
+export function canSyncHolidays(scope: LeavePermissionScope): boolean {
+  return scope === 'organization';
+}
