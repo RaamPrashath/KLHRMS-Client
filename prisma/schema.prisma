@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-    id            String    @id @default(uuid())
-    email         String    @unique
-    name          String?
-    emailVerified Boolean   @default(false)
-    onboarded     Boolean   @default(false)
-    image         String?
-    createdAt     DateTime  @default(now())
-    updatedAt     DateTime  @updatedAt
-    sessions      Session[]
-    accounts      Account[]
-    members       Member[]
+    id                String      @id @default(uuid())
+    email             String      @unique
+    name              String?
+    emailVerified     Boolean     @default(false)
+    onboarded         Boolean     @default(false)
+    image             String?
+    createdAt         DateTime    @default(now())
+    updatedAt         DateTime    @updatedAt
+    sessions          Session[]
+    accounts          Account[]
+    members           Member[]
+    candidateProfiles Candidate[]
 
     @@map("user")
 }
@@ -82,12 +83,17 @@ model Organization {
 
     createdAt DateTime @default(now())
 
-    members       Member[]
-    roles         Role[]
-    leaveTypes    LeaveType[]
-    leaveRequests LeaveRequest[]
-    leaveBalances LeaveBalance[]
-    holidays      Holiday[]
+    members                   Member[]
+    roles                     Role[]
+    leaveTypes                LeaveType[]
+    leaveRequests             LeaveRequest[]
+    leaveBalances             LeaveBalance[]
+    holidays                  Holiday[]
+    candidates                Candidate[]
+    candidateApplications     CandidateApplication[]
+    pipelineStages            PipelineStage[]
+    jobPostings               JobPosting[]
+    applicationStageHistories ApplicationStageHistory[]
 
     @@map("organization")
 }
@@ -105,9 +111,10 @@ model Member {
     role              Role?              @relation(fields: [organizationId, roleId], references: [organizationId, id])
     departmentMembers DepartmentMember[]
 
-    leaveRequests         LeaveRequest[] @relation("LeaveRequestMember")
-    approvedLeaveRequests LeaveRequest[] @relation("LeaveRequestApprover")
-    leaveBalances         LeaveBalance[] @relation("LeaveBalanceMember")
+    leaveRequests             LeaveRequest[]            @relation("LeaveRequestMember")
+    approvedLeaveRequests     LeaveRequest[]            @relation("LeaveRequestApprover")
+    leaveBalances             LeaveBalance[]            @relation("LeaveBalanceMember")
+    movedApplicationHistories ApplicationStageHistory[] @relation("ApplicationHistoryMovedBy")
 
     @@unique([organizationId, userId])
     @@index([organizationId])
@@ -353,4 +360,175 @@ model PublicHolidayMaster {
     @@unique([date, name, location])
     @@index([year, location])
     @@map("public_holiday_master")
+}
+
+enum JobPostingStatus {
+    DRAFT
+    PUBLISHED
+    CLOSED
+}
+
+enum ApplicationSource {
+    LINKEDIN
+    REFERRAL
+    COMPANY_WEBSITE
+    JOB_BOARD
+    DIRECT
+    OTHER
+}
+
+model Candidate {
+    id             String  @id @default(cuid())
+    organizationId String
+    userId         String?
+
+    firstName String
+    lastName  String
+
+    email String
+    phone String?
+
+    linkedinUrl String?
+    resumeUrl   String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+    applications CandidateApplication[]
+
+    @@unique([organizationId, email])
+    @@index([organizationId])
+    @@index([userId])
+    @@map("candidate")
+}
+
+model JobPosting {
+    id             String @id @default(cuid())
+    organizationId String
+
+    title        String
+    description  String
+    requirements String?
+
+    status JobPostingStatus @default(DRAFT)
+
+    publishedAt DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    applications   CandidateApplication[]
+    pipelineStages PipelineStage[]
+
+    @@index([organizationId])
+    @@index([organizationId, status])
+    @@map("job_posting")
+}
+
+model PipelineStage {
+    id             String @id @default(cuid())
+    organizationId String
+    jobPostingId   String
+
+    name  String
+    order Int
+
+    color String?
+
+    isDefault Boolean @default(false)
+    isFinal   Boolean @default(false)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+
+    applications CandidateApplication[]
+
+    fromStageHistories ApplicationStageHistory[] @relation("HistoryFromStage")
+
+    toStageHistories ApplicationStageHistory[] @relation("HistoryToStage")
+
+    @@unique([jobPostingId, order])
+    @@index([organizationId])
+    @@index([jobPostingId])
+    @@map("pipeline_stage")
+}
+
+model CandidateApplication {
+    id             String @id @default(cuid())
+    organizationId String
+
+    candidateId  String
+    jobPostingId String
+
+    pipelineStageId String
+
+    source ApplicationSource @default(DIRECT)
+
+    score Int?
+
+    notes String?
+
+    appliedAt      DateTime @default(now())
+    lastActivityAt DateTime @updatedAt
+
+    candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+
+    pipelineStage PipelineStage @relation(fields: [pipelineStageId], references: [id], onDelete: Restrict)
+
+    stageHistory ApplicationStageHistory[]
+
+    @@unique([candidateId, jobPostingId])
+    @@index([organizationId])
+    @@index([jobPostingId])
+    @@index([pipelineStageId])
+    @@index([organizationId, pipelineStageId])
+    @@map("candidate_application")
+}
+
+model ApplicationStageHistory {
+    id String @id @default(cuid())
+
+    organizationId String
+
+    applicationId String
+
+    fromStageId String?
+    toStageId   String
+
+    movedByMemberId String?
+
+    note String?
+
+    createdAt DateTime @default(now())
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    application CandidateApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+    fromStage PipelineStage? @relation("HistoryFromStage", fields: [fromStageId], references: [id], onDelete: SetNull)
+
+    toStage PipelineStage @relation("HistoryToStage", fields: [toStageId], references: [id], onDelete: Restrict)
+
+    movedBy Member? @relation("ApplicationHistoryMovedBy", fields: [movedByMemberId], references: [id], onDelete: SetNull)
+
+    @@index([organizationId])
+    @@index([applicationId])
+    @@index([fromStageId])
+    @@index([toStageId])
+    @@index([movedByMemberId])
+    @@map("application_stage_history")
 }

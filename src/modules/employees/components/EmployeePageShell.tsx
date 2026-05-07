@@ -76,14 +76,12 @@ export function EmployeePageShell({ orgSlug, memberId }: EmployeePageShellProps)
     });
   }, []);
 
-  // ── Error state ─────────────────────────────────────────────────────────────
   if (isError) {
     let message = 'Failed to load employees.';
     try {
       const parsed = JSON.parse(error?.message ?? '{}');
-      if (parsed.message) message = parsed.message;
+      if (parsed.message) message = parsed.message
     } catch {
-      // use default
     }
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-neutral-100 bg-surface p-8">
