@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   fetchEmployeesAction,
-  fetchEmployeeDepartmentsAction,
   fetchEmployeeRolesAction,
 } from '@/modules/employees/api/employeeServerActions';
 import type {
@@ -22,15 +21,6 @@ export function useEmployeesQuery(
     queryFn: () => fetchEmployeesAction({ orgSlug, memberId, filters }),
     enabled: !!orgSlug && !!memberId,
     staleTime: 30_000,
-  });
-}
-
-export function useEmployeeDepartmentsQuery(orgSlug: string, memberId: string) {
-  return useQuery<EmployeeFilterOption[], Error>({
-    queryKey: ['employee-departments', orgSlug],
-    queryFn: () => fetchEmployeeDepartmentsAction({ orgSlug, memberId }),
-    enabled: !!orgSlug && !!memberId,
-    staleTime: 60_000,
   });
 }
 

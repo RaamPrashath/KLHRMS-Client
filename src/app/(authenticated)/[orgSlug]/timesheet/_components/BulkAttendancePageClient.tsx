@@ -13,6 +13,7 @@ import type { WorkLogFormValues } from './WorkLogForm';
 
 import { useBulkAttendanceData } from '@/modules/attendance/hooks/use-bulk-attendance-data';
 import { useBulkAttendancePermissions } from '@/modules/attendance/hooks/use-bulk-attendance-permissions';
+import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 
 import type {
   LocalWorkLog,
@@ -66,6 +67,10 @@ export function BulkAttendancePageClient({
     optimisticUpdateDay,
     rollbackDay,
   } = useBulkAttendanceData(orgSlug, memberId);
+
+  // ── Holidays ─────────────────────────────────────────────────────────────────
+  const currentYear = currentWeekStart.getFullYear();
+  const { data: holidays = [] } = useHolidays(orgSlug, memberId, { year: currentYear });
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [dialogState, setDialogState] = useState<WorkLogDialogState>(CLOSED_DIALOG);
@@ -362,6 +367,7 @@ export function BulkAttendancePageClient({
       <BulkAttendanceCalendar
         weekStart={currentWeekStart}
         dayMap={dayMap}
+        holidays={holidays}
         onOpenCreate={handleOpenCreate}
         onOpenEdit={handleOpenEdit}
         onDeleteLog={handleDeleteLog}

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useTransition } from 'react';
 import { Users } from 'lucide-react';
-import { useEmployeesQuery, useEmployeeDepartmentsQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
+import { useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { EmployeeTable } from './EmployeeTable';
 import { EmployeeFilters } from './EmployeeFilters';
 import { EmployeePagination } from './EmployeePagination';
@@ -18,7 +18,6 @@ export function EmployeePageShell({ orgSlug, memberId }: EmployeePageShellProps)
 
   // ── Filter state ────────────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
-  const [departmentId, setDepartmentId] = useState<string | undefined>(undefined);
   const [roleId, setRoleId] = useState<string | undefined>(undefined);
   const [attendanceStatus, setAttendanceStatus] = useState<AttendanceTodayStatus | undefined>(undefined);
   const [page, setPage] = useState(1);
@@ -27,27 +26,18 @@ export function EmployeePageShell({ orgSlug, memberId }: EmployeePageShellProps)
   // ── Data queries ────────────────────────────────────────────────────────────
   const { data, isLoading, isError, error } = useEmployeesQuery(orgSlug, memberId, {
     search: search || undefined,
-    departmentId,
     roleId,
     attendanceStatus,
     page,
     pageSize,
   });
 
-  const { data: departments = [] } = useEmployeeDepartmentsQuery(orgSlug, memberId);
   const { data: roles = [] } = useEmployeeRolesQuery(orgSlug, memberId);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleSearchChange = useCallback((value: string) => {
     startTransition(() => {
       setSearch(value);
-      setPage(1);
-    });
-  }, []);
-
-  const handleDepartmentChange = useCallback((value: string | undefined) => {
-    startTransition(() => {
-      setDepartmentId(value);
       setPage(1);
     });
   }, []);
@@ -69,7 +59,6 @@ export function EmployeePageShell({ orgSlug, memberId }: EmployeePageShellProps)
   const handleClearAll = useCallback(() => {
     startTransition(() => {
       setSearch('');
-      setDepartmentId(undefined);
       setRoleId(undefined);
       setAttendanceStatus(undefined);
       setPage(1);
@@ -87,14 +76,12 @@ export function EmployeePageShell({ orgSlug, memberId }: EmployeePageShellProps)
     });
   }, []);
 
-  // ── Error state ─────────────────────────────────────────────────────────────
   if (isError) {
     let message = 'Failed to load employees.';
     try {
       const parsed = JSON.parse(error?.message ?? '{}');
-      if (parsed.message) message = parsed.message;
+      if (parsed.message) message = parsed.message
     } catch {
-      // use default
     }
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-neutral-100 bg-surface p-8">
@@ -127,13 +114,10 @@ export function EmployeePageShell({ orgSlug, memberId }: EmployeePageShellProps)
       {/* Filters */}
       <EmployeeFilters
         search={search}
-        departmentId={departmentId}
         roleId={roleId}
         attendanceStatus={attendanceStatus}
-        departments={departments}
         roles={roles}
         onSearchChange={handleSearchChange}
-        onDepartmentChange={handleDepartmentChange}
         onRoleChange={handleRoleChange}
         onAttendanceStatusChange={handleAttendanceStatusChange}
         onClearAll={handleClearAll}

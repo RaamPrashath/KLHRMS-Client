@@ -15,6 +15,8 @@ import type {
   CalendarWorkLogEvent,
   LocalWorkLog,
 } from '@/modules/attendance/types/bulkAttendanceTypes';
+import type { HolidayRecord } from '@/modules/leave/types/leaveTypes';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ─── react-big-calendar setup ─────────────────────────────────────────────────
 
@@ -101,13 +103,18 @@ function formatMins(totalMins: number): string {
 interface DayHeaderProps {
   date: Date;
   dayMap: Map<string, BulkDayState>;
+  holidayMap: Map<string, HolidayRecord>;
   onAddLog: (date: string) => void;
 }
 
-function DayColumnHeader({ date, dayMap, onAddLog }: Readonly<DayHeaderProps>) {
+function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHeaderProps>) {
   const dateStr = dateToYMD(date);
   const day = dayMap.get(dateStr);
   const isToday = isSameDay(date, new Date());
+  const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const holiday = holidayMap.get(dateStr);
+  const isOff = isWeekend || !!holiday;
 
   const totalMins = day?.logs.reduce((sum, l) => {
     const diff = l.endTime.getTime() - l.startTime.getTime();
@@ -116,29 +123,29 @@ function DayColumnHeader({ date, dayMap, onAddLog }: Readonly<DayHeaderProps>) {
 
   const hasLogs = totalMins > 0;
 
-  return (
+  // Determine text color for day name and date number
+  let labelColor: string;
+  let dateColor: string;
+  if (isToday) {
+    labelColor = 'text-primary';
+    dateColor = 'text-primary';
+  } else if (isOff) {
+    labelColor = 'text-red-500';
+    dateColor = 'text-red-500';
+  } else {
+    labelColor = 'text-neutral-400';
+    dateColor = 'text-neutral-900';
+  }
+
+  const headerContent = (
     <div className="flex flex-col h-full relative group">
       {/* Date section */}
       <div className="flex flex-col items-center pt-3 pb-2 px-1 gap-1">
-        <span
-          className={[
-            'text-[10px] font-bold uppercase tracking-widest',
-            isToday ? 'text-primary' : 'text-neutral-400',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
+        <span className={`text-[10px] font-bold uppercase tracking-widest ${labelColor}`}>
           {format(date, 'EEE')}
         </span>
 
-        <span
-          className={[
-            'text-[18px] font-bold leading-none',
-            isToday ? 'text-primary' : 'text-neutral-900',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
+        <span className={`text-[18px] font-bold leading-none ${dateColor}`}>
           {format(date, 'd')}
         </span>
       </div>
@@ -176,6 +183,22 @@ function DayColumnHeader({ date, dayMap, onAddLog }: Readonly<DayHeaderProps>) {
       </div>
     </div>
   );
+
+  // Wrap in tooltip only when there's a holiday name to show
+  if (holiday?.name) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {headerContent}
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs">
+          {holiday.name}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return headerContent;
 }
 
 // ─── Time gutter header — shows the week total ────────────────────────────────
@@ -213,6 +236,7 @@ function TimeGutterHeader({ totalWeekLabel }: Readonly<GutterHeaderProps>) {
 interface BulkAttendanceCalendarProps {
   weekStart: Date;
   dayMap: Map<string, BulkDayState>;
+  holidays: HolidayRecord[];
   onOpenCreate: (date: string, slotStart?: Date, slotEnd?: Date) => void;
   onOpenEdit: (date: string, log: LocalWorkLog) => void;
   onDeleteLog: (date: string, logId: string) => Promise<void>;
@@ -228,6 +252,7 @@ interface BulkAttendanceCalendarProps {
 export function BulkAttendanceCalendar({
   weekStart,
   dayMap,
+  holidays,
   onOpenCreate,
   onOpenEdit,
   onDeleteLog,
@@ -235,6 +260,17 @@ export function BulkAttendanceCalendar({
 }: Readonly<BulkAttendanceCalendarProps>) {
   const events = useMemo(() => logsToEvents(dayMap), [dayMap]);
   const hasAnyLogs = events.length > 0;
+
+  // Build a map of date string → holiday for fast lookup
+  const holidayMap = useMemo(() => {
+    const map = new Map<string, HolidayRecord>();
+    for (const h of holidays) {
+      if (h.isHoliday) {
+        map.set(h.holidayDate, h);
+      }
+    }
+    return map;
+  }, [holidays]);
 
   const totalWeekMins = useMemo(() => {
     return Array.from(dayMap.values()).reduce((sum, day) => {
@@ -265,6 +301,7 @@ export function BulkAttendanceCalendar({
           <DayColumnHeader
             date={date}
             dayMap={dayMap}
+            holidayMap={holidayMap}
             onAddLog={onOpenCreate}
           />
         ),
@@ -274,7 +311,7 @@ export function BulkAttendanceCalendar({
       ),
       toolbar: () => null,
     }),
-    [dayMap, onOpenCreate, onOpenEdit, onDeleteLog, totalWeekLabel],
+    [dayMap, holidayMap, onOpenCreate, onOpenEdit, onDeleteLog, totalWeekLabel],
   );
 
   // ── Drag handlers ───────────────────────────────────────────────────────────

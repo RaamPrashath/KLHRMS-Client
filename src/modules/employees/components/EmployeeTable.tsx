@@ -24,10 +24,10 @@ function getInitials(name: string): string {
 }
 
 // Column width distribution (must sum to 100%)
-// Employee 30% | Email 25% | Role 15% | Department 15% | Attendance 15%
-const COL_WIDTHS = ['30%', '25%', '15%', '15%', '15%'];
+// Employee 35% | Email 25% | Role 20% | Attendance 20%
+const COL_WIDTHS = ['35%', '25%', '20%', '20%'];
 
-const HEADERS = ['Employee', 'Email', 'Role', 'Department', "Today's Attendance"];
+const HEADERS = ['Employee', 'Email', 'Role', "Today's Attendance"];
 
 const columns: ColumnDef<EmployeeListItem>[] = [
   {
@@ -84,21 +84,6 @@ const columns: ColumnDef<EmployeeListItem>[] = [
       ),
   },
   {
-    id: 'department',
-    header: 'Department',
-    cell: ({ row }) =>
-      row.original.department ? (
-        <span
-          className="block truncate text-sm text-neutral-700"
-          title={row.original.department.name}
-        >
-          {row.original.department.name}
-        </span>
-      ) : (
-        <span className="text-neutral-400">—</span>
-      ),
-  },
-  {
     id: 'attendance',
     header: "Today's Attendance",
     cell: ({ row }) => (
@@ -147,7 +132,7 @@ export function EmployeeTable({ data, isLoading }: EmployeeTableProps) {
           <tbody>
             {Array.from({ length: 8 }).map((_, i) => (
               <tr key={i} className="border-b border-neutral-100">
-                {Array.from({ length: 5 }).map((_, j) => (
+                {Array.from({ length: 4 }).map((_, j) => (
                   <td key={j} className="px-4 py-3">
                     <div className="h-4 animate-pulse rounded bg-surface-muted" />
                   </td>

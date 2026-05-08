@@ -30,6 +30,11 @@ export default async function OrganizationsPage() {
                         Welcome, {session.user.name ?? session.user.email}. Choose an organization
                         or create a new one to continue.
                     </p>
+                    <div className="mt-4">
+                        <Button asChild variant="outline">
+                            <Link href="/careers">Browse public careers</Link>
+                        </Button>
+                    </div>
                 </div>
 
                 {/* ── Your organizations ── */}
