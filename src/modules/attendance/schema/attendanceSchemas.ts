@@ -3,6 +3,10 @@ import { z } from 'zod';
 export const clockInSchema = z.object({
   target_member_id: z.string().optional(),
   clock_in: z.iso.datetime().optional(),
+  work_location: z.enum(['OFFICE', 'REMOTE']),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracy_meters: z.number().min(0).optional(),
 });
 
 export const clockOutSchema = z.object({

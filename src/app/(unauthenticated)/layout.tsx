@@ -25,22 +25,15 @@ export default function UnauthenticatedLayout({ children }: UnauthenticatedLayou
 
                 {/* Logo Focus */}
                 <div className="relative z-10 w-full h-full flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-6">
-                        <div
-                            className="size-16 rounded-2xl bg-white shadow-2xl flex items-center justify-center transition-transform hover:scale-105 duration-500"
-                            aria-hidden="true"
-                        >
-                            {/* 2×2 grid mark — Kovan Labs brand */}
-                            <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
-                                <rect x="2" y="2" width="5" height="5" rx="1" fill="var(--primary)" />
-                                <rect x="9" y="2" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.7" />
-                                <rect x="2" y="9" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.7" />
-                                <rect x="9" y="9" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.4" />
-                            </svg>
-                        </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">
-                            Kovan Labs
-                        </h1>
+                    <div className="flex flex-col items-center gap-0">
+                        <Image
+                            src="/kovan-logo.svg"
+                            alt="Kovan Labs"
+                            width={260}
+                            height={57}
+                            priority
+                            
+                        />
                     </div>
                 </div>
 

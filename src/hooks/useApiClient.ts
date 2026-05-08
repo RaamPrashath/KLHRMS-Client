@@ -8,7 +8,7 @@
  */
 
 import { useMemo } from "react";
-import { authClient } from "@/lib/auth-client";
+import { useSession } from "@/hooks/useSession";
 
 export interface ApiAuth {
   token: string;
@@ -16,7 +16,7 @@ export interface ApiAuth {
 }
 
 export function useApiClient(orgId: string | undefined | null): ApiAuth | null {
-  const { data: session } = authClient.useSession();
+  const { data: session } = useSession();
   const token = session?.session?.token ?? null;
 
   return useMemo(() => {

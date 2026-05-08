@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type ChangeEvent } from "react";
+import { memo } from "react";
 import {
   Select,
   SelectContent,
@@ -24,7 +24,46 @@ interface DayColumnProps {
   locations: PlanLocationOption[];
   readOnly?: boolean;
   isToday?: boolean;
+  hasClockIn?: boolean;
   onChange?: (date: string, draft: DayDraft) => void;
+}
+
+function getFooterState(
+  plannedLocation: PlanLocationValue | "",
+  hasClockIn: boolean,
+) {
+  if (!plannedLocation) {
+    return {
+      label: "No plan saved",
+      tone: "text-muted-foreground/40",
+    };
+  }
+
+  if (plannedLocation === "LEAVE") {
+    return {
+      label: "Leave planned",
+      tone: "text-rose-700",
+    };
+  }
+
+  if (plannedLocation === "HOLIDAY") {
+    return {
+      label: "Holiday planned",
+      tone: "text-violet-700",
+    };
+  }
+
+  if (!hasClockIn) {
+    return {
+      label: "No clock-in yet",
+      tone: "text-muted-foreground/40",
+    };
+  }
+
+  return {
+    label: `Matched ${plannedLocation === "OFFICE" ? "office" : "remote"} plan`,
+    tone: "text-emerald-700",
+  };
 }
 
 export const DayColumn = memo(function DayColumn({
@@ -34,10 +73,12 @@ export const DayColumn = memo(function DayColumn({
   locations,
   readOnly = false,
   isToday = false,
+  hasClockIn = false,
   onChange,
 }: DayColumnProps) {
   const location = draft.work_location || null;
   const theme = location ? PLAN_LOCATION_THEMES[location] : null;
+  const footerState = getFooterState(draft.work_location, hasClockIn);
 
   function handleLocationChange(value: string) {
     onChange?.(date, {
@@ -123,12 +164,14 @@ export const DayColumn = memo(function DayColumn({
       >
         {readOnly ? (
           <div className="flex flex-col items-center justify-center flex-1">
-             <p className="text-[10px] text-muted-foreground/40 uppercase tracking-widest font-bold">Planned</p>
+            <p className={cn("text-[10px] uppercase tracking-widest font-bold text-center", footerState.tone)}>
+              {footerState.label}
+            </p>
           </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center">
-            <p className="text-[10px] text-muted-foreground/30 uppercase tracking-widest font-bold">
-              {location ? "Active" : "Pending"}
+            <p className={cn("text-[10px] uppercase tracking-widest font-bold text-center", footerState.tone)}>
+              {footerState.label}
             </p>
           </div>
         )}

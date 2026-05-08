@@ -1,7 +1,10 @@
 'use server';
 
+import { getServerSession } from '@/lib/server-session';
 import { prisma } from '@/lib/prisma';
+import type { PlanLocationValue } from '@/types/weekly_plan';
 import type {
+  AttendanceClockContext,
   AttendanceRecord,
   AttendanceListResponse,
 } from '@/modules/attendance/types/attendanceTypes';
@@ -33,6 +36,17 @@ function buildHeaders(orgSlug: string, memberId: string): HeadersInit {
   };
 }
 
+function buildAuthorizedHeaders(
+  orgSlug: string,
+  memberId: string,
+  token: string,
+): HeadersInit {
+  return {
+    ...buildHeaders(orgSlug, memberId),
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (res.ok) {
     if (res.status === 204) return undefined as T;
@@ -58,6 +72,17 @@ function buildQuery(params: Record<string, string | number | undefined | null>):
   }
   const s = q.toString();
   return s ? `?${s}` : '';
+}
+
+function getIsoWeekParts(dateIso: string): { year: number; week: number } {
+  const [year, month, day] = dateIso.split('-').map(Number);
+  const utcDate = new Date(Date.UTC(year, (month ?? 1) - 1, day ?? 1));
+  const dayNumber = utcDate.getUTCDay() || 7;
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayNumber);
+  const isoYear = utcDate.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const week = Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return { year: isoYear, week };
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -215,6 +240,60 @@ export async function fetchMemberProfileAction(params: {
     select: { user: { select: { name: true } } },
   });
   return { name: member?.user?.name ?? null };
+}
+
+export async function fetchAttendanceClockContextAction(params: {
+  orgSlug: string;
+  memberId: string;
+  date: string;
+}): Promise<AttendanceClockContext> {
+  const organization = await prisma.organization.findUnique({
+    where: { slug: params.orgSlug },
+    select: { latitude: true, longitude: true },
+  });
+
+  const office =
+    organization?.latitude != null && organization.longitude != null
+      ? {
+          latitude: organization.latitude,
+          longitude: organization.longitude,
+          radiusMeters: Number(
+            process.env.ATTENDANCE_OFFICE_RADIUS_METERS ??
+              process.env.NEXT_PUBLIC_ATTENDANCE_OFFICE_RADIUS_METERS ??
+              '200',
+          ),
+        }
+      : null;
+
+  const { year, week } = getIsoWeekParts(params.date);
+  let plannedLocation: PlanLocationValue | null = null;
+
+  try {
+    const session = await getServerSession();
+    const token = session?.session?.token;
+    if (!token) {
+      return { plannedLocation, office };
+    }
+
+    const query = buildQuery({ year, week });
+    const res = await fetch(`${getApiUrl()}/weekly-plans${query}`, {
+      method: 'GET',
+      headers: buildAuthorizedHeaders(params.orgSlug, params.memberId, token),
+      cache: 'no-store',
+    });
+    const entries = await handleResponse<
+      Array<{ date: string; work_location: PlanLocationValue }>
+    >(res);
+    plannedLocation =
+      entries.find((entry) => entry.date === params.date)?.work_location ?? null;
+  } catch {
+    plannedLocation = null;
+  }
+
+  return {
+    plannedLocation,
+    office,
+  };
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────────

@@ -87,7 +87,7 @@ export function SignupForm() {
                 type: "email-verification",
             });
 
-            router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+            router.replace(`/verify-email?email=${encodeURIComponent(data.email)}`);
         } catch (error) {
             setFormError(
                 "Unable to connect to the server. Please check your internet connection and try again."

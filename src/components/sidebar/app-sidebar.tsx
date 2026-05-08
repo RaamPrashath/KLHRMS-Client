@@ -31,11 +31,6 @@ import {
     ClipboardList,
     FolderKanban,
     CalendarDays,
-    // Recruitment
-    Briefcase,
-    UserSearch,
-    MessageSquare,
-    FileText,
     // Lifecycle
     UserPlus,
     FolderOpen,
@@ -64,6 +59,7 @@ import {
     type RolePermissions,
     filterNavByPermissions,
 } from "@/lib/hrms-roles";
+import Image from "next/image";
 
 // ─── Types ───────────────────────────────────────────────────
 export interface AppSidebarProps {
@@ -93,10 +89,6 @@ const NAV_ICONS: Record<string, React.ReactElement<{ className?: string }>> = {
     "timesheet":           <ClipboardList className={ic} />,
     "projects":            <FolderKanban  className={ic} />,
     "weekly-plan":         <CalendarDays  className={ic} />,
-    "jobs":                <Briefcase     className={ic} />,
-    "candidates":          <UserSearch    className={ic} />,
-    "interviews":          <MessageSquare className={ic} />,
-    "offers":              <FileText      className={ic} />,
     "onboarding":          <UserPlus      className={ic} />,
     "document-collection": <FolderOpen    className={ic} />,
     "offboarding":         <UserMinus     className={ic} />,
@@ -174,19 +166,7 @@ function LogoRow({ orgName, orgSlug }: { orgName: string; orgSlug: string }) {
         <div className="flex flex-col gap-4 py-2">
             <div className="flex items-center justify-between min-w-0 px-1">
                 <div className="flex items-center min-w-0">
-                    <Link
-                        href={`/${orgSlug}`}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-lg transition-transform hover:scale-105 active:scale-95"
-                    >
-                        {/* Brand Grid Mark */}
-                        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-                            <rect x="2" y="2" width="5" height="5" rx="1" fill="var(--primary)" />
-                            <rect x="9" y="2" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.7" />
-                            <rect x="2" y="9" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.7" />
-                            <rect x="9" y="9" width="5" height="5" rx="1" fill="var(--primary)" fillOpacity="0.4" />
-                        </svg>
-                    </Link>
-
+                    
                     <motion.div
                         initial={false}
                         animate={{ opacity: open ? 1 : 0, width: open ? "auto" : 0 }}
@@ -194,12 +174,15 @@ function LogoRow({ orgName, orgSlug }: { orgName: string; orgSlug: string }) {
                         className="overflow-hidden flex flex-col min-w-0 ml-3"
                         aria-hidden={!open}
                     >
-                        <span className="truncate text-[15px] font-semibold text-white tracking-tight">
-                            Kovan Labs
-                        </span>
-                        <span className="truncate text-[11px] font-medium text-white/40 uppercase tracking-[0.05em]">
-                            {orgName}
-                        </span>
+                        {/* Full wordmark — white-filtered for dark sidebar */}
+                        <Image
+                            src="/kovan-logo.svg"
+                            alt="Kovan Labs"
+                            width={108}
+                            height={24}
+                            draggable={false}
+                            className="bg-white p-2"
+                        />
                     </motion.div>
                 </div>
 
@@ -245,6 +228,8 @@ function NavSearch({
     }
 
     return (
+
+        
         <div className="relative group px-1">
             <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40 group-focus-within:text-white transition-colors pointer-events-none" />
             <input
@@ -446,6 +431,16 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, user }: Ap
 
     const allNavGroups = filterNavByPermissions(permissions);
 
+    // Total nav items this role can see — used to decide if search is worth showing.
+    // Employees typically have ≤5 items; admins/HR have many more.
+    const totalNavItems = allNavGroups.reduce((sum, g) => sum + g.items.length, 0);
+    const showSearch = totalNavItems > 6;
+
+    // Clear stale search if the bar is no longer visible (e.g. role change).
+    useEffect(() => {
+        if (!showSearch && search) setSearch("");
+    }, [showSearch, search]);
+
     // Filter nav items by search query
     const navGroups = search.trim()
         ? allNavGroups.reduce<typeof allNavGroups>((acc, group) => {
@@ -463,7 +458,7 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, user }: Ap
             <SidebarBody className="justify-between gap-4 bg-[var(--color-sidebar-bg)] border-r border-[var(--color-sidebar-divider)]">
                 <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto no-scrollbar gap-3">
                     <LogoRow orgName={orgName} orgSlug={orgSlug} />
-                    <NavSearch value={search} onChange={setSearch} />
+                    {showSearch && <NavSearch value={search} onChange={setSearch} />}
 
                     {navGroups.length === 0 ? (
                         <div className="px-2 py-4 text-xs text-[var(--color-sidebar-label)] text-center leading-relaxed">

@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
+import { requireServerSession } from '@/lib/server-session';
 import { RoleForm } from '@/modules/roles/components/RoleForm';
 
 export default async function CreateRolePage({
@@ -11,11 +10,7 @@ export default async function CreateRolePage({
 }: Readonly<{
   params: Promise<{ orgSlug: string }>;
 }>) {
-  const session = await auth.api.getSession({ headers: await headers() });
-
-  if (!session?.user?.id) {
-    redirect('/login');
-  }
+  const session = await requireServerSession();
 
   const { orgSlug } = await params;
   let memberId: string;

@@ -15,6 +15,7 @@ import {
 } from "@/hooks/queries/weekly_plan";
 import { useSaveWeeklyPlanMutation } from "@/hooks/mutations/weekly_plan";
 import { useApiClient } from "@/hooks/useApiClient";
+import { useMyAttendanceQuery } from "@/modules/attendance/hooks/useMyAttendanceQuery";
 import { getCurrentWeekState, getWeekDays, shiftWeek } from "@/modules/weekly-plan/date";
 import type {
   PlanLocationOption,
@@ -97,6 +98,16 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     weekState.week,
     canViewTeam,
   );
+  const weekDays = useMemo(
+    () => getWeekDays(weekState.year, weekState.week),
+    [weekState.week, weekState.year],
+  );
+  const attendanceQuery = useMyAttendanceQuery(orgSlug, memberId, {
+    dateFrom: weekDays[0]?.iso,
+    dateTo: weekDays[weekDays.length - 1]?.iso,
+    page: 1,
+    pageSize: 10,
+  });
 
   const saveMutation = useSaveWeeklyPlanMutation(
     orgSlug,
@@ -234,6 +245,18 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
 
   const teamMembers = Object.entries(teamByUser);
   const resolvedLocations = locations as PlanLocationOption[];
+  const actualByDate = useMemo(
+    () =>
+      Object.fromEntries(
+        (attendanceQuery.data?.items ?? []).map((record) => [
+          record.date,
+          {
+            hasClockIn: !!record.clockIn,
+          },
+        ]),
+      ),
+    [attendanceQuery.data?.items],
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -289,7 +312,8 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
           entries={myEntries}
           drafts={drafts}
           locations={resolvedLocations}
-          isLoading={isWeekLoading || isLocationsLoading}
+          isLoading={isWeekLoading || isLocationsLoading || attendanceQuery.isLoading}
+          actualByDate={actualByDate}
           onDraftChange={updateDraft}
         />
       </section>

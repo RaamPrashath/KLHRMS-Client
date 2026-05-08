@@ -18,11 +18,6 @@ export const HRMS_MODULES = [
   'timesheet',
   'projects',
   'weeklyPlan',
-  // Recruitment
-  'jobs',
-  'candidates',
-  'interviews',
-  'offers',
   // Lifecycle
   'onboarding',
   'documentCollection',

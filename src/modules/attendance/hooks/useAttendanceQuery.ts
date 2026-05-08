@@ -19,7 +19,7 @@ export function useAttendanceQuery(
   refetch: () => void;
 } {
   const query = useQuery<AttendanceListResponse, Error>({
-    queryKey: ['attendance', orgSlug, filters],
+    queryKey: ['attendance', orgSlug, memberId, filters],
     queryFn: () =>
       fetchAttendanceAction({
         orgSlug,
@@ -35,6 +35,9 @@ export function useAttendanceQuery(
         },
       }),
     enabled: !!orgSlug && !!memberId,
+    staleTime: 30_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   return {

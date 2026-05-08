@@ -39,6 +39,7 @@ export function useWorkLogEditor(): UseWorkLogEditorReturn {
         id: crypto.randomUUID(),
         startTime: start,
         endTime: end,
+        title: null,
         notes: null,
         isOptimistic: true,
       },
@@ -65,6 +66,7 @@ export function useWorkLogEditor(): UseWorkLogEditorReturn {
         id: crypto.randomUUID(),
         startTime,
         endTime,
+        title: null,
         notes,
         isOptimistic: true,
       };

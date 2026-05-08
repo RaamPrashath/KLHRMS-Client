@@ -1,10 +1,16 @@
+import { cn } from "@/lib/utils";
+
 interface AuthDividerProps {
     text?: string;
+    className?: string;
 }
 
-export function AuthDivider({ text = "OR CONTINUE WITH" }: AuthDividerProps) {
+export function AuthDivider({
+    text = "OR CONTINUE WITH",
+    className,
+}: AuthDividerProps) {
     return (
-        <div className="relative my-5">
+        <div className={cn("relative my-5", className)}>
             <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-neutral-100" />
             </div>

@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
+import { requireServerSession } from '@/lib/server-session';
 import { fetchRolesAction } from '@/modules/roles/api/roleServerActions';
 import { RoleForm } from '@/modules/roles/components/RoleForm';
 import { type RoleResponse } from '@/modules/roles/types/role';
@@ -13,11 +12,7 @@ export default async function EditRolePage({
 }: Readonly<{
   params: Promise<{ orgSlug: string; roleId: string }>;
 }>) {
-  const session = await auth.api.getSession({ headers: await headers() });
-
-  if (!session?.user?.id) {
-    redirect('/login');
-  }
+  const session = await requireServerSession();
 
   const { orgSlug, roleId } = await params;
   let memberId: string;

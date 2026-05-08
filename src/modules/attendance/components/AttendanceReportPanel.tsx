@@ -28,46 +28,38 @@ export function AttendanceReportPanel({
       {isError && (
         <p className="text-xs text-destructive-text">Failed to load summary.</p>
       )}
-      {/* impeccable-variants-start 71d9acc5 */}
-      <div data-impeccable-variants="71d9acc5" data-impeccable-variant-count="3" style={{ display: "contents" }}>
-        {/* Original */}
-        <div data-impeccable-variant="original">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <AttendanceStatusCard
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <AttendanceStatusCard
           label="Present Days"
           value={summary.presentDays}
           isLoading={isLoading}
-          />
-          <AttendanceStatusCard
+        />
+        <AttendanceStatusCard
           label="Half Days"
           value={summary.halfDays}
           isLoading={isLoading}
-          />
-          <AttendanceStatusCard
+        />
+        <AttendanceStatusCard
           label="Absent Days"
           value={summary.absentDays}
           isLoading={isLoading}
-          />
-          <AttendanceStatusCard
+        />
+        <AttendanceStatusCard
           label="Total Hours"
           value={formatHours(summary.totalHours)}
           isLoading={isLoading}
-          />
-          <AttendanceStatusCard
+        />
+        <AttendanceStatusCard
           label="Overtime Hrs"
           value={formatHours(summary.overtimeHours)}
           isLoading={isLoading}
-          />
-          <AttendanceStatusCard
+        />
+        <AttendanceStatusCard
           label="Status"
           value={CLOCK_STATUS_LABELS[summary.clockStatus] ?? summary.clockStatus}
           isLoading={isLoading}
-          />
-          </div>
-        </div>
-        {/* Variants: insert below this line */}
+        />
       </div>
-      {/* impeccable-variants-end 71d9acc5 */}
     </div>
   );
 }
