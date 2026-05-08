@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
+import { getRequestSession } from '@/lib/server-session';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getRequestSession(request.headers);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

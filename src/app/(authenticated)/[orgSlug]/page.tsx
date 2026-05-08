@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { requireOrgMembership } from "@/lib/organizations";
+import { requireServerSession } from "@/lib/server-session";
 import { DashboardShell } from "@/modules/dashboard/components/DashboardShell";
 
 export default async function DashboardPage({
@@ -9,8 +8,7 @@ export default async function DashboardPage({
 }: Readonly<{
   params: Promise<{ orgSlug: string }>;
 }>) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user?.id) redirect("/login");
+  const session = await requireServerSession();
 
   const { orgSlug } = await params;
   let memberId: string;

@@ -3,14 +3,19 @@ import { motion } from "framer-motion";
 interface ClockInButtonProps {
   onClockIn: () => void;
   isPending: boolean;
+  disabled?: boolean;
 }
 
-export function ClockInButton({ onClockIn, isPending }: Readonly<ClockInButtonProps>) {
+export function ClockInButton({
+  onClockIn,
+  isPending,
+  disabled = false,
+}: Readonly<ClockInButtonProps>) {
   return (
     <motion.button
       type="button"
       onClick={onClockIn}
-      disabled={isPending}
+      disabled={isPending || disabled}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}

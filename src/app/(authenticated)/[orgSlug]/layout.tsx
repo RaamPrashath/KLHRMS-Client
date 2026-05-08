@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { requireOrgMembership } from "@/lib/organizations";
 import { OrgSidebarShell } from "@/components/sidebar/org-sidebar-shell";
 import { type RolePermissions } from "@/lib/hrms-roles";
+import { requireServerSession } from "@/lib/server-session";
 
 export default async function OrganizationLayout({
     children,
@@ -12,11 +11,7 @@ export default async function OrganizationLayout({
     children: React.ReactNode;
     params: Promise<{ orgSlug: string }>;
 }>) {
-    const session = await auth.api.getSession({ headers: await headers() });
-
-    if (!session?.user?.id) {
-        redirect("/login");
-    }
+    const session = await requireServerSession();
 
     const { orgSlug } = await params;
     let org: Awaited<ReturnType<typeof requireOrgMembership>>["org"];

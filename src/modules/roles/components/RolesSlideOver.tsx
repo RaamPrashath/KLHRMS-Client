@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion, type Variants } from 'framer-motion';
 import { X } from 'lucide-react';
 import { RoleForm } from '@/modules/roles/components/RoleForm';
 import { type RoleResponse } from '@/modules/roles/types/role';
@@ -48,7 +48,7 @@ export function RolesSlideOver({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
-  const panelVariants = {
+  const panelVariants: Variants = {
     hidden: { x: shouldReduceMotion ? 0 : '100%', opacity: shouldReduceMotion ? 0 : 1 },
     visible: {
       x: 0,
@@ -62,7 +62,7 @@ export function RolesSlideOver({
     },
   };
 
-  const overlayVariants = {
+  const overlayVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { duration: 0.2 } },
     exit: { opacity: 0, transition: { duration: 0.15 } },

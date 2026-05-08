@@ -1,5 +1,3 @@
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -12,16 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import organizations from "@/lib/organizations";
+import { requireServerSession } from "@/lib/server-session";
 import { cn } from "@/lib/utils";
 
 export default async function OrganizationsPage() {
-    const session = await auth.api.getSession({
-        headers: await headers(),
-    });
-
-    if (!session?.user) {
-        redirect("/login");
-    }
+    const session = await requireServerSession();
 
     const [myOrgs, discoverableOrgs] = await Promise.all([
         organizations.getOrganizationsForUser(session.user.id),

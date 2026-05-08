@@ -3,6 +3,7 @@
 export type AttendanceStatus = 'PRESENT' | 'HALF_DAY' | 'ABSENT';
 export type ClockStatus = 'CLOCKED_IN' | 'CLOCKED_OUT' | 'NO_RECORD';
 export type PermissionScope = 'none' | 'self' | 'team' | 'department' | 'organization';
+export type AttendanceWorkLocation = 'OFFICE' | 'REMOTE';
 
 export interface AttendanceRecord {
   id: string;
@@ -39,6 +40,15 @@ export interface DerivedAttendanceSummary {
 export interface ApiError {
   status: number;
   message: string;
+}
+
+export interface AttendanceClockContext {
+  plannedLocation: 'OFFICE' | 'WFH' | 'LEAVE' | 'HOLIDAY' | null;
+  office: {
+    latitude: number;
+    longitude: number;
+    radiusMeters: number;
+  } | null;
 }
 
 export type AttendanceTimePreset = 'today' | 'yesterday' | 'last_week' | 'last_month' | 'all_time' | 'custom';

@@ -1,9 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
-import { auth } from '@/lib/auth';
 import organizations from '@/lib/organizations';
+import { requireServerSession } from '@/lib/server-session';
 
 export async function createOrganizationAction(formData: FormData) {
   const name = formData.get('name');
@@ -12,7 +11,7 @@ export async function createOrganizationAction(formData: FormData) {
     throw new Error('Name is required');
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await requireServerSession();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   const org = await organizations.createOrganizationForUser({
@@ -24,7 +23,7 @@ export async function createOrganizationAction(formData: FormData) {
 }
 
 export async function joinOrganizationAction(organizationId: string) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await requireServerSession();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   await organizations.joinOrganization(session.user.id, organizationId);
@@ -45,7 +44,7 @@ export async function updateOrganizationAction(slug: string, formData: FormData)
     throw new Error('Name is required');
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await requireServerSession();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   await organizations.requireOrgOwner(session.user.id, slug);
@@ -61,7 +60,7 @@ export async function deleteOrganizationAction(slug: string, formData: FormData)
     throw new Error('Confirmation slug does not match');
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await requireServerSession();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   await organizations.requireOrgOwner(session.user.id, slug);

@@ -1,11 +1,10 @@
 import { redirect } from 'next/navigation';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
 import {
   deleteOrganizationAction,
   updateOrganizationAction,
 } from '@/app/actions/organizationActions';
 import { requireOrgOwner } from '@/lib/organizations';
+import { requireServerSession } from '@/lib/server-session';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -16,11 +15,7 @@ export default async function OrganizationSettingsPage({
 }: Readonly<{
   params: Promise<{ orgSlug: string }>;
 }>) {
-  const session = await auth.api.getSession({ headers: await headers() });
-
-  if (!session?.user?.id) {
-    redirect('/login');
-  }
+  const session = await requireServerSession();
 
   const { orgSlug } = await params;
   let org: Awaited<ReturnType<typeof requireOrgOwner>>['org'];

@@ -47,7 +47,7 @@ export function LoginForm() {
 
             if (result.error) {
                 if (result.error.code === "EMAIL_NOT_VERIFIED") {
-                    router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+                    router.replace(`/verify-email?email=${encodeURIComponent(data.email)}`);
                     return;
                 }
 
@@ -57,16 +57,13 @@ export function LoginForm() {
                 return;
             }
 
-            const session = await authClient.getSession();
+            // Session data is already in the sign-in result — no extra getSession() needed.
+            const user = result.data?.user as { onboarded?: boolean } | undefined;
 
-            if (session.data?.user) {
-                const user = session.data.user as { onboarded?: boolean };
-
-                if (user.onboarded === false) {
-                    router.push("/onboarding");
-                } else {
-                    router.push("/organizations");
-                }
+            if (user?.onboarded === false) {
+                router.replace("/onboarding");
+            } else {
+                router.replace("/organizations");
             }
         } catch {
             setFormError("Something went wrong. Please try again.");
@@ -160,4 +157,4 @@ export function LoginForm() {
             </div>
         </div>
     );
-}
+}

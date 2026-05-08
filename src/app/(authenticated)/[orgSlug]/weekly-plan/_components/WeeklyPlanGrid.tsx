@@ -18,6 +18,12 @@ interface WeeklyPlanGridProps {
   drafts?: Record<string, DayDraft>;
   readOnly?: boolean;
   isLoading?: boolean;
+  actualByDate?: Record<
+    string,
+    {
+      hasClockIn: boolean;
+    }
+  >;
   onDraftChange?: (date: string, draft: DayDraft) => void;
 }
 
@@ -48,6 +54,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
   drafts,
   readOnly = false,
   isLoading = false,
+  actualByDate,
   onDraftChange,
 }: WeeklyPlanGridProps) {
   const days = useMemo(() => getWeekDays(year, week), [year, week]);
@@ -74,6 +81,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
       {days.map(({ iso, label }) => {
         const savedEntry = entries.find((entry) => entry.date === iso);
         const displayDraft = buildDisplayDraft(savedEntry, drafts?.[iso], readOnly);
+        const actualEntry = actualByDate?.[iso];
 
         return (
           <DayColumn
@@ -85,6 +93,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
             readOnly={readOnly}
             onChange={onDraftChange}
             isToday={isToday(parseISO(iso))}
+            hasClockIn={actualEntry?.hasClockIn ?? false}
           />
         );
       })}
