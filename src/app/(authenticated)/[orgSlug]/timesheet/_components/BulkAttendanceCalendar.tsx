@@ -22,8 +22,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 moment.updateLocale('en', {
   week: {
-    dow: 1,
-    doy: 4,
+    dow: 0, // Sunday = first day of week
+    doy: 6,
   },
 });
 

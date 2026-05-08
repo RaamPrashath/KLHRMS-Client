@@ -10,11 +10,18 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { Plus, RefreshCcw, Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer';
@@ -89,10 +96,16 @@ export function AtsKanbanBoard({
   orgSlug,
   memberId,
   jobPostingId,
+  jobPostings,
+  onJobPostingChange,
+  isLoadingPostings,
 }: {
   orgSlug: string;
   memberId: string;
   jobPostingId: string | null;
+  jobPostings: Array<{ id: string; title: string }>;
+  onJobPostingChange: (id: string) => void;
+  isLoadingPostings: boolean;
 }) {
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [activeApplication, setActiveApplication] = useState<PipelineApplication | null>(null);
@@ -158,7 +171,7 @@ export function AtsKanbanBoard({
 
   if (!jobPostingId) {
     return (
-      <div className="rounded-xl border border-neutral-100 bg-surface p-8 text-center text-sm text-neutral-500">
+      <div className="rounded-xl border border-neutral-100 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
         Select a job posting to open the ATS pipeline.
       </div>
     );
@@ -172,30 +185,36 @@ export function AtsKanbanBoard({
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-neutral-900">Pipeline stages</p>
-          <p className="text-xs text-neutral-500">Drag candidate cards between columns. Changes save in the background.</p>
+      <div className="mb-4 flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+          <Input
+            value={globalSearch}
+            onChange={(event) => setGlobalSearch(event.target.value)}
+            placeholder="Search all candidates"
+            className="h-9 bg-white pl-9"
+          />
         </div>
-        <div className="flex flex-1 items-center justify-end gap-2">
-          <div className="relative w-full max-w-sm">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-            <Input
-              value={globalSearch}
-              onChange={(event) => setGlobalSearch(event.target.value)}
-              placeholder="Search all candidates"
-              className="h-9 bg-surface pl-9"
-            />
-          </div>
-          <Button size="sm" variant="outline" onClick={() => boardQuery.refetch()}>
-            <RefreshCcw className="size-4" />
-            Refresh
-          </Button>
-          <Button size="sm" onClick={() => setAddAfterStageId(stages.at(-1)?.id ?? null)}>
-            <Plus className="size-4" />
-            Stage
-          </Button>
-        </div>
+        <Select
+          value={jobPostingId ?? undefined}
+          onValueChange={onJobPostingChange}
+          disabled={isLoadingPostings || !jobPostings.length}
+        >
+          <SelectTrigger className="h-9 w-full bg-white sm:w-[280px]">
+            <SelectValue placeholder={isLoadingPostings ? 'Loading jobs' : 'Select job posting'} />
+          </SelectTrigger>
+          <SelectContent>
+            {jobPostings.map((posting) => (
+              <SelectItem key={posting.id} value={posting.id}>
+                {posting.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button size="sm" onClick={() => setAddAfterStageId(stages.at(-1)?.id ?? null)}>
+          <Plus className="size-4" />
+          Stage
+        </Button>
       </div>
 
       <DndContext
@@ -205,7 +224,7 @@ export function AtsKanbanBoard({
         onDragCancel={() => setActiveApplication(null)}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
           {stages.map((stage, index) => {
             const stageSearch = columnSearch[stage.id] ?? '';
             const filteredApplications = stage.applications.filter(

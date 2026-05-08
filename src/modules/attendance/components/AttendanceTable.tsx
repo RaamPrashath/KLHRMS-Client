@@ -217,12 +217,11 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     setViewMode(mode);
     if (mode === 'list') {
       // Restore sensible list defaults
-      const today = getTodayIST();
       onFiltersChange({
         ...filters,
-        timePreset: 'today',
-        dateFrom: today,
-        dateTo: today,
+        timePreset: 'all_time',
+        dateFrom: undefined,
+        dateTo: undefined,
         page: 1,
         pageSize: 20,
       });
@@ -446,32 +445,17 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
           if (viewMode === 'list') {
             return (
               <div className="overflow-x-auto w-full bg-white">
-                <table className="w-full text-center border-collapse table-fixed min-w-[800px]">
+                <table className="w-full text-center border-collapse table-auto min-w-[800px]">
                   <thead>
-                    <tr>
+                    <tr className="border-b border-black/[0.04] bg-canvas">
                       {showEmployeeColumn && (
-                        <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center w-1/6">Employee</th>
+                        <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left" style={{ width: '25%' }}>Employee</th>
                       )}
-                      <th className={cn(
-                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
-                        showEmployeeColumn ? "w-1/6" : "w-1/5"
-                      )}>Date</th>
-                      <th className={cn(
-                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
-                        showEmployeeColumn ? "w-1/6" : "w-1/5"
-                      )}>Clock In</th>
-                      <th className={cn(
-                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
-                        showEmployeeColumn ? "w-1/6" : "w-1/5"
-                      )}>Clock Out</th>
-                      <th className={cn(
-                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
-                        showEmployeeColumn ? "w-1/6" : "w-1/5"
-                      )}>Work Time</th>
-                      <th className={cn(
-                        "px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center",
-                        showEmployeeColumn ? "w-1/6" : "w-1/5"
-                      )}>Status</th>
+                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Date</th>
+                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Clock In</th>
+                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Clock Out</th>
+                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Work Time</th>
+                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Status</th>
                     </tr>
                   </thead>
                   <TableBody

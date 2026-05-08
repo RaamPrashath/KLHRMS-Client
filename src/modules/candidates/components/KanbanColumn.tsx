@@ -30,18 +30,18 @@ export function KanbanColumn({
   onSearchChange,
   filteredApplications,
 }: {
-  stage: PipelineStage;
-  isFirst: boolean;
-  isLast: boolean;
-  onOpenCandidate: (applicationId: string) => void;
-  onAddAfter: (stageId: string) => void;
-  onRename: (stage: PipelineStage) => void;
-  onDelete: (stage: PipelineStage) => void;
-  onMoveLeft: (stage: PipelineStage) => void;
-  onMoveRight: (stage: PipelineStage) => void;
-  searchValue: string;
-  onSearchChange: (stageId: string, value: string) => void;
-  filteredApplications: PipelineApplication[];
+  readonly stage: PipelineStage;
+  readonly isFirst: boolean;
+  readonly isLast: boolean;
+  readonly onOpenCandidate: (applicationId: string) => void;
+  readonly onAddAfter: (stageId: string) => void;
+  readonly onRename: (stage: PipelineStage) => void;
+  readonly onDelete: (stage: PipelineStage) => void;
+  readonly onMoveLeft: (stage: PipelineStage) => void;
+  readonly onMoveRight: (stage: PipelineStage) => void;
+  readonly searchValue: string;
+  readonly onSearchChange: (stageId: string, value: string) => void;
+  readonly filteredApplications: PipelineApplication[];
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: stage.id,
@@ -52,11 +52,11 @@ export function KanbanColumn({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex h-[calc(100vh-220px)] min-h-[520px] w-[300px] shrink-0 flex-col rounded-xl border border-neutral-100 bg-surface-subtle',
-        isOver && 'border-primary bg-primary-ghost',
+        'flex h-[calc(100vh-220px)] min-h-[520px] w-[300px] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm',
+        isOver && 'ring-2 ring-primary bg-primary-ghost',
       )}
     >
-      <header className="border-b border-neutral-100 bg-surface p-3">
+      <header className="border-b border-neutral-100 bg-white p-3 ">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export function KanbanColumn({
           </DropdownMenu>
         </div>
 
-        <div className="relative mt-3">
+        <div className="relative mt-3 ">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
           <Input
             value={searchValue}
@@ -126,7 +126,7 @@ export function KanbanColumn({
           />
         ))}
         {filteredApplications.length === 0 && (
-          <div className="rounded-lg border border-dashed border-neutral-200 bg-surface/60 p-4 text-center text-xs text-neutral-500">
+          <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50/60 p-4 text-center text-xs text-neutral-500">
             {stage.applications.length === 0 ? 'Drop candidates here' : 'No candidates match'}
           </div>
         )}

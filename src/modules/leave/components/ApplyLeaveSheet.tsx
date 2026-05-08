@@ -92,96 +92,128 @@ export function ApplyLeaveSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-xl overflow-y-auto bg-surface">
-        <SheetHeader>
-          <SheetTitle>Apply Leave</SheetTitle>
-          <SheetDescription>Submit a leave request for review.</SheetDescription>
+      <SheetContent className="flex flex-col overflow-hidden bg-white sm:max-w-xl">
+        <SheetHeader className="shrink-0 border-b border-neutral-100 pb-4">
+          <SheetTitle className="text-xl font-semibold text-neutral-900">Apply Leave</SheetTitle>
+          <SheetDescription className="text-sm text-neutral-600">
+            Submit a leave request for review.
+          </SheetDescription>
         </SheetHeader>
 
-        <form id="apply-leave-form" className="mt-6 flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)}>
-          {createScope === 'organization' ? (
-            <div className="flex flex-col gap-1.5">
-              <Label>Member</Label>
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <form id="apply-leave-form" className="flex flex-col gap-5" onSubmit={form.handleSubmit(onSubmit)}>
+            {createScope === 'organization' ? (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="leave-member" className="text-sm font-medium text-neutral-900">
+                  Member
+                </Label>
+                <Select
+                  value={form.watch('memberId')}
+                  onValueChange={(value) => form.setValue('memberId', value, { shouldValidate: true })}
+                >
+                  <SelectTrigger id="leave-member" className="h-10">
+                    <SelectValue placeholder="Select a member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members.map((member) => (
+                      <SelectItem key={member.memberId} value={member.memberId}>
+                        {member.name ?? member.email ?? member.memberId}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.memberId ? (
+                  <p className="text-xs text-destructive-text">{form.formState.errors.memberId.message}</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="leave-type" className="text-sm font-medium text-neutral-900">
+                Leave Type
+              </Label>
               <Select
-                value={form.watch('memberId')}
-                onValueChange={(value) => form.setValue('memberId', value, { shouldValidate: true })}
+                value={form.watch('leaveTypeId')}
+                onValueChange={(value) => form.setValue('leaveTypeId', value, { shouldValidate: true })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a member" />
+                <SelectTrigger id="leave-type" className="h-10">
+                  <SelectValue placeholder="Select leave type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {members.map((member) => (
-                    <SelectItem key={member.memberId} value={member.memberId}>
-                      {member.name ?? member.email ?? member.memberId}
+                  {leaveTypes.map((leaveType) => (
+                    <SelectItem key={leaveType.id} value={leaveType.id}>
+                      {leaveType.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {form.formState.errors.memberId ? (
-                <p className="text-xs text-destructive-text">{form.formState.errors.memberId.message}</p>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-1.5">
-            <Label>Leave Type</Label>
-            <Select
-              value={form.watch('leaveTypeId')}
-              onValueChange={(value) => form.setValue('leaveTypeId', value, { shouldValidate: true })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select leave type" />
-              </SelectTrigger>
-              <SelectContent>
-                {leaveTypes.map((leaveType) => (
-                  <SelectItem key={leaveType.id} value={leaveType.id}>
-                    {leaveType.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {form.formState.errors.leaveTypeId ? (
-              <p className="text-xs text-destructive-text">{form.formState.errors.leaveTypeId.message}</p>
-            ) : null}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="leave-start-date">Start Date</Label>
-              <Input id="leave-start-date" type="date" {...form.register('startDate')} />
-              {form.formState.errors.startDate ? (
-                <p className="text-xs text-destructive-text">{form.formState.errors.startDate.message}</p>
+              {form.formState.errors.leaveTypeId ? (
+                <p className="text-xs text-destructive-text">{form.formState.errors.leaveTypeId.message}</p>
               ) : null}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="leave-end-date">End Date</Label>
-              <Input id="leave-end-date" type="date" {...form.register('endDate')} />
-              {form.formState.errors.endDate ? (
-                <p className="text-xs text-destructive-text">{form.formState.errors.endDate.message}</p>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="leave-start-date" className="text-sm font-medium text-neutral-900">
+                  Start Date
+                </Label>
+                <Input id="leave-start-date" type="date" className="h-10" {...form.register('startDate')} />
+                {form.formState.errors.startDate ? (
+                  <p className="text-xs text-destructive-text">{form.formState.errors.startDate.message}</p>
+                ) : null}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="leave-end-date" className="text-sm font-medium text-neutral-900">
+                  End Date
+                </Label>
+                <Input id="leave-end-date" type="date" className="h-10" {...form.register('endDate')} />
+                {form.formState.errors.endDate ? (
+                  <p className="text-xs text-destructive-text">{form.formState.errors.endDate.message}</p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="leave-days" className="text-sm font-medium text-neutral-900">
+                Days
+              </Label>
+              <Input
+                id="leave-days"
+                type="number"
+                step="0.5"
+                min="0.5"
+                className="h-10"
+                {...form.register('days', { valueAsNumber: true })}
+              />
+              {form.formState.errors.days ? (
+                <p className="text-xs text-destructive-text">{form.formState.errors.days.message}</p>
               ) : null}
             </div>
-          </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="leave-days">Days</Label>
-            <Input id="leave-days" type="number" step="0.5" min="0.5" {...form.register('days', { valueAsNumber: true })} />
-            {form.formState.errors.days ? (
-              <p className="text-xs text-destructive-text">{form.formState.errors.days.message}</p>
-            ) : null}
-          </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="leave-reason" className="text-sm font-medium text-neutral-900">
+                Reason
+              </Label>
+              <Textarea
+                id="leave-reason"
+                rows={4}
+                className="resize-none"
+                placeholder="Provide a brief reason for your leave request..."
+                {...form.register('reason')}
+              />
+              {form.formState.errors.reason ? (
+                <p className="text-xs text-destructive-text">{form.formState.errors.reason.message}</p>
+              ) : null}
+            </div>
+          </form>
+        </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="leave-reason">Reason</Label>
-            <Textarea id="leave-reason" rows={4} {...form.register('reason')} />
-          </div>
-        </form>
-
-        <SheetFooter className="mt-6 border-t border-neutral-100 pt-4">
+        <SheetFooter className="shrink-0 flex-row gap-3 border-t border-neutral-100 pt-4">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="h-9 rounded-md border border-neutral-200 px-4 text-sm text-neutral-700 hover:bg-neutral-50"
+            className="flex-1 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-200 focus:ring-offset-2"
           >
             Cancel
           </button>
@@ -189,7 +221,7 @@ export function ApplyLeaveSheet({
             type="submit"
             form="apply-leave-form"
             disabled={mutation.isPending}
-            className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
+            className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {mutation.isPending ? 'Submitting...' : 'Submit'}
           </button>

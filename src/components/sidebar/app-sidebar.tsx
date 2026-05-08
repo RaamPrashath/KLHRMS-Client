@@ -31,6 +31,11 @@ import {
     ClipboardList,
     FolderKanban,
     CalendarDays,
+    // Recruitment
+    Briefcase,
+    UserSearch,
+    Calendar,
+    FileText,
     // Lifecycle
     UserPlus,
     FolderOpen,
@@ -89,6 +94,10 @@ const NAV_ICONS: Record<string, React.ReactElement<{ className?: string }>> = {
     "timesheet":           <ClipboardList className={ic} />,
     "projects":            <FolderKanban  className={ic} />,
     "weekly-plan":         <CalendarDays  className={ic} />,
+    "jobs":                <Briefcase     className={ic} />,
+    "candidates":          <UserSearch    className={ic} />,
+    "interviews":          <Calendar      className={ic} />,
+    "offers":              <FileText      className={ic} />,
     "onboarding":          <UserPlus      className={ic} />,
     "document-collection": <FolderOpen    className={ic} />,
     "offboarding":         <UserMinus     className={ic} />,

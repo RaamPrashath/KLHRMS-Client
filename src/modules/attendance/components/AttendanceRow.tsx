@@ -27,12 +27,12 @@ function EmployeeAvatar({ name }: { readonly name: string | null }) {
     ? name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
     : '?';
   return (
-    <div className="flex items-center justify-center gap-3.5 min-w-0 max-w-[90%] mx-auto">
+    <div className="flex items-center gap-3.5 min-w-0 w-full px-2">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00874A]/[0.06] text-[#00874A] text-[13px] font-semibold border border-[#00874A]/10">
         {initials}
       </div>
-      <div className="flex flex-col min-w-0 text-left justify-center">
-        <span className="truncate text-[14.5px] font-medium text-neutral-900 tracking-tight pr-2" title={name || 'Unknown'}>
+      <div className="flex flex-col min-w-0 flex-1 text-left justify-center">
+        <span className="truncate text-[14.5px] font-medium text-neutral-900 tracking-tight" title={name || 'Unknown'}>
           {name ?? <span className="text-neutral-400 italic">Unknown</span>}
         </span>
       </div>
@@ -54,7 +54,7 @@ export function AttendanceRow({
     <tr className="group hover:bg-[#00874A]/[0.02] transition-colors duration-200">
       {/* 1. Employee (if shown) */}
       {showEmployeeColumn && (
-        <td className="px-6 py-4 align-middle border-b border-black/[0.04] text-center overflow-hidden">
+        <td className="px-6 py-4 align-middle border-b border-black/[0.04]">
           <EmployeeAvatar name={record.employeeName} />
         </td>
       )}

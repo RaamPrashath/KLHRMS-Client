@@ -5,15 +5,43 @@ import {
   getCoreRowModel,
   flexRender,
   type ColumnDef,
+  type Row,
 } from '@tanstack/react-table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AttendanceBadge } from './AttendanceBadge';
-import type { EmployeeListItem } from '@/modules/employees/types/employeeTypes';
+import { EmployeeFilters } from './EmployeeFilters';
+import { EmployeePagination } from './EmployeePagination';
+import type {
+  EmployeeListItem,
+  EmployeeFilterOption,
+  AttendanceTodayStatus,
+} from '@/modules/employees/types/employeeTypes';
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface EmployeeTableProps {
+  // data
   data: EmployeeListItem[];
   isLoading: boolean;
+  total: number;
+  // pagination
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  // filters
+  search: string;
+  roleId: string | undefined;
+  attendanceStatus: AttendanceTodayStatus | undefined;
+  roles: EmployeeFilterOption[];
+  onSearchChange: (value: string) => void;
+  onRoleChange: (value: string | undefined) => void;
+  onAttendanceStatusChange: (value: AttendanceTodayStatus | undefined) => void;
+  onClearAll: () => void;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getInitials(name: string): string {
   return name
@@ -23,16 +51,19 @@ function getInitials(name: string): string {
     .join('');
 }
 
-// Column width distribution (must sum to 100%)
-// Employee 35% | Email 25% | Role 20% | Attendance 20%
-const COL_WIDTHS = ['35%', '25%', '20%', '20%'];
+// ─── Column definitions ───────────────────────────────────────────────────────
 
-const HEADERS = ['Employee', 'Email', 'Role', "Today's Attendance"];
+// Column width distribution (must sum to 100%)
+// Employee 35% | Email 20% | Role 20% | Attendance 25%
+const COL_WIDTHS = ['35%', '20%', '20%', '25%'];
+
+const SKELETON_COUNT = 20;
+const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-row-${i}`);
 
 const columns: ColumnDef<EmployeeListItem>[] = [
   {
     id: 'employee',
-    header: 'Employee',
+    header: 'Name',
     cell: ({ row }) => {
       const { name, email, image } = row.original;
       return (
@@ -43,7 +74,6 @@ const columns: ColumnDef<EmployeeListItem>[] = [
               {getInitials(name)}
             </AvatarFallback>
           </Avatar>
-          {/* min-w-0 is required here so flexbox allows the child to shrink below its content size */}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-neutral-900" title={name}>
               {name}
@@ -92,104 +122,168 @@ const columns: ColumnDef<EmployeeListItem>[] = [
   },
 ];
 
-// Shared classes for th/td so skeleton and real table stay in sync
-const thClass =
-  'px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500';
-const tdClass = 'max-w-0 overflow-hidden px-4 py-3';
+// ─── ColGroup ─────────────────────────────────────────────────────────────────
 
 function ColGroup() {
   return (
     <colgroup>
-      {COL_WIDTHS.map((w, i) => (
-        <col key={i} style={{ width: w }} />
+      {COL_WIDTHS.map((w) => (
+        <col key={w} style={{ width: w }} />
       ))}
     </colgroup>
   );
 }
 
-export function EmployeeTable({ data, isLoading }: EmployeeTableProps) {
+// ─── TableBody sub-component ──────────────────────────────────────────────────
+
+interface TableBodyProps {
+  isLoading: boolean;
+  rows: Row<EmployeeListItem>[];
+  pageSize: number;
+  columnCount: number;
+}
+
+function TableBody({ isLoading, rows, pageSize, columnCount }: Readonly<TableBodyProps>) {
+  if (isLoading) {
+    return (
+      <tbody className="divide-y divide-black/4 bg-white">
+        {SKELETON_IDS.slice(0, pageSize).map((id) => (
+          <tr key={id} className="border-b border-black/4">
+            <td colSpan={columnCount} className="p-4 lg:px-6">
+              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <tbody className="bg-white">
+        <tr>
+          <td
+            colSpan={columnCount}
+            className="px-6 py-16 text-center text-sm text-neutral-400"
+          >
+            No employees found.
+          </td>
+        </tr>
+      </tbody>
+    );
+  }
+
+  return (
+    <tbody className="divide-y divide-black/4 bg-white">
+      {rows.map((row) => (
+        <tr
+          key={row.id}
+          className="border-b border-black/4 transition-colors hover:bg-canvas/60"
+        >
+          {row.getVisibleCells().map((cell) => (
+            <td key={cell.id} className="max-w-0 overflow-hidden px-6 py-3.5">
+              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export function EmployeeTable({
+  data,
+  isLoading,
+  total,
+  page,
+  pageSize,
+  totalPages,
+  onPageChange,
+  onPageSizeChange,
+  search,
+  roleId,
+  attendanceStatus,
+  roles,
+  onSearchChange,
+  onRoleChange,
+  onAttendanceStatusChange,
+  onClearAll,
+}: Readonly<EmployeeTableProps>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
+    pageCount: totalPages,
   });
 
-  if (isLoading) {
-    return (
-      <div className="overflow-hidden rounded-xl border border-neutral-100 bg-surface shadow-(--shadow-1)">
-        <table className="w-full table-fixed">
-          <ColGroup />
-          <thead>
-            <tr className="border-b border-neutral-200 bg-canvas">
-              {HEADERS.map((h) => (
-                <th key={h} className={thClass}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <tr key={i} className="border-b border-neutral-100">
-                {Array.from({ length: 4 }).map((_, j) => (
-                  <td key={j} className="px-4 py-3">
-                    <div className="h-4 animate-pulse rounded bg-surface-muted" />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-100 bg-surface shadow-(--shadow-1)">
-      {/* overflow-x-auto only kicks in on very narrow viewports; table-fixed prevents blowout */}
-      <div className="overflow-x-auto">
-        <table className="w-full table-fixed">
-          <ColGroup />
-          <thead>
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b border-neutral-200 bg-canvas">
-                {hg.headers.map((h) => (
-                  <th key={h.id} className={thClass}>
-                    {h.isPlaceholder
-                      ? null
-                      : flexRender(h.column.columnDef.header, h.getContext())}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-12 text-center text-sm text-neutral-400"
-                >
-                  No employees found.
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-neutral-100 bg-surface transition-colors hover:bg-canvas"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={tdClass}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+    <div className="flex flex-col gap-6">
+      {/* ── Card shell ─────────────────────────────────────────────────────── */}
+      <div className="bg-surface rounded-xl border border-black/3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
+
+        {/* ── Layer 1: Top actions (filters) ──────────────────────────── */}
+        <div className="p-4 border-b border-neutral-100 bg-surface flex flex-col gap-4">
+          {/* Filters row */}
+          <EmployeeFilters
+            search={search}
+            roleId={roleId}
+            attendanceStatus={attendanceStatus}
+            roles={roles}
+            onSearchChange={onSearchChange}
+            onRoleChange={onRoleChange}
+            onAttendanceStatusChange={onAttendanceStatusChange}
+            onClearAll={onClearAll}
+          />
+        </div>
+
+        {/* ── Layer 2: Table header ───────────────────────────────────────── */}
+        {/* ── Layer 3: Table body ─────────────────────────────────────────── */}
+        <div className="overflow-x-auto w-full bg-white">
+          <table className="w-full table-fixed border-collapse min-w-[700px]">
+            <ColGroup />
+
+            <thead>
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id} className="border-b border-black/4 bg-canvas">
+                  {hg.headers.map((h) => (
+                    <th
+                      key={h.id}
+                      className="px-6 py-3 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left"
+                    >
+                      {h.isPlaceholder
+                        ? null
+                        : flexRender(h.column.columnDef.header, h.getContext())}
+                    </th>
                   ))}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </thead>
+
+            <TableBody
+              isLoading={isLoading}
+              rows={table.getRowModel().rows}
+              pageSize={pageSize}
+              columnCount={columns.length}
+            />
+          </table>
+        </div>
+
+        {/* ── Pagination (inside card, below body) ────────────────────────── */}
+        {!isLoading && total > 0 && (
+          <div className="border-t border-black/4 bg-surface px-4 py-3">
+            <EmployeePagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              pageSize={pageSize}
+              onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

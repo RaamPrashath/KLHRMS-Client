@@ -45,11 +45,10 @@ interface AttendancePageShellProps {
 }
 
 function buildDefaultFilters(): AttendanceFiltersState {
-    const today = getTodayIST();
     return {
-        timePreset: 'today',
-        dateFrom: today,
-        dateTo: today,
+        timePreset: 'all_time',
+        dateFrom: undefined,
+        dateTo: undefined,
         status: undefined,
         targetMemberId: undefined,
         employeeNameSearch: undefined,
