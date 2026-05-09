@@ -247,6 +247,12 @@ export function MonthlyPlanPanel({
     setIsDirty(!monthDraftsEqual(nextDrafts, baselineDrafts));
   }
 
+  function handleClearAll() {
+    if (!isDirty) return;
+    setDrafts(baselineDrafts);
+    setIsDirty(false);
+  }
+
   async function handleSave() {
     const payload: WeeklyPlanDayInput[] = weekdayDates.map((date) => ({
       date,
@@ -306,6 +312,17 @@ export function MonthlyPlanPanel({
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 Apply to all weekdays
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full h-11 px-6 font-bold text-xs"
+                onClick={handleClearAll}
+                disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
+              >
+                <Eraser className="mr-2 h-4 w-4" />
+                Clear all
               </Button>
             </div>
           </div>

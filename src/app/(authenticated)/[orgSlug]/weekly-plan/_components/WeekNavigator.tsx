@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { getWeekRangeLabel, getWeekStart } from "@/modules/weekly-plan/date";
 
@@ -20,18 +21,18 @@ export function WeekNavigator({
   return (
     <div className="flex items-center gap-6">
       <div className="flex items-center gap-4">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-foreground/5 text-foreground border border-foreground/5 shadow-sm">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-[#f5f5f7] text-foreground">
           <CalendarDays className="h-5 w-5" />
         </div>
         <div className="flex flex-col">
-          <span className="text-lg font-bold text-foreground leading-tight tracking-tight">
+          <span className="text-lg font-semibold leading-tight tracking-[-0.01em] text-foreground">
             {getWeekStart(year, week).toLocaleString("en-US", {
               month: "long",
               year: "numeric",
             })}
           </span>
-          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground/60 mt-0.5">
-            Week {week} · {getWeekRangeLabel(year, week)}
+          <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+            Week {week} - {getWeekRangeLabel(year, week)}
           </span>
         </div>
       </div>

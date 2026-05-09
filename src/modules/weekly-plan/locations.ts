@@ -24,7 +24,7 @@ export const FALLBACK_PLAN_LOCATIONS: PlanLocationOption[] = [
   },
   {
     value: "WFH",
-    label: "Work from home (WFH)",
+    label: "WFH",
     short_label: "WFH",
     color: "#2563eb",
   },

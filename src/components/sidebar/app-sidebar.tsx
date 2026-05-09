@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
     Sidebar,
@@ -59,7 +59,6 @@ import {
     type RolePermissions,
     filterNavByPermissions,
 } from "@/lib/hrms-roles";
-import Image from "next/image";
 
 // ─── Types ───────────────────────────────────────────────────
 export interface AppSidebarProps {
@@ -78,45 +77,33 @@ export interface AppSidebarProps {
 // Maps urlSuffix → Lucide icon component
 const ic = "h-4 w-4 shrink-0";
 
-const NAV_ICONS: Record<string, React.ReactElement<{ className?: string }>> = {
-    "":                    <LayoutDashboard className={ic} />,
-    "employees":           <Users         className={ic} />,
-    "organization":        <Building2     className={ic} />,
-    "departments":         <Network       className={ic} />,
-    "permissions":         <ShieldCheck   className={ic} />,
-    "attendance":          <CalendarClock className={ic} />,
-    "leaves":              <CalendarOff   className={ic} />,
-    "timesheet":           <ClipboardList className={ic} />,
-    "projects":            <FolderKanban  className={ic} />,
-    "weekly-plan":         <CalendarDays  className={ic} />,
-    "onboarding":          <UserPlus      className={ic} />,
-    "document-collection": <FolderOpen    className={ic} />,
-    "offboarding":         <UserMinus     className={ic} />,
-    "knowledge-transfer":  <BookOpen      className={ic} />,
-    "okrs":                <Target        className={ic} />,
-    "goals":               <Flag          className={ic} />,
-    "reviews":             <Star          className={ic} />,
-    "feedback":            <MessageCircle className={ic} />,
-    "salary-structures":   <Layers        className={ic} />,
-    "payroll":             <Banknote      className={ic} />,
-    "payslips":            <Receipt       className={ic} />,
-    "tax":                 <Calculator    className={ic} />,
-    "assets":              <Monitor       className={ic} />,
-    "helpdesk":            <Headphones    className={ic} />,
-    "documents":           <FileStack     className={ic} />,
+const NAV_ICONS = {
+    "": LayoutDashboard,
+    "employees": Users,
+    "organization": Building2,
+    "departments": Network,
+    "permissions": ShieldCheck,
+    "attendance": CalendarClock,
+    "leaves": CalendarOff,
+    "timesheet": ClipboardList,
+    "projects": FolderKanban,
+    "weekly-plan": CalendarDays,
+    "onboarding": UserPlus,
+    "document-collection": FolderOpen,
+    "offboarding": UserMinus,
+    "knowledge-transfer": BookOpen,
+    "okrs": Target,
+    "goals": Flag,
+    "reviews": Star,
+    "feedback": MessageCircle,
+    "salary-structures": Layers,
+    "payroll": Banknote,
+    "payslips": Receipt,
+    "tax": Calculator,
+    "assets": Monitor,
+    "helpdesk": Headphones,
+    "documents": FileStack,
 };
-
-const MAX_DISPLAY_NAME_LENGTH = 18;
-
-function normalizeLabel(value: string) {
-    return value.trim().replace(/\s+/g, " ");
-}
-
-function truncateLabel(value: string, maxLength: number) {
-    if (value.length <= maxLength) return value;
-    if (maxLength <= 3) return value.slice(0, maxLength);
-    return value.slice(0, maxLength - 3).trimEnd() + "...";
-}
 
 function getInitials(name?: string | null, email?: string | null) {
     if (name) {
@@ -131,6 +118,8 @@ function getInitials(name?: string | null, email?: string | null) {
 function LogoRow({ orgName, orgSlug }: { orgName: string; orgSlug: string }) {
     const { open, setOpen, animate } = useSidebar();
     const shouldReduceMotion = useReducedMotion();
+    void orgName;
+    void orgSlug;
 
     const labelTransition = shouldReduceMotion
         ? { duration: 0 }
@@ -175,14 +164,9 @@ function LogoRow({ orgName, orgSlug }: { orgName: string; orgSlug: string }) {
                         aria-hidden={!open}
                     >
                         {/* Full wordmark — white-filtered for dark sidebar */}
-                        <Image
-                            src="/kovan-logo.svg"
-                            alt="Kovan Labs"
-                            width={108}
-                            height={24}
-                            draggable={false}
-                            className="bg-white p-2"
-                        />
+                        <p className="text-lg font-semibold tracking-[-0.04em] text-white">
+                            Kovan Labs
+                        </p>
                     </motion.div>
                 </div>
 
@@ -266,6 +250,87 @@ function RoleBadge({ roleName }: { readonly roleName: string }) {
         <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none bg-white/10 text-white/50 border border-white/5">
             {roleName}
         </span>
+    );
+}
+
+function SidebarNavigation({
+    allNavGroups,
+    orgSlug,
+    pathname,
+    showSearch,
+}: {
+    allNavGroups: ReturnType<typeof filterNavByPermissions>;
+    orgSlug: string;
+    pathname: string;
+    showSearch: boolean;
+}) {
+    const [search, setSearch] = useState("");
+
+    const navGroups = useMemo(() => {
+        const term = search.trim().toLowerCase();
+        if (!term) return allNavGroups;
+
+        return allNavGroups.reduce<typeof allNavGroups>((acc, group) => {
+            const items = group.items.filter((item) =>
+                item.title.toLowerCase().includes(term)
+            );
+            if (items.length > 0) acc.push({ ...group, items });
+            return acc;
+        }, []);
+    }, [allNavGroups, search]);
+
+    return (
+        <>
+            {showSearch && <NavSearch value={search} onChange={setSearch} />}
+
+            {navGroups.length === 0 ? (
+                <div className="px-2 py-4 text-xs text-[var(--color-sidebar-label)] text-center leading-relaxed">
+                    {search.trim() ? (
+                        <>No results for &ldquo;{search}&rdquo;</>
+                    ) : (
+                        <>No role assigned.<br />Contact your admin.</>
+                    )}
+                </div>
+            ) : (
+                <nav className="flex flex-col gap-3.5 mt-1">
+                    {navGroups.map((group) => (
+                        <div key={group.title} className="flex flex-col gap-0.5">
+                            <SidebarLabel>{group.title}</SidebarLabel>
+                            {group.items.map((item) => {
+                                const url = item.urlSuffix
+                                    ? `/${orgSlug}/${item.urlSuffix}`
+                                    : `/${orgSlug}`;
+                                const isActive = pathname === url;
+                                const Icon = NAV_ICONS[item.urlSuffix as keyof typeof NAV_ICONS];
+
+                                return (
+                                    <SidebarLink
+                                        key={item.title}
+                                        isActive={isActive}
+                                        link={{
+                                            label: item.title,
+                                            href: url,
+                                            icon: Icon
+                                                ? (
+                                                    <Icon
+                                                        className={cn(
+                                                            ic,
+                                                            isActive
+                                                                ? "text-[var(--color-sidebar-active-text)]"
+                                                                : "text-[var(--color-sidebar-text)]"
+                                                        )}
+                                                    />
+                                                )
+                                                : null,
+                                        }}
+                                    />
+                                );
+                            })}
+                        </div>
+                    ))}
+                </nav>
+            )}
+        </>
     );
 }
 
@@ -427,84 +492,32 @@ function UserFooter({
 export function AppSidebar({ orgSlug, orgName, roleName, permissions, user }: AppSidebarProps) {
     const [open, setOpen] = useState(true);
     const pathname = usePathname();
-    const [search, setSearch] = useState("");
 
-    const allNavGroups = filterNavByPermissions(permissions);
+    const allNavGroups = useMemo(
+        () => filterNavByPermissions(permissions),
+        [permissions]
+    );
 
     // Total nav items this role can see — used to decide if search is worth showing.
     // Employees typically have ≤5 items; admins/HR have many more.
-    const totalNavItems = allNavGroups.reduce((sum, g) => sum + g.items.length, 0);
+    const totalNavItems = useMemo(
+        () => allNavGroups.reduce((sum, group) => sum + group.items.length, 0),
+        [allNavGroups]
+    );
     const showSearch = totalNavItems > 6;
-
-    // Clear stale search if the bar is no longer visible (e.g. role change).
-    useEffect(() => {
-        if (!showSearch && search) setSearch("");
-    }, [showSearch, search]);
-
-    // Filter nav items by search query
-    const navGroups = search.trim()
-        ? allNavGroups.reduce<typeof allNavGroups>((acc, group) => {
-            const term = search.toLowerCase();
-            const items = group.items.filter((item) =>
-                item.title.toLowerCase().includes(term)
-            );
-            if (items.length > 0) acc.push({ ...group, items });
-            return acc;
-        }, [])
-        : allNavGroups;
 
     return (
         <Sidebar open={open} setOpen={setOpen} animate={true}>
             <SidebarBody className="justify-between gap-4 bg-[var(--color-sidebar-bg)] border-r border-[var(--color-sidebar-divider)]">
                 <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto no-scrollbar gap-3">
                     <LogoRow orgName={orgName} orgSlug={orgSlug} />
-                    {showSearch && <NavSearch value={search} onChange={setSearch} />}
-
-                    {navGroups.length === 0 ? (
-                        <div className="px-2 py-4 text-xs text-[var(--color-sidebar-label)] text-center leading-relaxed">
-                            {search.trim() ? (
-                                <>No results for &ldquo;{search}&rdquo;</>
-                            ) : (
-                                <>No role assigned.<br />Contact your admin.</>
-                            )}
-                        </div>
-                    ) : (
-                        <nav className="flex flex-col gap-3.5 mt-1">
-                            {navGroups.map((group) => (
-                                <div key={group.title} className="flex flex-col gap-0.5">
-                                    <SidebarLabel>{group.title}</SidebarLabel>
-                                    {group.items.map((item) => {
-                                        const url = item.urlSuffix
-                                            ? `/${orgSlug}/${item.urlSuffix}`
-                                            : `/${orgSlug}`;
-                                        const isActive = pathname === url;
-                                        const icon = NAV_ICONS[item.urlSuffix];
-
-                                        return (
-                                            <SidebarLink
-                                                key={item.title}
-                                                isActive={isActive}
-                                                link={{
-                                                    label: item.title,
-                                                    href: url,
-                                                    icon: icon
-                                                        ? React.cloneElement(icon, {
-                                                            className: cn(
-                                                                ic,
-                                                                isActive
-                                                                    ? "text-[var(--color-sidebar-active-text)]"
-                                                                    : "text-[var(--color-sidebar-text)]"
-                                                            ),
-                                                        })
-                                                        : null,
-                                                }}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            ))}
-                        </nav>
-                    )}
+                    <SidebarNavigation
+                        key={showSearch ? "with-search" : "without-search"}
+                        allNavGroups={allNavGroups}
+                        orgSlug={orgSlug}
+                        pathname={pathname}
+                        showSearch={showSearch}
+                    />
                 </div>
 
                 <UserFooter user={user} orgSlug={orgSlug} roleName={roleName} />

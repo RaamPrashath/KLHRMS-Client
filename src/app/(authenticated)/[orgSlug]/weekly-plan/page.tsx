@@ -30,17 +30,14 @@ export default async function PlanPage({
   const canViewTeam = ["org", "organization"].includes(weeklyPlanScope);
 
   return (
-    <div className="flex flex-col gap-6 ">
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Plan
-          </h1>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Capture where you plan to work each day, save in bulk, and switch between
-            a focused weekly flow and a full-month strip view without leaving the page.
-          </p>
-        </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-[40px] font-semibold tracking-[-0.02em] text-foreground">
+          Plans
+        </h1>
+        <p className="max-w-2xl text-[15px] leading-6 text-muted-foreground">
+          Set where work happens across the week, then review the pattern before you save.
+        </p>
       </div>
 
       <PlanClient
