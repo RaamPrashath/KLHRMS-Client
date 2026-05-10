@@ -124,7 +124,7 @@ function TableBody({
     return (
       <tbody className="divide-y divide-black/[0.04] bg-white">
         {SKELETON_IDS.slice(0, pageSize).map((id) => (
-          <tr key={id} className="border-b border-black/[0.04]">
+          <tr key={id} className="border-b border-black/4">
             <td colSpan={columnCount} className="p-4 lg:px-6">
               <Skeleton className="h-10 w-full rounded-xl" />
             </td>
@@ -368,7 +368,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                 </h2>
               </div>
 
-              <div className="mt-2 flex items-center self-start rounded-xl bg-neutral-50 p-1 border border-black/[0.04]">
+              <div className="mt-2 flex items-center self-start rounded-xl bg-neutral-50 p-1 border border-black/4">
                 {VIEW_MODES.map(({ mode, icon, label }) => (
                   <button
                     key={mode}
@@ -447,15 +447,15 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
               <div className="overflow-x-auto w-full bg-white">
                 <table className="w-full text-center border-collapse table-auto min-w-[800px]">
                   <thead>
-                    <tr className="border-b border-black/[0.04] bg-canvas">
+                    <tr className="border-b border-black/4 bg-canvas">
                       {showEmployeeColumn && (
-                        <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left" style={{ width: '25%' }}>Employee</th>
+                        <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left" style={{ width: '25%' }}>Employee</th>
                       )}
-                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Date</th>
-                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Clock In</th>
-                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Clock Out</th>
-                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Work Time</th>
-                      <th className="px-6 py-3 border-b border-black/[0.04] text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Status</th>
+                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Date</th>
+                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Clock In</th>
+                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Clock Out</th>
+                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Work Time</th>
+                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Status</th>
                     </tr>
                   </thead>
                   <TableBody

@@ -29,6 +29,7 @@ export function OrgSidebarShell({
 }: OrgSidebarShellProps) {
     const pathname = usePathname();
     const isLeaveRoute = pathname.includes("/leaves");
+    const isCandidatesRoute = pathname.includes("/candidates");
 
     return (
         <div className="flex h-dvh overflow-hidden">
@@ -43,7 +44,7 @@ export function OrgSidebarShell({
                 <div
                     className={cn(
                         "w-full",
-                        isLeaveRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isLeaveRoute || isCandidatesRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
                     )}
                 >
                     {children}

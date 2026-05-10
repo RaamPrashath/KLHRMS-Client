@@ -1,14 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AtsKanbanBoard } from '@/modules/candidates/components/AtsKanbanBoard';
 import { usePipelineJobPostings } from '@/modules/candidates/hooks/useAtsPipeline';
@@ -36,8 +28,8 @@ export function AtsPipelinePageShell({
   orgSlug,
   memberId,
 }: {
-  orgSlug: string;
-  memberId: string;
+  readonly orgSlug: string;
+  readonly memberId: string;
 }) {
   const postingsQuery = usePipelineJobPostings(orgSlug, memberId);
   const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);

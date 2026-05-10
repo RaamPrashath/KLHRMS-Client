@@ -52,7 +52,7 @@ export function KanbanColumn({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex h-[calc(100vh-220px)] min-h-[520px] w-[300px] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm',
+        'flex h-[calc(100vh-200px)] min-h-[520px] w-[300px] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm',
         isOver && 'ring-2 ring-primary bg-primary-ghost',
       )}
     >

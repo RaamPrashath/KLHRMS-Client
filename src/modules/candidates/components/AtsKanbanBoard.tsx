@@ -100,12 +100,12 @@ export function AtsKanbanBoard({
   onJobPostingChange,
   isLoadingPostings,
 }: {
-  orgSlug: string;
-  memberId: string;
-  jobPostingId: string | null;
-  jobPostings: Array<{ id: string; title: string }>;
-  onJobPostingChange: (id: string) => void;
-  isLoadingPostings: boolean;
+  readonly orgSlug: string;
+  readonly memberId: string;
+  readonly jobPostingId: string | null;
+  readonly jobPostings: Array<{ id: string; title: string }>;
+  readonly onJobPostingChange: (id: string) => void;
+  readonly isLoadingPostings: boolean;
 }) {
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [activeApplication, setActiveApplication] = useState<PipelineApplication | null>(null);
@@ -224,7 +224,7 @@ export function AtsKanbanBoard({
         onDragCancel={() => setActiveApplication(null)}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+        <div className="flex gap-4 overflow-x-auto p-1 no-scrollbar">
           {stages.map((stage, index) => {
             const stageSearch = columnSearch[stage.id] ?? '';
             const filteredApplications = stage.applications.filter(
