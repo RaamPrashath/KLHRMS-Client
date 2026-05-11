@@ -3,11 +3,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  completeInterviewMeetingAction,
   createPipelineStageAction,
+  createInterviewMeetingAction,
   deletePipelineStageAction,
+  extendPipelineStageAction,
   fetchCandidateApplicationDetailAction,
+  fetchEvaluationWorkspaceAction,
   fetchPipelineBoardAction,
   fetchPipelineJobPostingsAction,
+  generateEvaluationWorkspaceAction,
   moveApplicationStageAction,
   updatePipelineStageAction,
 } from '@/modules/candidates/api/atsServerActions';
@@ -16,8 +21,11 @@ import type {
   PipelineApplication,
   PipelineBoard,
   PipelineJobPosting,
+  StageEvaluationWorkspace,
+  InterviewMeeting,
 } from '@/modules/candidates/types/atsTypes';
 import type {
+  CreateInterviewMeetingInput,
   CreatePipelineStageInput,
   UpdatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
@@ -107,6 +115,48 @@ export function useCandidateApplicationDetail(
   });
 }
 
+export function useCreateInterviewMeeting(
+  orgSlug: string,
+  memberId: string,
+  jobPostingId: string | null,
+) {
+  const queryClient = useQueryClient();
+  return useMutation<InterviewMeeting, Error, { applicationId: string; data: CreateInterviewMeetingInput }>({
+    mutationFn: (params) =>
+      createInterviewMeetingAction({
+        orgSlug,
+        memberId,
+        applicationId: params.applicationId,
+        data: params.data,
+      }),
+    onSuccess: (_meeting, params) => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+    },
+  });
+}
+
+export function useCompleteInterviewMeeting(
+  orgSlug: string,
+  memberId: string,
+  jobPostingId: string | null,
+) {
+  const queryClient = useQueryClient();
+  return useMutation<InterviewMeeting, Error, { applicationId: string; eventId: string }>({
+    mutationFn: (params) =>
+      completeInterviewMeetingAction({
+        orgSlug,
+        memberId,
+        applicationId: params.applicationId,
+        eventId: params.eventId,
+      }),
+    onSuccess: (_meeting, params) => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+    },
+  });
+}
+
 export function useMoveApplicationStage(
   orgSlug: string,
   memberId: string,
@@ -164,6 +214,56 @@ export function useUpdatePipelineStage(orgSlug: string, memberId: string, jobPos
       updatePipelineStageAction({ orgSlug, memberId, stageId: params.stageId, data: params.data }),
     onSuccess: () => {
       if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+    },
+  });
+}
+
+export function useExtendPipelineStage(orgSlug: string, memberId: string, jobPostingId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (stageId: string) =>
+      extendPipelineStageAction({ orgSlug, memberId, data: { stageId } }),
+    onSuccess: () => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+    },
+  });
+}
+
+export function useEvaluationWorkspace(
+  orgSlug: string,
+  memberId: string,
+  stageId: string | null,
+) {
+  return useQuery<StageEvaluationWorkspace, Error>({
+    queryKey: ['ats-evaluation-workspace', orgSlug, stageId],
+    queryFn: () =>
+      fetchEvaluationWorkspaceAction({
+        orgSlug,
+        memberId,
+        stageId: stageId ?? '',
+      }),
+    enabled: !!orgSlug && !!memberId && !!stageId,
+    retry: false,
+  });
+}
+
+export function useGenerateEvaluationWorkspace(
+  orgSlug: string,
+  memberId: string,
+  jobPostingId: string | null,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (stageId: string) =>
+      generateEvaluationWorkspaceAction({ orgSlug, memberId, stageId }),
+    onSuccess: (workspace) => {
+      queryClient.setQueryData(
+        ['ats-evaluation-workspace', orgSlug, workspace.stageId],
+        workspace,
+      );
+      if (jobPostingId) {
+        queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      }
     },
   });
 }

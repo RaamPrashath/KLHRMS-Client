@@ -92,6 +92,8 @@ model Organization {
     candidates                Candidate[]
     candidateApplications     CandidateApplication[]
     pipelineStages            PipelineStage[]
+    stageEvaluationCategories StageEvaluationCategory[]
+    stageEvaluationWorkspaces StageEvaluationWorkspace[]
     jobPostings               JobPosting[]
     applicationStageHistories ApplicationStageHistory[]
 
@@ -115,6 +117,7 @@ model Member {
     approvedLeaveRequests     LeaveRequest[]            @relation("LeaveRequestApprover")
     leaveBalances             LeaveBalance[]            @relation("LeaveBalanceMember")
     movedApplicationHistories ApplicationStageHistory[] @relation("ApplicationHistoryMovedBy")
+    createdEvaluationWorkspaces StageEvaluationWorkspace[] @relation("EvaluationWorkspaceCreatedBy")
 
     @@unique([organizationId, userId])
     @@index([organizationId])
@@ -377,6 +380,14 @@ enum ApplicationSource {
     OTHER
 }
 
+enum StageType {
+    DEFAULT
+    INTERVIEW
+    OFFER
+    HIRED
+    REJECTED
+}
+
 model Candidate {
     id             String  @id @default(cuid())
     organizationId String
@@ -444,6 +455,17 @@ model PipelineStage {
     isDefault Boolean @default(false)
     isFinal   Boolean @default(false)
 
+    stageType StageType @default(DEFAULT)
+
+    meetingEnabled            Boolean   @default(false)
+    offerLetterEnabled        Boolean   @default(false)
+    evaluationEnabled         Boolean   @default(false)
+    evaluationType            String?
+    evaluationIncludeTotal    Boolean   @default(false)
+    evaluationIncludeAnalysis Boolean   @default(false)
+    dueDate                   DateTime?
+    extendToNextWorkingDay    Boolean   @default(false)
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
@@ -453,6 +475,9 @@ model PipelineStage {
 
     applications CandidateApplication[]
 
+    evaluationCategories StageEvaluationCategory[]
+    evaluationWorkspace StageEvaluationWorkspace?
+
     fromStageHistories ApplicationStageHistory[] @relation("HistoryFromStage")
 
     toStageHistories ApplicationStageHistory[] @relation("HistoryToStage")
@@ -461,6 +486,53 @@ model PipelineStage {
     @@index([organizationId])
     @@index([jobPostingId])
     @@map("pipeline_stage")
+}
+
+model StageEvaluationCategory {
+    id             String @id @default(cuid())
+    organizationId String
+    stageId        String
+
+    name  String
+    order Int
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    stage        PipelineStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+    @@unique([stageId, order])
+    @@index([organizationId])
+    @@index([stageId])
+    @@index([organizationId, stageId])
+    @@map("stage_evaluation_category")
+}
+
+model StageEvaluationWorkspace {
+    id             String @id @default(cuid())
+    organizationId String
+    stageId        String @unique
+
+    googleSpreadsheetId  String
+    googleSpreadsheetUrl String
+    googleSheetId        Int?
+    googleSheetTitle     String
+    createdByMemberId    String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    stage        PipelineStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+    createdBy    Member?       @relation("EvaluationWorkspaceCreatedBy", fields: [createdByMemberId], references: [id], onDelete: SetNull)
+
+    @@unique([organizationId, stageId])
+    @@index([organizationId])
+    @@index([stageId])
+    @@index([createdByMemberId])
+    @@index([organizationId, stageId])
+    @@map("stage_evaluation_workspace")
 }
 
 model CandidateApplication {

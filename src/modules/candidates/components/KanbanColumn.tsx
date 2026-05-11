@@ -1,7 +1,17 @@
 'use client';
 
 import { useDroppable } from '@dnd-kit/core';
-import { ArrowLeft, ArrowRight, MoreHorizontal, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  ExternalLink,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +26,14 @@ import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import type { PipelineApplication, PipelineStage } from '@/modules/candidates/types/atsTypes';
 
+function formatStageDate(value: string): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    timeZone: 'Asia/Kolkata',
+  }).format(new Date(value));
+}
+
 export function KanbanColumn({
   stage,
   isFirst,
@@ -26,6 +44,10 @@ export function KanbanColumn({
   onDelete,
   onMoveLeft,
   onMoveRight,
+  onOpenEvaluationWorkspace,
+  onScheduleInterview,
+  onStartInterview,
+  onCompleteInterview,
   searchValue,
   onSearchChange,
   filteredApplications,
@@ -39,6 +61,10 @@ export function KanbanColumn({
   readonly onDelete: (stage: PipelineStage) => void;
   readonly onMoveLeft: (stage: PipelineStage) => void;
   readonly onMoveRight: (stage: PipelineStage) => void;
+  readonly onOpenEvaluationWorkspace: (stage: PipelineStage) => void;
+  readonly onScheduleInterview: (application: PipelineApplication) => void;
+  readonly onStartInterview: (application: PipelineApplication) => void;
+  readonly onCompleteInterview: (application: PipelineApplication) => void;
   readonly searchValue: string;
   readonly onSearchChange: (stageId: string, value: string) => void;
   readonly filteredApplications: PipelineApplication[];
@@ -61,12 +87,29 @@ export function KanbanColumn({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-primary" />
-              <h2 className="truncate text-sm font-semibold text-neutral-900">{stage.name}</h2>
+              {stage.evaluationEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenEvaluationWorkspace(stage)}
+                  className="flex min-w-0 items-center gap-1 text-left text-sm font-semibold text-neutral-900 hover:text-primary"
+                >
+                  <span className="truncate">{stage.name}</span>
+                  <ExternalLink className="size-3.5 shrink-0 text-neutral-400" />
+                </button>
+              ) : (
+                <h2 className="truncate text-sm font-semibold text-neutral-900">{stage.name}</h2>
+              )}
             </div>
             <p className="mt-0.5 text-xs text-neutral-500">
               {filteredApplications.length}
               {filteredApplications.length !== stage.applications.length ? ` of ${stage.applications.length}` : ''} candidates
             </p>
+            {stage.dueDate ? (
+              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text">
+                <CalendarDays className="size-3" />
+                {formatStageDate(stage.dueDate)}
+              </div>
+            ) : null}
           </div>
 
           <DropdownMenu>
@@ -82,7 +125,7 @@ export function KanbanColumn({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onRename(stage)}>
                 <Pencil className="size-4" />
-                Rename
+                Configure
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled={isFirst} onClick={() => onMoveLeft(stage)}>
@@ -123,6 +166,10 @@ export function KanbanColumn({
             key={application.id}
             application={application}
             onOpen={onOpenCandidate}
+            meetingEnabled={stage.meetingEnabled}
+            onScheduleInterview={onScheduleInterview}
+            onStartInterview={onStartInterview}
+            onCompleteInterview={onCompleteInterview}
           />
         ))}
         {filteredApplications.length === 0 && (
