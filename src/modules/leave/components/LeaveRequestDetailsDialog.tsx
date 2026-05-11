@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 import { useApproveLeaveRequest } from '@/modules/leave/hooks/useApproveLeaveRequest';
-import { useCancelLeaveRequest } from '@/modules/leave/hooks/useCancelLeaveRequest';
 import { useRejectLeaveRequest } from '@/modules/leave/hooks/useRejectLeaveRequest';
 import { useLeaveRequest } from '@/modules/leave/hooks/useLeaveRequest';
 import { canApproveLeaves } from '@/modules/leave/utils/leavePermissions';
@@ -43,14 +42,9 @@ export function LeaveRequestDetailsDialog({
   const { data, isLoading } = useLeaveRequest(orgSlug, memberId, leaveRequestId);
   const approveMutation = useApproveLeaveRequest(orgSlug, memberId);
   const rejectMutation = useRejectLeaveRequest(orgSlug, memberId);
-  const cancelMutation = useCancelLeaveRequest(orgSlug, memberId);
   const [approverComment, setApproverComment] = useState('');
 
   const canApprove = canApproveLeaves(permissions.approve);
-  const canCancel =
-    !!data &&
-    data.status === 'PENDING' &&
-    (data.memberId === memberId || permissions.create === 'organization' || permissions.approve === 'organization');
 
   async function handleApprove() {
     if (!leaveRequestId) return;
@@ -71,17 +65,6 @@ export function LeaveRequestDetailsDialog({
       onOpenChange(false);
     } catch (error) {
       toast.error(getLeaveErrorMessage(error, 'Failed to reject request'));
-    }
-  }
-
-  async function handleCancel() {
-    if (!leaveRequestId) return;
-    try {
-      await cancelMutation.mutateAsync(leaveRequestId);
-      toast.success('Leave request cancelled');
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(getLeaveErrorMessage(error, 'Failed to cancel request'));
     }
   }
 
@@ -121,11 +104,6 @@ export function LeaveRequestDetailsDialog({
               <p className="mt-1 text-sm text-neutral-900">{data.reason || 'No reason provided'}</p>
             </div>
 
-            <div className="rounded-lg border border-neutral-100 p-3">
-              <p className="text-xs uppercase tracking-wide text-neutral-500">Approver Comment</p>
-              <p className="mt-1 text-sm text-neutral-900">{data.approverComment || 'No approver comment yet'}</p>
-            </div>
-
             {canApprove && data.status === 'PENDING' ? (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="leave-approver-comment">Approver Comment</Label>
@@ -141,16 +119,6 @@ export function LeaveRequestDetailsDialog({
         )}
 
         <DialogFooter className="gap-2">
-          {canCancel ? (
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={cancelMutation.isPending}
-              className="h-9 rounded-md border border-warning-border bg-warning-bg px-4 text-sm font-medium text-warning-text hover:opacity-90 disabled:opacity-60"
-            >
-              {cancelMutation.isPending ? 'Cancelling...' : 'Cancel Request'}
-            </button>
-          ) : null}
           {canApprove && data?.status === 'PENDING' ? (
             <>
               <button

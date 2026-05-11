@@ -66,6 +66,15 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
         ],
     },
     {
+        title: "Recruitment",
+        items: [
+            { title: "Jobs",               urlSuffix: "jobs",                permissionKey: "jobs"        },
+            { title: "Candidates",         urlSuffix: "candidates",          permissionKey: "candidates"  },
+            { title: "Interviews",         urlSuffix: "interviews",          permissionKey: "interviews"  },
+            { title: "Offers",             urlSuffix: "offers",              permissionKey: "offers"      },
+        ],
+    },
+    {
         title: "Lifecycle",
         items: [
             { title: "Onboarding",         urlSuffix: "onboarding",          permissionKey: "onboarding"         },

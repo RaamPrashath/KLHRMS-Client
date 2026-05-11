@@ -18,6 +18,11 @@ export const HRMS_MODULES = [
   'timesheet',
   'projects',
   'weeklyPlan',
+  // Recruitment
+  'jobs',
+  'candidates',
+  'interviews',
+  'offers',
   // Lifecycle
   'onboarding',
   'documentCollection',
@@ -36,17 +41,14 @@ export const HRMS_MODULES = [
 
 /**
  * Standard actions available for most modules.
- * Domain-specific actions (e.g., leaves.approve) are handled separately.
  */
-export const HRMS_ACTIONS = ['view', 'create', 'edit', 'delete'] as const;
+export const HRMS_ACTIONS = ['view', 'create', 'edit', 'delete', 'approve'] as const;
 
 /**
  * Domain-specific actions per module.
  * These extend the standard actions for specific modules.
  */
-export const MODULE_SPECIFIC_ACTIONS: Record<string, readonly string[]> = {
-  leaves: ['approve'],
-} as const;
+export const MODULE_SPECIFIC_ACTIONS: Record<string, readonly string[]> = {} as const;
 
 /**
  * Scope hierarchy: none → self → team → department → organization → none (cycles)

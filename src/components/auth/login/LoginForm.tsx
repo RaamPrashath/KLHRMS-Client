@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+// import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -106,12 +106,12 @@ export function LoginForm() {
                     <Field>
                         <div className="flex items-center justify-between">
                             <FieldLabel htmlFor="password">Password</FieldLabel>
-                            <Link
+                            {/* <Link
                                 href="/forgot-password"
                                 className="text-xs text-muted-foreground hover:text-primary transition-colors"
                             >
                                 Forgot password?
-                            </Link>
+                            </Link> */}
                         </div>
 
                         <PasswordInput

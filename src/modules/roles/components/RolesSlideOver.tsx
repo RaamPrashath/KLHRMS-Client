@@ -106,7 +106,6 @@ export function RolesSlideOver({
               bg-surface
               shadow-(--shadow-4)
               flex flex-col
-              overflow-hidden
             "
           >
             {/* Header */}
@@ -133,7 +132,7 @@ export function RolesSlideOver({
             </div>
 
             {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-6" style={{ WebkitOverflowScrolling: 'touch' }}>
               {(mode === 'create' || (mode === 'edit' && role)) && (
                 <RoleForm
                   mode={mode}

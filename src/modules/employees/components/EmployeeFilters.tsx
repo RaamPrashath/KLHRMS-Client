@@ -49,73 +49,76 @@ export function EmployeeFilters({
     search || roleId || attendanceStatus;
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
-      {/* Search */}
-      <div className="relative flex-1 min-w-[200px] max-w-sm">
+    <div className="flex items-center gap-2">
+      {/* Search — stretches to fill space left of the selects */}
+      <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
         <Input
-          placeholder="Search by name or email…"
+          placeholder="Who's in today? email…"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-9 bg-neutral-50 border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
         />
       </div>
 
-      {/* Role filter */}
-      <Select
-        value={roleId ?? ALL_VALUE}
-        onValueChange={(v) => onRoleChange(v === ALL_VALUE ? undefined : v)}
-      >
-        <SelectTrigger className="h-9 w-[160px] text-sm border-neutral-200">
-          <SelectValue placeholder="All Roles" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL_VALUE} className="text-sm">
-            All Roles
-          </SelectItem>
-          {roles.map((r) => (
-            <SelectItem key={r.id} value={r.id} className="text-sm">
-              {r.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Attendance status filter */}
-      <Select
-        value={attendanceStatus ?? ALL_VALUE}
-        onValueChange={(v) =>
-          onAttendanceStatusChange(
-            v === ALL_VALUE ? undefined : (v as AttendanceTodayStatus),
-          )
-        }
-      >
-        <SelectTrigger className="h-9 w-[180px] text-sm border-neutral-200">
-          <SelectValue placeholder="All Attendance" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL_VALUE} className="text-sm">
-            All Attendance
-          </SelectItem>
-          {ATTENDANCE_OPTIONS.map((o) => (
-            <SelectItem key={o.value} value={o.value} className="text-sm">
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Clear all */}
-      {hasActiveFilters && (
-        <button
-          type="button"
-          onClick={onClearAll}
-          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 py-2 text-[13px] text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
+      {/* Right-aligned controls */}
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Role filter */}
+        <Select
+          value={roleId ?? ALL_VALUE}
+          onValueChange={(v) => onRoleChange(v === ALL_VALUE ? undefined : v)}
         >
-          <X className="size-3.5" />
-          Clear
-        </button>
-      )}
+          <SelectTrigger className="h-9 w-[160px] text-sm border-neutral-200">
+            <SelectValue placeholder="All Roles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE} className="text-sm">
+              All Roles
+            </SelectItem>
+            {roles.map((r) => (
+              <SelectItem key={r.id} value={r.id} className="text-sm">
+                {r.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Attendance status filter */}
+        <Select
+          value={attendanceStatus ?? ALL_VALUE}
+          onValueChange={(v) =>
+            onAttendanceStatusChange(
+              v === ALL_VALUE ? undefined : (v as AttendanceTodayStatus),
+            )
+          }
+        >
+          <SelectTrigger className="h-9 w-[180px] text-sm border-neutral-200">
+            <SelectValue placeholder="All Attendance" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE} className="text-sm">
+              All Attendance
+            </SelectItem>
+            {ATTENDANCE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value} className="text-sm">
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Clear all */}
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={onClearAll}
+            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 py-2 text-[13px] text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
+          >
+            <X className="size-3.5" />
+            Clear
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { BriefcaseBusiness, Plus } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 
-import { Button } from '@/components/ui/button';
 import { getScope, type RolePermissions } from '@/lib/hrms-roles';
 import { CreateJobRequisitionSheet } from '@/modules/jobs/components/CreateJobRequisitionSheet';
 import { JobRequisitionTable } from '@/modules/jobs/components/JobRequisitionTable';
@@ -25,17 +23,6 @@ interface JobRequisitionPageShellProps {
   ownedOnly: boolean;
 }
 
-function parseError(error: Error | null) {
-  if (!error) return 'Failed to load job requisitions.';
-  try {
-    const parsed = JSON.parse(error.message);
-    if (parsed.message) return parsed.message as string;
-  } catch {
-    // ignore parse failures
-  }
-  return 'Failed to load job requisitions.';
-}
-
 export function JobRequisitionPageShell({
   orgSlug,
   memberId,
@@ -43,82 +30,72 @@ export function JobRequisitionPageShell({
   permissions,
   ownedOnly,
 }: Readonly<JobRequisitionPageShellProps>) {
+  const shouldReduceMotion = useReducedMotion();
   const [sheetOpen, setSheetOpen] = useState(false);
   const jobsDeleteScope = getScope(permissions, 'jobs', 'delete');
-  const { data = [], isLoading, isError, error } = useJobRequisitionsQuery(orgSlug, memberId, ownedOnly);
+  const { data = [], isLoading, isError, error, refetch } = useJobRequisitionsQuery(orgSlug, memberId, ownedOnly);
   const submitMutation = useSubmitJobRequisition(orgSlug, memberId);
   const approveMutation = useApproveJobRequisition(orgSlug, memberId);
   const rejectMutation = useRejectJobRequisition(orgSlug, memberId);
   const closeMutation = useCloseJobRequisition(orgSlug, memberId);
 
-  if (isError) {
-    return (
-      <div className="rounded-xl border border-neutral-100 bg-surface p-6 text-sm text-destructive-text">
-        {parseError(error)}
-      </div>
-    );
-  }
+  const motionProps = {
+    initial: { opacity: 0, y: shouldReduceMotion ? 0 : 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.2 },
+  };
 
   return (
     <>
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4 rounded-xl border border-neutral-100 bg-surface p-6 shadow-[var(--shadow-1)] sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary-subtle">
-              <BriefcaseBusiness className="size-5 text-primary" />
+      <main className="min-h-full bg-canvas">
+        <div className="px-6 py-6 flex flex-col gap-6 max-w-7xl">
+          {/* Page heading */}
+          <section aria-labelledby="jobs-heading">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1
+                  id="jobs-heading"
+                  className="text-4xl font-semibold text-neutral-900 tracking-tight"
+                >
+                  {ownedOnly ? 'My Job Requisitions' : 'Job Requisitions'}
+                </h1>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-neutral-900">
-                {ownedOnly ? 'My Job Requisitions' : 'Jobs'}
-              </h1>
-              <p className="text-sm text-neutral-500">
-                {ownedOnly
-                  ? 'Track your requisitions and approval progress.'
-                  : 'View the requisitions visible to your current role and review pending approvals.'}
-              </p>
-            </div>
-          </div>
+          </section>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {!ownedOnly ? (
-              <Button asChild variant="outline">
-                <Link href={`/${orgSlug}/jobs/requisitions`}>My Requisitions</Link>
-              </Button>
-            ) : (
-              <Button asChild variant="outline">
-                <Link href={`/${orgSlug}/jobs`}>All Visible Jobs</Link>
-              </Button>
-            )}
-            <Button onClick={() => setSheetOpen(true)}>
-              <Plus className="mr-1 size-4" />
-              New Requisition
-            </Button>
-          </div>
+          {/* Job requisitions table */}
+          <motion.div {...motionProps}>
+            <JobRequisitionTable
+              orgSlug={orgSlug}
+              ownedOnly={ownedOnly}
+              data={data}
+              isLoading={isLoading}
+              isError={isError}
+              error={error}
+              onRetry={refetch}
+              showRaisedBy={!ownedOnly}
+              canClose={jobsDeleteScope === 'organization'}
+              submitLoading={submitMutation.isPending}
+              approveLoading={approveMutation.isPending}
+              rejectLoading={rejectMutation.isPending}
+              closeLoading={closeMutation.isPending}
+              onSubmit={async (requisitionId) => {
+                await submitMutation.mutateAsync(requisitionId);
+              }}
+              onApprove={async (requisitionId, comment) => {
+                await approveMutation.mutateAsync({ requisitionId, data: { comment } });
+              }}
+              onReject={async (requisitionId, comment) => {
+                await rejectMutation.mutateAsync({ requisitionId, data: { comment } });
+              }}
+              onClose={async (requisitionId) => {
+                await closeMutation.mutateAsync(requisitionId);
+              }}
+              onNewRequisition={() => setSheetOpen(true)}
+            />
+          </motion.div>
         </div>
-
-        <JobRequisitionTable
-          data={data}
-          isLoading={isLoading}
-          showRaisedBy={!ownedOnly}
-          canClose={jobsDeleteScope === 'organization'}
-          submitLoading={submitMutation.isPending}
-          approveLoading={approveMutation.isPending}
-          rejectLoading={rejectMutation.isPending}
-          closeLoading={closeMutation.isPending}
-          onSubmit={async (requisitionId) => {
-            await submitMutation.mutateAsync(requisitionId);
-          }}
-          onApprove={async (requisitionId, comment) => {
-            await approveMutation.mutateAsync({ requisitionId, data: { comment } });
-          }}
-          onReject={async (requisitionId, comment) => {
-            await rejectMutation.mutateAsync({ requisitionId, data: { comment } });
-          }}
-          onClose={async (requisitionId) => {
-            await closeMutation.mutateAsync(requisitionId);
-          }}
-        />
-      </div>
+      </main>
 
       <CreateJobRequisitionSheet
         open={sheetOpen}

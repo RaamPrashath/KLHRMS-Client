@@ -39,14 +39,12 @@ export default async function JobsPage({
   });
 
   return (
-    <div className="min-h-full bg-canvas p-6">
-      <JobRequisitionPageShell
-        orgSlug={orgSlug}
-        memberId={member.id}
-        departments={departments}
-        permissions={(member.role?.permissions as RolePermissions) ?? null}
-        ownedOnly={false}
-      />
-    </div>
+    <JobRequisitionPageShell
+      orgSlug={orgSlug}
+      memberId={member.id}
+      departments={departments}
+      permissions={(member.role?.permissions as RolePermissions) ?? null}
+      ownedOnly={false}
+    />
   );
 }

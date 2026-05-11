@@ -36,7 +36,7 @@ export function BulkAttendanceToolbar({
   const isCurrentWeek = (() => {
     const now = new Date();
     const currentWeekStart = new Date(now);
-    currentWeekStart.setDate(now.getDate() - now.getDay() + 1);
+    currentWeekStart.setDate(now.getDate() - now.getDay()); // Sunday = 0, so no +1
     currentWeekStart.setHours(0, 0, 0, 0);
     return weekStart.getTime() === currentWeekStart.getTime();
   })();

@@ -61,16 +61,11 @@ export function EmployeePagination({
   onPageSizeChange,
 }: EmployeePaginationProps) {
   const pageNumbers = buildPageNumbers(page, totalPages);
-  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const to = Math.min(page * pageSize, total);
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Left: count + page size selector */}
       <div className="flex items-center gap-3">
-        <span className="text-[13px] text-neutral-500">
-          {total === 0 ? 'No results' : `${from}–${to} of ${total} employees`}
-        </span>
         <div className="flex items-center gap-2">
           <span className="text-[13px] text-neutral-500">Show</span>
           <Select

@@ -65,8 +65,6 @@ function getPresetRange(preset: AttendanceTimePreset): {
 // ─── Preset button labels ─────────────────────────────────────────────────────
 
 const PRESETS: { value: AttendanceTimePreset; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: 'yesterday', label: 'Yesterday' },
   { value: 'last_week', label: 'Last 7 days' },
   { value: 'last_month', label: 'Last 30 days' },
   { value: 'all_time', label: 'All time' },
@@ -82,9 +80,9 @@ interface AttendanceFiltersProps {
 }
 
 const DEFAULT_FILTERS: AttendanceFiltersState = {
-  timePreset: 'today',
-  dateFrom: getTodayIST(),
-  dateTo: getTodayIST(),
+  timePreset: 'all_time',
+  dateFrom: undefined,
+  dateTo: undefined,
   status: undefined,
   targetMemberId: undefined,
   employeeNameSearch: undefined,
