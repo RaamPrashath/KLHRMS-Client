@@ -87,6 +87,21 @@ export const createInterviewMeetingSchema = z.object({
   }
 });
 
+export const stageInterviewAssignmentSchema = z.object({
+  applicationId: z.string().min(1),
+  interviewerMemberId: z.string().min(1),
+  scheduledStartAt: z.string().datetime(),
+  durationMinutes: z.number().int().min(15).max(240).default(30),
+});
+
+export const stageInterviewAssignmentRequestSchema = z.object({
+  assignments: z.array(stageInterviewAssignmentSchema).min(1),
+});
+
+export const stageInterviewWarningRequestSchema = z.object({
+  assignments: z.array(stageInterviewAssignmentSchema).default([]),
+});
+
 export interface MoveApplicationStageInput {
   toStageId: string;
   note?: string | null;
@@ -138,4 +153,11 @@ export interface CreateInterviewMeetingInput {
   durationMinutes: number;
   title?: string | null;
   notes?: string | null;
+}
+
+export interface StageInterviewAssignmentInput {
+  applicationId: string;
+  interviewerMemberId: string;
+  scheduledStartAt: string;
+  durationMinutes: number;
 }

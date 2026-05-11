@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  assignStageInterviewsAction,
   completeInterviewMeetingAction,
   createPipelineStageAction,
   createInterviewMeetingAction,
@@ -12,8 +13,11 @@ import {
   fetchEvaluationWorkspaceAction,
   fetchPipelineBoardAction,
   fetchPipelineJobPostingsAction,
+  fetchStageWorkspaceAction,
   generateEvaluationWorkspaceAction,
   moveApplicationStageAction,
+  previewStageInterviewWarningsAction,
+  searchInterviewersAction,
   updatePipelineStageAction,
 } from '@/modules/candidates/api/atsServerActions';
 import type {
@@ -23,6 +27,11 @@ import type {
   PipelineJobPosting,
   StageEvaluationWorkspace,
   InterviewMeeting,
+  InterviewerSearchResponse,
+  StageInterviewAssignment,
+  StageInterviewAssignmentResponse,
+  StageInterviewWarningResponse,
+  StageWorkspace,
 } from '@/modules/candidates/types/atsTypes';
 import type {
   CreateInterviewMeetingInput,
@@ -32,6 +41,10 @@ import type {
 
 function boardKey(orgSlug: string, jobPostingId: string) {
   return ['ats-pipeline', orgSlug, jobPostingId] as const;
+}
+
+function stageWorkspaceKey(orgSlug: string, stageSlug: string) {
+  return ['ats-stage-workspace', orgSlug, stageSlug] as const;
 }
 
 function moveApplicationInBoard(
@@ -112,6 +125,50 @@ export function useCandidateApplicationDetail(
         applicationId: applicationId ?? '',
       }),
     enabled: !!orgSlug && !!memberId && !!applicationId,
+  });
+}
+
+export function useStageWorkspace(orgSlug: string, memberId: string, stageSlug: string) {
+  return useQuery<StageWorkspace, Error>({
+    queryKey: stageWorkspaceKey(orgSlug, stageSlug),
+    queryFn: () => fetchStageWorkspaceAction({ orgSlug, memberId, stageSlug }),
+    enabled: !!orgSlug && !!memberId && !!stageSlug,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useInterviewersSearch(orgSlug: string, memberId: string, search: string) {
+  return useQuery<InterviewerSearchResponse, Error>({
+    queryKey: ['ats-interviewers', orgSlug, search],
+    queryFn: () => searchInterviewersAction({ orgSlug, memberId, search }),
+    enabled: !!orgSlug && !!memberId,
+    staleTime: 30_000,
+  });
+}
+
+export function usePreviewStageInterviewWarnings(
+  orgSlug: string,
+  memberId: string,
+  stageSlug: string,
+) {
+  return useMutation<StageInterviewWarningResponse, Error, StageInterviewAssignment[]>({
+    mutationFn: (assignments) =>
+      previewStageInterviewWarningsAction({ orgSlug, memberId, stageSlug, assignments }),
+  });
+}
+
+export function useAssignStageInterviews(
+  orgSlug: string,
+  memberId: string,
+  stageSlug: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation<StageInterviewAssignmentResponse, Error, StageInterviewAssignment[]>({
+    mutationFn: (assignments) =>
+      assignStageInterviewsAction({ orgSlug, memberId, stageSlug, assignments }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stageWorkspaceKey(orgSlug, stageSlug) });
+    },
   });
 }
 

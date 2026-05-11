@@ -57,6 +57,7 @@ export interface PipelineStage {
   id: string;
   jobPostingId: string;
   name: string;
+  slug: string;
   order: number;
   color: string | null;
   isDefault: boolean;
@@ -122,4 +123,62 @@ export interface CandidateApplicationDetail {
   appliedAt: string;
   lastActivityAt: string;
   stageHistory: StageHistoryItem[];
+}
+
+export interface StageWorkspaceInterviewer {
+  memberId: string;
+  name: string;
+  email: string;
+  department: string | null;
+}
+
+export interface StageWorkspaceAssignment {
+  eventId: string;
+  interviewer: StageWorkspaceInterviewer | null;
+  scheduledStartAt: string;
+  scheduledEndAt: string;
+  emailSentAt: string | null;
+}
+
+export interface StageWorkspaceCandidate {
+  applicationId: string;
+  candidate: CandidateSummary;
+  jobTitle: string;
+  source: string;
+  score: number | null;
+  appliedAt: string;
+  currentAssignment: StageWorkspaceAssignment | null;
+}
+
+export interface StageWorkspace {
+  stage: PipelineStage;
+  jobPosting: PipelineJobPosting;
+  candidateCount: number;
+  candidates: StageWorkspaceCandidate[];
+}
+
+export interface InterviewerSearchResponse {
+  items: StageWorkspaceInterviewer[];
+}
+
+export interface StageInterviewAssignment {
+  applicationId: string;
+  interviewerMemberId: string;
+  scheduledStartAt: string;
+  durationMinutes: number;
+}
+
+export interface StageInterviewWarning {
+  applicationId: string;
+  interviewerMemberId: string;
+  messages: string[];
+}
+
+export interface StageInterviewWarningResponse {
+  warnings: StageInterviewWarning[];
+}
+
+export interface StageInterviewAssignmentResponse {
+  assignedCount: number;
+  warnings: StageInterviewWarning[];
 }

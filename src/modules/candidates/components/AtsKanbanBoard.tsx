@@ -10,7 +10,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { FileSpreadsheet, Plus, Search } from 'lucide-react';
+import { FileSpreadsheet, KanbanSquare, List, Plus, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -32,8 +33,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer';
+import { AtsPipelineTable } from '@/modules/candidates/components/AtsPipelineTable';
 import { KanbanColumn } from '@/modules/candidates/components/KanbanColumn';
 import { StageConfigDrawer } from '@/modules/candidates/components/StageConfigDrawer';
 import { authClient } from '@/lib/auth-client';
@@ -189,10 +192,12 @@ export function AtsKanbanBoard({
   readonly onJobPostingChange: (id: string) => void;
   readonly isLoadingPostings: boolean;
 }) {
+  const router = useRouter();
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [activeApplication, setActiveApplication] = useState<PipelineApplication | null>(null);
   const [addAfterStageId, setAddAfterStageId] = useState<string | null>(null);
   const [renamingStage, setRenamingStage] = useState<PipelineStage | null>(null);
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [globalSearch, setGlobalSearch] = useState('');
   const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
   const deferredGlobalSearch = useDeferredValue(globalSearch);
@@ -453,6 +458,26 @@ export function AtsKanbanBoard({
     setColumnSearch((current) => ({ ...current, [stageId]: value }));
   }
 
+  async function moveSelectedApplications(applicationIds: string[], toStageId: string) {
+    const currentApplications = boardQuery.data?.stages.flatMap((stage) => stage.applications) ?? [];
+    const applicationsToMove = applicationIds.filter((applicationId) => {
+      const application = currentApplications.find((item) => item.id === applicationId);
+      return application && application.pipelineStageId !== toStageId;
+    });
+
+    if (applicationsToMove.length === 0) {
+      toast.info('Selected candidates are already in that stage');
+      return;
+    }
+
+    await Promise.all(
+      applicationsToMove.map((applicationId) =>
+        moveApplication.mutateAsync({ applicationId, toStageId }),
+      ),
+    );
+    toast.success(`${applicationsToMove.length} candidate${applicationsToMove.length === 1 ? '' : 's'} moved`);
+  }
+
   function openEvaluationWorkspace(stage: PipelineStage) {
     if (!stage.evaluationWorkspace?.googleSpreadsheetUrl) {
       toast.error('Evaluation sheet is still being prepared');
@@ -462,6 +487,10 @@ export function AtsKanbanBoard({
       ? stage.evaluationWorkspace.googleSpreadsheetUrl
       : `${stage.evaluationWorkspace.googleSpreadsheetUrl}#gid=${stage.evaluationWorkspace.googleSheetId}`;
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function openStageWorkspace(stage: PipelineStage) {
+    router.push(`/${orgSlug}/candidates/stage/${stage.slug}`);
   }
 
   if (!jobPostingId) {
@@ -480,85 +509,128 @@ export function AtsKanbanBoard({
 
   return (
     <>
-      <div className="mb-4 flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-          <Input
-            value={globalSearch}
-            onChange={(event) => setGlobalSearch(event.target.value)}
-            placeholder="Search all candidates"
-            className="h-9 bg-white pl-9"
-          />
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+            <Input
+              value={globalSearch}
+              onChange={(event) => setGlobalSearch(event.target.value)}
+              placeholder="Search all candidates"
+              className="h-9 bg-white pl-9"
+            />
+          </div>
+          <Select
+            value={jobPostingId ?? undefined}
+            onValueChange={onJobPostingChange}
+            disabled={isLoadingPostings || !jobPostings.length}
+          >
+            <SelectTrigger className="h-9 w-full bg-white lg:w-[280px]">
+              <SelectValue placeholder={isLoadingPostings ? 'Loading jobs' : 'Select job posting'} />
+            </SelectTrigger>
+            <SelectContent>
+              {jobPostings.map((posting) => (
+                <SelectItem key={posting.id} value={posting.id}>
+                  {posting.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={() => setAddAfterStageId(stages.at(-1)?.id ?? null)}>
+            <Plus className="size-4" />
+            Stage
+          </Button>
         </div>
-        <Select
-          value={jobPostingId ?? undefined}
-          onValueChange={onJobPostingChange}
-          disabled={isLoadingPostings || !jobPostings.length}
-        >
-          <SelectTrigger className="h-9 w-full bg-white sm:w-[280px]">
-            <SelectValue placeholder={isLoadingPostings ? 'Loading jobs' : 'Select job posting'} />
-          </SelectTrigger>
-          <SelectContent>
-            {jobPostings.map((posting) => (
-              <SelectItem key={posting.id} value={posting.id}>
-                {posting.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button size="sm" onClick={() => setAddAfterStageId(stages.at(-1)?.id ?? null)}>
-          <Plus className="size-4" />
-          Stage
-        </Button>
+        <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('kanban')}
+            aria-pressed={viewMode === 'kanban'}
+            className={cn(
+              'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+              viewMode === 'kanban'
+                ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                : 'text-neutral-500 hover:text-neutral-900',
+            )}
+          >
+            <KanbanSquare className="size-3.5" />
+            Kanban
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            aria-pressed={viewMode === 'table'}
+            className={cn(
+              'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+              viewMode === 'table'
+                ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                : 'text-neutral-500 hover:text-neutral-900',
+            )}
+          >
+            <List className="size-3.5" />
+            Table
+          </button>
+        </div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragCancel={() => setActiveApplication(null)}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-4 overflow-x-auto p-1 no-scrollbar">
-          {stages.map((stage, index) => {
-            const stageSearch = columnSearch[stage.id] ?? '';
-            const filteredApplications = stage.applications.filter(
-              (application) =>
-                matchesApplicationSearch(application, stage.name, deferredGlobalSearch) &&
-                matchesApplicationSearch(application, stage.name, stageSearch),
-            );
+      {viewMode === 'table' ? (
+        <AtsPipelineTable
+          stages={stages}
+          globalSearch={deferredGlobalSearch}
+          isMoving={moveApplication.isPending}
+          onOpenCandidate={setSelectedApplicationId}
+          onMoveSelected={moveSelectedApplications}
+        />
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragCancel={() => setActiveApplication(null)}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-4 overflow-x-auto p-1 no-scrollbar">
+            {stages.map((stage, index) => {
+              const stageSearch = columnSearch[stage.id] ?? '';
+              const filteredApplications = stage.applications.filter(
+                (application) =>
+                  matchesApplicationSearch(application, stage.name, deferredGlobalSearch) &&
+                  matchesApplicationSearch(application, stage.name, stageSearch),
+              );
 
-            return (
-              <KanbanColumn
-                key={stage.id}
-                stage={stage}
-                isFirst={index === 0}
-                isLast={index === stages.length - 1}
-                searchValue={stageSearch}
-                filteredApplications={filteredApplications}
-                onSearchChange={updateColumnSearch}
-                onOpenCandidate={setSelectedApplicationId}
-                onAddAfter={setAddAfterStageId}
-                onRename={setRenamingStage}
-                onDelete={(item) => deleteStage.mutate(item.id)}
-                onMoveLeft={(item) => moveStage(item, -1)}
-                onMoveRight={(item) => moveStage(item, 1)}
-                onOpenEvaluationWorkspace={openEvaluationWorkspace}
-                onScheduleInterview={openScheduleInterview}
-                onStartInterview={startInterviewNow}
-                onCompleteInterview={markInterviewCompleted}
-              />
-            );
-          })}
-        </div>
-        <DragOverlay dropAnimation={null} zIndex={9999}>
-          {activeApplication ? (
-            <div className="w-[276px]">
-              <CandidateCard application={activeApplication} isOverlay />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+              return (
+                <KanbanColumn
+                  key={stage.id}
+                  stage={stage}
+                  isFirst={index === 0}
+                  isLast={index === stages.length - 1}
+                  searchValue={stageSearch}
+                  filteredApplications={filteredApplications}
+                  onSearchChange={updateColumnSearch}
+                  onOpenCandidate={setSelectedApplicationId}
+                  onAddAfter={setAddAfterStageId}
+                  onRename={setRenamingStage}
+                  onDelete={(item) => deleteStage.mutate(item.id)}
+                  onMoveLeft={(item) => moveStage(item, -1)}
+                  onMoveRight={(item) => moveStage(item, 1)}
+                  onOpenStageWorkspace={openStageWorkspace}
+                  onOpenEvaluationWorkspace={openEvaluationWorkspace}
+                  onScheduleInterview={openScheduleInterview}
+                  onStartInterview={startInterviewNow}
+                  onCompleteInterview={markInterviewCompleted}
+                />
+              );
+            })}
+          </div>
+          <DragOverlay dropAnimation={null} zIndex={9999}>
+            {activeApplication ? (
+              <div className="w-[276px]">
+                <CandidateCard application={activeApplication} isOverlay />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
 
       <StageConfigDrawer
         open={addAfterStageId !== null}

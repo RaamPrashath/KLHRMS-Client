@@ -5,11 +5,14 @@ import {
   createInterviewMeetingSchema,
   extendPipelineStageSchema,
   moveApplicationStageSchema,
+  stageInterviewAssignmentRequestSchema,
+  stageInterviewWarningRequestSchema,
   updatePipelineStageSchema,
   type CreatePipelineStageInput,
   type CreateInterviewMeetingInput,
   type ExtendPipelineStageInput,
   type MoveApplicationStageInput,
+  type StageInterviewAssignmentInput,
   type UpdatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
 import type {
@@ -19,7 +22,11 @@ import type {
   PipelineBoard,
   PipelineJobPosting,
   PipelineStage,
+  InterviewerSearchResponse,
+  StageInterviewAssignmentResponse,
+  StageInterviewWarningResponse,
   StageEvaluationWorkspace,
+  StageWorkspace,
 } from '@/modules/candidates/types/atsTypes';
 
 function getApiUrl(): string {
@@ -78,6 +85,73 @@ export async function fetchPipelineBoardAction(params: {
     cache: 'no-store',
   });
   return handleResponse<PipelineBoard>(res);
+}
+
+export async function fetchStageWorkspaceAction(params: {
+  orgSlug: string;
+  memberId: string;
+  stageSlug: string;
+}): Promise<StageWorkspace> {
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/by-slug/${encodeURIComponent(params.stageSlug)}/workspace`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<StageWorkspace>(res);
+}
+
+export async function searchInterviewersAction(params: {
+  orgSlug: string;
+  memberId: string;
+  search?: string;
+}): Promise<InterviewerSearchResponse> {
+  const query = new URLSearchParams();
+  if (params.search?.trim()) query.set('search', params.search.trim());
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/interviewers${suffix}`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<InterviewerSearchResponse>(res);
+}
+
+export async function previewStageInterviewWarningsAction(params: {
+  orgSlug: string;
+  memberId: string;
+  stageSlug: string;
+  assignments: StageInterviewAssignmentInput[];
+}): Promise<StageInterviewWarningResponse> {
+  const parsed = stageInterviewWarningRequestSchema.safeParse({ assignments: params.assignments });
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/by-slug/${encodeURIComponent(params.stageSlug)}/assignments/warnings`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(parsed.data),
+  });
+  return handleResponse<StageInterviewWarningResponse>(res);
+}
+
+export async function assignStageInterviewsAction(params: {
+  orgSlug: string;
+  memberId: string;
+  stageSlug: string;
+  assignments: StageInterviewAssignmentInput[];
+}): Promise<StageInterviewAssignmentResponse> {
+  const parsed = stageInterviewAssignmentRequestSchema.safeParse({ assignments: params.assignments });
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/by-slug/${encodeURIComponent(params.stageSlug)}/assignments`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(parsed.data),
+  });
+  return handleResponse<StageInterviewAssignmentResponse>(res);
 }
 
 export async function moveApplicationStageAction(params: {
