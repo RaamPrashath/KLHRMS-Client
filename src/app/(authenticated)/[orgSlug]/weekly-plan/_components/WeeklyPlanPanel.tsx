@@ -13,7 +13,7 @@ import {
 } from "@/hooks/queries/weekly_plan";
 import { useSaveWeeklyPlanMutation } from "@/hooks/mutations/weekly_plan";
 import { useApiClient } from "@/hooks/useApiClient";
-import { useMyAttendanceQuery } from "@/modules/attendance/hooks/useMyAttendanceQuery";
+import { useMyAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
 import { getCurrentWeekState, getWeekDays, shiftWeek } from "@/modules/weekly-plan/date";
 import type {
   PlanLocationOption,

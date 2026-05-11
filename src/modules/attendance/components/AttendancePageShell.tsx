@@ -1,20 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 
-import { fetchMemberPermissionsAction } from "@/modules/attendance/api/attendanceServerActions";
 import {
     resolveAttendancePermissions,
     isOperativeScope,
 } from "@/modules/attendance/utils/attendancePermissions";
-import { useAttendanceQuery } from "@/modules/attendance/hooks/useAttendanceQuery";
-import { useMyAttendanceQuery } from "@/modules/attendance/hooks/useMyAttendanceQuery";
-import { useDeleteAttendanceMutation } from "@/modules/attendance/hooks/useDeleteAttendanceMutation";
+import {
+    useAttendanceQuery,
+    useMemberPermissionsQuery,
+    useMyAttendanceQuery,
+} from "@/modules/attendance/hooks/queries/attendance";
+import { useDeleteAttendanceMutation } from "@/modules/attendance/hooks/mutations/attendance";
 
 import { AttendancePermissionGate } from "@/modules/attendance/components/AttendancePermissionGate";
 import { ClockWidget } from "@/modules/attendance/components/ClockWidget";
@@ -65,11 +66,8 @@ export function AttendancePageShell({
     const shouldReduceMotion = useReducedMotion();
 
     // ── Permission resolution ──────────────────────────────────────────────────
-    const { data: rawPermissions, isLoading: permissionsLoading } = useQuery({
-        queryKey: ["member-permissions", orgSlug, memberId],
-        queryFn: () => fetchMemberPermissionsAction({ orgSlug, memberId }),
-        staleTime: 60_000,
-    });
+    const { data: rawPermissions, isLoading: permissionsLoading } =
+        useMemberPermissionsQuery(orgSlug, memberId);
 
     const permissions = resolveAttendancePermissions(rawPermissions ?? {});
     const isOrgScope = permissions.view === "organization";

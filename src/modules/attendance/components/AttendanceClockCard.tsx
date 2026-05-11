@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
@@ -9,7 +8,6 @@ import {
   CheckCircle2,
   House,
   Loader2,
-  MapPin,
   RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,15 +20,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  fetchAttendanceClockContextAction,
-  fetchMemberProfileAction,
-  fetchMyAttendanceAction,
-} from "@/modules/attendance/api/attendanceServerActions";
 import { ClockInButton } from "@/modules/attendance/components/ClockInButton";
 import { ClockOutButton } from "@/modules/attendance/components/ClockOutButton";
-import { useClockInMutation } from "@/modules/attendance/hooks/useClockInMutation";
-import { useClockOutMutation } from "@/modules/attendance/hooks/useClockOutMutation";
+import {
+  findTodayRecord,
+  useAttendanceClockContextQuery,
+  useAttendanceTodayQuery,
+  useMemberProfileQuery,
+} from "@/modules/attendance/hooks/queries/attendance";
+import {
+  useClockInMutation,
+  useClockOutMutation,
+} from "@/modules/attendance/hooks/mutations/attendance";
 import type {
   ApiError,
   AttendanceClockContext,
@@ -52,6 +53,7 @@ interface AttendanceClockCardProps {
   orgSlug: string;
   memberId: string;
   variant?: "attendance" | "dashboard";
+  roleName?: string | null;
 }
 
 interface GeoState {
@@ -68,7 +70,6 @@ interface LocationOptionCardProps {
   detectedValue: ClockChoice | null;
   disabled?: boolean;
   title: string;
-  description: string;
   icon: typeof Building2;
   accentClassName: string;
 }
@@ -84,11 +85,6 @@ function deriveWidgetState(
   return "NOT_CLOCKED_IN";
 }
 
-function findTodayRecord(records: AttendanceRecord[]): AttendanceRecord | null {
-  const todayIST = getTodayIST();
-  return records.find((record) => record.date === todayIST) ?? null;
-}
-
 function getGreeting(name: string) {
   const hour = new Date().getHours();
   const greetings =
@@ -102,6 +98,19 @@ function getGreeting(name: string) {
             ? "Good evening, {name}."
             : "Still going strong, {name}.";
   return greetings.replace("{name}", name);
+}
+
+function getDashboardClockStatus(widgetState: WidgetState): string {
+  if (widgetState === "CLOCKED_IN") return "Clocked in";
+  if (widgetState === "COMPLETED") return "Done for today";
+  if (widgetState === "LOADING") return "Checking status";
+  return "Not clocked in";
+}
+
+function getInitials(name: string | null | undefined): string {
+  const parts = name?.split(" ").filter(Boolean).slice(0, 2) ?? [];
+  const initials = parts.map((part) => part[0]?.toUpperCase()).join("");
+  return initials || "HR";
 }
 
 function mapPlanLocationToChoice(planLocation: PlanLocation): ClockChoice | null {
@@ -149,14 +158,14 @@ function getDistanceMeters(
 function getDetectedLocation(
   geoState: GeoState,
   context: AttendanceClockContext | undefined,
-): { location: ClockChoice | null; distanceMeters: number | null } {
+) {
   if (
     geoState.status !== "ready" ||
     geoState.latitude == null ||
     geoState.longitude == null ||
     !context?.office
   ) {
-    return { location: null, distanceMeters: null };
+    return null;
   }
 
   const distanceMeters = getDistanceMeters(
@@ -165,9 +174,7 @@ function getDetectedLocation(
     context.office.latitude,
     context.office.longitude,
   );
-  const location =
-    distanceMeters <= context.office.radiusMeters ? "OFFICE" : "REMOTE";
-  return { location, distanceMeters: Math.round(distanceMeters) };
+  return distanceMeters <= context.office.radiusMeters ? "OFFICE" : "REMOTE";
 }
 
 function parseErrorMessage(error: unknown, fallback: string): string {
@@ -253,7 +260,6 @@ function LocationOptionCard({
   detectedValue,
   disabled = false,
   title,
-  description,
   icon: Icon,
   accentClassName,
 }: Readonly<LocationOptionCardProps>) {
@@ -266,7 +272,7 @@ function LocationOptionCard({
         "relative flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all duration-200",
         disabled ? "cursor-not-allowed opacity-60" : "hover:border-neutral-300 hover:bg-neutral-50/70",
         isSelected
-          ? "border-neutral-900 bg-neutral-950 text-white shadow-[0_16px_40px_rgba(15,23,42,0.14)]"
+          ? "border-neutral-900 bg-neutral-50 text-foreground shadow-[0_16px_40px_rgba(15,23,42,0.08)]"
           : "border-border bg-white text-foreground",
       ].join(" ")}
     >
@@ -276,7 +282,7 @@ function LocationOptionCard({
           <div
             className={[
               "flex size-8 shrink-0 items-center justify-center rounded-full",
-              isSelected ? "bg-white/12 text-white" : `bg-neutral-100 ${accentClassName}`,
+              isSelected ? `bg-neutral-100 ${accentClassName}` : `bg-neutral-100 ${accentClassName}`,
             ].join(" ")}
           >
             <Icon className="size-4" />
@@ -287,7 +293,7 @@ function LocationOptionCard({
               <span
                 className={[
                   "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]",
-                  isSelected ? "bg-white/12 text-white" : "bg-emerald-100 text-emerald-700",
+                  "bg-emerald-100 text-emerald-700",
                 ].join(" ")}
               >
                 Detected
@@ -295,9 +301,6 @@ function LocationOptionCard({
             ) : null}
           </div>
         </div>
-        <p className={["text-xs leading-5", isSelected ? "text-white/75" : "text-muted-foreground"].join(" ")}>
-          {description}
-        </p>
       </div>
     </label>
   );
@@ -307,8 +310,10 @@ export function AttendanceClockCard({
   orgSlug,
   memberId,
   variant = "attendance",
+  roleName = null,
 }: Readonly<AttendanceClockCardProps>) {
   const todayIso = getTodayIST();
+  const isDashboard = variant === "dashboard";
   const [widgetState, setWidgetState] = useState<WidgetState>("LOADING");
   const [activeClockIn, setActiveClockIn] = useState<string | null>(null);
   const [completedRecord, setCompletedRecord] = useState<AttendanceRecord | null>(null);
@@ -325,52 +330,16 @@ export function AttendanceClockCard({
   });
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { data: todayData, isLoading } = useQuery({
-    queryKey: ["attendance-today", orgSlug, memberId],
-    queryFn: () =>
-      fetchMyAttendanceAction({
-        orgSlug,
-        memberId,
-        filters: {
-          date_from: todayIso,
-          date_to: todayIso,
-          page: 1,
-          page_size: 1,
-        },
-      }),
-    enabled: !!orgSlug && !!memberId,
-    staleTime: 30_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
-
-  const { data: profile } = useQuery({
-    queryKey: ["member-profile", memberId],
-    queryFn: () => fetchMemberProfileAction({ memberId }),
-    enabled: !!memberId,
-    staleTime: 300_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
-
-  const { data: clockContext, isLoading: isClockContextLoading } = useQuery({
-    queryKey: ["attendance-clock-context", orgSlug, memberId, todayIso],
-    queryFn: () =>
-      fetchAttendanceClockContextAction({
-        orgSlug,
-        memberId,
-        date: todayIso,
-      }),
-    enabled: !!orgSlug && !!memberId,
-    staleTime: 300_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
+  const { data: todayData, isLoading } = useAttendanceTodayQuery(orgSlug, memberId, todayIso);
+  const { data: profile } = useMemberProfileQuery(memberId);
+  const { data: clockContext, isLoading: isClockContextLoading } =
+    useAttendanceClockContextQuery(orgSlug, memberId, todayIso);
 
   const clockInMutation = useClockInMutation(orgSlug, memberId);
   const clockOutMutation = useClockOutMutation(orgSlug, memberId);
 
   const firstName = profile?.name?.split(" ")[0] ?? "there";
+  const fullName = profile?.name?.trim() || "Team member";
   const greeting = useMemo(() => getGreeting(firstName), [firstName]);
   const todayRecord = todayData ? findTodayRecord(todayData.items) : undefined;
   const planChoice = mapPlanLocationToChoice(clockContext?.plannedLocation ?? null);
@@ -378,7 +347,7 @@ export function AttendanceClockCard({
   const planBlocksClockIn =
     clockContext?.plannedLocation === "LEAVE" || clockContext?.plannedLocation === "HOLIDAY";
   const locationMatchesSelection =
-    selectedLocation === detectedLocation.location && detectedLocation.location != null;
+    selectedLocation === detectedLocation && detectedLocation != null;
   const planMatchesSelection = !planChoice || selectedLocation === planChoice;
   const canSubmitClockIn =
     !planBlocksClockIn &&
@@ -431,8 +400,8 @@ export function AttendanceClockCard({
         setGeoState(nextGeoState);
 
         const nextDetected = getDetectedLocation(nextGeoState, clockContext);
-        if (nextDetected.location) {
-          setSelectedLocation(nextDetected.location);
+        if (nextDetected) {
+          setSelectedLocation(nextDetected);
         }
       },
       (error) => {
@@ -454,6 +423,7 @@ export function AttendanceClockCard({
 
   useEffect(() => {
     if (isLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWidgetState("LOADING");
       return;
     }
@@ -478,17 +448,24 @@ export function AttendanceClockCard({
   }, [isLoading, todayRecord]);
 
   useEffect(() => {
-    if (widgetState !== "CLOCKED_IN" || !activeClockIn) {
-      if (elapsedIntervalRef.current) {
-        clearInterval(elapsedIntervalRef.current);
-        elapsedIntervalRef.current = null;
-      }
+    if (elapsedIntervalRef.current) {
+      clearInterval(elapsedIntervalRef.current);
+      elapsedIntervalRef.current = null;
+    }
+
+    if (widgetState === "CLOCKED_IN" && activeClockIn) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setElapsedDisplay(formatElapsed(activeClockIn));
+    }
+
+    if (!isDashboard && (widgetState !== "CLOCKED_IN" || !activeClockIn)) {
       return;
     }
 
-    setElapsedDisplay(formatElapsed(activeClockIn));
     elapsedIntervalRef.current = setInterval(() => {
-      setElapsedDisplay(formatElapsed(activeClockIn));
+      if (widgetState === "CLOCKED_IN" && activeClockIn) {
+        setElapsedDisplay(formatElapsed(activeClockIn));
+      }
     }, 1000);
 
     return () => {
@@ -497,16 +474,12 @@ export function AttendanceClockCard({
         elapsedIntervalRef.current = null;
       }
     };
-  }, [activeClockIn, widgetState]);
-
-  useEffect(() => {
-    if (!isDialogOpen) return;
-    setSelectedLocation(planChoice ?? "OFFICE");
-    requestCurrentLocation();
-  }, [clockContext?.office, isDialogOpen, planChoice]);
+  }, [activeClockIn, isDashboard, widgetState]);
 
   function handleOpenClockInDialog() {
     setInlineError(null);
+    setSelectedLocation(planChoice ?? "OFFICE");
+    requestCurrentLocation();
     setIsDialogOpen(true);
   }
 
@@ -556,7 +529,8 @@ export function AttendanceClockCard({
   }
 
   const todayLabel = formatTodayLabel();
-  const isDashboard = variant === "dashboard";
+  const statusLabel = getDashboardClockStatus(widgetState);
+  const subtitle = roleName ? `${roleName} · ${statusLabel}` : statusLabel;
   const dialogStatus = getDialogStatusMessage({
     isClockContextLoading,
     geoState,
@@ -576,38 +550,86 @@ export function AttendanceClockCard({
     <>
       <div
         className={[
-          "relative overflow-hidden rounded-2xl border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
-          isDashboard ? "flex h-full min-h-[240px] flex-col" : "",
+          "relative overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+          isDashboard
+            ? "flex h-full min-h-[148px] flex-col border border-hairline shadow-[0_10px_30px_rgba(15,23,42,0.04)]"
+            : "border-none",
         ].join(" ")}
       >
         <div
           className={[
             "relative flex min-h-[100px] justify-between gap-6 p-6 md:p-8",
-            isDashboard ? "flex-1 flex-col" : "flex-col md:flex-row md:items-center md:gap-0",
+            isDashboard
+              ? "flex-1 flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center"
+              : "flex-col md:flex-row md:items-center md:gap-0",
           ].join(" ")}
         >
-          <div className="flex min-w-0 flex-col text-left">
+          <div className={isDashboard ? "flex min-w-0 items-center gap-4 text-left" : "flex min-w-0 flex-col text-left"}>
             {widgetState === "LOADING" ? (
               <>
-                <div className="h-7 w-48 animate-pulse rounded-lg bg-neutral-100" />
-                <div className="mt-2 h-4 w-32 animate-pulse rounded-lg bg-neutral-100" />
+                {isDashboard ? (
+                  <>
+                    <div className="size-11 animate-pulse rounded-full bg-neutral-100" />
+                    <div>
+                      <div className="h-7 w-40 animate-pulse rounded-lg bg-neutral-100" />
+                      <div className="mt-2 h-4 w-28 animate-pulse rounded-lg bg-neutral-100" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="h-7 w-48 animate-pulse rounded-lg bg-neutral-100" />
+                    <div className="mt-2 h-4 w-32 animate-pulse rounded-lg bg-neutral-100" />
+                  </>
+                )}
               </>
             ) : (
               <>
-                <h2 className="truncate font-sans text-xl font-medium text-neutral-900" title={greeting}>
-                  {greeting}
-                </h2>
-                <p className="mt-1 text-sm text-neutral-400">{todayLabel}</p>
-                {clockContext?.plannedLocation ? (
-                  <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-neutral-500">
-                    Planned: {getPlanLabel(clockContext.plannedLocation)}
-                  </p>
-                ) : null}
+                {isDashboard ? (
+                  <>
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#e8f8f1] text-lg font-semibold text-primary">
+                      {getInitials(fullName)}
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="truncate font-sans text-[1.75rem] font-semibold tracking-tight text-ink" title={fullName}>
+                        {fullName}
+                      </h2>
+                      <p className="mt-1 text-base text-ink-muted-48">{subtitle}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="truncate font-sans text-xl font-medium text-neutral-900" title={greeting}>
+                      {greeting}
+                    </h2>
+                    <p className="mt-1 text-sm text-neutral-400">{todayLabel}</p>
+                    {clockContext?.plannedLocation ? (
+                      <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-neutral-500">
+                        Planned: {getPlanLabel(clockContext.plannedLocation)}
+                      </p>
+                    ) : null}
+                  </>
+                )}
               </>
             )}
           </div>
 
-          <div className={isDashboard ? "flex items-center justify-center" : "flex items-center shrink-0 min-h-[48px]"}>
+          {isDashboard ? (
+            <div className="hidden items-center justify-center md:flex md:border-l md:border-r md:border-divider-soft md:px-6">
+              {widgetState === "CLOCKED_IN" ? (
+                <div className="flex items-center gap-3">
+                  <p
+                    className="text-[2.25rem] font-light tracking-tight text-ink tabular-nums"
+                    aria-live="polite"
+                  >
+                    {elapsedDisplay}
+                  </p>
+                  <span className="inline-flex size-3 rounded-full bg-[#2fb56f]" />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className={isDashboard ? "flex items-center justify-start md:justify-end" : "flex items-center shrink-0 min-h-[48px]"}>
             <AnimatePresence mode="wait">
               {widgetState === "LOADING" && (
                 <motion.div
@@ -628,10 +650,12 @@ export function AttendanceClockCard({
                   exit={{ opacity: 0, filter: "blur(4px)" }}
                   transition={{ duration: 0.25 }}
                 >
-                  <ClockInButton
-                    onClockIn={handleOpenClockInDialog}
-                    isPending={clockInMutation.isPending || isClockContextLoading}
-                  />
+                  <div className={isDashboard ? "scale-[0.98] origin-right" : ""}>
+                    <ClockInButton
+                      onClockIn={handleOpenClockInDialog}
+                      isPending={clockInMutation.isPending || isClockContextLoading}
+                    />
+                  </div>
                 </motion.div>
               )}
 
@@ -642,23 +666,22 @@ export function AttendanceClockCard({
                   animate={{ opacity: 1, filter: "blur(0px)" }}
                   exit={{ opacity: 0, filter: "blur(4px)" }}
                   transition={{ duration: 0.25 }}
-                  className={isDashboard ? "flex flex-col items-center gap-4" : "flex items-center gap-6"}
+                  className={isDashboard ? "flex flex-col items-start gap-4 md:items-end" : "flex items-center gap-6"}
                 >
-                  <div className="flex items-center gap-3">
-                    <p
-                      className={[
-                        "font-sans font-light tracking-tight text-neutral-900 tabular-nums",
-                        isDashboard ? "text-4xl" : "text-3xl",
-                      ].join(" ")}
-                      aria-live="polite"
-                    >
-                      {elapsedDisplay}
-                    </p>
-                    <div className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00874A] opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00874A]" />
+                  {!isDashboard ? (
+                    <div className="flex items-center gap-3">
+                      <p
+                        className="font-sans text-3xl font-light tracking-tight text-neutral-900 tabular-nums"
+                        aria-live="polite"
+                      >
+                        {elapsedDisplay}
+                      </p>
+                      <div className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00874A] opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00874A]" />
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                   <div className="flex items-center gap-3">
                     <ClockOutButton
                       onClockOut={handleClockOut}
@@ -703,7 +726,7 @@ export function AttendanceClockCard({
           <DialogHeader>
             <DialogTitle>Confirm clock-in location</DialogTitle>
             <DialogDescription>
-              Your location is checked automatically when this dialog opens. We use the organization office coordinates and today's weekly plan before enabling clock-in.
+              Your location is checked automatically when this dialog opens. We use the organization office coordinates and today&apos;s weekly plan before enabling clock-in.
             </DialogDescription>
           </DialogHeader>
 
@@ -756,97 +779,22 @@ export function AttendanceClockCard({
               <LocationOptionCard
                 value="OFFICE"
                 selectedValue={selectedLocation}
-                detectedValue={detectedLocation.location}
+                detectedValue={detectedLocation}
                 disabled={geoState.status === "loading" || isClockContextLoading}
                 title="Office"
-                description="Use this when your live coordinates fall inside the office geofence."
                 icon={Building2}
                 accentClassName="text-emerald-600"
               />
               <LocationOptionCard
                 value="REMOTE"
                 selectedValue={selectedLocation}
-                detectedValue={detectedLocation.location}
+                detectedValue={detectedLocation}
                 disabled={geoState.status === "loading" || isClockContextLoading}
                 title="Remote"
-                description="Use this when your live coordinates place you outside the office geofence."
                 icon={House}
                 accentClassName="text-sky-600"
               />
             </RadioGroup>
-
-            <div className="rounded-2xl border border-border bg-muted/20 p-4 text-sm">
-              <div className="flex items-start gap-3">
-                <MapPin className="mt-0.5 size-4 text-primary" />
-                <div className="space-y-2">
-                  <p className="font-medium text-foreground">Live location check</p>
-                  {geoState.status === "loading" ? (
-                    <p className="flex items-center gap-2 text-muted-foreground">
-                      <Loader2 className="size-4 animate-spin" />
-                      Reading your current coordinates...
-                    </p>
-                  ) : null}
-                  {geoState.status === "error" ? (
-                    <p className="flex items-center gap-2 text-destructive">
-                      <AlertCircle className="size-4" />
-                      {geoState.message}
-                    </p>
-                  ) : null}
-                  {geoState.status === "ready" ? (
-                    <div className="space-y-1 text-muted-foreground">
-                      <p>
-                        Detected location:{" "}
-                        <span className="font-semibold text-foreground">
-                          {getLocationChoiceLabel(detectedLocation.location)}
-                        </span>
-                      </p>
-                      {detectedLocation.distanceMeters != null ? (
-                        <p>{detectedLocation.distanceMeters}m from office center</p>
-                      ) : null}
-                      {geoState.accuracyMeters != null ? (
-                        <p>Accuracy +/-{Math.round(geoState.accuracyMeters)}m</p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-white p-4 text-sm">
-              <p className="font-medium text-foreground">Plan alignment</p>
-              <p className="mt-1 text-muted-foreground">
-                Today's weekly plan:{" "}
-                <span className="font-semibold text-foreground">
-                  {getPlanLabel(clockContext?.plannedLocation ?? null)}
-                </span>
-              </p>
-              {clockContext?.office ? (
-                <p className="mt-1 text-muted-foreground">
-                  Office geofence radius:{" "}
-                  <span className="font-semibold text-foreground">
-                    {clockContext.office.radiusMeters}m
-                  </span>
-                </p>
-              ) : null}
-              {!planMatchesSelection && !planBlocksClockIn ? (
-                <p className="mt-2 flex items-center gap-2 text-amber-700">
-                  <AlertCircle className="size-4" />
-                  Your detected location and today's weekly plan do not match.
-                </p>
-              ) : null}
-              {planBlocksClockIn ? (
-                <p className="mt-2 flex items-center gap-2 text-amber-700">
-                  <AlertCircle className="size-4" />
-                  Today is marked as {getPlanLabel(clockContext?.plannedLocation ?? null)} in the weekly plan, so clock-in is blocked.
-                </p>
-              ) : null}
-              {locationMatchesSelection && planMatchesSelection && !planBlocksClockIn ? (
-                <p className="mt-2 flex items-center gap-2 text-emerald-700">
-                  <CheckCircle2 className="size-4" />
-                  Selection, coordinates, and weekly plan all match.
-                </p>
-              ) : null}
-            </div>
           </div>
 
           <DialogFooter>
@@ -862,3 +810,4 @@ export function AttendanceClockCard({
     </>
   );
 }
+

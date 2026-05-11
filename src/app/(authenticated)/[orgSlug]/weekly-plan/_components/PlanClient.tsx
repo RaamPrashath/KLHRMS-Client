@@ -27,7 +27,7 @@ const TAB_OPTIONS: Array<{
 }> = [
   { value: "weekly", label: "Weekly Plan", icon: Rows3 },
   { value: "monthly", label: "Monthly Plan", icon: CalendarRange },
-  { value: "team", label: "Manage People", icon: Users, requireTeam: true },
+  { value: "team", label: "View Plan", icon: Users, requireTeam: true },
 ];
 
 export function PlanClient({
