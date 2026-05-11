@@ -78,13 +78,13 @@ export function KanbanColumn({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex h-[calc(100vh-200px)] min-h-[520px] w-[300px] shrink-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm',
+        'flex w-[300px] shrink-0 flex-col rounded-xl bg-white shadow-sm',
         isOver && 'ring-2 ring-primary bg-primary-ghost',
       )}
     >
-      <header className="border-b border-neutral-100 bg-white p-3 ">
+      <header className="sticky top-0 z-10 border-b border-neutral-100 bg-white p-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-primary" />
               {stage.evaluationEnabled ? (
@@ -99,17 +99,17 @@ export function KanbanColumn({
               ) : (
                 <h2 className="truncate text-sm font-semibold text-neutral-900">{stage.name}</h2>
               )}
+              {stage.dueDate ? (
+                <div className="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text flex-shrink-0">
+                  <CalendarDays className="size-3" />
+                  {formatStageDate(stage.dueDate)}
+                </div>
+              ) : null}
             </div>
             <p className="mt-0.5 text-xs text-neutral-500">
               {filteredApplications.length}
               {filteredApplications.length !== stage.applications.length ? ` of ${stage.applications.length}` : ''} candidates
             </p>
-            {stage.dueDate ? (
-              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text">
-                <CalendarDays className="size-3" />
-                {formatStageDate(stage.dueDate)}
-              </div>
-            ) : null}
           </div>
 
           <DropdownMenu>
@@ -149,7 +149,7 @@ export function KanbanColumn({
           </DropdownMenu>
         </div>
 
-        <div className="relative mt-3 ">
+        <div className="relative mt-3">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
           <Input
             value={searchValue}
@@ -160,7 +160,7 @@ export function KanbanColumn({
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+      <div className="space-y-3 p-3 pb-6">
         {filteredApplications.map((application) => (
           <CandidateCard
             key={application.id}

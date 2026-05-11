@@ -3,7 +3,7 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { CSSProperties } from 'react';
-import { CalendarDays, Check, Gauge, Play, Settings } from 'lucide-react';
+import { CalendarDays, Check, CheckCircle2, Clock, Gauge, Play, Settings } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -72,10 +72,21 @@ export function CandidateCard({
       {...(!isOverlay ? attributes : {})}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-neutral-900">{fullName}</p>
           <p className="truncate text-xs text-neutral-500">{application.candidate.email}</p>
         </div>
+        {meetingEnabled && meeting ? (
+          <div className="flex-shrink-0">
+            {meeting.status === 'PENDING' ? (
+              <Clock className="size-4 text-warning-text" aria-label="Pending" />
+            ) : meeting.status === 'ONGOING' ? (
+              <Play className="size-4 text-success-text" aria-label="Ongoing" />
+            ) : (
+              <CheckCircle2 className="size-4 text-neutral-400" aria-label="Completed" />
+            )}
+          </div>
+        ) : null}
       </div>
 
       {application.score !== null ? (
@@ -89,40 +100,26 @@ export function CandidateCard({
         </div>
       ) : null}
 
-      {meetingEnabled && meeting ? (
+      {meetingEnabled && meeting && meeting.status === 'PENDING' ? (
         <div className="mt-3 rounded-md border border-neutral-100 bg-neutral-50 p-2">
           <div className="flex items-center justify-between gap-2">
-            <span
-              className={cn(
-                'rounded-full px-2 py-0.5 text-xs font-medium',
-                meeting.status === 'PENDING' && 'bg-warning-bg text-warning-text',
-                meeting.status === 'ONGOING' && 'bg-success-bg text-success-text',
-                meeting.status === 'COMPLETED' && 'bg-neutral-50 text-neutral-500',
-              )}
-            >
-              {meeting.status === 'PENDING' ? 'Pending' : meeting.status === 'ONGOING' ? 'Ongoing' : 'Completed'}
-            </span>
-            {meeting.status === 'PENDING' ? (
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                className="size-6"
-                aria-label="Edit scheduled interview"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onScheduleInterview?.(application);
-                }}
-              >
-                <Settings className="size-3.5" />
-              </Button>
-            ) : null}
-          </div>
-          {meeting.status === 'PENDING' ? (
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="text-xs text-neutral-500">
               Meeting scheduled at {formatDateTime(meeting.scheduledStartAt)}
             </p>
-          ) : null}
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              className="size-6 flex-shrink-0"
+              aria-label="Edit scheduled interview"
+              onClick={(event) => {
+                event.stopPropagation();
+                onScheduleInterview?.(application);
+              }}
+            >
+              <Settings className="size-3.5" />
+            </Button>
+          </div>
         </div>
       ) : null}
 
