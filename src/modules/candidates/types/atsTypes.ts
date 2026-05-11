@@ -14,6 +14,14 @@ export interface CandidateSummary {
   resumeUrl: string | null;
 }
 
+export interface ApplicationInterviewMeeting {
+  id: string;
+  status: 'PENDING' | 'ONGOING' | 'COMPLETED';
+  scheduledStartAt: string;
+  scheduledEndAt: string;
+  meetingUrl: string | null;
+}
+
 export interface PipelineApplication {
   id: string;
   jobPostingId: string;
@@ -24,6 +32,25 @@ export interface PipelineApplication {
   source: string;
   appliedDate: string;
   resumeUrl: string | null;
+  interviewMeeting: ApplicationInterviewMeeting | null;
+}
+
+export interface StageEvaluationCategory {
+  id: string;
+  stageId: string;
+  name: string;
+  order: number;
+}
+
+export interface StageEvaluationWorkspace {
+  id: string;
+  stageId: string;
+  googleSpreadsheetId: string;
+  googleSpreadsheetUrl: string;
+  googleSheetId: number | null;
+  googleSheetTitle: string;
+  createdByMemberId: string | null;
+  createdAt: string;
 }
 
 export interface PipelineStage {
@@ -35,6 +62,17 @@ export interface PipelineStage {
   isDefault: boolean;
   isFinal: boolean;
   isProtected: boolean;
+  stageType: string;
+  meetingEnabled: boolean;
+  offerLetterEnabled: boolean;
+  evaluationEnabled: boolean;
+  evaluationType: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
+  evaluationIncludeTotal: boolean;
+  evaluationIncludeAnalysis: boolean;
+  dueDate: string | null;
+  extendToNextWorkingDay: boolean;
+  evaluationCategories: StageEvaluationCategory[];
+  evaluationWorkspace: StageEvaluationWorkspace | null;
   applications: PipelineApplication[];
 }
 
@@ -52,6 +90,21 @@ export interface StageHistoryItem {
   movedByMemberId: string | null;
   movedByName: string | null;
   note: string | null;
+  createdAt: string;
+}
+
+export interface InterviewMeeting {
+  id: string;
+  applicationId: string;
+  stageId: string;
+  title: string;
+  status: string;
+  scheduledStartAt: string;
+  scheduledEndAt: string;
+  meetingUrl: string | null;
+  googleCalendarEventId: string | null;
+  googleCalendarEventUrl: string | null;
+  emailSentAt: string | null;
   createdAt: string;
 }
 

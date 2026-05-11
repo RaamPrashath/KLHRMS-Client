@@ -1,14 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AtsKanbanBoard } from '@/modules/candidates/components/AtsKanbanBoard';
 import { usePipelineJobPostings } from '@/modules/candidates/hooks/useAtsPipeline';
@@ -36,8 +28,8 @@ export function AtsPipelinePageShell({
   orgSlug,
   memberId,
 }: {
-  orgSlug: string;
-  memberId: string;
+  readonly orgSlug: string;
+  readonly memberId: string;
 }) {
   const postingsQuery = usePipelineJobPostings(orgSlug, memberId);
   const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
@@ -53,32 +45,13 @@ export function AtsPipelinePageShell({
   }
 
   return (
-    <div className="min-h-full bg-canvas p-6">
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">ATS Pipeline</h1>
-          <p className="mt-1 text-sm text-neutral-500">Manage candidate applications by job posting.</p>
-        </div>
-        <Select
-          value={selectedPostingId ?? undefined}
-          onValueChange={setSelectedPostingId}
-          disabled={postingsQuery.isLoading || !postingsQuery.data?.length}
-        >
-          <SelectTrigger className="w-full bg-surface lg:w-[320px]">
-            <SelectValue placeholder={postingsQuery.isLoading ? 'Loading jobs' : 'Select job posting'} />
-          </SelectTrigger>
-          <SelectContent>
-            {(postingsQuery.data ?? []).map((posting) => (
-              <SelectItem key={posting.id} value={posting.id}>
-                {posting.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="min-h-full bg-canvas px-6 mt-6">
+      <div className="mb-6 flex flex-col gap-6">
+        <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">ATS Pipeline</h1>
       </div>
 
       {postingsQuery.data?.length === 0 ? (
-        <div className="rounded-xl border border-neutral-100 bg-surface p-8 text-center text-sm text-neutral-500">
+        <div className="rounded-xl border border-neutral-100 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
           No job postings are available yet.
         </div>
       ) : (
@@ -86,6 +59,9 @@ export function AtsPipelinePageShell({
           orgSlug={orgSlug}
           memberId={memberId}
           jobPostingId={selectedPostingId}
+          jobPostings={postingsQuery.data ?? []}
+          onJobPostingChange={setSelectedPostingId}
+          isLoadingPostings={postingsQuery.isLoading}
         />
       )}
     </div>

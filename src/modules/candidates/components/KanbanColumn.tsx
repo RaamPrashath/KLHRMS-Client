@@ -1,7 +1,17 @@
 'use client';
 
 import { useDroppable } from '@dnd-kit/core';
-import { ArrowLeft, ArrowRight, MoreHorizontal, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  ExternalLink,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +26,14 @@ import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import type { PipelineApplication, PipelineStage } from '@/modules/candidates/types/atsTypes';
 
+function formatStageDate(value: string): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    timeZone: 'Asia/Kolkata',
+  }).format(new Date(value));
+}
+
 export function KanbanColumn({
   stage,
   isFirst,
@@ -26,22 +44,30 @@ export function KanbanColumn({
   onDelete,
   onMoveLeft,
   onMoveRight,
+  onOpenEvaluationWorkspace,
+  onScheduleInterview,
+  onStartInterview,
+  onCompleteInterview,
   searchValue,
   onSearchChange,
   filteredApplications,
 }: {
-  stage: PipelineStage;
-  isFirst: boolean;
-  isLast: boolean;
-  onOpenCandidate: (applicationId: string) => void;
-  onAddAfter: (stageId: string) => void;
-  onRename: (stage: PipelineStage) => void;
-  onDelete: (stage: PipelineStage) => void;
-  onMoveLeft: (stage: PipelineStage) => void;
-  onMoveRight: (stage: PipelineStage) => void;
-  searchValue: string;
-  onSearchChange: (stageId: string, value: string) => void;
-  filteredApplications: PipelineApplication[];
+  readonly stage: PipelineStage;
+  readonly isFirst: boolean;
+  readonly isLast: boolean;
+  readonly onOpenCandidate: (applicationId: string) => void;
+  readonly onAddAfter: (stageId: string) => void;
+  readonly onRename: (stage: PipelineStage) => void;
+  readonly onDelete: (stage: PipelineStage) => void;
+  readonly onMoveLeft: (stage: PipelineStage) => void;
+  readonly onMoveRight: (stage: PipelineStage) => void;
+  readonly onOpenEvaluationWorkspace: (stage: PipelineStage) => void;
+  readonly onScheduleInterview: (application: PipelineApplication) => void;
+  readonly onStartInterview: (application: PipelineApplication) => void;
+  readonly onCompleteInterview: (application: PipelineApplication) => void;
+  readonly searchValue: string;
+  readonly onSearchChange: (stageId: string, value: string) => void;
+  readonly filteredApplications: PipelineApplication[];
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: stage.id,
@@ -52,16 +78,33 @@ export function KanbanColumn({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex h-[calc(100vh-220px)] min-h-[520px] w-[300px] shrink-0 flex-col rounded-xl border border-neutral-100 bg-surface-subtle',
-        isOver && 'border-primary bg-primary-ghost',
+        'flex w-[300px] shrink-0 flex-col rounded-xl bg-white shadow-sm',
+        isOver && 'ring-2 ring-primary bg-primary-ghost',
       )}
     >
-      <header className="border-b border-neutral-100 bg-surface p-3">
+      <header className="sticky top-0 z-10 border-b border-neutral-100 bg-white p-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-primary" />
-              <h2 className="truncate text-sm font-semibold text-neutral-900">{stage.name}</h2>
+              {stage.evaluationEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenEvaluationWorkspace(stage)}
+                  className="flex min-w-0 items-center gap-1 text-left text-sm font-semibold text-neutral-900 hover:text-primary"
+                >
+                  <span className="truncate">{stage.name}</span>
+                  <ExternalLink className="size-3.5 shrink-0 text-neutral-400" />
+                </button>
+              ) : (
+                <h2 className="truncate text-sm font-semibold text-neutral-900">{stage.name}</h2>
+              )}
+              {stage.dueDate ? (
+                <div className="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text flex-shrink-0">
+                  <CalendarDays className="size-3" />
+                  {formatStageDate(stage.dueDate)}
+                </div>
+              ) : null}
             </div>
             <p className="mt-0.5 text-xs text-neutral-500">
               {filteredApplications.length}
@@ -82,7 +125,7 @@ export function KanbanColumn({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onRename(stage)}>
                 <Pencil className="size-4" />
-                Rename
+                Configure
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled={isFirst} onClick={() => onMoveLeft(stage)}>
@@ -117,16 +160,20 @@ export function KanbanColumn({
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+      <div className="space-y-3 p-3 pb-6">
         {filteredApplications.map((application) => (
           <CandidateCard
             key={application.id}
             application={application}
             onOpen={onOpenCandidate}
+            meetingEnabled={stage.meetingEnabled}
+            onScheduleInterview={onScheduleInterview}
+            onStartInterview={onStartInterview}
+            onCompleteInterview={onCompleteInterview}
           />
         ))}
         {filteredApplications.length === 0 && (
-          <div className="rounded-lg border border-dashed border-neutral-200 bg-surface/60 p-4 text-center text-xs text-neutral-500">
+          <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50/60 p-4 text-center text-xs text-neutral-500">
             {stage.applications.length === 0 ? 'Drop candidates here' : 'No candidates match'}
           </div>
         )}

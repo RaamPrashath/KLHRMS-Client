@@ -137,10 +137,10 @@ export function useBulkAttendanceData(
 
   // ── Week state ───────────────────────────────────────────────────────────────
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() =>
-    startOfWeek(new Date(), { weekStartsOn: 1 }),
+    startOfWeek(new Date(), { weekStartsOn: 0 }),
   );
 
-  const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 0 });
   const fromStr = dateToYMD(currentWeekStart);
   const toStr = dateToYMD(weekEnd);
 
@@ -296,7 +296,7 @@ export function useBulkAttendanceData(
   }, []);
 
   const goToCurrentWeek = useCallback(() => {
-    setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }));
     setOptimisticOverlay(new Map());
   }, []);
 

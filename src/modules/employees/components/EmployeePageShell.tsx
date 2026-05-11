@@ -1,11 +1,8 @@
 'use client';
 
 import { useState, useCallback, useTransition } from 'react';
-import { Users } from 'lucide-react';
 import { useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { EmployeeTable } from './EmployeeTable';
-import { EmployeeFilters } from './EmployeeFilters';
-import { EmployeePagination } from './EmployeePagination';
 import type { AttendanceTodayStatus } from '@/modules/employees/types/employeeTypes';
 
 interface EmployeePageShellProps {
@@ -13,7 +10,7 @@ interface EmployeePageShellProps {
   memberId: string;
 }
 
-export function EmployeePageShell({ orgSlug, memberId }: EmployeePageShellProps) {
+export function EmployeePageShell({ orgSlug, memberId }: Readonly<EmployeePageShellProps>) {
   const [, startTransition] = useTransition();
 
   // ── Filter state ────────────────────────────────────────────────────────────
@@ -80,8 +77,9 @@ export function EmployeePageShell({ orgSlug, memberId }: EmployeePageShellProps)
     let message = 'Failed to load employees.';
     try {
       const parsed = JSON.parse(error?.message ?? '{}');
-      if (parsed.message) message = parsed.message
+      if (parsed.message) message = parsed.message;
     } catch {
+      // ignore parse errors
     }
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-neutral-100 bg-surface p-8">
@@ -95,48 +93,26 @@ export function EmployeePageShell({ orgSlug, memberId }: EmployeePageShellProps)
   const items = data?.items ?? [];
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary-subtle">
-            <Users className="size-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-neutral-900">Employees</h1>
-            <p className="text-[13px] text-neutral-500">
-              {isLoading ? 'Loading…' : `${total} member${total !== 1 ? 's' : ''} in this organization`}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <EmployeeFilters
-        search={search}
-        roleId={roleId}
-        attendanceStatus={attendanceStatus}
-        roles={roles}
-        onSearchChange={handleSearchChange}
-        onRoleChange={handleRoleChange}
-        onAttendanceStatusChange={handleAttendanceStatusChange}
-        onClearAll={handleClearAll}
-      />
-
-      {/* Table */}
-      <EmployeeTable data={items} isLoading={isLoading} />
-
-      {/* Pagination */}
-      {!isLoading && total > 0 && (
-        <EmployeePagination
-          page={page}
-          totalPages={totalPages}
-          total={total}
-          pageSize={pageSize}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
-      )}
+    <div className="flex flex-col gap-6">
+      <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">Employees</h1>
+      <EmployeeTable
+      data={items}
+      isLoading={isLoading}
+      total={total}
+      page={page}
+      pageSize={pageSize}
+      totalPages={totalPages}
+      onPageChange={handlePageChange}
+      onPageSizeChange={handlePageSizeChange}
+      search={search}
+      roleId={roleId}
+      attendanceStatus={attendanceStatus}
+      roles={roles}
+      onSearchChange={handleSearchChange}
+      onRoleChange={handleRoleChange}
+      onAttendanceStatusChange={handleAttendanceStatusChange}
+      onClearAll={handleClearAll}
+    />
     </div>
   );
 }

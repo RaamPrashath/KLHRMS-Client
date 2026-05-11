@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   HRMS_MODULES,
   HRMS_ACTIONS,
+  MODULE_SPECIFIC_ACTIONS,
   roleCreateSchema,
   type RoleFormValues,
 } from '@/modules/roles/schema/roleSchemas';
@@ -37,6 +38,13 @@ function buildEmptyPermissions(): RolePermissions {
     map[mod] = {};
     for (const action of HRMS_ACTIONS) {
       (map[mod] as Record<string, string>)[action] = 'none';
+    }
+    // Also seed module-specific actions (e.g. leaves.approve)
+    const extras = MODULE_SPECIFIC_ACTIONS[mod as string];
+    if (extras) {
+      for (const action of extras) {
+        (map[mod] as Record<string, string>)[action] = 'none';
+      }
     }
   }
   return map;

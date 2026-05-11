@@ -2,18 +2,24 @@
 
 import {
   createPipelineStageSchema,
+  createInterviewMeetingSchema,
+  extendPipelineStageSchema,
   moveApplicationStageSchema,
   updatePipelineStageSchema,
   type CreatePipelineStageInput,
+  type CreateInterviewMeetingInput,
+  type ExtendPipelineStageInput,
   type MoveApplicationStageInput,
   type UpdatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
 import type {
   CandidateApplicationDetail,
+  InterviewMeeting,
   PipelineApplication,
   PipelineBoard,
   PipelineJobPosting,
   PipelineStage,
+  StageEvaluationWorkspace,
 } from '@/modules/candidates/types/atsTypes';
 
 function getApiUrl(): string {
@@ -106,6 +112,38 @@ export async function fetchCandidateApplicationDetailAction(params: {
   return handleResponse<CandidateApplicationDetail>(res);
 }
 
+export async function createInterviewMeetingAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  data: CreateInterviewMeetingInput;
+}): Promise<InterviewMeeting> {
+  const parsed = createInterviewMeetingSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/interview-meetings`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(parsed.data),
+  });
+  return handleResponse<InterviewMeeting>(res);
+}
+
+export async function completeInterviewMeetingAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  eventId: string;
+}): Promise<InterviewMeeting> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/interview-meetings/${params.eventId}/complete`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<InterviewMeeting>(res);
+}
+
 export async function createPipelineStageAction(params: {
   orgSlug: string;
   memberId: string;
@@ -141,6 +179,48 @@ export async function updatePipelineStageAction(params: {
     body: JSON.stringify(parsed.data),
   });
   return handleResponse<PipelineStage>(res);
+}
+
+export async function extendPipelineStageAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: ExtendPipelineStageInput;
+}): Promise<PipelineStage> {
+  const parsed = extendPipelineStageSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/${parsed.data.stageId}/extend`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<PipelineStage>(res);
+}
+
+export async function fetchEvaluationWorkspaceAction(params: {
+  orgSlug: string;
+  memberId: string;
+  stageId: string;
+}): Promise<StageEvaluationWorkspace> {
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/${params.stageId}/evaluation-workspace`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<StageEvaluationWorkspace>(res);
+}
+
+export async function generateEvaluationWorkspaceAction(params: {
+  orgSlug: string;
+  memberId: string;
+  stageId: string;
+}): Promise<StageEvaluationWorkspace> {
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/${params.stageId}/evaluation-workspace`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<StageEvaluationWorkspace>(res);
 }
 
 export async function deletePipelineStageAction(params: {

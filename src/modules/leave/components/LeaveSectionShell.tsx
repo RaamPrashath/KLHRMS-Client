@@ -211,7 +211,7 @@ export function LeaveSectionShell({
 
                   {canCreate ? (
                     <Button
-                      className="shrink-0 rounded-full bg-primary px-5 text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover"
+                      className="shrink-0 bg-primary px-5 text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover"
                       onClick={() => setApplyOpen(true)}
                     >
                       Apply Leave
