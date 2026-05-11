@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useRef, useState } from 'react';
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
 import {
-  fetchBulkAttendanceRangeAction,
-  upsertBulkAttendanceAction,
-  deleteBulkAttendanceDayAction,
-} from '@/modules/attendance/api/bulkAttendanceServerActions';
+  useDeleteBulkAttendanceDayMutation,
+  useUpsertBulkAttendanceMutation,
+} from '@/modules/attendance/hooks/mutations/attendance';
+import {
+  attendanceQueryKeys,
+  useBulkAttendanceRangeQuery,
+} from '@/modules/attendance/hooks/queries/attendance';
 import type {
   BulkDayState,
   LocalWorkLog,
@@ -132,7 +134,6 @@ export function useBulkAttendanceData(
   orgSlug: string,
   memberId: string,
 ): UseBulkAttendanceDataReturn {
-  const queryClient = useQueryClient();
 
   // ── Week state ───────────────────────────────────────────────────────────────
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() =>
@@ -144,15 +145,16 @@ export function useBulkAttendanceData(
   const toStr = dateToYMD(weekEnd);
 
   // ── Query ────────────────────────────────────────────────────────────────────
-  const queryKey = ['bulk-attendance', orgSlug, fromStr, toStr];
+  const queryKey = attendanceQueryKeys.bulkAttendance(orgSlug, fromStr, toStr);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey,
-    queryFn: () =>
-      fetchBulkAttendanceRangeAction({ orgSlug, memberId, from: fromStr, to: toStr }),
-    enabled: !!orgSlug && !!memberId,
-    staleTime: 30_000,
-  });
+  const { data, isLoading, isError, refetch } = useBulkAttendanceRangeQuery(
+    orgSlug,
+    memberId,
+    fromStr,
+    toStr,
+  );
+  const upsertMutation = useUpsertBulkAttendanceMutation(orgSlug, memberId, queryKey);
+  const deleteMutation = useDeleteBulkAttendanceDayMutation(orgSlug, memberId, queryKey);
 
   // ── Local optimistic state ───────────────────────────────────────────────────
   const [optimisticOverlay, setOptimisticOverlay] = useState<Map<string, BulkDayState | null>>(
@@ -204,7 +206,6 @@ export function useBulkAttendanceData(
         return next;
       });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [serverMap],
   );
 
@@ -239,11 +240,7 @@ export function useBulkAttendanceData(
       };
 
       try {
-        const result = await upsertBulkAttendanceAction({
-          orgSlug,
-          memberId,
-          data: { days: [dayInput] },
-        });
+        const result = await upsertMutation.mutateAsync({ days: [dayInput] });
 
         // Reconcile with server response
         const savedDay = result.days[0];
@@ -255,7 +252,6 @@ export function useBulkAttendanceData(
           });
         }
 
-        await queryClient.invalidateQueries({ queryKey });
         markSaved();
       } catch (err: unknown) {
         const msg = (err as { message?: string }).message ?? 'Failed to save attendance';
@@ -263,8 +259,7 @@ export function useBulkAttendanceData(
         throw err;
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [orgSlug, memberId, queryClient, queryKey],
+    [upsertMutation],
   );
 
   // ── Delete day ───────────────────────────────────────────────────────────────
@@ -272,14 +267,13 @@ export function useBulkAttendanceData(
     async (date: string) => {
       markSaving();
       try {
-        await deleteBulkAttendanceDayAction({ orgSlug, memberId, day: date });
+        await deleteMutation.mutateAsync(date);
         setOptimisticOverlay((prev) => {
           const next = new Map(prev);
           // null signals deletion in the overlay
           next.set(date, null as unknown as BulkDayState);
           return next;
         });
-        await queryClient.invalidateQueries({ queryKey });
         markSaved();
       } catch (err: unknown) {
         const msg = (err as { message?: string }).message ?? 'Failed to delete attendance';
@@ -287,8 +281,7 @@ export function useBulkAttendanceData(
         throw err;
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [orgSlug, memberId, queryClient, queryKey],
+    [deleteMutation],
   );
 
   // ── Week navigation ──────────────────────────────────────────────────────────

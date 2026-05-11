@@ -100,16 +100,6 @@ function statusBadge(status: ProjectStatus) {
   return map[status];
 }
 
-function formatMoney(value: number | null) {
-  if (value === null) return 'Not set';
-  return `$${value.toLocaleString()}`;
-}
-
-function formatDate(value: string | null) {
-  if (!value) return 'Not set';
-  return new Date(value).toLocaleDateString();
-}
-
 function RowSkeleton({ colSpan }: { colSpan: number }) {
   return (
     <TableRow>
@@ -310,10 +300,6 @@ export function ProjectPageShell({
           <h1 className="mt-2 text-[40px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
             Projects
           </h1>
-          <p className="mt-3 max-w-2xl text-[17px] leading-7 text-[#6e6e73]">
-            Show ownership, client context, timeline, and staffing in one place
-            so HR, admin, and employees can all follow the work.
-          </p>
         </div>
 
         {canManageProjects && (
@@ -482,7 +468,7 @@ export function ProjectPageShell({
       </div>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="!w-[92vw] sm:!w-[78vw] lg:!w-[44vw] xl:!w-[40vw] !max-w-none max-h-[82vh] overflow-hidden rounded-[18px] border border-[#e5e5ea] bg-white p-0 shadow-2xl">
+        <DialogContent className="w-[92vw]! sm:w-[78vw]! lg:w-[44vw]! xl:w-[40vw]! max-w-none! max-h-[82vh] overflow-hidden rounded-[18px] border border-[#e5e5ea] bg-white p-0 shadow-2xl">
           <div className="flex max-h-[82vh] flex-col">
             <DialogHeader className="shrink-0 border-b border-[#e5e5ea] px-6 py-4">
               <DialogTitle className="text-[22px] font-semibold tracking-[-0.01em] text-[#1d1d1f]">
@@ -554,82 +540,6 @@ export function ProjectPageShell({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="project-start">Start date</Label>
-                    <Input
-                      id="project-start"
-                      type="date"
-                      value={projectForm.startDate || ''}
-                      onChange={(event) =>
-                        setProjectForm({
-                          ...projectForm,
-                          startDate: event.target.value,
-                        })
-                      }
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="project-end">End date</Label>
-                    <Input
-                      id="project-end"
-                      type="date"
-                      value={projectForm.endDate || ''}
-                      onChange={(event) =>
-                        setProjectForm({
-                          ...projectForm,
-                          endDate: event.target.value,
-                        })
-                      }
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="project-budget">Budget</Label>
-                    <Input
-                      id="project-budget"
-                      type="number"
-                      min={0}
-                      value={projectForm.budget ?? ''}
-                      onChange={(event) =>
-                        setProjectForm({
-                          ...projectForm,
-                          budget:
-                            event.target.value === ''
-                              ? null
-                              : Number(event.target.value),
-                        })
-                      }
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="project-budgeted-hours">
-                      Budgeted hours
-                    </Label>
-                    <Input
-                      id="project-budgeted-hours"
-                      type="number"
-                      min={0}
-                      value={projectForm.budgetedHours ?? ''}
-                      onChange={(event) =>
-                        setProjectForm({
-                          ...projectForm,
-                          budgetedHours:
-                            event.target.value === ''
-                              ? null
-                              : Number(event.target.value),
-                        })
-                      }
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
-                    />
-                  </div>
-
                   <div className="grid gap-2">
                     <Label>Status</Label>
                     <Select
@@ -709,7 +619,7 @@ export function ProjectPageShell({
                   ? 'Saving...'
                   : editingProjectId
                     ? 'Save changes'
-                    : 'Create and open'}
+                    : 'Create Project'}
               </Button>
             </DialogFooter>
           </div>
@@ -771,6 +681,14 @@ function ProjectDetailDialog({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="!w-[92vw] lg:!w-[35vw] !max-w-none overflow-hidden rounded-[18px] border border-[#e5e5ea] bg-white p-0 shadow-2xl">
+        <DialogHeader className="sr-only">
+          <DialogTitle>
+            {project ? `${project.name} project details` : 'Project details'}
+          </DialogTitle>
+          <DialogDescription>
+            Review project information, staffing, and project actions.
+          </DialogDescription>
+        </DialogHeader>
         {isLoading && !project ? (
           <div className="space-y-3 px-8 py-8">
             <Skeleton className="h-8 w-52 rounded-lg" />
@@ -828,26 +746,6 @@ function ProjectDetailDialog({
                   <OverviewField
                     label="Team"
                     value={project.teamName || 'Not linked'}
-                  />
-                  <OverviewField
-                    label="Budget"
-                    value={formatMoney(project.budget)}
-                  />
-                  <OverviewField
-                    label="Budgeted hours"
-                    value={
-                      project.budgetedHours
-                        ? `${project.budgetedHours}h`
-                        : 'Not set'
-                    }
-                  />
-                  <OverviewField
-                    label="Start date"
-                    value={formatDate(project.startDate)}
-                  />
-                  <OverviewField
-                    label="End date"
-                    value={formatDate(project.endDate)}
                   />
                   <OverviewField
                     label="Assigned people"

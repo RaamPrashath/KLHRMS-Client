@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 import { BulkAttendanceToolbar } from './BulkAttendanceToolbar';
@@ -12,7 +11,7 @@ import { WorkLogDialog } from './WorkLogDialog';
 import type { WorkLogFormValues } from './WorkLogForm';
 
 import { useBulkAttendanceData } from '@/modules/attendance/hooks/use-bulk-attendance-data';
-import { useBulkAttendancePermissions } from '@/modules/attendance/hooks/use-bulk-attendance-permissions';
+import { useBulkAttendancePermissions } from '@/modules/attendance/hooks/queries/attendance';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 
 import type {
@@ -21,10 +20,6 @@ import type {
 } from '@/modules/attendance/types/bulkAttendanceTypes';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function dateToYMD(d: Date): string {
-  return format(d, 'yyyy-MM-dd');
-}
 
 const CLOSED_DIALOG: WorkLogDialogState = {
   open: false,

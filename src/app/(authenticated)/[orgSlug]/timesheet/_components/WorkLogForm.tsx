@@ -208,12 +208,12 @@ export function WorkLogForm({
   const derivedMins = startD && endD && endD > startD ? computeDurationMinutes(startD, endD) : null;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
 
       {/* Title */}
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="wl-title" className="text-[13px] font-medium text-neutral-700">
-          Title <span className="text-destructive-text">*</span>
+        <Label htmlFor="wl-title" className="text-[14px] font-semibold text-ink-muted-48">
+          Title <span className="text-destructive font-bold">*</span>
         </Label>
         <Input
           id="wl-title"
@@ -225,34 +225,35 @@ export function WorkLogForm({
           }}
           placeholder="e.g. Design review, Sprint planning"
           aria-invalid={!!errors.title}
+          className="border-hairline bg-canvas/30 focus:border-primary-light focus:ring-primary-subtle"
         />
         {errors.title && (
-          <p className="text-xs text-destructive-text">{errors.title}</p>
+          <p className="text-xs font-medium text-destructive">{errors.title}</p>
         )}
       </div>
 
       {/* Start / End row */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="wl-start" className="text-[13px] font-medium text-neutral-700">
-            Start <span className="text-destructive-text">*</span>
+          <Label htmlFor="wl-start" className="text-[14px] font-semibold text-ink-muted-48">
+            Start <span className="text-destructive font-bold">*</span>
           </Label>
           <Input
             id="wl-start"
             type="time"
             value={startTimeStr}
             onChange={(e) => handleStartChange(e.target.value)}
-            className="font-mono"
+            className="font-mono border-hairline bg-canvas/30"
             aria-invalid={!!errors.startTime}
           />
           {errors.startTime && (
-            <p className="text-xs text-destructive-text">{errors.startTime}</p>
+            <p className="text-xs font-medium text-destructive">{errors.startTime}</p>
           )}
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="wl-end" className="text-[13px] font-medium text-neutral-700">
-            End <span className="text-destructive-text">*</span>
+          <Label htmlFor="wl-end" className="text-[14px] font-semibold text-ink-muted-48">
+            End <span className="text-destructive font-bold">*</span>
           </Label>
           <Input
             id="wl-end"
@@ -260,18 +261,18 @@ export function WorkLogForm({
             value={endTimeStr}
             onChange={(e) => handleEndChange(e.target.value)}
             onBlur={handleEndBlur}
-            className="font-mono"
+            className="font-mono border-hairline bg-canvas/30"
             aria-invalid={!!errors.endTime}
           />
           {errors.endTime && (
-            <p className="text-xs text-destructive-text">{errors.endTime}</p>
+            <p className="text-xs font-medium text-destructive">{errors.endTime}</p>
           )}
         </div>
       </div>
 
       {/* Duration */}
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="wl-duration" className="text-[13px] font-medium text-neutral-700">
+        <Label htmlFor="wl-duration" className="text-[14px] font-semibold text-ink-muted-48">
           Duration
         </Label>
         <Input
@@ -282,42 +283,43 @@ export function WorkLogForm({
           onBlur={handleDurationBlur}
           placeholder="e.g. 2 hrs 30 mins"
           aria-invalid={!!errors.duration}
+          className="border-hairline bg-canvas/30"
         />
         {errors.duration ? (
-          <p className="text-xs text-destructive-text">{errors.duration}</p>
+          <p className="text-xs font-medium text-destructive">{errors.duration}</p>
         ) : derivedMins !== null ? (
-          <p className="text-xs text-neutral-500">{formatMinutesToDuration(derivedMins)}</p>
+          <p className="text-xs font-medium text-ink-muted-48">{formatMinutesToDuration(derivedMins)}</p>
         ) : null}
       </div>
 
       {/* Description */}
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="wl-notes" className="text-[13px] font-medium text-neutral-700">
-          Description <span className="text-neutral-400 font-normal">(optional)</span>
+        <Label htmlFor="wl-notes" className="text-[14px] font-semibold text-ink-muted-48">
+          Description <span className="text-ink-muted-48 font-normal opacity-60">(optional)</span>
         </Label>
         <textarea
           id="wl-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Additional details…"
-          rows={2}
-          className="bg-surface border border-neutral-200 rounded-md px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary focus:outline-none focus:ring-[3px] focus:ring-primary/10 resize-none"
+          rows={3}
+          className="bg-canvas/30 border border-hairline rounded-md px-3 py-2 text-sm text-ink placeholder:text-ink-muted-48/50 focus:border-primary-light focus:outline-none focus:ring-[3px] focus:ring-primary-subtle transition-all duration-200 resize-none"
         />
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-1">
+      <div className="flex items-center gap-3 pt-3">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 h-9 px-4 text-sm font-medium text-neutral-700 border border-neutral-200 rounded-md hover:bg-neutral-50 transition-colors duration-100"
+          className="flex-1 h-10 px-4 text-[14px] font-semibold text-ink border border-hairline rounded-pill hover:bg-canvas transition-all duration-200 active:scale-[0.95]"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isPending}
-          className="flex-1 h-9 px-4 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-md disabled:opacity-60 disabled:pointer-events-none inline-flex items-center justify-center gap-2 transition-colors duration-100"
+          className="flex-1 h-10 px-4 text-[14px] font-semibold text-white bg-primary hover:bg-primary-hover rounded-pill disabled:opacity-40 disabled:pointer-events-none inline-flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.95]"
         >
           {isPending && (
             <svg className="animate-spin size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">

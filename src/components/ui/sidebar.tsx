@@ -1,7 +1,7 @@
 "use client";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import React, { useState, createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { HamburgerMenuIcon, Cross1Icon } from "@radix-ui/react-icons";
 
@@ -44,9 +44,13 @@ export const SidebarProvider = ({
 
   const open = openProp !== undefined ? openProp : openState;
   const setOpen = setOpenProp !== undefined ? setOpenProp : setOpenState;
+  const value = useMemo(
+    () => ({ open, setOpen, animate }),
+    [open, setOpen, animate]
+  );
 
   return (
-    <SidebarContext.Provider value={{ open, setOpen, animate }}>
+    <SidebarContext.Provider value={value}>
       {children}
     </SidebarContext.Provider>
   );
@@ -129,7 +133,7 @@ export const MobileSidebar = ({
         <div className="flex justify-end z-20 w-full">
           <HamburgerMenuIcon
             className="text-neutral-800 dark:text-neutral-200 h-5 w-5 cursor-pointer"
-            onClick={() => setOpen(!open)}
+            onClick={() => setOpen((value) => !value)}
           />
         </div>
         <AnimatePresence>
@@ -149,7 +153,7 @@ export const MobileSidebar = ({
             >
               <div
                 className="absolute right-10 top-10 z-50 text-neutral-800 dark:text-neutral-200 cursor-pointer"
-                onClick={() => setOpen(!open)}
+                onClick={() => setOpen((value) => !value)}
               >
                 <Cross1Icon className="h-5 w-5" />
               </div>
@@ -174,7 +178,7 @@ export const SidebarLink = ({
   isActive?: boolean;
   onClick?: () => void;
 }) => {
-  const { open, animate } = useSidebar();
+  const { open } = useSidebar();
   const shouldReduceMotion = useReducedMotion();
 
   return (
@@ -232,7 +236,7 @@ export const SidebarLabel = ({
   children: React.ReactNode;
   className?: string;
 }) => {
-  const { open, animate } = useSidebar();
+  const { open } = useSidebar();
   const shouldReduceMotion = useReducedMotion();
 
   return (

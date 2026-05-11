@@ -44,13 +44,13 @@ export function WorkLogDialog({
 
   return (
     <Dialog open={state.open} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-sm bg-surface rounded-2xl shadow-(--shadow-4)">
+      <DialogContent className="max-w-sm border-hairline bg-surface rounded-lg shadow-2">
         <DialogHeader className="px-0 pt-0">
-          <DialogTitle className="text-xl font-semibold text-neutral-900">
+          <DialogTitle className="text-[21px] font-semibold tracking-tight text-ink">
             {isCreate ? 'Add work log' : 'Edit work log'}
           </DialogTitle>
           {state.date && (
-            <DialogDescription className="text-[13px] text-neutral-500">
+            <DialogDescription className="text-[14px] font-medium text-ink-muted-48">
               {formatDialogDate(state.date)}
             </DialogDescription>
           )}

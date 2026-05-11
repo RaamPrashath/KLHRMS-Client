@@ -2,20 +2,18 @@
 
 import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, Save, User, Users } from "lucide-react";
+import { Copy, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   getMyWeeklyPlanQueryOptions,
   getPlanLocationsQueryOptions,
-  getTeamWeeklyPlanQueryOptions,
   useMyWeeklyPlanQuery,
   usePlanLocationsQuery,
-  useTeamWeeklyPlanQuery,
 } from "@/hooks/queries/weekly_plan";
 import { useSaveWeeklyPlanMutation } from "@/hooks/mutations/weekly_plan";
 import { useApiClient } from "@/hooks/useApiClient";
-import { useMyAttendanceQuery } from "@/modules/attendance/hooks/useMyAttendanceQuery";
+import { useMyAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
 import { getCurrentWeekState, getWeekDays, shiftWeek } from "@/modules/weekly-plan/date";
 import type {
   PlanLocationOption,
@@ -32,7 +30,6 @@ interface WeeklyPlanPanelProps {
   orgId: string;
   memberId: string;
   userId: string;
-  canViewTeam: boolean;
   onDirtyChange: (isDirty: boolean) => void;
 }
 
@@ -53,25 +50,11 @@ function draftsEqual(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function groupTeamEntries(entries: WeeklyPlanEntry[]) {
-  return entries.reduce<Record<string, { name: string | null; entries: WeeklyPlanEntry[] }>>(
-    (accumulator, entry) => {
-      if (!accumulator[entry.user_id]) {
-        accumulator[entry.user_id] = { name: entry.user_name, entries: [] };
-      }
-      accumulator[entry.user_id].entries.push(entry);
-      return accumulator;
-    },
-    {},
-  );
-}
-
 export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
   orgSlug,
   orgId,
   memberId,
   userId,
-  canViewTeam,
   onDirtyChange,
 }: WeeklyPlanPanelProps) {
   const [weekState, setWeekState] = useState(getCurrentWeekState);
@@ -90,14 +73,6 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     data: myEntries = [],
     isLoading: isWeekLoading,
   } = useMyWeeklyPlanQuery(orgSlug, orgId, memberId, weekState.year, weekState.week);
-  const teamQuery = useTeamWeeklyPlanQuery(
-    orgSlug,
-    orgId,
-    memberId,
-    weekState.year,
-    weekState.week,
-    canViewTeam,
-  );
   const weekDays = useMemo(
     () => getWeekDays(weekState.year, weekState.week),
     [weekState.week, weekState.year],
@@ -145,22 +120,8 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
       getMyWeeklyPlanQueryOptions(planAuth, orgSlug, next.year, next.week),
     );
 
-    if (canViewTeam) {
-      queryClient.prefetchQuery(
-        getTeamWeeklyPlanQueryOptions(planAuth, orgSlug, previous.year, previous.week),
-      );
-      queryClient.prefetchQuery(
-        getTeamWeeklyPlanQueryOptions(planAuth, orgSlug, next.year, next.week),
-      );
-    }
-
     queryClient.prefetchQuery(getPlanLocationsQueryOptions(planAuth, orgSlug));
-  }, [auth, canViewTeam, memberId, orgSlug, queryClient, weekState.week, weekState.year]);
-
-  const teamByUser = useMemo(
-    () => groupTeamEntries(canViewTeam ? teamQuery.data ?? [] : []),
-    [canViewTeam, teamQuery.data],
-  );
+  }, [auth, memberId, orgSlug, queryClient, weekState.week, weekState.year]);
 
   const updateDraft = useCallback((date: string, nextDraft: DayDraft) => {
     setDrafts((current) => {
@@ -243,7 +204,6 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     }
   }
 
-  const teamMembers = Object.entries(teamByUser);
   const resolvedLocations = locations as PlanLocationOption[];
   const actualByDate = useMemo(
     () =>
@@ -260,49 +220,39 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border border-border/50 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] mb-2">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <WeekNavigator
-            year={weekState.year}
-            week={weekState.week}
-            onPrevious={() => maybeChangeWeek(-1)}
-            onNext={() => maybeChangeWeek(1)}
-          />
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl font-bold text-[11px] uppercase tracking-wider h-10 px-5"
-              onClick={handleCopyPreviousWeek}
-              disabled={isWeekLoading || isLocationsLoading || saveMutation.isPending}
-            >
-              <Copy className="mr-2 h-3.5 w-3.5" />
-              Copy previous
-            </Button>
-            <Button
-              type="button"
-              className="rounded-xl font-bold text-[11px] uppercase tracking-wider h-10 px-5 shadow-lg shadow-primary/10"
-              onClick={handleSave}
-              disabled={!isDirty || saveMutation.isPending || isWeekLoading}
-            >
-              <Save className="mr-2 h-3.5 w-3.5" />
-              {saveMutation.isPending ? "Saving..." : "Save Plan"}
-            </Button>
+      <section className="flex flex-col gap-5 pt-2">
+        <div className="mb-1 flex flex-col gap-4 rounded-2xl border border-border bg-[#f5f5f7] p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
+              <User className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">My Plan</h2>
+              <p className="text-[11px] font-medium text-muted-foreground/70">
+                Update your location for each day and save once finished.
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <section className="flex flex-col gap-5 pt-4">
-        <div className="flex items-center gap-4 mb-1">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
-            <User className="h-4 w-4" />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">My Plan</h2>
-            <p className="text-[11px] text-muted-foreground/60 font-medium">
-              Update your location for each day and save once finished.
-            </p>
+          <div className="flex flex-col gap-3 lg:items-end">
+            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+              <WeekNavigator
+                year={weekState.year}
+                week={weekState.week}
+                onPrevious={() => maybeChangeWeek(-1)}
+                onNext={() => maybeChangeWeek(1)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-full border-border bg-white px-5 text-[11px] font-semibold uppercase tracking-wider text-foreground hover:bg-white"
+                onClick={handleCopyPreviousWeek}
+                disabled={isWeekLoading || isLocationsLoading || saveMutation.isPending}
+              >
+                <Copy className="mr-2 h-3.5 w-3.5" />
+                Copy previous
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -313,54 +263,13 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
           drafts={drafts}
           locations={resolvedLocations}
           isLoading={isWeekLoading || isLocationsLoading || attendanceQuery.isLoading}
+          isDirty={isDirty}
+          isSaving={saveMutation.isPending}
           actualByDate={actualByDate}
           onDraftChange={updateDraft}
+          onSave={handleSave}
         />
       </section>
-
-      {canViewTeam ? (
-        <section className="rounded-2xl border border-border/50 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/40">
-              <Users className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Team Plans</h2>
-              <p className="text-[11px] text-muted-foreground/60 font-medium">
-                {teamMembers.length
-                  ? `${teamMembers.length} teammates with saved plans this week`
-                  : "No team plans submitted for this week yet."}
-              </p>
-            </div>
-          </div>
-
-          {teamMembers.length ? (
-            <div className="flex flex-col gap-10">
-              {teamMembers.map(([memberKey, value]) => (
-                <div key={memberKey} className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-2">
-                    <div>
-                      <p className="text-[13px] font-bold text-foreground uppercase tracking-tight">
-                        {value.name ?? memberKey}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">
-                        {value.entries.length}/5 days planned
-                      </p>
-                    </div>
-                  </div>
-                  <WeeklyPlanGrid
-                    year={weekState.year}
-                    week={weekState.week}
-                    entries={value.entries}
-                    locations={resolvedLocations}
-                    readOnly
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
     </div>
   );
 });

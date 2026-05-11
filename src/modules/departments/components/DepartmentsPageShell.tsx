@@ -241,9 +241,6 @@ export function DepartmentsPageShell({
         <div className="max-w-3xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6e6e73]">Organization</p>
           <h1 className="mt-2 text-[40px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">Departments</h1>
-          <p className="mt-3 max-w-2xl text-[17px] leading-7 text-[#6e6e73]">
-            Give HR and admin teams one predictable place to understand leadership, teams, people, and linked work.
-          </p>
         </div>
         {canManageDepartments && (
           <Button

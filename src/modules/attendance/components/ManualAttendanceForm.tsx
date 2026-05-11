@@ -14,7 +14,7 @@ import {
   SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet';
-import { useManualAttendanceMutation } from '@/modules/attendance/hooks/useManualAttendanceMutation';
+import { useManualAttendanceMutation } from '@/modules/attendance/hooks/mutations/attendance';
 import type { ApiError } from '@/modules/attendance/types/attendanceTypes';
 
 // ─── Local form schema ────────────────────────────────────────────────────────

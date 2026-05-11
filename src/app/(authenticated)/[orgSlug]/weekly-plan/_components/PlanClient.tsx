@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CalendarRange, Rows3 } from "lucide-react";
+import { CalendarRange, Rows3, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MonthlyPlanPanel } from "./MonthlyPlanPanel";
 import { WeeklyPlanPanel } from "./WeeklyPlanPanel";
+import { ManagePeoplePanel } from "./ManagePeoplePanel";
 
-type PlanView = "weekly" | "monthly";
+type PlanView = "weekly" | "monthly" | "team";
 
 interface PlanClientProps {
   orgSlug: string;
@@ -22,9 +23,11 @@ const TAB_OPTIONS: Array<{
   value: PlanView;
   label: string;
   icon: React.ElementType;
+  requireTeam?: boolean;
 }> = [
   { value: "weekly", label: "Weekly Plan", icon: Rows3 },
   { value: "monthly", label: "Monthly Plan", icon: CalendarRange },
+  { value: "team", label: "View Plan", icon: Users, requireTeam: true },
 ];
 
 export function PlanClient({
@@ -42,7 +45,9 @@ export function PlanClient({
 
   const activeView = useMemo<PlanView>(() => {
     const view = searchParams.get("view");
-    return view === "monthly" ? "monthly" : "weekly";
+    if (view === "monthly") return "monthly";
+    if (view === "team") return "team";
+    return "weekly";
   }, [searchParams]);
 
   function handleViewChange(nextView: PlanView) {
@@ -71,9 +76,9 @@ export function PlanClient({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="w-full lg:w-[30%] rounded-xl border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,248,250,0.96))] p-1.5 shadow-[0_12px_40px_rgba(15,23,42,0.04)] backdrop-blur-md">
-        <div className="grid grid-cols-2 gap-1.5">
-          {TAB_OPTIONS.map((tab) => {
+      <div className="w-full overflow-x-auto">
+        <div className="inline-flex min-w-fit rounded-2xl border border-border bg-[#f5f5f7] p-1">
+          {TAB_OPTIONS.filter((tab) => !tab.requireTeam || canViewTeam).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeView === tab.value;
 
@@ -83,16 +88,16 @@ export function PlanClient({
                 type="button"
                 onClick={() => handleViewChange(tab.value)}
                 className={cn(
-                  "relative flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-bold transition-all duration-300",
+                  "relative flex min-w-[196px] items-center justify-center gap-2 rounded-[14px] px-5 py-3 text-[13px] font-semibold transition-all duration-300",
                   isActive
                     ? "text-white"
-                    : "text-muted-foreground hover:bg-white/80 hover:text-foreground",
+                    : "text-muted-foreground hover:bg-white hover:text-foreground",
                 )}
               >
                 {isActive ? (
                   <motion.span
                     layoutId="plan-tab-pill"
-                    className="absolute inset-0 rounded-lg bg-[#111111] shadow-[0_8px_20px_rgba(17,17,17,0.18)]"
+                    className="absolute inset-0 rounded-[14px] bg-[#1d1d1f]"
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 ) : null}
@@ -108,7 +113,7 @@ export function PlanClient({
 
       <div className="relative min-h-[600px]">
         <AnimatePresence mode="wait">
-          {activeView === "weekly" ? (
+          {activeView === "weekly" && (
             <motion.div
               key="weekly"
               initial={{ opacity: 0, x: -10 }}
@@ -121,11 +126,12 @@ export function PlanClient({
                 orgId={orgId}
                 memberId={memberId}
                 userId={userId}
-                canViewTeam={canViewTeam}
                 onDirtyChange={setWeeklyDirty}
               />
             </motion.div>
-          ) : (
+          )}
+
+          {activeView === "monthly" && (
             <motion.div
               key="monthly"
               initial={{ opacity: 0, x: 10 }}
@@ -139,6 +145,22 @@ export function PlanClient({
                 memberId={memberId}
                 userId={userId}
                 onDirtyChange={setMonthlyDirty}
+              />
+            </motion.div>
+          )}
+
+          {activeView === "team" && canViewTeam && (
+            <motion.div
+              key="team"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <ManagePeoplePanel
+                orgSlug={orgSlug}
+                orgId={orgId}
+                memberId={memberId}
               />
             </motion.div>
           )}
