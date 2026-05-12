@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AtsKanbanBoard } from '@/modules/candidates/components/AtsKanbanBoard';
 import { usePipelineJobPostings } from '@/modules/candidates/hooks/useAtsPipeline';
@@ -33,12 +33,10 @@ export function AtsPipelinePageShell({
 }) {
   const postingsQuery = usePipelineJobPostings(orgSlug, memberId);
   const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!selectedPostingId && postingsQuery.data?.[0]) {
-      setSelectedPostingId(postingsQuery.data[0].id);
-    }
-  }, [postingsQuery.data, selectedPostingId]);
+  const effectivePostingId = useMemo(
+    () => selectedPostingId ?? postingsQuery.data?.[0]?.id ?? null,
+    [postingsQuery.data, selectedPostingId],
+  );
 
   if (postingsQuery.isLoading) {
     return <PipelinePageSkeleton />;
@@ -58,7 +56,7 @@ export function AtsPipelinePageShell({
         <AtsKanbanBoard
           orgSlug={orgSlug}
           memberId={memberId}
-          jobPostingId={selectedPostingId}
+          jobPostingId={effectivePostingId}
           jobPostings={postingsQuery.data ?? []}
           onJobPostingChange={setSelectedPostingId}
           isLoadingPostings={postingsQuery.isLoading}

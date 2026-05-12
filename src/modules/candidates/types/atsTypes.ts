@@ -182,3 +182,66 @@ export interface StageInterviewAssignmentResponse {
   assignedCount: number;
   warnings: StageInterviewWarning[];
 }
+
+export interface HiringTeamMember {
+  id: string;
+  memberId: string;
+  name: string | null;
+  email: string | null;
+  role: string | null;
+}
+
+export interface HiringTeam {
+  id: string;
+  jobPostingId: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  memberCount: number;
+  members: HiringTeamMember[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamDistributionRequest {
+  hiringTeamId: string;
+  strategy: 'ROUND_ROBIN';
+  applicationIds: string[];
+  scheduledStartAt: string;
+  durationMinutes: number;
+  backupInterviewers?: string[];
+  ignoreWarnings?: boolean;
+}
+
+export interface TeamDistributionResponse {
+  assignedCount: number;
+  warnings: StageInterviewWarning[];
+}
+
+export interface ReshuffleRequest {
+  newInterviewerMemberId?: string;
+}
+
+export interface ReshuffleResponse {
+  eventId: string;
+  newInterviewerMemberId: string;
+  warnings: StageInterviewWarning[];
+}
+
+export interface MyInterview {
+  eventId: string;
+  applicationId: string;
+  stageId: string;
+  stageName: string;
+  candidate: CandidateSummary;
+  jobTitle: string;
+  scheduledStartAt: string;
+  scheduledEndAt: string;
+  status: string;
+  role: 'INTERVIEWER' | 'BACKUP';
+  isBackup: boolean;
+}
+
+export interface MyInterviewListResponse {
+  items: MyInterview[];
+}

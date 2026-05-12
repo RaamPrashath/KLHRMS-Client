@@ -7,31 +7,42 @@ import {
   completeInterviewMeetingAction,
   createPipelineStageAction,
   createInterviewMeetingAction,
+  createReassignmentRequestAction,
   deletePipelineStageAction,
+  distributeStageInterviewsAction,
   extendPipelineStageAction,
   fetchCandidateApplicationDetailAction,
   fetchEvaluationWorkspaceAction,
+  fetchHiringTeamsAction,
+  fetchMyInterviewsAction,
   fetchPipelineBoardAction,
   fetchPipelineJobPostingsAction,
   fetchStageWorkspaceAction,
+  createHiringTeamAction,
   generateEvaluationWorkspaceAction,
   moveApplicationStageAction,
   previewStageInterviewWarningsAction,
+  reshuffleInterviewAssignmentAction,
   searchInterviewersAction,
   updatePipelineStageAction,
 } from '@/modules/candidates/api/atsServerActions';
 import type {
   CandidateApplicationDetail,
+  MyInterviewListResponse,
   PipelineApplication,
   PipelineBoard,
   PipelineJobPosting,
   StageEvaluationWorkspace,
   InterviewMeeting,
   InterviewerSearchResponse,
+  ReshuffleRequest,
+  ReshuffleResponse,
   StageInterviewAssignment,
   StageInterviewAssignmentResponse,
   StageInterviewWarningResponse,
   StageWorkspace,
+  TeamDistributionRequest,
+  TeamDistributionResponse,
 } from '@/modules/candidates/types/atsTypes';
 import type {
   CreateInterviewMeetingInput,
@@ -332,5 +343,70 @@ export function useDeletePipelineStage(orgSlug: string, memberId: string, jobPos
     onSuccess: () => {
       if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
     },
+  });
+}
+
+export function useFetchHiringTeams(orgSlug: string, memberId: string, jobPostingId: string | null) {
+  return useQuery({
+    queryKey: ['hiring-teams', orgSlug, jobPostingId],
+    queryFn: async () => {
+      if (!jobPostingId) throw new Error('Job posting ID is required');
+      return fetchHiringTeamsAction({ orgSlug, memberId, jobPostingId });
+    },
+    enabled: !!orgSlug && !!memberId && !!jobPostingId,
+    retry: false,
+  });
+}
+
+export function useCreateHiringTeam(orgSlug: string, memberId: string, jobPostingId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { jobPostingId: string; name: string; description: string | null; members: Array<{ memberId: string; role?: string | null }> }) =>
+      createHiringTeamAction({ orgSlug, memberId, jobPostingId: jobPostingId ?? '', data }),
+    onSuccess: () => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: ['hiring-teams', orgSlug, jobPostingId] });
+    },
+  });
+}
+
+export function useDistributeStageInterviews(orgSlug: string, memberId: string, jobPostingId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation<TeamDistributionResponse, Error, { stageSlug: string; data: TeamDistributionRequest }>({
+    mutationFn: (args) =>
+      distributeStageInterviewsAction({ orgSlug, memberId, ...args }),
+    onSuccess: () => {
+      if (jobPostingId) {
+        queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      }
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
+    },
+  });
+}
+
+export function useReshuffleInterviewAssignment(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<ReshuffleResponse, Error, { applicationId: string; eventId: string; data: ReshuffleRequest }>({
+    mutationFn: (args) =>
+      reshuffleInterviewAssignmentAction({ orgSlug, memberId, ...args }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
+    },
+  });
+}
+
+export function useFetchMyInterviews(orgSlug: string, memberId: string) {
+  return useQuery<MyInterviewListResponse, Error>({
+    queryKey: ['my-interviews', orgSlug, memberId],
+    queryFn: () => fetchMyInterviewsAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
+    retry: false,
+  });
+}
+
+export function useCreateReassignmentRequest(orgSlug: string, memberId: string) {
+  return useMutation({
+    mutationFn: (args: { eventId: string; data: { reason: string } }) =>
+      createReassignmentRequestAction({ orgSlug, memberId, ...args }),
   });
 }

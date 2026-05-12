@@ -4,12 +4,13 @@ export const publicCareerApplicationSchema = z.object({
   firstName: z.string().trim().min(1, 'First name is required').max(255, 'First name is too long'),
   lastName: z.string().trim().min(1, 'Last name is required').max(255, 'Last name is too long'),
   email: z.string().trim().email('Enter a valid email address'),
-  phone: z.string().trim().max(50, 'Phone number is too long').optional().or(z.literal('')),
+  // Keep as string (not optional) so the inferred type matches the form's defaultValues
+  phone: z.string().trim().max(50, 'Phone number is too long'),
   linkedinUrl: z.union([
     z.url('Enter a valid LinkedIn URL'),
     z.literal(''),
   ]),
-  coverLetter: z.string().max(5000, 'Notes are too long').optional().or(z.literal('')),
+  coverLetter: z.string().max(5000, 'Notes are too long'),
   resumeFile: z.custom<File | null>((value) => value instanceof File, {
     message: 'Resume is required',
   }).refine((file) => file == null || file.size <= 5 * 1024 * 1024, {
@@ -26,6 +27,8 @@ export const publicCareerApplicationSchema = z.object({
   }),
 });
 
+export type PublicCareerApplicationFormValues = z.infer<typeof publicCareerApplicationSchema>;
+
 export interface PublicCareerApplicationInput {
   firstName: string;
   lastName: string;
@@ -34,14 +37,4 @@ export interface PublicCareerApplicationInput {
   linkedinUrl?: string;
   resumeUrl: string;
   coverLetter?: string;
-}
-
-export interface PublicCareerApplicationFormValues {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  linkedinUrl: string;
-  coverLetter: string;
-  resumeFile: File | null;
 }

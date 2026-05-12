@@ -17,11 +17,17 @@ import {
 } from '@/modules/candidates/schema/atsSchemas';
 import type {
   CandidateApplicationDetail,
+  HiringTeam,
   InterviewMeeting,
+  MyInterviewListResponse,
   PipelineApplication,
   PipelineBoard,
   PipelineJobPosting,
   PipelineStage,
+  ReshuffleRequest,
+  ReshuffleResponse,
+  TeamDistributionRequest,
+  TeamDistributionResponse,
   InterviewerSearchResponse,
   StageInterviewAssignmentResponse,
   StageInterviewWarningResponse,
@@ -305,6 +311,99 @@ export async function deletePipelineStageAction(params: {
   const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/${params.stageId}`, {
     method: 'DELETE',
     headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<void>(res);
+}
+
+export async function fetchHiringTeamsAction(params: {
+  orgSlug: string;
+  memberId: string;
+  jobPostingId: string;
+}): Promise<{ items: HiringTeam[]; total: number }> {
+  const res = await fetch(`${getApiUrl()}/hiring-teams?jobPostingId=${encodeURIComponent(params.jobPostingId)}`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<{ items: HiringTeam[]; total: number }>(res);
+}
+
+export async function createHiringTeamAction(params: {
+  orgSlug: string;
+  memberId: string;
+  jobPostingId: string;
+  data: {
+    jobPostingId: string;
+    name: string;
+    description: string | null;
+    members: Array<{ memberId: string; role?: string | null }>;
+  };
+}): Promise<HiringTeam> {
+  const res = await fetch(`${getApiUrl()}/hiring-teams`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({
+      ...params.data,
+      jobPostingId: params.data.jobPostingId || params.jobPostingId,
+    }),
+  });
+  return handleResponse<HiringTeam>(res);
+}
+
+export async function distributeStageInterviewsAction(params: {
+  orgSlug: string;
+  memberId: string;
+  stageSlug: string;
+  data: TeamDistributionRequest;
+}): Promise<TeamDistributionResponse> {
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/by-slug/${params.stageSlug}/team-assignments`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<TeamDistributionResponse>(res);
+}
+
+export async function reshuffleInterviewAssignmentAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  eventId: string;
+  data: ReshuffleRequest;
+}): Promise<ReshuffleResponse> {
+  const res = await fetch(
+    `${getApiUrl()}/candidates/applications/${params.applicationId}/interview-events/${params.eventId}/reshuffle`,
+    {
+      method: 'POST',
+      headers: buildHeaders(params.orgSlug, params.memberId),
+      body: JSON.stringify(params.data),
+    }
+  );
+  return handleResponse<ReshuffleResponse>(res);
+}
+
+export async function fetchMyInterviewsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<MyInterviewListResponse> {
+  const res = await fetch(`${getApiUrl()}/candidates/interviews/my`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<MyInterviewListResponse>(res);
+}
+
+export async function createReassignmentRequestAction(params: {
+  orgSlug: string;
+  memberId: string;
+  eventId: string;
+  data: { reason: string };
+}): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/candidates/interviews/${params.eventId}/reassignment-requests`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
   });
   return handleResponse<void>(res);
 }
