@@ -90,17 +90,62 @@ function deriveWidgetState(
 
 function getGreeting(name: string) {
   const hour = new Date().getHours();
-  const greetings =
-    hour < 6
-      ? "Early start, {name}."
-      : hour < 12
-        ? "Good morning, {name}."
-        : hour < 17
-          ? "Good afternoon, {name}."
-          : hour < 21
-            ? "Good evening, {name}."
-            : "Still going strong, {name}.";
-  return greetings.replace("{name}", name);
+
+  const quotes: Record<string, string[]> = {
+    early: [
+      "The world is quiet and the day is yours, {name}.",
+      "A fresh start. Take it easy, {name}.",
+      "Peaceful morning, focused mind, {name}.",
+      "The best ideas start in the quiet, {name}.",
+      "Watching the sunrise with you, {name}.",
+    ],
+    morning: [
+      "Coffee poured, goals set. Let's build, {name}.",
+      "Wishing you deep focus and flow, {name}.",
+      "Ready to make an impact today, {name}?",
+      "Big goals, small steps. You've got this, {name}.",
+      "Bringing the energy to a new day, {name}.",
+    ],
+    afternoon: [
+      "Halfway there! Take a breather, {name}.",
+      "Keep that momentum going, {name}.",
+      "Drink some water and keep shining, {name}.",
+      "Steady progress wins the day, {name}.",
+      "Hope you're finding your flow, {name}.",
+    ],
+    evening: [
+      "The sun is setting on a job well done, {name}.",
+      "Time to wrap up and log off, {name}.",
+      "Transitioning into rest mode, {name}.",
+      "You put in solid work today, {name}.",
+      "Almost time to recharge, {name}.",
+    ],
+    night: [
+      "Still here? Don't forget to disconnect, {name}.",
+      "The stars are out. Prioritize your rest, {name}.",
+      "The work will be here tomorrow, {name}.",
+      "Pace yourself, late-night legend, {name}.",
+      "Peace of mind is the priority now, {name}.",
+    ],
+    midnight: [
+      "Your most important task now is sleep, {name}.",
+      "Past midnight? Go get some rest, {name}.",
+      "The servers are sleeping—you should too, {name}.",
+      "Take care of yourself first, {name}.",
+      "Wishing you a restful night, {name}.",
+    ],
+  };
+
+  let bucket: string[];
+  if (hour < 5) bucket = quotes.midnight;
+  else if (hour < 7) bucket = quotes.early;
+  else if (hour < 12) bucket = quotes.morning;
+  else if (hour < 17) bucket = quotes.afternoon;
+  else if (hour < 20) bucket = quotes.evening;
+  else bucket = quotes.night;
+
+  const pick = bucket[Math.floor(Math.random() * bucket.length)] ?? bucket[0];
+  return pick.replace("{name}", name);
 }
 
 function getDashboardClockStatus(widgetState: WidgetState): string {
@@ -620,10 +665,10 @@ export function AttendanceClockCard({
                       {getInitials(fullName)}
                     </div>
                     <div className="min-w-0">
-                      <h2 className="truncate font-sans text-[1.75rem] font-semibold tracking-tight text-ink" title={fullName}>
-                        {fullName}
+                      <h2 className="truncate font-sans text-xl font-medium text-neutral-900" title={greeting}>
+                        {greeting}
                       </h2>
-                      <p className="mt-1 text-base text-ink-muted-48">{subtitle}</p>
+                      <p className="mt-0.5 text-sm text-neutral-500">{subtitle}</p>
                     </div>
                   </>
                 ) : (

@@ -7,6 +7,7 @@ import { AttendanceFilters } from '@/modules/attendance/components/AttendanceFil
 import { AttendanceRow } from '@/modules/attendance/components/AttendanceRow';
 import { AttendanceExportButtons } from '@/modules/attendance/components/AttendanceExportButtons';
 import { AttendancePivotView, type PivotMode } from '@/modules/attendance/components/AttendancePivotView';
+import { SelfAttendanceWeekView } from '@/modules/attendance/components/SelfAttendanceWeekView';
 import {
   formatDate,
   formatTime,
@@ -304,6 +305,11 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
             }
 
             if (viewMode === 'list') {
+              // Self-scope: show week-based view instead of paginated list
+              if (!showEmployeeColumn) {
+                return <SelfAttendanceWeekView orgSlug={orgSlug} memberId={memberId} />;
+              }
+
               return (
                 <>
                   {/* Header */}

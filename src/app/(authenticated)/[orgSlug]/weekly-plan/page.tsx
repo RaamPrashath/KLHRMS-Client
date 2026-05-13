@@ -35,9 +35,6 @@ export default async function PlanPage({
         <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
           Plans
         </h1>
-        <p className="mt-1 text-sm text-neutral-500 max-w-2xl">
-          Set where work happens across the week, then review the pattern before you save.
-        </p>
       </div>
 
       <PlanClient

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { BulkAttendanceCalendar } from './BulkAttendanceCalendar';
 import { BulkAttendanceSkeleton } from './BulkAttendanceSkeleton';
+import { BulkAttendanceToolbar } from './BulkAttendanceToolbar';
 import { WorkLogDialog } from './WorkLogDialog';
 import type { WorkLogFormValues } from './WorkLogForm';
 
@@ -55,6 +56,11 @@ export function BulkAttendancePageClient({
     deleteDayEntry,
     optimisticUpdateDay,
     rollbackDay,
+    goToPrevWeek,
+    goToNextWeek,
+    goToCurrentWeek,
+    saveState,
+    saveError,
   } = useBulkAttendanceData(orgSlug, memberId);
 
   // ── Holidays ─────────────────────────────────────────────────────────────────
@@ -350,19 +356,32 @@ export function BulkAttendancePageClient({
   }
 
   return (
-    <div className="flex flex-col ">
-      
+    <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-0 max-h-dvh overflow-hidden">
+      {/* Header with nav */}
+      <div className="flex items-center justify-between ml-7 mt-7 mr-7 shrink-0">
+        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">Timesheet</h1>
+        <BulkAttendanceToolbar
+          weekStart={currentWeekStart}
+          onPrev={goToPrevWeek}
+          onNext={goToNextWeek}
+          onToday={goToCurrentWeek}
+          saveState={saveState}
+          saveError={saveError}
+        />
+      </div>
 
-      {/* Calendar */}
-      <BulkAttendanceCalendar
-        weekStart={currentWeekStart}
-        dayMap={dayMap}
-        holidays={holidays}
-        onOpenCreate={handleOpenCreate}
-        onOpenEdit={handleOpenEdit}
-        onDeleteLog={handleDeleteLog}
-        onDragLog={handleDragLog}
-      />    
+      {/* Card — fills remaining space, calendar scrolls internally */}
+      <div className="mx-7 bg-surface border border-neutral-100 rounded-xl overflow-y-auto overflow-x-hidden overscroll-contain shadow-[var(--shadow-1)] flex-1 min-h-0">
+        <BulkAttendanceCalendar
+          weekStart={currentWeekStart}
+          dayMap={dayMap}
+          holidays={holidays}
+          onOpenCreate={handleOpenCreate}
+          onOpenEdit={handleOpenEdit}
+          onDeleteLog={handleDeleteLog}
+          onDragLog={handleDragLog}
+        />
+      </div>
 
       {/* Work log dialog */}
       <WorkLogDialog

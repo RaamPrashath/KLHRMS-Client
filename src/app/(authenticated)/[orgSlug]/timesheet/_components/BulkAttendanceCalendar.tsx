@@ -142,7 +142,7 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
   }
 
   const headerContent = (
-    <div className="flex flex-col h-full relative">
+    <div className="relative flex h-full flex-col">
       {/* Date section */}
       <div className="flex flex-col items-center pt-3 pb-2 px-1 gap-1">
         <span className={`text-[10px] font-bold uppercase tracking-widest ${labelColor}`}>
@@ -173,10 +173,9 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
           {formatMins(totalMins)}
         </span>
       </div>
-      
-      {/* Sticky Add Log Button - positioned absolutely within the column */}
-      <div 
-        className="absolute left-0 right-0 flex justify-center pointer-events-none z-10"
+
+      <div
+        className="pointer-events-none absolute inset-x-0 z-30 flex justify-center"
         style={{ top: 'calc(100% + 8px)' }}
         data-date={dateStr}
       >
@@ -186,7 +185,7 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
             e.stopPropagation();
             onAddLog(dateStr);
           }}
-          className="pointer-events-auto h-7 px-3 text-[11px] font-semibold bg-white/95 backdrop-blur-sm hover:bg-primary hover:text-white border border-input rounded-md shadow-sm transition-all duration-200 sticky top-2 inline-flex items-center justify-center"
+          className="pointer-events-auto inline-flex h-7 items-center justify-center rounded-md border border-input bg-white/95 px-3 text-[11px] font-semibold shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-primary hover:text-white"
         >
           <Plus className="size-3 mr-1.5" strokeWidth={2.5} />
           Add worklog
@@ -202,7 +201,7 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
         <TooltipTrigger asChild>
           <div>{headerContent}</div>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs">
+        <TooltipContent side="top" className="text-xs">
           {holiday.name}
         </TooltipContent>
       </Tooltip>
@@ -357,11 +356,8 @@ export function BulkAttendanceCalendar({
 
   return (
     <div
-      className="border border-black/[0.03] overflow-hidden"
-      style={{ 
-        backgroundColor: 'var(--color-surface)', 
-        boxShadow: '0 8px 30px rgb(0,0,0,0.04)'
-      }}
+      className="h-full"
+      style={{ backgroundColor: 'var(--color-surface)' }}
     >
       <style>{`
         /* ── Reset & base ── */
@@ -369,7 +365,8 @@ export function BulkAttendanceCalendar({
           font-family: var(--font-sans) !important;
           background: transparent !important;
           color: var(--color-neutral-900) !important;
-          height: 100% !important;
+          min-height: 100% !important;
+          height: auto !important;
         }
 
         /* ── Time view shell ── */
@@ -377,7 +374,8 @@ export function BulkAttendanceCalendar({
           border: none !important;
           display: flex;
           flex-direction: column;
-          height: 100% !important;
+          min-height: 100% !important;
+          height: auto !important;
         }
 
         /* ── Header area ── */
@@ -385,6 +383,9 @@ export function BulkAttendanceCalendar({
           border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
           background: var(--color-canvas) !important;
           flex-shrink: 0 !important;
+          position: sticky !important;
+          top: 0 !important;
+          z-index: 20 !important;
         }
         .rbc-time-header.rbc-overflowing {
           border-right: none !important;
@@ -395,6 +396,13 @@ export function BulkAttendanceCalendar({
         }
         .rbc-time-header-content {
           border-left: none !important;
+        }
+        .rbc-time-header,
+        .rbc-time-header-content,
+        .rbc-time-header-gutter,
+        .rbc-time-header > .rbc-row:first-child,
+        .rbc-time-header .rbc-header {
+          overflow: visible !important;
         }
 
         /* ── Column headers ── */
@@ -420,12 +428,8 @@ export function BulkAttendanceCalendar({
         /* ── Time body ── */
         .rbc-time-content {
           border-top: none !important;
-          flex: 1 !important;
-          overflow-y: scroll !important;
-          scrollbar-width: none !important;
-        }
-        .rbc-time-content::-webkit-scrollbar {
-          display: none !important;
+          flex: 0 0 auto !important;
+          overflow: visible !important;
         }
 
         /* ── Day columns with sticky button ── */
@@ -568,7 +572,7 @@ export function BulkAttendanceCalendar({
         onEventDrop={handleEventDrop}
         onEventResize={handleEventResize}
         components={components}
-        className="h-[680px]"
+        className="min-h-full"
         formats={{
           timeGutterFormat: 'HH:mm',
           eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
