@@ -2,15 +2,14 @@
 
 import { createContext, useContext, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { startOfMonth } from 'date-fns';
-import { motion, useReducedMotion } from 'motion/react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { ApplyLeaveSheet } from '@/modules/leave/components/ApplyLeaveSheet';
 import { HolidayDialog } from '@/modules/leave/components/HolidayDialog';
 import { LeaveRequestDetailsDialog } from '@/modules/leave/components/LeaveRequestDetailsDialog';
-import { LeaveSidebar, type LeaveSection } from '@/modules/leave/components/LeaveSidebar';
 import { LeaveTypeDialog } from '@/modules/leave/components/LeaveTypeDialog';
 import { useDeleteHoliday } from '@/modules/leave/hooks/useDeleteHoliday';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
@@ -52,10 +51,25 @@ interface LeaveShellContextValue {
 
 const LeaveShellContext = createContext<LeaveShellContextValue | null>(null);
 
+export type LeaveSection = 'requests' | 'balances' | 'leave-types' | 'holidays';
+
+interface TabItem {
+  key: LeaveSection;
+  label: string;
+  adminOnly?: boolean;
+}
+
+const TABS: TabItem[] = [
+  { key: 'requests', label: 'Requests' },
+  { key: 'balances', label: 'Balances' },
+  { key: 'leave-types', label: 'Leave Types', adminOnly: true },
+  { key: 'holidays', label: 'Holidays', adminOnly: true },
+];
+
 const SECTION_COPY: Record<LeaveSection, { title: string; description: string }> = {
   requests: {
     title: 'Leave Requests',
-    description: 'A calm, glanceable queue for upcoming time away and approval decisions.',
+    description: '',
   },
   balances: {
     title: 'Leave Balances',
@@ -94,9 +108,7 @@ export function LeaveSectionShell({
   children,
 }: Readonly<LeaveSectionShellProps>) {
   const pathname = usePathname();
-  const shouldReduceMotion = useReducedMotion();
   const activeSection = resolveSection(pathname);
-  const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
   const [applyOpen, setApplyOpen] = useState(false);
   const [leaveTypeDialogOpen, setLeaveTypeDialogOpen] = useState(false);
   const [holidayDialogOpen, setHolidayDialogOpen] = useState(false);
@@ -105,10 +117,7 @@ export function LeaveSectionShell({
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
 
   const leaveTypesQuery = useLeaveTypes(orgSlug, memberId);
-  const holidaysQuery = useHolidays(orgSlug, memberId, {
-    month: calendarMonth.getMonth() + 1,
-    year: calendarMonth.getFullYear(),
-  });
+  const holidaysQuery = useHolidays(orgSlug, memberId);
   const deleteHolidayMutation = useDeleteHoliday(orgSlug, memberId);
   const syncHolidaysMutation = useSyncHolidays(orgSlug, memberId);
 
@@ -163,105 +172,63 @@ export function LeaveSectionShell({
       },
     }),
     [
-      canApprove,
-      canCreate,
-      canSync,
-      deleteHolidayMutation,
-      syncHolidaysMutation,
-      holidays,
-      holidaysQuery.isLoading,
-      leaveTypes,
-      leaveTypesQuery.isLoading,
-      memberId,
-      orgSlug,
-      permissions,
+      canApprove, canCreate, canSync, deleteHolidayMutation, syncHolidaysMutation,
+      holidays, holidaysQuery.isLoading, leaveTypes, leaveTypesQuery.isLoading,
+      memberId, orgSlug, permissions,
     ],
   );
 
   const sectionCopy = SECTION_COPY[activeSection];
+  const visibleTabs = TABS.filter((tab) => !tab.adminOnly || canApprove);
 
   return (
     <LeaveShellContext.Provider value={shellContext}>
-      <div className="flex min-h-dvh flex-col bg-white lg:flex-row">
-        <LeaveSidebar
-          orgSlug={orgSlug}
-          activeSection={activeSection}
-          canApprove={canApprove}
-          month={calendarMonth}
-          onMonthChange={setCalendarMonth}
-          holidays={holidays}
-        />
-
-        <main className="min-w-0 flex-1 bg-canvas">
-          <div className="flex flex-col gap-6 px-6 py-6 sm:px-8 sm:py-7 lg:px-10 lg:py-8">
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-              animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-col gap-6"
+      <div className="flex flex-col gap-6 flex-1 min-h-full">
+        <div className="flex items-start justify-between ml-7 mt-7 mr-7">
+          <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
+            {sectionCopy.title}
+          </h1>
+          {canCreate && (
+            <Button
+              className="shrink-0 bg-primary px-5 text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover"
+              onClick={() => setApplyOpen(true)}
             >
-              <section aria-labelledby="leave-section-heading">
-                <div className="flex items-start justify-between gap-4">
-                  <h1
-                    id="leave-section-heading"
-                    className="text-4xl font-semibold tracking-tight text-neutral-900"
-                  >
-                    {sectionCopy.title}
-                  </h1>
+              Apply Leave
+            </Button>
+          )}
+        </div>
 
-                  {canCreate ? (
-                    <Button
-                      className="shrink-0 bg-primary px-5 text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover"
-                      onClick={() => setApplyOpen(true)}
-                    >
-                      Apply Leave
-                    </Button>
-                  ) : null}
-                </div>
-              </section>
+        {/* ── Tab bar ─────────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-1 mx-7">
+          {visibleTabs.map((tab) => {
+            const isActive = tab.key === activeSection;
+            return (
+              <Link
+                key={tab.key}
+                href={`/${orgSlug}/leaves/${tab.key}`}
+                className={cn(
+                  'relative px-5 py-2.5 text-sm font-medium rounded-lg transition-colors',
+                  isActive
+                    ? 'bg-[#1d1d1f] text-white'
+                    : 'text-neutral-500 hover:text-neutral-900 hover:bg-black/[0.04]',
+                )}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
 
-              {children}
-            </motion.div>
-          </div>
-        </main>
+        {/* ── Content ─────────────────────────────────────────────────────── */}
+        <div className="mx-7 mb-7">
+          {children}
+        </div>
       </div>
 
-      <ApplyLeaveSheet
-        open={applyOpen}
-        onOpenChange={setApplyOpen}
-        orgSlug={orgSlug}
-        memberId={memberId}
-        createScope={permissions.create}
-        leaveTypes={leaveTypes}
-        members={initialMembers}
-      />
-
-      <LeaveTypeDialog
-        open={leaveTypeDialogOpen}
-        onOpenChange={setLeaveTypeDialogOpen}
-        orgSlug={orgSlug}
-        memberId={memberId}
-        leaveType={selectedLeaveType}
-      />
-
-      <HolidayDialog
-        open={holidayDialogOpen}
-        onOpenChange={setHolidayDialogOpen}
-        orgSlug={orgSlug}
-        memberId={memberId}
-        holiday={selectedHoliday}
-      />
-
-      <LeaveRequestDetailsDialog
-        open={selectedRequestId !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedRequestId(null);
-        }}
-        orgSlug={orgSlug}
-        memberId={memberId}
-        leaveRequestId={selectedRequestId}
-        permissions={permissions}
-      />
+      <ApplyLeaveSheet open={applyOpen} onOpenChange={setApplyOpen} orgSlug={orgSlug} memberId={memberId} createScope={permissions.create} leaveTypes={leaveTypes} members={initialMembers} />
+      <LeaveTypeDialog open={leaveTypeDialogOpen} onOpenChange={setLeaveTypeDialogOpen} orgSlug={orgSlug} memberId={memberId} leaveType={selectedLeaveType} />
+      <HolidayDialog open={holidayDialogOpen} onOpenChange={setHolidayDialogOpen} orgSlug={orgSlug} memberId={memberId} holiday={selectedHoliday} />
+      <LeaveRequestDetailsDialog open={selectedRequestId !== null} onOpenChange={(open) => { if (!open) setSelectedRequestId(null); }} orgSlug={orgSlug} memberId={memberId} leaveRequestId={selectedRequestId} permissions={permissions} />
     </LeaveShellContext.Provider>
   );
 }

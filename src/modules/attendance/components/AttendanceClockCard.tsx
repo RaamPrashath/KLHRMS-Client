@@ -20,8 +20,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 import { ClockInButton } from "@/modules/attendance/components/ClockInButton";
 import { ClockOutButton } from "@/modules/attendance/components/ClockOutButton";
+import { ProjectTaskSelector } from "@/modules/attendance/components/ProjectTaskSelector";
 import {
   findTodayRecord,
   useAttendanceClockContextQuery,
@@ -32,6 +34,7 @@ import {
   useClockInMutation,
   useClockOutMutation,
 } from "@/modules/attendance/hooks/mutations/attendance";
+import { useProjectsForAttendance } from "@/modules/projects/hooks/useProjectsForAttendance";
 import type {
   ApiError,
   AttendanceClockContext,
@@ -321,6 +324,13 @@ export function AttendanceClockCard({
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<ClockChoice>("OFFICE");
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [clockInDescription, setClockInDescription] = useState("");
+  const [clockInFieldErrors, setClockInFieldErrors] = useState<{
+    project?: string;
+    task?: string;
+  }>({});
   const [geoState, setGeoState] = useState<GeoState>({
     status: "idle",
     latitude: null,
@@ -334,6 +344,7 @@ export function AttendanceClockCard({
   const { data: profile } = useMemberProfileQuery(memberId);
   const { data: clockContext, isLoading: isClockContextLoading } =
     useAttendanceClockContextQuery(orgSlug, memberId, todayIso);
+  const { data: projects = [] } = useProjectsForAttendance(orgSlug, memberId);
 
   const clockInMutation = useClockInMutation(orgSlug, memberId);
   const clockOutMutation = useClockOutMutation(orgSlug, memberId);
@@ -355,6 +366,8 @@ export function AttendanceClockCard({
     !!clockContext?.office &&
     locationMatchesSelection &&
     planMatchesSelection &&
+    !!selectedProjectId &&
+    !!selectedTaskId &&
     !clockInMutation.isPending;
 
   function requestCurrentLocation() {
@@ -479,11 +492,25 @@ export function AttendanceClockCard({
   function handleOpenClockInDialog() {
     setInlineError(null);
     setSelectedLocation(planChoice ?? "OFFICE");
+    setSelectedProjectId(null);
+    setSelectedTaskId(null);
+    setClockInDescription("");
+    setClockInFieldErrors({});
     requestCurrentLocation();
     setIsDialogOpen(true);
   }
 
   function handleClockInSubmit() {
+    const nextErrors: { project?: string; task?: string } = {};
+
+    if (!selectedProjectId) nextErrors.project = "Project is required";
+    if (!selectedTaskId) nextErrors.task = "Task is required";
+
+    if (Object.keys(nextErrors).length > 0) {
+      setClockInFieldErrors(nextErrors);
+      return;
+    }
+
     if (!canSubmitClockIn || geoState.latitude == null || geoState.longitude == null) {
       return;
     }
@@ -495,6 +522,9 @@ export function AttendanceClockCard({
         latitude: geoState.latitude,
         longitude: geoState.longitude,
         accuracy_meters: geoState.accuracyMeters ?? undefined,
+        project_id: selectedProjectId!,
+        project_task_id: selectedTaskId!,
+        description: clockInDescription.trim() || undefined,
       })
       .then((record) => {
         setWidgetState("CLOCKED_IN");
@@ -725,9 +755,6 @@ export function AttendanceClockCard({
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Confirm clock-in location</DialogTitle>
-            <DialogDescription>
-              Your location is checked automatically when this dialog opens. We use the organization office coordinates and today&apos;s weekly plan before enabling clock-in.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5">
@@ -795,6 +822,41 @@ export function AttendanceClockCard({
                 accentClassName="text-sky-600"
               />
             </RadioGroup>
+
+            <ProjectTaskSelector
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+              selectedTaskId={selectedTaskId}
+              onProjectChange={(value) => {
+                setSelectedProjectId(value);
+                if (value) {
+                  setClockInFieldErrors((current) => ({ ...current, project: undefined }));
+                }
+              }}
+              onTaskChange={(value) => {
+                setSelectedTaskId(value);
+                if (value) {
+                  setClockInFieldErrors((current) => ({ ...current, task: undefined }));
+                }
+              }}
+              projectError={clockInFieldErrors.project}
+              taskError={clockInFieldErrors.task}
+              disabled={clockInMutation.isPending}
+            />
+
+            <div className="space-y-1.5">
+              <label htmlFor="clock-in-description" className="text-[14px] font-semibold text-ink-muted-48">
+                Description <span className="font-normal opacity-60 text-ink-muted-48">(optional)</span>
+              </label>
+              <Textarea
+                id="clock-in-description"
+                value={clockInDescription}
+                onChange={(event) => setClockInDescription(event.target.value)}
+                placeholder="Additional details..."
+                rows={3}
+                className="resize-none border-hairline bg-canvas/30 text-sm text-ink placeholder:text-ink-muted-48/50"
+              />
+            </div>
           </div>
 
           <DialogFooter>

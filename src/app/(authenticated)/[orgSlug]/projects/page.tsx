@@ -33,7 +33,7 @@ export default async function ProjectsPage({
     getScope(permissions, 'projects', 'delete') === 'organization';
 
   return (
-    <div className="min-h-full bg-canvas px-8 py-7">
+    <div className="min-h-full bg-canvas flex flex-col flex-1">
       <ProjectPageShell orgSlug={orgSlug} memberId={memberId!} canManageProjects={canManageProjects} />
     </div>
   );

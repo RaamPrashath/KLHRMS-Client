@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const projectStatusOptions = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as const;
-export const projectTaskStatusOptions = ['TODO', 'IN_PROGRESS', 'DONE', 'BLOCKED'] as const;
 
 export const projectSchema = z
   .object({
@@ -29,9 +28,6 @@ export const projectMemberSchema = z.object({
 
 export const projectTaskSchema = z.object({
   name: z.string().trim().min(1, 'Task name is required').max(255),
-  description: z.string().optional().or(z.literal('')),
-  assignedMemberId: z.string().optional().or(z.literal('')),
-  status: z.enum(projectTaskStatusOptions),
 });
 
 export type ProjectInput = z.infer<typeof projectSchema>;

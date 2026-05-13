@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-interface EmployeePaginationProps {
+interface ProjectsPaginationProps {
   page: number;
   totalPages: number;
   total: number;
@@ -27,14 +27,12 @@ function buildPageNumbers(current: number, total: number): (number | '...')[] {
 
   const pages: (number | '...')[] = [];
 
-  // Always show first page
   pages.push(1);
 
   if (current > 4) {
     pages.push('...');
   }
 
-  // Window around current page
   const start = Math.max(2, current - 2);
   const end = Math.min(total - 1, current + 2);
 
@@ -46,25 +44,23 @@ function buildPageNumbers(current: number, total: number): (number | '...')[] {
     pages.push('...');
   }
 
-  // Always show last page
   pages.push(total);
 
   return pages;
 }
 
-export function EmployeePagination({
+export function ProjectsPagination({
   page,
   totalPages,
   total,
   pageSize,
   onPageChange,
   onPageSizeChange,
-}: EmployeePaginationProps) {
+}: ProjectsPaginationProps) {
   const pageNumbers = buildPageNumbers(page, totalPages);
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {/* Left: count + page size selector */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="text-[13px] text-neutral-500">Show</span>
@@ -87,9 +83,7 @@ export function EmployeePagination({
         </div>
       </div>
 
-      {/* Right: page navigation */}
       <div className="flex items-center gap-1">
-        {/* Prev */}
         <button
           type="button"
           onClick={() => onPageChange(page - 1)}
@@ -100,7 +94,6 @@ export function EmployeePagination({
           <ChevronLeft className="size-4" />
         </button>
 
-        {/* Page numbers */}
         {pageNumbers.map((p, idx) =>
           p === '...' ? (
             <span
@@ -126,7 +119,6 @@ export function EmployeePagination({
           ),
         )}
 
-        {/* Next */}
         <button
           type="button"
           onClick={() => onPageChange(page + 1)}

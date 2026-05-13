@@ -59,7 +59,7 @@ export function PlanClient({
 
     if (
       hasUnsavedChanges &&
-      !window.confirm("You have unsaved changes in this tab. Switch views anyway?")
+      !globalThis.confirm("You have unsaved changes in this tab. Switch views anyway?")
     ) {
       return;
     }
@@ -75,7 +75,7 @@ export function PlanClient({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 mx-7 mb-7">
       <div className="w-full overflow-x-auto">
         <div className="inline-flex min-w-fit rounded-2xl border border-border bg-[#f5f5f7] p-1">
           {TAB_OPTIONS.filter((tab) => !tab.requireTeam || canViewTeam).map((tab) => {

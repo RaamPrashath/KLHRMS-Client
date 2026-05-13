@@ -14,6 +14,8 @@ import {
 import { useSaveWeeklyPlanMutation } from "@/hooks/mutations/weekly_plan";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useMyAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
+import { useHolidays } from "@/modules/leave/hooks/useHolidays";
+import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
 import { getCurrentWeekState, getWeekDays, shiftWeek } from "@/modules/weekly-plan/date";
 import type {
   PlanLocationOption,
@@ -84,6 +86,20 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     pageSize: 10,
   });
 
+  // Fetch holidays for the current week
+  const { data: holidays = [] } = useHolidays(orgSlug, memberId, {
+    year: weekState.year,
+  });
+
+  // Fetch approved leaves for the current week
+  const { data: leaveRequestsData } = useLeaveRequests(orgSlug, memberId, {
+    status: "APPROVED",
+    fromDate: weekDays[0]?.iso,
+    toDate: weekDays[weekDays.length - 1]?.iso,
+    page: 1,
+    pageSize: 50,
+  });
+
   const saveMutation = useSaveWeeklyPlanMutation(
     orgSlug,
     orgId,
@@ -95,12 +111,54 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
 
   useEffect(() => {
     const nextBaseline = buildDrafts(myEntries);
+    
+    // Auto-fill holidays and leaves
+    const autoFilledDrafts = { ...nextBaseline };
+    
+    // Create a set of holiday dates
+    const holidayDates = new Set(
+      holidays
+        .filter((h) => h.isHoliday)
+        .map((h) => h.holidayDate)
+    );
+    
+    // Create a map of leave dates
+    const leaveDates = new Set<string>();
+    if (leaveRequestsData?.items) {
+      leaveRequestsData.items.forEach((leave) => {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dateStr = d.toISOString().split("T")[0];
+          leaveDates.add(dateStr);
+        }
+      });
+    }
+    
+    // Auto-fill dates - ALWAYS override with holidays, then leaves if no holiday
+    weekDays.forEach(({ iso }) => {
+      // ALWAYS set holidays, regardless of existing value
+      if (holidayDates.has(iso)) {
+        autoFilledDrafts[iso] = {
+          work_location: "HOLIDAY",
+          project: "",
+        };
+      }
+      // Only set leaves if there's no existing entry AND it's not a holiday
+      else if (leaveDates.has(iso) && (!autoFilledDrafts[iso] || !autoFilledDrafts[iso].work_location)) {
+        autoFilledDrafts[iso] = {
+          work_location: "LEAVE",
+          project: "",
+        };
+      }
+    });
+    
     startTransition(() => {
-      setBaselineDrafts(nextBaseline);
-      setDrafts(nextBaseline);
+      setBaselineDrafts(autoFilledDrafts);
+      setDrafts(autoFilledDrafts);
       setIsDirty(false);
     });
-  }, [myEntries, weekState.week, weekState.year]);
+  }, [myEntries, weekState.week, weekState.year, holidays, leaveRequestsData, weekDays]);
 
   useEffect(() => {
     onDirtyChange(isDirty);
@@ -218,10 +276,21 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     [attendanceQuery.data?.items],
   );
 
+  // Create a set of holiday dates for protection
+  const holidayDates = useMemo(
+    () =>
+      new Set(
+        holidays
+          .filter((h) => h.isHoliday)
+          .map((h) => h.holidayDate)
+      ),
+    [holidays]
+  );
+
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-5 pt-2">
-        <div className="mb-1 flex flex-col gap-4 rounded-2xl border border-border bg-[#f5f5f7] p-6 lg:flex-row lg:items-center lg:justify-between">
+      <section className="flex flex-col gap-5">
+        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
               <User className="h-4 w-4" />
@@ -266,6 +335,7 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
           isDirty={isDirty}
           isSaving={saveMutation.isPending}
           actualByDate={actualByDate}
+          holidayDates={holidayDates}
           onDraftChange={updateDraft}
           onSave={handleSave}
         />

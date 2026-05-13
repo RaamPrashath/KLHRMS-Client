@@ -1,18 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  useReactTable,
-  getCoreRowModel,
-  createColumnHelper,
-  flexRender,
-} from '@tanstack/react-table';
 import { List, CalendarDays, CalendarRange } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { AttendanceFilters } from '@/modules/attendance/components/AttendanceFilters';
 import { AttendanceRow } from '@/modules/attendance/components/AttendanceRow';
-import { AttendanceEmptyState } from '@/modules/attendance/components/AttendanceEmptyState';
 import { AttendanceExportButtons } from '@/modules/attendance/components/AttendanceExportButtons';
 import { AttendancePivotView, type PivotMode } from '@/modules/attendance/components/AttendancePivotView';
 import {
@@ -20,7 +12,8 @@ import {
   formatTime,
   formatHours,
   getTodayIST,
-} from '@/modules/attendance/utils/attendanceFormatters';import type {
+} from '@/modules/attendance/utils/attendanceFormatters';
+import type {
   AttendanceRecord,
   AttendanceListResponse,
   AttendanceFiltersState,
@@ -62,7 +55,6 @@ function addMonths(d: Date, n: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + n, 1);
 }
 
-/** Returns [periodStart, periodEnd] as YMD strings for the pivot period */
 function getPivotRange(mode: PivotMode, anchor: Date): [string, string] {
   if (mode === 'weekly') {
     const monday = getMondayOfWeek(anchor);
@@ -92,78 +84,8 @@ interface AttendanceTableProps {
   onDelete: (record: AttendanceRecord) => void;
 }
 
-const columnHelper = createColumnHelper<AttendanceRecord>();
-const SKELETON_IDS = Array.from({ length: 20 }, (_, i) => `skeleton-row-${i}`);
-
-// ─── List table body ──────────────────────────────────────────────────────────
-
-interface BodyProps {
-  isLoading: boolean;
-  items: AttendanceRecord[];
-  pageSize: number;
-  columnCount: number;
-  canEdit: boolean;
-  canDelete: boolean;
-  showEmployeeColumn: boolean;
-  onEdit: (record: AttendanceRecord) => void;
-  onDelete: (record: AttendanceRecord) => void;
-}
-
-function TableBody({
-  isLoading,
-  items,
-  pageSize,
-  columnCount,
-  canEdit,
-  canDelete,
-  showEmployeeColumn,
-  onEdit,
-  onDelete,
-}: Readonly<BodyProps>) {
-  if (isLoading) {
-    return (
-      <tbody className="divide-y divide-black/[0.04] bg-white">
-        {SKELETON_IDS.slice(0, pageSize).map((id) => (
-          <tr key={id} className="border-b border-black/4">
-            <td colSpan={columnCount} className="p-4 lg:px-6">
-              <Skeleton className="h-10 w-full rounded-xl" />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <tbody className="bg-white">
-        <tr>
-          <td colSpan={columnCount}>
-            <div className="w-full">
-              <AttendanceEmptyState />
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    );
-  }
-
-  return (
-    <tbody className="divide-y divide-black/[0.04] bg-white">
-      {items.map((record) => (
-        <AttendanceRow
-          key={record.id}
-          record={record}
-          canEdit={canEdit}
-          canDelete={canDelete}
-          showEmployeeColumn={showEmployeeColumn}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
-      ))}
-    </tbody>
-  );
-}
+const SKELETON_COUNT = 20;
+const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-row-${i}`);
 
 // ─── View mode toggle ─────────────────────────────────────────────────────────
 
@@ -192,13 +114,9 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     onDelete,
   } = props;
 
-  // ── View mode state ──────────────────────────────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-
-  // Pivot anchor — the "current" week/month being viewed
   const [pivotAnchor, setPivotAnchor] = useState<Date>(() => new Date());
 
-  // ── When switching to pivot mode, update filters to fetch the full period ────
   useEffect(() => {
     if (viewMode === 'list') return;
     const [from, to] = getPivotRange(viewMode as PivotMode, pivotAnchor);
@@ -208,7 +126,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
       dateFrom: from,
       dateTo: to,
       page: 1,
-      pageSize: 200, // fetch all records for the period
+      pageSize: 200,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, pivotAnchor]);
@@ -216,7 +134,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
   function handleViewModeChange(mode: ViewMode) {
     setViewMode(mode);
     if (mode === 'list') {
-      // Restore sensible list defaults
       onFiltersChange({
         ...filters,
         timePreset: 'all_time',
@@ -228,7 +145,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     }
   }
 
-  // ── Pivot navigation ─────────────────────────────────────────────────────────
   function handlePrev() {
     setPivotAnchor((prev) =>
       viewMode === 'weekly' ? addDays(prev, -7) : addMonths(prev, -1),
@@ -245,13 +161,11 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     setPivotAnchor(new Date());
   }
 
-  // ── List view data ───────────────────────────────────────────────────────────
   const items = data?.items ?? [];
   const pageSize = filters.pageSize ?? 20;
   const currentPage = filters.page ?? 1;
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
 
-  // Export rows — always from visible items
   const exportRows: AttendanceExportRow[] = items.map((r) => ({
     id: r.id,
     date: r.date,
@@ -269,8 +183,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
   };
   const exportTitle = `Attendance Report — ${presetLabels[filters.timePreset] ?? 'Report'}`;
 
-  // ── Pivot export helpers ─────────────────────────────────────────────────────
-  // Compute the ordered date columns and period label for the current pivot view
   const MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   function getPivotDateColumns(): string[] {
@@ -302,71 +214,24 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     ? `Attendance — ${getPivotPeriodLabel()}`
     : exportTitle;
 
-  // ── List columns ─────────────────────────────────────────────────────────────
-  const columns = [
-    ...(showEmployeeColumn
-      ? [columnHelper.accessor('employeeName', {
-          header: 'Employee',
-          cell: (info) => info.getValue() ?? '—',
-        })]
-      : []),
-    columnHelper.accessor('date', {
-      header: 'Date',
-      cell: (info) => formatDate(info.getValue()),
-    }),
-    columnHelper.accessor('clockIn', {
-      header: 'Clock In',
-      cell: (info) => formatTime(info.getValue()),
-    }),
-    columnHelper.accessor('clockOut', {
-      header: 'Clock Out',
-      cell: (info) => formatTime(info.getValue()),
-    }),
-    columnHelper.accessor('totalHours', {
-      header: 'Total Hrs',
-      cell: (info) => formatHours(info.getValue()),
-    }),
-    columnHelper.accessor('status', {
-      header: 'Status',
-      cell: (info) => info.getValue(),
-    }),
-    ...(canEdit || canDelete
-      ? [columnHelper.display({ id: 'actions', header: 'Actions' })]
-      : []),
-  ];
-
-  const table = useReactTable({
-    data: items,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    pageCount: totalPages,
-  });
-
-  const tableDescription = showEmployeeColumn
-    ? "All employees' attendance records for your organization."
-    : 'Detailed breakdown of your daily time logs and status.';
-
-  // Pivot period start for the pivot view
   const pivotPeriodStart = toYMD(
     viewMode === 'weekly'
       ? getMondayOfWeek(pivotAnchor)
       : getMonthStart(pivotAnchor),
   );
 
+  const columnCount = showEmployeeColumn ? 6 : 5;
+
   return (
-    <div className="flex flex-col gap-6">
-<div className="bg-surface rounded-xl border border-black/3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
-        {/* ── Table header ──────────────────────────────────────────────── */}
-        <div className="p-4 border-b border-neutral-100 bg-surface flex flex-col gap-4">
+    <div className="flex flex-col flex-1 mx-7 mb-7">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+        {/* ── Top section: title + view toggle + export + filters ───────── */}
+        <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-            {/* Title + view toggle */}
             <div className="flex flex-col gap-2">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight flex items-center gap-2">
-                  {showEmployeeColumn && 'Attendance Records'}
-                </h2>
-              </div>
+              <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight">
+                Attendance Records
+              </h2>
 
               <div className="mt-2 flex items-center self-start rounded-xl bg-neutral-50 p-1 border border-black/4">
                 {VIEW_MODES.map(({ mode, icon, label }) => (
@@ -390,7 +255,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
               </div>
             </div>
 
-            {/* Export buttons */}
             <div className="shrink-0">
               <AttendanceExportButtons
                 orgSlug={orgSlug}
@@ -407,7 +271,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
             </div>
           </div>
 
-          {/* Filters — only shown in list mode */}
           {viewMode === 'list' && (
             <AttendanceFilters
               filters={filters}
@@ -418,76 +281,87 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
         </div>
 
         {/* ── Body ─────────────────────────────────────────────────────── */}
-        {(() => {
-          if (isError) {
-            return (
-              <div className="p-12 flex flex-col items-center justify-center gap-3 bg-canvas/30">
-                <div className="size-10 rounded-full bg-destructive-bg flex items-center justify-center mb-2">
-                  <span className="text-destructive-text font-medium">!</span>
+        <div className="w-full">
+          {(() => {
+            if (isError) {
+              return (
+                <div className="flex flex-col items-center justify-center gap-3 py-16 bg-surface">
+                  <p className="text-sm font-medium text-neutral-900">
+                    Failed to load attendance records
+                  </p>
+                  <p className="text-xs text-neutral-500 max-w-[250px] text-center">
+                    There was a problem retrieving the data. Please try again.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="text-sm font-normal bg-transparent border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-4 py-2 rounded-md transition-colors"
+                  >
+                    Retry Connection
+                  </button>
                 </div>
-                <p className="text-sm font-medium text-neutral-900">
-                  Failed to load attendance records
-                </p>
-                <p className="text-xs text-neutral-500 max-w-[250px] text-center mb-2">
-                  There was a problem retrieving the data. Please try again.
-                </p>
-                <button
-                  type="button"
-                  onClick={onRetry}
-                  className="text-sm font-normal bg-transparent border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-4 py-2 rounded-md transition-colors"
-                >
-                  Retry Connection
-                </button>
-              </div>
-            );
-          }
+              );
+            }
 
-          if (viewMode === 'list') {
+            if (viewMode === 'list') {
+              return (
+                <>
+                  {/* Header */}
+                  <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
+                    {showEmployeeColumn && (
+                      <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</div>
+                    )}
+                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Date</div>
+                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock In</div>
+                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock Out</div>
+                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Work Time</div>
+                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</div>
+                  </div>
+
+                  {/* Body */}
+                  <div className="px-4">
+                    {isLoading ? (
+                      <div className="flex flex-col divide-y divide-black/4 bg-surface">
+                        {SKELETON_IDS.slice(0, pageSize).map((id) => (
+                          <div key={id} className="border-b border-black/4 p-6">
+                            <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : items.length === 0 ? (
+                      <div className="bg-surface py-16 text-center text-sm text-neutral-400">
+                        No attendance records found.
+                      </div>
+                    ) : (
+                      <div className="flex flex-col bg-surface">
+                        {items.map((record) => (
+                          <AttendanceRow
+                            key={record.id}
+                            record={record}
+                            showEmployeeColumn={showEmployeeColumn}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            }
+
             return (
-              <div className="overflow-x-auto w-full bg-white">
-                <table className="w-full text-center border-collapse table-auto min-w-[800px]">
-                  <thead>
-                    <tr className="border-b border-black/4 bg-canvas">
-                      {showEmployeeColumn && (
-                        <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left" style={{ width: '25%' }}>Employee</th>
-                      )}
-                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Date</th>
-                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Clock In</th>
-                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Clock Out</th>
-                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Work Time</th>
-                      <th className="px-6 py-3 border-b border-black/4 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-center" style={{ width: showEmployeeColumn ? '15%' : '20%' }}>Status</th>
-                    </tr>
-                  </thead>
-                  <TableBody
-                    isLoading={isLoading}
-                    items={items}
-                    pageSize={pageSize}
-                    columnCount={showEmployeeColumn ? 6 : 5}
-                    canEdit={canEdit}
-                    canDelete={canDelete}
-                    showEmployeeColumn={showEmployeeColumn}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                  />
-                </table>
-              </div>
+              <AttendancePivotView
+                mode={viewMode}
+                periodStart={pivotPeriodStart}
+                onPrev={handlePrev}
+                onNext={handleNext}
+                onToday={handleToday}
+                records={items}
+                isLoading={isLoading}
+                showEmployeeColumn={showEmployeeColumn}
+              />
             );
-          }
-
-          return (
-            <AttendancePivotView
-              mode={viewMode}
-              periodStart={pivotPeriodStart}
-              onPrev={handlePrev}
-              onNext={handleNext}
-              onToday={handleToday}
-              records={items}
-              isLoading={isLoading}
-              showEmployeeColumn={showEmployeeColumn}
-            />
-          );
-        })()}
-
+          })()}
+        </div>
       </div>
     </div>
   );

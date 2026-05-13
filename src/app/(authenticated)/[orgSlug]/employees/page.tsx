@@ -31,7 +31,7 @@ export default async function EmployeesPage({
   }
 
   return (
-    <div className="min-h-full bg-canvas px-8 py-7">
+    <div className="min-h-full bg-canvas flex flex-col flex-1">
       <EmployeePageShell orgSlug={orgSlug} memberId={memberId!} />
     </div>
   );

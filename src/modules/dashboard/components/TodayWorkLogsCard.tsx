@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Plus, Clock, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { getTodayIST } from '@/modules/attendance/utils/attendanceFormatters';
 import { useBulkAttendanceData } from '@/modules/attendance/hooks/use-bulk-attendance-data';
+import { useProjectsQuery } from '@/modules/projects/hooks/useProjectsQuery';
 import { WorkLogDialog } from '@/app/(authenticated)/[orgSlug]/timesheet/_components/WorkLogDialog';
 import type { WorkLogFormValues } from '@/app/(authenticated)/[orgSlug]/timesheet/_components/WorkLogForm';
 import type {
@@ -47,11 +48,39 @@ export function TodayWorkLogsCard({ orgSlug, memberId }: Readonly<TodayWorkLogsC
     rollbackDay,
   } = useBulkAttendanceData(orgSlug, memberId);
 
+  const { data: projects = [], isLoading: isLoadingProjects } = useProjectsQuery(orgSlug, memberId);
+
   const [dialogState, setDialogState] = useState<WorkLogDialogState>(CLOSED_DIALOG);
   const [isSavingDialog, setIsSavingDialog] = useState(false);
 
   const todayData = dayMap.get(today);
   const logs = todayData?.logs ?? [];
+
+  // Create a lookup map for projects and tasks
+  const projectTaskMap = useMemo(() => {
+    const map = new Map<string, { projectName: string; taskName: string }>();
+    for (const project of projects) {
+      for (const task of project.tasks) {
+        map.set(`${project.id}-${task.id}`, {
+          projectName: project.name,
+          taskName: task.name,
+        });
+      }
+    }
+    return map;
+  }, [projects]);
+
+  // Helper to get display title for a log
+  const getLogTitle = useCallback((log: LocalWorkLog): string => {
+    if (log.projectId && log.projectTaskId) {
+      const key = `${log.projectId}-${log.projectTaskId}`;
+      const info = projectTaskMap.get(key);
+      if (info) {
+        return `${info.projectName} - ${info.taskName}`;
+      }
+    }
+    return log.title || 'Untitled';
+  }, [projectTaskMap]);
 
   // ── Open create dialog ───────────────────────────────────────────────────────
   const handleOpenCreate = useCallback(() => {
@@ -66,6 +95,8 @@ export function TodayWorkLogsCard({ orgSlug, memberId }: Readonly<TodayWorkLogsC
         id: crypto.randomUUID(),
         startTime: start,
         endTime: end,
+        projectId: null,
+        projectTaskId: null,
         title: null,
         notes: null,
         isOptimistic: true,
@@ -109,6 +140,8 @@ export function TodayWorkLogsCard({ orgSlug, memberId }: Readonly<TodayWorkLogsC
             : crypto.randomUUID(),
         startTime: values.startTime,
         endTime: values.endTime,
+        projectId: values.projectId,
+        projectTaskId: values.projectTaskId,
         title: values.title,
         notes: values.notes,
         isOptimistic: true,
@@ -187,7 +220,7 @@ export function TodayWorkLogsCard({ orgSlug, memberId }: Readonly<TodayWorkLogsC
     [today, dayMap, optimisticUpdateDay, rollbackDay, saveDayLogs, deleteDayEntry],
   );
 
-  if (isLoading) {
+  if (isLoading || isLoadingProjects) {
     return (
       <div className="rounded-[18px] border border-hairline bg-canvas p-6">
         <div className="mb-5 flex items-center justify-between">
@@ -240,8 +273,8 @@ export function TodayWorkLogsCard({ orgSlug, memberId }: Readonly<TodayWorkLogsC
                 className="flex items-start justify-between gap-4 border-b border-hairline py-4 last:border-b-0"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[17px] font-semibold tracking-[-0.374px] text-ink" title={log.title ?? undefined}>
-                    {log.title || 'Untitled'}
+                  <p className="truncate text-[17px] font-semibold tracking-[-0.374px] text-ink" title={getLogTitle(log)}>
+                    {getLogTitle(log)}
                   </p>
                   <div className="mt-0.5 flex items-center gap-2 text-[14px] text-ink-muted-48">
                     <span className="tabular-nums">
@@ -261,7 +294,7 @@ export function TodayWorkLogsCard({ orgSlug, memberId }: Readonly<TodayWorkLogsC
                     type="button"
                     onClick={() => handleOpenEdit(log)}
                     className="flex size-9 items-center justify-center rounded-full text-ink-muted-48 transition-colors hover:bg-surface-subtle hover:text-ink active:scale-[0.95]"
-                    aria-label={`Edit log: ${log.title || 'Untitled'}`}
+                    aria-label={`Edit log: ${getLogTitle(log)}`}
                   >
                     <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
@@ -271,7 +304,7 @@ export function TodayWorkLogsCard({ orgSlug, memberId }: Readonly<TodayWorkLogsC
                     type="button"
                     onClick={() => handleDeleteLog(log.id)}
                     className="flex size-9 items-center justify-center rounded-full text-ink-muted-48 transition-colors hover:bg-[#fff3f3] hover:text-[#a93434] active:scale-[0.95]"
-                    aria-label={`Delete log: ${log.title || 'Untitled'}`}
+                    aria-label={`Delete log: ${getLogTitle(log)}`}
                   >
                     <Trash2 className="size-4" />
                   </button>

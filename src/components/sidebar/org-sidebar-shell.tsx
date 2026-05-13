@@ -30,6 +30,14 @@ export function OrgSidebarShell({
     const pathname = usePathname();
     const isLeaveRoute = pathname.includes("/leaves");
     const isCandidatesRoute = pathname.includes("/candidates");
+    const isTimesheetRoute = pathname.includes("/timesheet");
+    const isAttendanceRoute = pathname.includes("/attendance");
+    const isDepartmentsRoute = pathname.includes("/departments");
+    const isEmployeesRoute = pathname.includes("/employees");
+    const isProjectsRoute = pathname.includes("/projects");
+    const isJobsRoute = pathname.includes("/jobs");
+    const isInterviewsRoute = pathname.includes("/interviews");
+    const isWeeklyPlanRoute = pathname.includes("/weekly-plan");
 
     return (
         <div className="flex h-dvh overflow-hidden">
@@ -44,7 +52,7 @@ export function OrgSidebarShell({
                 <div
                     className={cn(
                         "w-full",
-                        isLeaveRoute || isCandidatesRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isLeaveRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
                     )}
                 >
                     {children}

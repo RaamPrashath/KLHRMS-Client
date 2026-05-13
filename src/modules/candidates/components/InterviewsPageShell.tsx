@@ -5,14 +5,6 @@ import { Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { useCreateReassignmentRequest, useFetchMyInterviews, useReshuffleInterviewAssignment } from '@/modules/candidates/hooks/useAtsPipeline';
 import type { MyInterview } from '@/modules/candidates/types/atsTypes';
 
@@ -105,6 +97,8 @@ function ReassignmentDialog({
   );
 }
 
+const SKELETON_IDS = Array.from({ length: 8 }, (_, i) => `skeleton-row-${i}`);
+
 export function InterviewsPageShell({
   orgSlug,
   memberId,
@@ -119,9 +113,20 @@ export function InterviewsPageShell({
 
   if (interviewsQuery.isLoading) {
     return (
-      <div className="min-h-full bg-canvas p-6">
-        <div className="rounded-xl border border-neutral-100 bg-surface p-8 text-sm text-neutral-500">
-          Loading your interviews...
+      <div className="min-h-full bg-canvas flex flex-col gap-6 flex-1">
+        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight ml-7 mt-7">
+          My Interviews
+        </h1>
+        <div className="flex flex-col mx-7 mb-7">
+          <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+            <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
+              {SKELETON_IDS.map((id) => (
+                <div key={id} className="border-b border-black/4 p-6">
+                  <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -130,166 +135,156 @@ export function InterviewsPageShell({
   const interviews = interviewsQuery.data?.items ?? [];
 
   return (
-    <div className="min-h-full bg-canvas px-6 py-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
-          My Interviews
-        </h1>
-        <p className="mt-2 text-sm text-neutral-500">
-          View assigned interviews, confirm ownership, or reject to pass the slot to a backup interviewer.
-        </p>
+    <div className="min-h-full bg-canvas flex flex-col gap-6 flex-1">
+      <div className="ml-7 mt-7 mr-7 flex items-start justify-between">
+        <div>
+          <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
+            My Interviews
+          </h1>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-100 bg-surface shadow-[--shadow-1]">
-        {interviews.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-6 py-12">
-            <Clock className="mb-4 size-12 text-neutral-200" />
-            <p className="font-medium text-neutral-600">No interviews assigned</p>
-            <p className="mt-1 text-sm text-neutral-500">
-              You do not have any interviews scheduled at this time
-            </p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-canvas hover:bg-canvas">
-                <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Candidate
-                </TableHead>
-                <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Position
-                </TableHead>
-                <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Stage
-                </TableHead>
-                <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Scheduled
-                </TableHead>
-                <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Role
-                </TableHead>
-                <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Status
-                </TableHead>
-                <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Action
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {interviews.map((interview) => (
-                <TableRow key={interview.eventId} className="border-neutral-100 hover:bg-canvas">
-                  <TableCell className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-9 items-center justify-center rounded-full bg-primary-ghost text-xs font-semibold text-primary">
-                        {interview.candidate.firstName[0]}
-                        {interview.candidate.lastName[0]}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-neutral-900">
-                          {candidateName(interview.candidate.firstName, interview.candidate.lastName)}
-                        </p>
-                        <p className="truncate text-xs text-neutral-500">{interview.candidate.email}</p>
+      <div className="flex flex-col mx-7 mb-7">
+        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+          {interviews.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 bg-surface">
+              <Clock className="mb-2 size-8 text-neutral-300" />
+              <p className="text-sm text-neutral-400">No interviews assigned</p>
+            </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
+                <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Candidate</div>
+                <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Position</div>
+                <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Stage</div>
+                <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Scheduled</div>
+                <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Role</div>
+                <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</div>
+                <div className="w-[280px] shrink-0 text-right text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Action</div>
+              </div>
+
+              {/* Rows */}
+              <div className="flex flex-col bg-surface px-4">
+                {interviews.map((interview) => (
+                  <div
+                    key={interview.eventId}
+                    className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4"
+                  >
+                    <div className="flex-1 flex justify-center">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-xs font-semibold text-primary">
+                          {interview.candidate.firstName[0]}
+                          {interview.candidate.lastName[0]}
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <p className="truncate text-sm font-medium text-neutral-900">
+                            {candidateName(interview.candidate.firstName, interview.candidate.lastName)}
+                          </p>
+                          <p className="truncate text-[11px] text-neutral-500">{interview.candidate.email}</p>
+                        </div>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <p className="text-sm text-neutral-700">{interview.jobTitle}</p>
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-1">
-                      <div className="size-1.5 rounded-full bg-neutral-400" />
-                      <span className="text-xs font-medium text-neutral-700">{interview.stageName}</span>
+
+                    <div className="flex-1 flex justify-center">
+                      <span className="text-sm text-neutral-700">{interview.jobTitle}</span>
                     </div>
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <div className="flex items-center gap-2 text-sm text-neutral-600">
-                      <Clock className="size-3.5 text-neutral-400" />
-                      {formatDateTime(interview.scheduledStartAt)}
+
+                    <div className="flex-1 flex justify-center">
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-1">
+                        <div className="size-1.5 rounded-full bg-neutral-400" />
+                        <span className="text-xs font-medium text-neutral-700">{interview.stageName}</span>
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <div className="inline-flex items-center gap-1.5">
-                      <div
-                        className={`size-2 rounded-full ${
-                          interview.isBackup ? 'bg-warning-text' : 'bg-success-text'
-                        }`}
-                      />
-                      <span className="text-xs font-medium text-neutral-700">
-                        {interview.isBackup ? 'Backup' : 'Primary'}
-                      </span>
+
+                    <div className="flex-1 flex justify-center">
+                      <div className="flex items-center gap-2 text-sm text-neutral-600">
+                        <Clock className="size-3.5 text-neutral-400" />
+                        {formatDateTime(interview.scheduledStartAt)}
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    {interview.isBackup ? (
-                      <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
-                        Standby backup
-                      </span>
-                    ) : acceptedEventIds.includes(interview.eventId) ? (
-                      <span className="inline-flex items-center rounded-full bg-success-bg px-2.5 py-1 text-xs font-medium text-success-text">
-                        Accepted
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-warning-bg px-2.5 py-1 text-xs font-medium text-warning-text">
-                        Awaiting response
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    {interview.isBackup ? null : (
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant={acceptedEventIds.includes(interview.eventId) ? 'outline' : 'default'}
-                          onClick={() => {
-                            setAcceptedEventIds((current) => (
-                              current.includes(interview.eventId) ? current : [...current, interview.eventId]
-                            ));
-                            toast.success('Interview accepted');
-                          }}
-                        >
-                          {acceptedEventIds.includes(interview.eventId) ? 'Accepted' : 'Accept'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={reshuffleInterview.isPending}
-                          onClick={() => {
-                            reshuffleInterview.mutate(
-                              {
-                                applicationId: interview.applicationId,
-                                eventId: interview.eventId,
-                                data: {},
-                              },
-                              {
-                                onSuccess: () => {
-                                  setAcceptedEventIds((current) => current.filter((id) => id !== interview.eventId));
-                                  toast.success('Interview rejected. A backup interviewer has been notified.');
+
+                    <div className="flex-1 flex justify-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <div className={`size-2 rounded-full ${interview.isBackup ? 'bg-warning-text' : 'bg-success-text'}`} />
+                        <span className="text-xs font-medium text-neutral-700">
+                          {interview.isBackup ? 'Backup' : 'Primary'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 flex justify-center">
+                      {interview.isBackup ? (
+                        <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
+                          Standby backup
+                        </span>
+                      ) : acceptedEventIds.includes(interview.eventId) ? (
+                        <span className="inline-flex items-center rounded-full bg-success-bg px-2.5 py-1 text-xs font-medium text-success-text">
+                          Accepted
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-warning-bg px-2.5 py-1 text-xs font-medium text-warning-text">
+                          Awaiting response
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="w-[280px] shrink-0 flex justify-end gap-2">
+                      {interview.isBackup ? null : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant={acceptedEventIds.includes(interview.eventId) ? 'outline' : 'default'}
+                            onClick={() => {
+                              setAcceptedEventIds((current) => (
+                                current.includes(interview.eventId) ? current : [...current, interview.eventId]
+                              ));
+                              toast.success('Interview accepted');
+                            }}
+                          >
+                            {acceptedEventIds.includes(interview.eventId) ? 'Accepted' : 'Accept'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={reshuffleInterview.isPending}
+                            onClick={() => {
+                              reshuffleInterview.mutate(
+                                {
+                                  applicationId: interview.applicationId,
+                                  eventId: interview.eventId,
+                                  data: {},
                                 },
-                                onError: () => {
-                                  toast.error('Could not reassign this interview automatically. Add a backup first.');
+                                {
+                                  onSuccess: () => {
+                                    setAcceptedEventIds((current) => current.filter((id) => id !== interview.eventId));
+                                    toast.success('Interview rejected. A backup interviewer has been notified.');
+                                  },
+                                  onError: () => {
+                                    toast.error('Could not reassign this interview automatically. Add a backup first.');
+                                  },
                                 },
-                              },
-                            );
-                          }}
-                        >
-                          {reshuffleInterview.isPending ? 'Reassigning...' : 'Reject'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setReassignmentInterview(interview)}
-                        >
-                          Request Reassignment
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+                              );
+                            }}
+                          >
+                            {reshuffleInterview.isPending ? 'Reassigning...' : 'Reject'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setReassignmentInterview(interview)}
+                          >
+                            Request Reassignment
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {reassignmentInterview && (

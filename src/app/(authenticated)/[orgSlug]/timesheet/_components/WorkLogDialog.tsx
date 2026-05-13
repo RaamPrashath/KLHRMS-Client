@@ -10,10 +10,12 @@ import {
 import { WorkLogForm } from './WorkLogForm';
 import type { WorkLogFormValues } from './WorkLogForm';
 import type { WorkLogDialogState } from '@/modules/attendance/types/bulkAttendanceTypes';
+import type { ProjectForAttendance } from '@/modules/projects/types/projectTypes';
 import { format, parseISO } from 'date-fns';
 
 interface WorkLogDialogProps {
   state: WorkLogDialogState;
+  projects?: ProjectForAttendance[];
   onClose: () => void;
   onSave: (date: string, values: WorkLogFormValues) => Promise<void>;
   isPending?: boolean;
@@ -30,6 +32,7 @@ function formatDialogDate(dateStr: string | null): string {
 
 export function WorkLogDialog({
   state,
+  projects = [],
   onClose,
   onSave,
   isPending = false,
@@ -61,6 +64,7 @@ export function WorkLogDialog({
             key={`${state.mode}-${state.date}-${state.log?.id ?? 'new'}`}
             date={state.date}
             initialLog={state.log}
+            projects={projects}
             // Pass slot times as defaults when creating from a dragged selection
             defaultStart={isCreate && state.log ? state.log.startTime : undefined}
             defaultEnd={isCreate && state.log ? state.log.endTime : undefined}

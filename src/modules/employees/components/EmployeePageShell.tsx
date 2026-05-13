@@ -93,8 +93,8 @@ export function EmployeePageShell({ orgSlug, memberId }: Readonly<EmployeePageSh
   const items = data?.items ?? [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">Employees</h1>
+    <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">
+      <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight ml-7 mt-7">Employees</h1>
       <EmployeeTable
       data={items}
       isLoading={isLoading}

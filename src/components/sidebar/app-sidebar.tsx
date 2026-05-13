@@ -268,10 +268,10 @@ function SidebarNavigation({
     pathname,
     showSearch,
 }: {
-    allNavGroups: ReturnType<typeof filterNavByPermissions>;
-    orgSlug: string;
-    pathname: string;
-    showSearch: boolean;
+    readonly allNavGroups: ReturnType<typeof filterNavByPermissions>;
+    readonly orgSlug: string;
+    readonly pathname: string;
+    readonly showSearch: boolean;
 }) {
     const [search, setSearch] = useState("");
 
@@ -293,7 +293,7 @@ function SidebarNavigation({
             {showSearch && <NavSearch value={search} onChange={setSearch} />}
 
             {navGroups.length === 0 ? (
-                <div className="px-2 py-4 text-xs text-[var(--color-sidebar-label)] text-center leading-relaxed">
+                <div className="px-2 pb-4 text-xs text-[var(--color-sidebar-label)] text-center leading-relaxed">
                     {search.trim() ? (
                         <>No results for &ldquo;{search}&rdquo;</>
                     ) : (
@@ -301,7 +301,7 @@ function SidebarNavigation({
                     )}
                 </div>
             ) : (
-                <nav className="flex flex-col gap-3.5 mt-1">
+                <nav className="flex flex-col ">
                     {navGroups.map((group) => (
                         <div key={group.title} className="flex flex-col gap-0.5">
                             <SidebarLabel>{group.title}</SidebarLabel>

@@ -98,6 +98,8 @@ function normalizeDayFromApi(day: BulkAttendanceDay): BulkDayState {
       id: l.id,
       startTime: parseDateSafe(l.startTime) ?? new Date(l.startTime),
       endTime: parseDateSafe(l.endTime) ?? new Date(l.endTime),
+      projectId: l.projectId ?? null,
+      projectTaskId: l.projectTaskId ?? null,
       title: l.title ?? null,
       notes: l.notes ?? null,
       isOptimistic: false,
@@ -234,6 +236,8 @@ export function useBulkAttendanceData(
         logs: normalizedLogs.map((l) => ({
           startTime: toLocalISOString(l.startTime),
           endTime: toLocalISOString(l.endTime),
+          projectId: l.projectId ?? undefined,
+          projectTaskId: l.projectTaskId ?? undefined,
           title: l.title ?? undefined,
           notes: l.notes ?? undefined,
         })),

@@ -7,8 +7,10 @@ import moment from 'moment';
 import { format, isSameDay } from 'date-fns';
 import { Plus } from 'lucide-react';
 
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 import { BulkAttendanceEvent } from './BulkAttendanceEvent';
-import { BulkAttendanceEmptyState } from './BulkAttendanceEmptyState';
 
 import type {
   BulkDayState,
@@ -78,6 +80,8 @@ function logsToEvents(dayMap: Map<string, BulkDayState>): CalendarWorkLogEvent[]
         resource: {
           type: 'work-log',
           date: day.date,
+          projectId: log.projectId,
+          projectTaskId: log.projectTaskId,
           title: log.title,
           notes: log.notes,
           isOptimistic: log.isOptimistic,
@@ -138,7 +142,7 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
   }
 
   const headerContent = (
-    <div className="flex flex-col h-full relative group">
+    <div className="flex flex-col h-full relative">
       {/* Date section */}
       <div className="flex flex-col items-center pt-3 pb-2 px-1 gap-1">
         <span className={`text-[10px] font-bold uppercase tracking-widest ${labelColor}`}>
@@ -169,17 +173,24 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
           {formatMins(totalMins)}
         </span>
       </div>
-
-      {/* Add button */}
-      <div
-        role="button"
-        tabIndex={0}
-        aria-label={`Add work log for ${format(date, 'EEEE d MMMM')}`}
-        onClick={(e) => { e.stopPropagation(); onAddLog(dateStr); }}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onAddLog(dateStr); } }}
-        className="absolute top-2.5 right-2 size-5 flex items-center justify-center rounded text-neutral-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer"
+      
+      {/* Sticky Add Log Button - positioned absolutely within the column */}
+      <div 
+        className="absolute left-0 right-0 flex justify-center pointer-events-none z-10"
+        style={{ top: 'calc(100% + 8px)' }}
+        data-date={dateStr}
       >
-        <Plus className="size-3.5" strokeWidth={2.5} />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddLog(dateStr);
+          }}
+          className="pointer-events-auto h-7 px-3 text-[11px] font-semibold bg-white/95 backdrop-blur-sm hover:bg-primary hover:text-white border border-input rounded-md shadow-sm transition-all duration-200 sticky top-2 inline-flex items-center justify-center"
+        >
+          <Plus className="size-3 mr-1.5" strokeWidth={2.5} />
+          Add worklog
+        </button>
       </div>
     </div>
   );
@@ -189,7 +200,7 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          {headerContent}
+          <div>{headerContent}</div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-xs">
           {holiday.name}
@@ -259,7 +270,6 @@ export function BulkAttendanceCalendar({
   onDragLog,
 }: Readonly<BulkAttendanceCalendarProps>) {
   const events = useMemo(() => logsToEvents(dayMap), [dayMap]);
-  const hasAnyLogs = events.length > 0;
 
   // Build a map of date string → holiday for fast lookup
   const holidayMap = useMemo(() => {
@@ -347,7 +357,7 @@ export function BulkAttendanceCalendar({
 
   return (
     <div
-      className="border border-black/[0.03] rounded-2xl overflow-hidden"
+      className="border border-black/[0.03] overflow-hidden"
       style={{ 
         backgroundColor: 'var(--color-surface)', 
         boxShadow: '0 8px 30px rgb(0,0,0,0.04)'
@@ -397,12 +407,10 @@ export function BulkAttendanceCalendar({
         .rbc-header + .rbc-header {
           border-left: 1px solid rgba(0, 0, 0, 0.03) !important;
         }
-        .rbc-header > button {
-          all: unset;
+        .rbc-header > * {
           display: block !important;
           width: 100% !important;
           height: 100% !important;
-          cursor: default !important;
         }
 
         /* ── All-day row ── */
@@ -418,6 +426,14 @@ export function BulkAttendanceCalendar({
         }
         .rbc-time-content::-webkit-scrollbar {
           display: none !important;
+        }
+
+        /* ── Day columns with sticky button ── */
+        .rbc-day-slot {
+          position: relative !important;
+        }
+        .rbc-time-column {
+          position: relative !important;
         }
 
         /* ── Time gutter ── */
@@ -542,7 +558,7 @@ export function BulkAttendanceCalendar({
         onNavigate={() => {/* controlled externally */}}
         step={15}
         timeslots={4}
-        min={new Date(0, 0, 0, 6, 0, 0)}
+        min={new Date(0, 0, 0, 8, 0, 0)}
         max={new Date(0, 0, 0, 22, 0, 0)}
         selectable
         resizable
@@ -562,13 +578,6 @@ export function BulkAttendanceCalendar({
         showMultiDayTimes={false}
         popup={false}
       />
-
-      {/* Empty state */}
-      {!hasAnyLogs && (
-        <div className="border-t border-neutral-100 bg-canvas/50">
-          <BulkAttendanceEmptyState />
-        </div>
-      )}
     </div>
   );
 }

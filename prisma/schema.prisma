@@ -149,6 +149,9 @@ model AttendanceRecord {
     date               DateTime  @db.Date
     clockIn            DateTime?
     clockOut           DateTime?
+    projectId          String?
+    projectTaskId      String?
+    description        String?
     totalHours         Float?
     overtimeHours      Float?
     status             String    @default("ABSENT")
@@ -161,6 +164,8 @@ model AttendanceRecord {
     @@index([organizationId])
     @@index([organizationId, date])
     @@index([organizationId, employeeId])
+    @@index([projectId])
+    @@index([projectTaskId])
     @@map("attendanceRecord")
 }
 
@@ -173,7 +178,9 @@ model AttendanceWorkLog {
     date               DateTime  @db.Date
     startTime          DateTime?
     endTime            DateTime?
-    title              String? // ← add this
+    projectId          String?
+    projectTaskId      String?
+    title              String?
     notes              String?
     createdAt          DateTime  @default(now())
 
@@ -183,6 +190,8 @@ model AttendanceWorkLog {
     @@index([organizationId])
     @@index([organizationId, employeeId])
     @@index([organizationId, date])
+    @@index([projectId])
+    @@index([projectTaskId])
     @@map("attendanceWorkLog")
 }
 

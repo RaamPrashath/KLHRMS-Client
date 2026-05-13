@@ -32,6 +32,7 @@ interface WeeklyPlanGridProps {
       hasClockIn: boolean;
     }
   >;
+  holidayDates?: Set<string>;
   onDraftChange?: (date: string, draft: DayDraft) => void;
   onSave?: () => void;
 }
@@ -86,6 +87,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
   isLoading = false,
   isDirty = false,
   isSaving = false,
+  holidayDates = new Set(),
   onDraftChange,
   onSave,
 }: WeeklyPlanGridProps) {
@@ -120,6 +122,11 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
   }, [dayDrafts]);
 
   function handleSelect(date: string, nextLocation: PlanLocationValue) {
+    // Prevent changing holiday cells
+    if (holidayDates.has(date)) {
+      return;
+    }
+    
     const current = dayDrafts.find((item) => item.date === date)?.draft ?? {
       work_location: "",
       project: "",
@@ -212,6 +219,8 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                       index < dayDrafts.length - 1 &&
                       dayDrafts[index + 1]?.draft.work_location === rowLocation;
                     const isCurrentDay = isToday(parseISO(item.date));
+                    const isHoliday = holidayDates.has(item.date);
+                    const isProtected = isHoliday && item.draft.work_location === "HOLIDAY";
 
                     const content = (
                       <div
@@ -225,6 +234,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                                   ? "border-[#00874a]/45 bg-[#f4fbf7]"
                                   : "hover:border-[#d8d8de] hover:bg-[#f2f2f5]",
                               ),
+                          isProtected && "opacity-80 cursor-not-allowed",
                         )}
                       >
                         {isSelected ? (
@@ -250,7 +260,11 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                         key={`${rowLocation}-${item.date}`}
                         type="button"
                         onClick={() => handleSelect(item.date, rowLocation)}
-                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00874a]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                        disabled={isProtected}
+                        className={cn(
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00874a]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+                          isProtected && "cursor-not-allowed"
+                        )}
                         aria-pressed={isSelected}
                         aria-label={`${rowMeta?.label ?? rowLocation} on ${item.date}`}
                       >

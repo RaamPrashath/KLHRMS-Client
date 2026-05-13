@@ -24,6 +24,17 @@ function buildHeaders(orgSlug: string, memberId: string): HeadersInit {
   };
 }
 
+function buildQuery(
+  params: Record<string, string | number | boolean | undefined | null>,
+): string {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v != null && v !== '') q.set(k, String(v));
+  }
+  const s = q.toString();
+  return s ? `?${s}` : '';
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (res.ok) {
     if (res.status === 204) return undefined as T;
@@ -63,8 +74,14 @@ export async function fetchDepartmentsAction(params: {
   orgSlug: string;
   memberId: string;
   search?: string;
+  page?: number;
+  pageSize?: number;
 }): Promise<DepartmentListResponse> {
-  const query = params.search ? `?search=${encodeURIComponent(params.search)}` : '';
+  const query = buildQuery({
+    search: params.search || undefined,
+    page: params.page ?? 1,
+    page_size: params.pageSize ?? 25,
+  });
   const res = await fetch(`${getApiUrl()}/departments${query}`, {
     method: 'GET',
     headers: buildHeaders(params.orgSlug, params.memberId),

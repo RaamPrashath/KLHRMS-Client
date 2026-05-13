@@ -7,7 +7,7 @@ import {
   createColumnHelper,
   flexRender,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, CalendarDays, FileSpreadsheet, FileDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { useTeamWeeklyPlanQuery } from "@/hooks/queries/weekly_plan";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -257,17 +257,17 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-hairline bg-surface overflow-hidden">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px]">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="border-b border-hairline bg-canvas/50">
+                <tr key={headerGroup.id} className="border-b border-black/[0.04] bg-canvas/50">
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
                       className={cn(
-                        "px-4 py-3 text-left text-[12px] font-bold uppercase tracking-widest text-ink-muted-48",
+                        "px-4 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider",
                         header.id !== "name" && "text-center",
                       )}
                     >
@@ -290,23 +290,15 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-canvas">
-                        <FileSpreadsheet className="h-5 w-5 text-ink-muted-48" aria-hidden="true" />
-                      </div>
-                      <p className="text-[15px] font-semibold text-ink">No team plans found</p>
-                      <p className="text-[13px] text-ink-muted-48">
-                        No teammates have submitted plans for this week yet.
-                      </p>
-                    </div>
+                  <td colSpan={6} className="px-4 py-16 text-center">
+                    <p className="text-sm text-neutral-400">No team plans found.</p>
                   </td>
                 </tr>
               ) : (
                 table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="border-b border-hairline last:border-0 transition-colors hover:bg-canvas/30"
+                    className="border-b border-black/4 last:border-0 transition-colors hover:bg-black/[0.02]"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
@@ -329,7 +321,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
 
       {/* Summary footer */}
       {!isLoading && rows.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-hairline bg-surface px-5 py-3">
+        <div className="flex items-center justify-between rounded-2xl bg-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-5 py-3">
           <p className="text-[13px] font-medium text-ink-muted-48">
             Showing <span className="font-semibold text-ink">{rows.length}</span> team member{rows.length === 1 ? "" : "s"}
           </p>

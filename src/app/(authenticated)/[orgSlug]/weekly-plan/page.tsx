@@ -30,12 +30,12 @@ export default async function PlanPage({
   const canViewTeam = ["org", "organization"].includes(weeklyPlanScope);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-[40px] font-semibold tracking-[-0.02em] text-foreground">
+    <div className="flex flex-col gap-6 flex-1 min-h-full">
+      <div className="ml-7 mt-7">
+        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
           Plans
         </h1>
-        <p className="max-w-2xl text-[15px] leading-6 text-muted-foreground">
+        <p className="mt-1 text-sm text-neutral-500 max-w-2xl">
           Set where work happens across the week, then review the pattern before you save.
         </p>
       </div>
