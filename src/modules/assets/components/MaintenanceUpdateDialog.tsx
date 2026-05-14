@@ -15,13 +15,13 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select';
-import { ACTION_GREEN } from '@/modules/assets/components/assetsPageConfig';
+import { ACTION_GREEN } from '@/modules/assets/lib/assetConfig';
 import {
   DateField,
   FieldSelect,
   TextAreaField,
 } from '@/modules/assets/components/assetsPagePrimitives';
-import { humanize } from '@/modules/assets/components/assetsPageUtils';
+import { humanize } from '@/modules/assets/lib/assetUtils';
 import { assetConditionOptions, type AssetMaintenanceUpdateInput } from '@/modules/assets/schema/assetSchemas';
 import type { AssetCondition } from '@/modules/assets/types/assetTypes';
 

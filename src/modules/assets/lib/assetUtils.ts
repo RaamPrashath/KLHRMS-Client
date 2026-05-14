@@ -85,9 +85,9 @@ export function deriveReturnNextStatus(condition: AssetCondition) {
 }
 
 export function getRowActions(status: AssetStatus) {
-  if (status === 'AVAILABLE') return ['View', 'Edit', 'Provide Asset', 'Log Maintenance', 'Retire'];
+  if (status === 'AVAILABLE') return ['View', 'Edit', 'Provide Asset', 'Log Maintenance', 'Decommission'];
   if (status === 'PROVIDED') return ['View', 'Return Asset', 'Log Maintenance'];
-  if (status === 'UNDER_MAINTENANCE') return ['View', 'Complete Maintenance'];
-  if (status === 'DAMAGED') return ['View', 'Log Maintenance', 'Retire'];
+  if (status === 'UNDER_MAINTENANCE') return ['View'];
+  if (status === 'DAMAGED') return ['View', 'Log Maintenance', 'Decommission'];
   return ['View'];
 }

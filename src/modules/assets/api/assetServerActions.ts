@@ -13,8 +13,11 @@ import {
   type AssetReturnInput,
 } from '@/modules/assets/schema/assetSchemas';
 import type {
+  AssetCategoryDefinition,
+  AssetCategoryFieldDefinition,
   AssetDetail,
   AssetFiltersState,
+  AssetIdDefinition,
   AssetListResponse,
   AssetMetaResponse,
   AssetReportType,
@@ -79,6 +82,7 @@ function normalizeAssetPayload(data: AssetInput) {
     assetCode: parsed.data.assetCode,
     name: parsed.data.name,
     category: parsed.data.category,
+    categoryDefinitionId: parsed.data.categoryDefinitionId || null,
     serialNumber: parsed.data.serialNumber || null,
     model: parsed.data.model || null,
     purchaseDate: parsed.data.purchaseDate || null,
@@ -88,6 +92,13 @@ function normalizeAssetPayload(data: AssetInput) {
     status: parsed.data.status,
     location: parsed.data.location || null,
     quantity: parsed.data.quantity,
+    customFields: (parsed.data.customFields || []).map((cf) => ({
+      fieldDefinitionId: cf.fieldDefinitionId,
+      value: cf.value ?? null,
+    })),
+    units: (parsed.data.units || []).map((u) => ({
+      serialNumber: u.serialNumber ?? null,
+    })),
   };
 }
 
@@ -99,6 +110,7 @@ export async function fetchAssetsAction(params: {
   const query = buildQuery({
     search: params.filters.search,
     category: params.filters.category,
+    category_definition_id: params.filters.categoryDefinitionId,
     status: params.filters.status,
     current_holder_member_id: params.filters.currentHolderMemberId,
     page: params.filters.page,
@@ -198,6 +210,7 @@ export async function provideAssetAction(params: {
     headers: buildHeaders(params.orgSlug, params.memberId),
     body: JSON.stringify({
       memberId: payload.memberId,
+      assetUnitId: payload.assetUnitId || null,
       providedDate: payload.providedDate || null,
       conditionWhileProviding: payload.conditionWhileProviding,
       providedByMemberId: payload.providedByMemberId || null,
@@ -228,6 +241,7 @@ export async function returnAssetAction(params: {
     headers: buildHeaders(params.orgSlug, params.memberId),
     body: JSON.stringify({
       memberId: payload.memberId,
+      assetUnitId: payload.assetUnitId || null,
       returnDate: payload.returnDate || null,
       returnedCondition: payload.returnedCondition,
       receivedByMemberId: payload.receivedByMemberId || null,
@@ -266,6 +280,7 @@ export async function createAssetMaintenanceAction(params: {
       status: payload.status,
       conditionBeforeMaintenance: payload.conditionBeforeMaintenance || null,
       notes: payload.notes || null,
+      assetUnitId: payload.assetUnitId || null,
     }),
   });
   return handleResponse<AssetDetail>(res);
@@ -328,4 +343,195 @@ export async function exportAssetsPdfAction(params: {
     base64: bytes.toString('base64'),
     fileName: `${params.reportType.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`,
   };
+}
+
+export async function exportAssetsCsvAction(params: {
+  orgSlug: string;
+  memberId: string;
+  reportType: AssetReportType;
+  memberIdFilter?: string;
+}): Promise<string> {
+  const query = buildQuery({
+    report_type: params.reportType,
+    member_id: params.memberIdFilter,
+  });
+  const res = await fetch(`${getApiUrl()}/assets/report.csv${query}`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  if (!res.ok) return handleResponse<string>(res);
+  return res.text();
+}
+
+// ── Category CRUD Actions ─────────────────────────────────────────────────────
+
+export async function fetchAssetCategoriesAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<AssetCategoryDefinition[]> {
+  const res = await fetch(`${getApiUrl()}/assets/categories`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<AssetCategoryDefinition[]>(res);
+}
+
+export async function createAssetCategoryAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: { name: string; description?: string };
+}): Promise<AssetCategoryDefinition> {
+  const res = await fetch(`${getApiUrl()}/assets/categories`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<AssetCategoryDefinition>(res);
+}
+
+export async function updateAssetCategoryAction(params: {
+  orgSlug: string;
+  memberId: string;
+  categoryId: string;
+  data: { name?: string; description?: string };
+}): Promise<AssetCategoryDefinition> {
+  const res = await fetch(`${getApiUrl()}/assets/categories/${params.categoryId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<AssetCategoryDefinition>(res);
+}
+
+export async function deleteAssetCategoryAction(params: {
+  orgSlug: string;
+  memberId: string;
+  categoryId: string;
+}): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/assets/categories/${params.categoryId}`, {
+    method: 'DELETE',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<void>(res);
+}
+
+export async function createAssetCategoryFieldAction(params: {
+  orgSlug: string;
+  memberId: string;
+  categoryId: string;
+  data: {
+    fieldName: string;
+    fieldType: string;
+    fieldOptions?: string[];
+    isRequired?: boolean;
+    displayOrder?: number;
+  };
+}): Promise<AssetCategoryFieldDefinition> {
+  const res = await fetch(`${getApiUrl()}/assets/categories/${params.categoryId}/fields`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<AssetCategoryFieldDefinition>(res);
+}
+
+export async function updateAssetCategoryFieldAction(params: {
+  orgSlug: string;
+  memberId: string;
+  fieldId: string;
+  data: {
+    fieldName?: string;
+    fieldType?: string;
+    fieldOptions?: string[] | null;
+    isRequired?: boolean;
+    displayOrder?: number;
+  };
+}): Promise<AssetCategoryFieldDefinition> {
+  const res = await fetch(`${getApiUrl()}/assets/categories/fields/${params.fieldId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<AssetCategoryFieldDefinition>(res);
+}
+
+export async function deleteAssetCategoryFieldAction(params: {
+  orgSlug: string;
+  memberId: string;
+  fieldId: string;
+}): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/assets/categories/fields/${params.fieldId}`, {
+    method: 'DELETE',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<void>(res);
+}
+
+// ── Dashboard Actions ─────────────────────────────────────────────────────────
+
+export async function fetchAssetDashboardAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<import('@/modules/assets/components/dashboard/dashboard.types').DashboardData> {
+  const res = await fetch(`${getApiUrl()}/assets/dashboard`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<import('@/modules/assets/components/dashboard/dashboard.types').DashboardData>(res);
+}
+
+// ── Asset ID CRUD Actions ────────────────────────────────────────────────────
+
+export async function fetchAssetIdsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<AssetIdDefinition[]> {
+  const res = await fetch(`${getApiUrl()}/assets/asset-ids`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<AssetIdDefinition[]>(res);
+}
+
+export async function createAssetIdAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: { assetIdName: string };
+}): Promise<AssetIdDefinition> {
+  const res = await fetch(`${getApiUrl()}/assets/asset-ids`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<AssetIdDefinition>(res);
+}
+
+export async function updateAssetIdAction(params: {
+  orgSlug: string;
+  memberId: string;
+  assetIdId: string;
+  data: { assetIdName?: string };
+}): Promise<AssetIdDefinition> {
+  const res = await fetch(`${getApiUrl()}/assets/asset-ids/${params.assetIdId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<AssetIdDefinition>(res);
+}
+
+export async function deleteAssetIdAction(params: {
+  orgSlug: string;
+  memberId: string;
+  assetIdId: string;
+}): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/assets/asset-ids/${params.assetIdId}`, {
+    method: 'DELETE',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<void>(res);
 }

@@ -53,6 +53,7 @@ import {
     Calculator,
     // Operations
     Monitor,
+    Wrench,
     Headphones,
     FileStack,
 } from "lucide-react";
@@ -110,6 +111,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
     "payslips":            Receipt,
     "tax":                 Calculator,
     "assets":              Monitor,
+    "maintenance":         Wrench,
     "helpdesk":            Headphones,
     "documents":           FileStack,
 };
@@ -147,6 +149,7 @@ function LogoRow({ orgName, orgSlug }: { orgName: string; orgSlug: string }) {
             onClick={() => setOpen(!open)}
             whileTap={{ scale: 0.88 }}
             aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+            suppressHydrationWarning
             className="flex items-center justify-center h-8 w-8 rounded-full shrink-0 transition-all duration-200 text-white/40 hover:text-white hover:bg-white/10 active:scale-95"
         >
             <motion.span
@@ -213,6 +216,7 @@ function NavSearch({
             <button
                 onClick={handleCollapsedClick}
                 aria-label="Search navigation"
+                suppressHydrationWarning
                 className="flex items-center justify-center h-9 w-9 rounded-full mx-auto text-white/40 hover:text-white hover:bg-white/10 transition-all duration-200 active:scale-95"
             >
                 <MagnifyingGlassIcon className="h-4 w-4" />
@@ -401,6 +405,7 @@ function UserFooter({
         <div ref={dropdownRef} className="relative border-t border-white/5 pt-4">
             <button
                 onClick={() => setDropdownOpen((v) => !v)}
+                suppressHydrationWarning
                 className={cn(
                     "flex items-center w-full rounded-xl px-3 py-2.5 transition-all duration-200 gap-3 hover:bg-white/5 text-left active:scale-[0.98]",
                     dropdownOpen && "bg-white/5 shadow-inner"

@@ -40,7 +40,7 @@ export default function RootLayout({
                 "font-sans",
             )}
         >
-            <body className="min-h-full flex flex-col">
+            <body className="min-h-full flex flex-col" suppressHydrationWarning>
                 <Providers>{children}</Providers>
 
                 <Toaster position="bottom-right"/>

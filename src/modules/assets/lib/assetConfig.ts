@@ -1,5 +1,21 @@
 import type { ElementType } from 'react';
-import { BarChart3, Hammer, LaptopMinimal, PackagePlus, RotateCcw } from 'lucide-react';
+import {
+  AlertTriangle,
+  Archive,
+  ArrowLeftRight,
+  BarChart3,
+  ClipboardList,
+  Hammer,
+  LaptopMinimal,
+  LayoutDashboard,
+  LayoutGrid,
+  PackageCheck,
+  PackagePlus,
+  RotateCcw,
+  UserCircle,
+  Users,
+  Wrench,
+} from 'lucide-react';
 import type {
   AssetInput,
   AssetMaintenanceCreateInput,
@@ -11,26 +27,65 @@ import type { AssetMaintenanceSummary, AssetReportType } from '@/modules/assets/
 
 export const ACTION_GREEN = '#00874a';
 
-export type AssetTabValue = 'register' | 'provide' | 'returns' | 'maintenance' | 'reports';
+export type AssetTabValue = 'dashboard' | 'register' | 'categories' | 'provide' | 'reports';
 
-export const ASSET_TAB_OPTIONS: Array<{
+const ASSET_TABS: Array<{
   value: AssetTabValue;
   label: string;
   icon: ElementType;
 }> = [
+  { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { value: 'register', label: 'Asset Register', icon: LaptopMinimal },
-  { value: 'provide', label: 'Provide Asset', icon: PackagePlus },
-  { value: 'returns', label: 'Returns', icon: RotateCcw },
-  { value: 'maintenance', label: 'Maintenance', icon: Hammer },
+  { value: 'categories', label: 'Categories', icon: LayoutGrid },
+  { value: 'provide', label: 'Issue Asset', icon: PackagePlus },
   { value: 'reports', label: 'Reports', icon: BarChart3 },
 ];
 
-export const REPORT_CARDS: AssetReportType[] = ['ALL_ASSETS', 'AVAILABLE_ASSETS', 'MAINTENANCE_HISTORY'];
+export function getAssetTabOptions(canManage: boolean) {
+  if (canManage) return ASSET_TABS;
+  return [];
+}
+
+export const ASSET_TAB_OPTIONS = getAssetTabOptions(true);
+
+export const REPORT_GROUPS: Array<{
+  label: string;
+  icon: ElementType;
+  types: AssetReportType[];
+}> = [
+  {
+    label: 'Register',
+    icon: ClipboardList,
+    types: ['ALL_ASSETS', 'AVAILABLE_ASSETS', 'PROVIDED_ASSETS', 'DAMAGED_ASSETS'],
+  },
+  {
+    label: 'Activity',
+    icon: ArrowLeftRight,
+    types: ['RETURNED_ASSETS', 'MAINTENANCE_HISTORY'],
+  },
+  {
+    label: 'Employee',
+    icon: Users,
+    types: ['EMPLOYEE_ASSET_REPORT', 'OFFBOARDING_PENDING_RETURN'],
+  },
+];
+
+export const REPORT_TYPE_ICONS: Record<AssetReportType, ElementType> = {
+  ALL_ASSETS: Archive,
+  AVAILABLE_ASSETS: PackageCheck,
+  PROVIDED_ASSETS: UserCircle,
+  DAMAGED_ASSETS: AlertTriangle,
+  RETURNED_ASSETS: ArrowLeftRight,
+  MAINTENANCE_HISTORY: Wrench,
+  EMPLOYEE_ASSET_REPORT: Users,
+  OFFBOARDING_PENDING_RETURN: ClipboardList,
+};
 
 export const defaultAssetForm: AssetInput = {
   assetCode: '',
   name: '',
   category: 'OTHER',
+  categoryDefinitionId: null,
   serialNumber: '',
   model: '',
   purchaseDate: '',
@@ -40,12 +95,15 @@ export const defaultAssetForm: AssetInput = {
   status: 'AVAILABLE',
   location: '',
   quantity: 1,
+  customFields: [],
+  units: [],
 };
 
 export function createProvideForm(memberId: string): AssetProvideInput {
   return {
     memberId: '',
     assetId: '',
+    assetUnitId: null,
     providedDate: '',
     conditionWhileProviding: 'GOOD',
     providedByMemberId: memberId,
@@ -57,6 +115,7 @@ export function createReturnForm(memberId: string): AssetReturnInput {
   return {
     memberId: '',
     assetId: '',
+    assetUnitId: null,
     returnDate: '',
     returnedCondition: 'GOOD',
     receivedByMemberId: memberId,
@@ -68,6 +127,7 @@ export function createReturnForm(memberId: string): AssetReturnInput {
 export function createMaintenanceForm(): AssetMaintenanceCreateInput {
   return {
     assetId: '',
+    assetUnitId: null,
     maintenanceType: 'REPAIR',
     issueDescription: '',
     serviceDate: '',

@@ -5,8 +5,10 @@ import {
   fetchAssetDetailAction,
   fetchAssetMetaAction,
   fetchAssetsAction,
+  fetchAssetCategoriesAction,
 } from '@/modules/assets/api/assetServerActions';
 import type {
+  AssetCategoryDefinition,
   AssetDetail,
   AssetFiltersState,
   AssetListResponse,
@@ -35,5 +37,13 @@ export function useAssetDetailQuery(orgSlug: string, memberId: string, assetId: 
     queryKey: ['asset', orgSlug, assetId],
     queryFn: () => fetchAssetDetailAction({ orgSlug, memberId, assetId: assetId! }),
     enabled: !!orgSlug && !!memberId && !!assetId,
+  });
+}
+
+export function useAssetCategoriesQuery(orgSlug: string, memberId: string) {
+  return useQuery<AssetCategoryDefinition[], Error>({
+    queryKey: ['asset-categories', orgSlug],
+    queryFn: () => fetchAssetCategoriesAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
   });
 }

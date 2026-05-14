@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { ACTION_GREEN } from '@/modules/assets/components/assetsPageConfig';
+import { ACTION_GREEN } from '@/modules/assets/lib/assetConfig';
 import type { AssetStatus, AssetSummary } from '@/modules/assets/types/assetTypes';
 
 export function AssetRowSkeleton({ colSpan }: { colSpan: number }) {
@@ -34,19 +34,19 @@ export function SectionCard({
 }) {
   return (
     <section className="overflow-hidden rounded-3xl border border-[#e5e7eb] bg-white shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-      <div className="flex flex-col gap-4 border-b border-[#eef0f3] px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-3 border-b border-[#eef0f3] px-4 py-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
             Asset Management
           </p>
-          <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-[#111827]">
+          <h2 className="mt-0.5 text-[18px] font-semibold tracking-[-0.02em] text-[#111827]">
             {title}
           </h2>
-          <p className="mt-2 max-w-3xl text-[14px] leading-6 text-[#6b7280]">{description}</p>
+          <p className="mt-1 max-w-3xl text-[13px] leading-5 text-[#6b7280]">{description}</p>
         </div>
         {action}
       </div>
-      <div className="px-6 py-5">{children}</div>
+      <div className="px-4 py-3">{children}</div>
     </section>
   );
 }

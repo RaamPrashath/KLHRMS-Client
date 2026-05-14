@@ -52,14 +52,32 @@ export const assetReportTypeOptions = [
   'OFFBOARDING_PENDING_RETURN',
 ] as const;
 
+export const categoryFieldTypeOptions = [
+  'TEXT',
+  'NUMBER',
+  'DATE',
+  'BOOLEAN',
+  'SELECT',
+] as const;
+
 const optionalTrimmedString = (max: number) =>
   z.string().trim().max(max).optional().or(z.literal(''));
+
+const customFieldValueSchema = z.object({
+  fieldDefinitionId: z.string().min(1),
+  value: z.string().nullable().optional(),
+});
+
+const assetUnitInputSchema = z.object({
+  serialNumber: z.string().nullable().optional(),
+});
 
 export const assetSchema = z
   .object({
     assetCode: z.string().trim().min(1, 'Asset code / Tag ID is required').max(120),
     name: z.string().trim().min(1, 'Asset name is required').max(255),
     category: z.enum(assetCategoryOptions),
+    categoryDefinitionId: z.string().optional().nullable(),
     serialNumber: optionalTrimmedString(255),
     model: optionalTrimmedString(120),
     purchaseDate: z.string().optional().or(z.literal('')),
@@ -69,6 +87,8 @@ export const assetSchema = z
     status: z.enum(assetStatusOptions),
     location: optionalTrimmedString(160),
     quantity: z.coerce.number().int('Quantity must be a whole number').min(1, 'Quantity must be at least 1'),
+    customFields: z.array(customFieldValueSchema).optional().default([]),
+    units: z.array(assetUnitInputSchema).optional().default([]),
   })
   .refine(
     (data) =>
@@ -83,6 +103,7 @@ export const assetSchema = z
 export const assetProvideSchema = z.object({
   memberId: z.string().min(1, 'Employee is required'),
   assetId: z.string().min(1, 'Asset is required'),
+  assetUnitId: z.string().optional().nullable(),
   providedDate: z.string().optional().or(z.literal('')),
   conditionWhileProviding: z.enum(assetConditionOptions),
   providedByMemberId: z.string().optional().or(z.literal('')),
@@ -92,6 +113,7 @@ export const assetProvideSchema = z.object({
 export const assetReturnSchema = z.object({
   memberId: z.string().min(1, 'Employee is required'),
   assetId: z.string().min(1, 'Asset is required'),
+  assetUnitId: z.string().optional().nullable(),
   returnDate: z.string().optional().or(z.literal('')),
   returnedCondition: z.enum(assetConditionOptions),
   receivedByMemberId: z.string().optional().or(z.literal('')),
@@ -101,6 +123,7 @@ export const assetReturnSchema = z.object({
 
 export const assetMaintenanceCreateSchema = z.object({
   assetId: z.string().min(1, 'Asset is required'),
+  assetUnitId: z.string().optional().nullable(),
   maintenanceType: z.enum(assetMaintenanceTypeOptions),
   issueDescription: z.string().trim().min(1, 'Issue description is required'),
   serviceDate: z.string().min(1, 'Service date is required'),
@@ -142,8 +165,33 @@ export const assetMaintenanceUpdateSchema = z
     }
   });
 
+// Category schemas
+export const assetCategoryCreateSchema = z.object({
+  name: z.string().trim().min(1, 'Category name is required').max(100),
+  description: z.string().optional().or(z.literal('')),
+});
+
+export const assetCategoryFieldCreateSchema = z.object({
+  fieldName: z.string().trim().min(1, 'Field name is required').max(100),
+  fieldType: z.enum(categoryFieldTypeOptions),
+  fieldOptions: z.array(z.string()).optional(),
+  isRequired: z.boolean().default(false),
+  displayOrder: z.number().int().default(0),
+});
+
+export const assetCategoryFieldUpdateSchema = z.object({
+  fieldName: z.string().trim().min(1).max(100).optional(),
+  fieldType: z.enum(categoryFieldTypeOptions).optional(),
+  fieldOptions: z.array(z.string()).optional().nullable(),
+  isRequired: z.boolean().optional(),
+  displayOrder: z.number().int().optional(),
+});
+
 export type AssetInput = z.infer<typeof assetSchema>;
 export type AssetProvideInput = z.infer<typeof assetProvideSchema>;
 export type AssetReturnInput = z.infer<typeof assetReturnSchema>;
 export type AssetMaintenanceCreateInput = z.infer<typeof assetMaintenanceCreateSchema>;
 export type AssetMaintenanceUpdateInput = z.infer<typeof assetMaintenanceUpdateSchema>;
+export type AssetCategoryCreateInput = z.infer<typeof assetCategoryCreateSchema>;
+export type AssetCategoryFieldCreateInput = z.infer<typeof assetCategoryFieldCreateSchema>;
+export type AssetCategoryFieldUpdateInput = z.infer<typeof assetCategoryFieldUpdateSchema>;

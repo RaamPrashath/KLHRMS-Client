@@ -96,6 +96,7 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
         title: "Operations",
         items: [
             { title: "Assets",             urlSuffix: "assets",              permissionKey: "assets"    },
+            { title: "Maintenance",        urlSuffix: "maintenance",         permissionKey: "assets"    },
             { title: "Helpdesk",           urlSuffix: "helpdesk",            permissionKey: "helpdesk"  },
             { title: "Documents",          urlSuffix: "documents",           permissionKey: "documents" },
         ],

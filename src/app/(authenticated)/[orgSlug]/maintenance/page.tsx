@@ -3,9 +3,9 @@ import { getScope, hasPermission } from '@/lib/hrms-roles';
 import type { RolePermissions } from '@/lib/hrms-roles';
 import { requireOrgMembership } from '@/lib/organizations';
 import { requireServerSession } from '@/lib/server-session';
-import { AssetsPageShell } from '@/modules/assets/components/AssetsPageShell';
+import { MaintenancePageShell } from '@/modules/assets/components/MaintenancePageShell';
 
-export default async function AssetsPage({
+export default async function MaintenancePage({
   params,
 }: Readonly<{
   params: Promise<{ orgSlug: string }>;
@@ -33,7 +33,7 @@ export default async function AssetsPage({
 
   return (
     <div className="min-h-full bg-canvas px-5 pt-4">
-      <AssetsPageShell orgSlug={orgSlug} memberId={memberId!} canManageAssets={canManageAssets} />
+      <MaintenancePageShell orgSlug={orgSlug} memberId={memberId!} canManageAssets={canManageAssets} />
     </div>
   );
 }

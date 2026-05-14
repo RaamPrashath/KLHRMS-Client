@@ -44,11 +44,72 @@ export type AssetReportType =
   | 'EMPLOYEE_ASSET_REPORT'
   | 'OFFBOARDING_PENDING_RETURN';
 
+export type CategoryFieldType = 'TEXT' | 'NUMBER' | 'DATE' | 'BOOLEAN' | 'SELECT';
+
+export interface AssetIdDefinition {
+  id: string;
+  assetIdName: string;
+  isActive: boolean;
+}
+
+export interface AssetCategoryDefinition {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  fields: AssetCategoryFieldDefinition[];
+}
+
+export interface AssetCategoryFieldDefinition {
+  id: string;
+  categoryId: string;
+  fieldName: string;
+  fieldType: CategoryFieldType;
+  fieldOptions: { options?: string[] } | null;
+  isRequired: boolean;
+  displayOrder: number;
+}
+
+export interface CustomFieldValueInput {
+  fieldDefinitionId: string;
+  value: string | null;
+}
+
+export interface CustomFieldValueResponse {
+  fieldDefinitionId: string;
+  fieldName: string;
+  fieldType: string;
+  value: string | null;
+}
+
+export interface AssetUnitInput {
+  serialNumber: string | null;
+}
+
+export interface AssetUnitResponse {
+  id: string;
+  assetId: string;
+  serialNumber: string | null;
+  status: string;
+  currentHolderMemberId: string | null;
+  currentHolderName: string | null;
+  condition: string | null;
+}
+
+export interface AssetUnitSummary {
+  total: number;
+  available: number;
+  provided: number;
+  underMaintenance: number;
+  damaged: number;
+}
+
 export interface AssetSummary {
   id: string;
   assetCode: string;
   name: string;
   category: AssetCategory;
+  categoryDefinitionId: string | null;
   serialNumber: string | null;
   model: string | null;
   purchaseDate: string | null;
@@ -65,10 +126,13 @@ export interface AssetSummary {
   currentHolderName: string | null;
   currentHolderEmail: string | null;
   openMaintenanceCount: number;
+  unitSummary: AssetUnitSummary | null;
+  customFields: CustomFieldValueResponse[];
 }
 
 export interface AssetProvideRecordSummary {
   id: string;
+  assetUnitId: string | null;
   memberId: string;
   memberName: string | null;
   memberEmail: string | null;
@@ -86,6 +150,7 @@ export interface AssetProvideRecordSummary {
 
 export interface AssetMaintenanceSummary {
   id: string;
+  assetUnitId: string | null;
   maintenanceType: AssetMaintenanceType;
   issueDescription: string;
   serviceDate: string;
@@ -104,6 +169,7 @@ export interface AssetDetail extends AssetSummary {
   activeProvision: AssetProvideRecordSummary | null;
   assetHistory: AssetProvideRecordSummary[];
   maintenanceHistory: AssetMaintenanceSummary[];
+  units: AssetUnitResponse[];
 }
 
 export interface AssetListResponse {
@@ -122,7 +188,7 @@ export interface AssetLookupOption {
 
 export interface AssetMetaResponse {
   members: AssetLookupOption[];
-  categories: AssetCategory[];
+  categories: AssetCategoryDefinition[];
   statuses: AssetStatus[];
   conditions: AssetCondition[];
   maintenanceTypes: AssetMaintenanceType[];
@@ -133,6 +199,7 @@ export interface AssetMetaResponse {
 export interface AssetFiltersState {
   search?: string;
   category?: AssetCategory;
+  categoryDefinitionId?: string;
   status?: AssetStatus;
   currentHolderMemberId?: string;
   page: number;
