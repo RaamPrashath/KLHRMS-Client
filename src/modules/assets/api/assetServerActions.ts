@@ -469,6 +469,59 @@ export async function deleteAssetCategoryFieldAction(params: {
   return handleResponse<void>(res);
 }
 
+// ── Maintenance Tickets Actions ───────────────────────────────────────────────
+
+export interface MaintenanceTicket {
+  id: string;
+  assetId: string;
+  assetName: string;
+  assetCode: string;
+  assetCondition: string;
+  maintenanceType: string;
+  issueDescription: string;
+  status: string;
+  serviceDate: string;
+  createdAt: string;
+  loggedByMemberId: string | null;
+  loggedByName: string | null;
+}
+
+export async function fetchMaintenanceTicketsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<MaintenanceTicket[]> {
+  const res = await fetch(`${getApiUrl()}/assets/tickets`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<MaintenanceTicket[]>(res);
+}
+
+// ── My Tickets Actions ────────────────────────────────────────────────────────
+
+export async function fetchMyTicketsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<Array<{
+  id: string;
+  assetId: string;
+  assetName: string;
+  assetCode: string;
+  maintenanceType: string;
+  issueDescription: string;
+  status: string;
+  serviceDate: string;
+  createdAt: string;
+}>> {
+  const res = await fetch(`${getApiUrl()}/assets/tickets/mine`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse(res);
+}
+
 // ── Dashboard Actions ─────────────────────────────────────────────────────────
 
 export async function fetchAssetDashboardAction(params: {

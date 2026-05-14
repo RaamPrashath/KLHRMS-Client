@@ -30,7 +30,7 @@ export function OrgSidebarShell({
     const pathname = usePathname();
     const isLeaveRoute = pathname.includes("/leaves");
     const isCandidatesRoute = pathname.includes("/candidates");
-    const isFullWidthRoute = isLeaveRoute || isCandidatesRoute || pathname.includes("/assets");
+    const isFullWidthRoute = isLeaveRoute || isCandidatesRoute || pathname.includes("/assets") || pathname.includes("/maintenance")
 
     return (
         <div className="flex h-dvh overflow-hidden">

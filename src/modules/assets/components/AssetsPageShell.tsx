@@ -27,6 +27,7 @@ import { AssetIdManager } from '@/modules/assets/components/AssetIdManager';
 import { CategoryTab } from '@/modules/assets/components/CategoryTab';
 import { DashboardTab } from '@/modules/assets/components/dashboard/DashboardTab';
 import { IssueAssetTab } from '@/modules/assets/components/IssueAssetTab';
+import { MyTicketsTab } from '@/modules/assets/components/MyTicketsTab';
 import { RaiseTicketDialog } from '@/modules/assets/components/RaiseTicketDialog';
 import { ReportsTab } from '@/modules/assets/components/ReportsTab';
 import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog';
@@ -81,6 +82,7 @@ export function AssetsPageShell({
   const [assetForm, setAssetForm] = useState<AssetInput>(defaultAssetForm);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'create' | 'manage'>('manage');
+  const [employeeTab, setEmployeeTab] = useState<'assets' | 'tickets'>('assets');
   const [raiseTicketOpen, setRaiseTicketOpen] = useState(false);
 
   const router = useRouter();
@@ -280,60 +282,107 @@ export function AssetsPageShell({
             Report Issue
           </Button>
         </div>
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="w-full sm:max-w-xs flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2">
-            <Search className="size-4 shrink-0 text-[#9ca3af]" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search assets..."
-              className="h-auto border-0 bg-transparent px-0 py-0 text-[13px] shadow-none focus-visible:ring-0 placeholder:text-[#9ca3af]"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Select
-              value={categoryFilter}
-              onValueChange={(value) => setCategoryFilter(value as AssetCategory | 'ALL')}
+
+        <div className="mb-5">
+          <div className="inline-flex rounded-lg bg-[#f4f5f7] p-0.5">
+            <button
+              type="button"
+              onClick={() => setEmployeeTab('assets')}
+              className={`relative rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-200 ${
+                employeeTab === 'assets' ? 'text-white' : 'text-[#6b7280] hover:text-[#111827]'
+              }`}
             >
-              <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
-                <SelectValue placeholder="All categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All categories</SelectItem>
-                {assetCategoryOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {humanize(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as AssetStatus | 'ALL')}
+              {employeeTab === 'assets' && (
+                <motion.span
+                  layoutId="employee-tab-pill"
+                  className="absolute inset-0 rounded-md bg-[#1d1d1f]"
+                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                />
+              )}
+              <span className="relative z-10">My Assets</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setEmployeeTab('tickets')}
+              className={`relative rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-200 ${
+                employeeTab === 'tickets' ? 'text-white' : 'text-[#6b7280] hover:text-[#111827]'
+              }`}
             >
-              <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
-                {assetStatusOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {humanize(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {employeeTab === 'tickets' && (
+                <motion.span
+                  layoutId="employee-tab-pill"
+                  className="absolute inset-0 rounded-md bg-[#1d1d1f]"
+                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                />
+              )}
+              <span className="relative z-10">My Tickets</span>
+            </button>
           </div>
         </div>
-        <AssetRegisterTab
-          assets={filteredAssets}
-          isLoading={registerQuery.isLoading}
-          onOpenDetail={openDetail}
-          onEdit={() => {}}
-          onProvide={() => {}}
-          onMaintenance={seedMaintenanceForm}
-          onDecommission={() => {}}
-        />
+
+        {employeeTab === 'assets' ? (
+          <>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="w-full sm:max-w-xs flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2">
+                <Search className="size-4 shrink-0 text-[#9ca3af]" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search assets..."
+                  className="h-auto border-0 bg-transparent px-0 py-0 text-[13px] shadow-none focus-visible:ring-0 placeholder:text-[#9ca3af]"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={categoryFilter}
+                  onValueChange={(value) => setCategoryFilter(value as AssetCategory | 'ALL')}
+                >
+                  <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All categories</SelectItem>
+                    {assetCategoryOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {humanize(option)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value as AssetStatus | 'ALL')}
+                >
+                  <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All statuses</SelectItem>
+                    {assetStatusOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {humanize(option)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <AssetRegisterTab
+              assets={filteredAssets}
+              isLoading={registerQuery.isLoading}
+              onOpenDetail={openDetail}
+              onEdit={() => {}}
+              onProvide={() => {}}
+              onMaintenance={seedMaintenanceForm}
+              onDecommission={() => {}}
+            />
+          </>
+        ) : (
+          <div className="rounded-xl border border-[#e5e7eb] bg-white p-5">
+            <MyTicketsTab orgSlug={orgSlug} memberId={memberId} />
+          </div>
+        )}
+
         <AssetDetailDialog
           open={!!detailAssetId}
           onOpenChange={(open) => !open && setDetailAssetId(null)}

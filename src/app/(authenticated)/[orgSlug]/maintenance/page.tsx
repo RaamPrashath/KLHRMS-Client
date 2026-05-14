@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getScope, hasPermission } from '@/lib/hrms-roles';
+import { hasPermission } from '@/lib/hrms-roles';
 import type { RolePermissions } from '@/lib/hrms-roles';
 import { requireOrgMembership } from '@/lib/organizations';
 import { requireServerSession } from '@/lib/server-session';
@@ -26,14 +26,9 @@ export default async function MaintenancePage({
 
   if (!permissions || !hasPermission(permissions, 'maintenance')) redirect(`/${orgSlug}`);
 
-  const canManageAssets =
-    getScope(permissions, 'assets', 'create') === 'organization' ||
-    getScope(permissions, 'assets', 'edit') === 'organization' ||
-    getScope(permissions, 'assets', 'delete') === 'organization';
-
   return (
     <div className="min-h-full bg-canvas px-5 pt-4">
-      <MaintenancePageShell orgSlug={orgSlug} memberId={memberId!} canManageAssets={canManageAssets} />
+      <MaintenancePageShell orgSlug={orgSlug} memberId={memberId!} />
     </div>
   );
 }
