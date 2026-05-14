@@ -1,5 +1,6 @@
 export interface PipelineJobPosting {
   id: string;
+  slug: string;
   title: string;
   status: string;
 }
@@ -11,6 +12,10 @@ export interface CandidateSummary {
   email: string;
   phone: string | null;
   linkedinUrl: string | null;
+  portfolioUrl: string | null;
+  currentCompany: string | null;
+  currentTitle: string | null;
+  totalExperience: string | null;
   resumeUrl: string | null;
 }
 
@@ -29,8 +34,11 @@ export interface PipelineApplication {
   currentStage: string;
   candidate: CandidateSummary;
   score: number | null;
+  rating: number | null;
   source: string;
   appliedDate: string;
+  lastMovedAt: string | null;
+  status: string;
   resumeUrl: string | null;
   interviewMeeting: ApplicationInterviewMeeting | null;
 }
@@ -118,7 +126,10 @@ export interface CandidateApplicationDetail {
   candidate: CandidateSummary;
   source: string;
   score: number | null;
-  notes: string | null;
+  rating: number | null;
+  coverLetter: string | null;
+  internalNotes: string | null;
+  status: string;
   resumeUrl: string | null;
   appliedAt: string;
   lastActivityAt: string;
@@ -137,6 +148,8 @@ export interface StageWorkspaceAssignment {
   interviewer: StageWorkspaceInterviewer | null;
   scheduledStartAt: string;
   scheduledEndAt: string;
+  meetLink: string | null;
+  status: string;
   emailSentAt: string | null;
 }
 
@@ -146,6 +159,7 @@ export interface StageWorkspaceCandidate {
   jobTitle: string;
   source: string;
   score: number | null;
+  rating: number | null;
   appliedAt: string;
   currentAssignment: StageWorkspaceAssignment | null;
 }
@@ -166,6 +180,7 @@ export interface StageInterviewAssignment {
   interviewerMemberId: string;
   scheduledStartAt: string;
   durationMinutes: number;
+  meetLink?: string | null;
 }
 
 export interface StageInterviewWarning {
@@ -240,6 +255,7 @@ export interface MyInterview {
   status: string;
   role: 'INTERVIEWER' | 'BACKUP';
   isBackup: boolean;
+  meetingUrl: string | null;
 }
 
 export interface MyInterviewListResponse {

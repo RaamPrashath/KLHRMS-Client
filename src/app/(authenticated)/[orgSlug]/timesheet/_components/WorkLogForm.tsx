@@ -5,6 +5,8 @@ import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { ProjectTaskSelector } from '@/modules/attendance/components/ProjectTaskSelector';
 import {
   addMinutesToDate,
@@ -200,7 +202,7 @@ export function WorkLogForm({
       : null;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       <ProjectTaskSelector
         projects={projects}
         selectedProjectId={projectId}
@@ -223,7 +225,7 @@ export function WorkLogForm({
       />
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="wl-duration" className="text-[14px] font-semibold text-ink-muted-48">
+        <Label htmlFor="wl-duration" className="text-[13px] font-medium text-neutral-700">
           Duration
         </Label>
         <Input
@@ -234,12 +236,11 @@ export function WorkLogForm({
           onBlur={handleDurationBlur}
           placeholder="e.g. 2 hrs 30 mins"
           aria-invalid={!!errors.duration}
-          className="border-hairline bg-canvas/30"
         />
         {errors.duration ? (
           <p className="text-xs font-medium text-destructive">{errors.duration}</p>
         ) : derivedMinutes !== null ? (
-          <p className="text-xs font-medium text-ink-muted-48">
+          <p className="text-xs font-medium text-muted-foreground">
             {formatMinutesToDuration(derivedMinutes)}
           </p>
         ) : null}
@@ -247,15 +248,15 @@ export function WorkLogForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="wl-start" className="text-[14px] font-semibold text-ink-muted-48">
-            Start <span className="font-bold text-destructive">*</span>
+          <Label htmlFor="wl-start" className="text-[13px] font-medium text-neutral-700">
+            Start <span className="text-destructive">*</span>
           </Label>
           <Input
             id="wl-start"
             type="time"
             value={startTimeStr}
             onChange={(event) => handleStartChange(event.target.value)}
-            className="border-hairline bg-canvas/30 font-mono"
+            className="font-mono"
             aria-invalid={!!errors.startTime}
           />
           {errors.startTime ? (
@@ -264,8 +265,8 @@ export function WorkLogForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="wl-end" className="text-[14px] font-semibold text-ink-muted-48">
-            End <span className="font-bold text-destructive">*</span>
+          <Label htmlFor="wl-end" className="text-[13px] font-medium text-neutral-700">
+            End <span className="text-destructive">*</span>
           </Label>
           <Input
             id="wl-end"
@@ -273,7 +274,7 @@ export function WorkLogForm({
             value={endTimeStr}
             onChange={(event) => handleEndChange(event.target.value)}
             onBlur={handleEndBlur}
-            className="border-hairline bg-canvas/30 font-mono"
+            className="font-mono"
             aria-invalid={!!errors.endTime}
           />
           {errors.endTime ? (
@@ -283,8 +284,8 @@ export function WorkLogForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="wl-notes" className="text-[14px] font-semibold text-ink-muted-48">
-          Description <span className="font-normal opacity-60 text-ink-muted-48">(optional)</span>
+        <Label htmlFor="wl-notes" className="text-[13px] font-medium text-neutral-700">
+          Description <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
         <Textarea
           id="wl-notes"
@@ -292,31 +293,18 @@ export function WorkLogForm({
           onChange={(event) => setNotes(event.target.value)}
           placeholder="Additional details..."
           rows={3}
-          className="resize-none border-hairline bg-canvas/30 text-sm text-ink placeholder:text-ink-muted-48/50"
+          className="resize-none"
         />
       </div>
 
-      <div className="flex items-center gap-3 pt-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="h-10 flex-1 rounded-pill border border-hairline px-4 text-[14px] font-semibold text-ink transition-all duration-200 hover:bg-canvas active:scale-[0.95]"
-        >
+      <div className="flex items-center gap-3 pt-2 border-t border-neutral-100">
+        <Button type="button" variant="outline" onClick={onCancel} className="flex-1" size="lg">
           Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-pill bg-primary px-4 text-[14px] font-semibold text-white transition-all duration-200 hover:bg-primary-hover active:scale-[0.95] disabled:pointer-events-none disabled:opacity-40"
-        >
-          {isPending ? (
-            <svg className="size-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          ) : null}
+        </Button>
+        <Button type="submit" disabled={isPending} className="flex-1" size="lg">
+          {isPending ? <Spinner /> : null}
           {submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

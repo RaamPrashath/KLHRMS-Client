@@ -106,15 +106,10 @@ function isGoogleConnectError(error: unknown): boolean {
 function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineStageInput {
   return {
     name: data.name,
-    meetingEnabled: data.meetingEnabled,
-    offerLetterEnabled: data.offerLetterEnabled,
+    stageType: data.stageType,
     evaluationEnabled: data.evaluationEnabled,
-    evaluationType: data.evaluationType,
-    evaluationIncludeTotal: data.evaluationIncludeTotal,
-    evaluationIncludeAnalysis: data.evaluationIncludeAnalysis,
     dueDate: data.dueDate,
     dueDateEnabled: Boolean(data.dueDate),
-    extendToNextWorkingDay: data.extendToNextWorkingDay,
     evaluationCategories: data.evaluationCategories,
   };
 }
@@ -127,10 +122,23 @@ function requiredGoogleScope(action: PendingGoogleAction): string {
   return action.kind === 'create-interview' ? GOOGLE_CALENDAR_SCOPE : GOOGLE_SHEETS_SCOPE;
 }
 
-function readGoogleAccounts(data: unknown): Array<{ providerId?: unknown; scopes?: unknown }> {
+function readGoogleAccounts(data: unknown): Array<{ providerId?: unknown; scope?: unknown; scopes?: unknown }> {
   return Array.isArray(data)
-    ? data.filter((item): item is { providerId?: unknown; scopes?: unknown } => typeof item === 'object' && item !== null)
+    ? data.filter((item): item is { providerId?: unknown; scope?: unknown; scopes?: unknown } => typeof item === 'object' && item !== null)
     : [];
+}
+
+function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
+  if (Array.isArray(account.scopes)) {
+    return account.scopes.filter((scope): scope is string => typeof scope === 'string');
+  }
+  if (typeof account.scopes === 'string') {
+    return account.scopes.split(/[,\s]+/).filter(Boolean);
+  }
+  if (typeof account.scope === 'string') {
+    return account.scope.split(/[,\s]+/).filter(Boolean);
+  }
+  return [];
 }
 
 function toIstDateTimeInput(value: Date): string {
@@ -184,20 +192,28 @@ export function AtsKanbanBoard({
   jobPostings,
   onJobPostingChange,
   isLoadingPostings,
+  showJobSelector = true,
+  pipelineBasePath,
 }: {
   readonly orgSlug: string;
   readonly memberId: string;
   readonly jobPostingId: string | null;
-  readonly jobPostings: Array<{ id: string; title: string }>;
+  readonly jobPostings: Array<{ id: string; slug?: string; title: string; status?: string }>;
   readonly onJobPostingChange: (id: string) => void;
   readonly isLoadingPostings: boolean;
+  readonly showJobSelector?: boolean;
+  readonly pipelineBasePath?: string;
 }) {
   const router = useRouter();
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [activeApplication, setActiveApplication] = useState<PipelineApplication | null>(null);
   const [addAfterStageId, setAddAfterStageId] = useState<string | null>(null);
   const [renamingStage, setRenamingStage] = useState<PipelineStage | null>(null);
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
+    if (typeof window === 'undefined') return 'kanban';
+    const stored = window.localStorage.getItem('pipeline-view-preference');
+    return stored === 'table' ? 'table' : 'kanban';
+  });
   const [globalSearch, setGlobalSearch] = useState('');
   const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
   const deferredGlobalSearch = useDeferredValue(globalSearch);
@@ -221,6 +237,10 @@ export function AtsKanbanBoard({
   const [meetingStartLocal, setMeetingStartLocal] = useState('');
   const [meetingDuration, setMeetingDuration] = useState(30);
   const pendingMeetingWindowRef = useRef<Window | null>(null);
+  const currentPosting = useMemo(
+    () => jobPostings.find((posting) => posting.id === jobPostingId) ?? null,
+    [jobPostingId, jobPostings],
+  );
 
   const hasGoogleAccess = useCallback(async (scope: string) => {
     const result = await authClient.listAccounts();
@@ -228,10 +248,19 @@ export function AtsKanbanBoard({
       throw new Error(result.error.message ?? 'Could not check Google connection');
     }
 
-    return readGoogleAccounts(result.data).some((account) => {
-      if (account.providerId !== 'google' || !Array.isArray(account.scopes)) return false;
-      return account.scopes.includes(scope);
-    });
+    const accounts = readGoogleAccounts(result.data);
+    const googleAccount = accounts.find((account) => account.providerId === 'google');
+    
+    if (!googleAccount) return false;
+
+    return normalizeGoogleScopes(googleAccount).includes(scope);
+  }, []);
+
+  const hasGoogleLinked = useCallback(async () => {
+    const result = await authClient.listAccounts();
+    if (result.error) return false;
+    
+    return readGoogleAccounts(result.data).some((account) => account.providerId === 'google');
   }, []);
 
   const requestGoogleConnection = useCallback((action: PendingGoogleAction) => {
@@ -244,6 +273,10 @@ export function AtsKanbanBoard({
       if (!options?.skipGoogleCheck && actionNeedsGoogle(action)) {
         const hasAccess = await hasGoogleAccess(requiredGoogleScope(action));
         if (!hasAccess) {
+          if (pendingMeetingWindowRef.current) {
+            pendingMeetingWindowRef.current.close();
+            pendingMeetingWindowRef.current = null;
+          }
           requestGoogleConnection(action);
           return;
         }
@@ -322,12 +355,16 @@ export function AtsKanbanBoard({
     try {
       const action = JSON.parse(storedAction) as PendingGoogleAction;
       window.setTimeout(() => {
-        void runStageAction(action, { skipGoogleCheck: true });
+        void runStageAction(action);
       }, 0);
     } catch {
       toast.error('Google connected, but the pending stage change could not be restored');
     }
   }, [jobPostingId, pendingStorageKey, runStageAction]);
+
+  useEffect(() => {
+    window.localStorage.setItem('pipeline-view-preference', viewMode);
+  }, [viewMode]);
 
   function handleDragStart(event: DragStartEvent) {
     const applicationId = String(event.active.id);
@@ -376,14 +413,25 @@ export function AtsKanbanBoard({
       const callbackUrl = new URL(window.location.href);
       callbackUrl.searchParams.set(GOOGLE_CONNECT_RETURN_PARAM, '1');
 
+      const requiredScope = requiredGoogleScope(pendingGoogleAction);
+      const alreadyLinked = await hasGoogleLinked();
+      
       const result = await authClient.linkSocial({
         provider: 'google',
         callbackURL: callbackUrl.toString(),
-        scopes: [GOOGLE_SHEETS_SCOPE, GOOGLE_CALENDAR_SCOPE],
+        scopes: [requiredScope],
         disableRedirect: true,
       });
+      
       if (result.error) {
-        throw new Error(result.error.message ?? 'Google connection failed');
+        // If account is already linked, this is expected when requesting additional scopes
+        // The error might be misleading, but the OAuth flow should still work
+        if (alreadyLinked && result.error.message?.includes('already linked')) {
+          // Continue with the OAuth flow to request additional scopes
+          console.log('Requesting additional scopes for existing Google account');
+        } else {
+          throw new Error(result.error.message ?? 'Google connection failed');
+        }
       }
 
       const data = result.data as { url?: string } | null;
@@ -490,7 +538,8 @@ export function AtsKanbanBoard({
   }
 
   function openStageWorkspace(stage: PipelineStage) {
-    router.push(`/${orgSlug}/candidates/stage/${stage.slug}`);
+    const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/jobs/${currentPosting.slug}/pipeline` : `/${orgSlug}/candidates`);
+    router.push(`${basePath}/${stage.slug}`);
   }
 
   if (!jobPostingId) {
@@ -520,22 +569,24 @@ export function AtsKanbanBoard({
               className="h-9 bg-white pl-9"
             />
           </div>
-          <Select
-            value={jobPostingId ?? undefined}
-            onValueChange={onJobPostingChange}
-            disabled={isLoadingPostings || !jobPostings.length}
-          >
-            <SelectTrigger className="h-9 w-full bg-white lg:w-[280px]">
-              <SelectValue placeholder={isLoadingPostings ? 'Loading jobs' : 'Select job posting'} />
-            </SelectTrigger>
-            <SelectContent>
-              {jobPostings.map((posting) => (
-                <SelectItem key={posting.id} value={posting.id}>
-                  {posting.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {showJobSelector ? (
+            <Select
+              value={jobPostingId ?? undefined}
+              onValueChange={onJobPostingChange}
+              disabled={isLoadingPostings || !jobPostings.length}
+            >
+              <SelectTrigger className="h-9 w-full bg-white lg:w-[280px]">
+                <SelectValue placeholder={isLoadingPostings ? 'Loading jobs' : 'Select job posting'} />
+              </SelectTrigger>
+              <SelectContent>
+                {jobPostings.map((posting) => (
+                  <SelectItem key={posting.id} value={posting.id}>
+                    {posting.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
           <Button size="sm" onClick={() => setAddAfterStageId(stages.at(-1)?.id ?? null)}>
             <Plus className="size-4" />
             Stage
@@ -665,9 +716,13 @@ export function AtsKanbanBoard({
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary-ghost text-primary">
               <FileSpreadsheet className="size-5" />
             </div>
-            <DialogTitle>Connect Google Workspace</DialogTitle>
+            <DialogTitle>
+              {pendingGoogleAction?.kind === 'create-interview' ? 'Connect Google Calendar' : 'Connect Google Sheets'}
+            </DialogTitle>
             <DialogDescription>
-              Evaluation sheets and interview meetings use Google. Connect once, then this action will continue automatically.
+              {pendingGoogleAction?.kind === 'create-interview'
+                ? 'Interview meetings need Google Calendar access to create a Meet link and email the candidate.'
+                : 'Evaluation workspaces need Google Sheets access. After Google connects, this action will continue automatically.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

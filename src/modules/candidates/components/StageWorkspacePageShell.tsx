@@ -475,36 +475,7 @@ export function StageWorkspacePageShell({
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center rounded-xl bg-neutral-100 p-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setAssignmentMode('direct')}
-                  className={cn(
-                    'relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200',
-                    assignmentMode === 'direct'
-                      ? 'bg-white text-neutral-900 shadow-sm'
-                      : 'text-neutral-500 hover:text-neutral-700',
-                  )}
-                >
-                  <Users className="size-4" />
-                  Direct
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAssignmentMode('automatic')}
-                  className={cn(
-                    'relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200',
-                    assignmentMode === 'automatic'
-                      ? 'bg-white text-neutral-900 shadow-sm'
-                      : 'text-neutral-500 hover:text-neutral-700',
-                  )}
-                >
-                  <Shuffle className="size-4" />
-                  Automatic
-                </button>
-              </div>
-            </div>
+{/* Direct / Automatic toggle removed for now */}
           </div>
         </div>
 
@@ -537,10 +508,9 @@ export function StageWorkspacePageShell({
                 ) : null}
 
                 <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-surface shadow-[var(--shadow-2)]">
-                  <div className="flex flex-col gap-4 border-b border-neutral-100 bg-neutral-50/50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-4 border-b border-neutral-100 bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h2 className="text-lg font-semibold text-neutral-900">Direct Assignment</h2>
-                      <p className="text-sm text-neutral-500">Assign interviewers and slots for each candidate manually.</p>
                     </div>
                     <Button
                       type="button"

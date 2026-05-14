@@ -17,6 +17,12 @@ export const auth = betterAuth({
         enabled: true,
         requireEmailVerification: true,
     },
+    account: {
+        accountLinking: {
+            enabled: true,
+            allowDifferentEmails: true,
+        },
+    },
     socialProviders: {
         microsoft: {
             clientId: process.env.MICROSOFT_CLIENT_ID!,
@@ -31,10 +37,6 @@ export const auth = betterAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
             accessType: "offline",
             prompt: "consent",
-            scope: [
-                "https://www.googleapis.com/auth/spreadsheets",
-                "https://www.googleapis.com/auth/calendar",
-            ],
         },
     },
     plugins: [

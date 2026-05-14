@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useCreateReassignmentRequest, useFetchMyInterviews, useReshuffleInterviewAssignment } from '@/modules/candidates/hooks/useAtsPipeline';
 import type { MyInterview } from '@/modules/candidates/types/atsTypes';
@@ -173,10 +174,11 @@ export function InterviewsPageShell({
                   >
                     <div className="flex-1 flex justify-center">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-xs font-semibold text-primary">
-                          {interview.candidate.firstName[0]}
-                          {interview.candidate.lastName[0]}
-                        </div>
+                        <Avatar className="size-8">
+                          <AvatarFallback className="bg-primary-ghost text-xs font-semibold text-primary">
+                            {interview.candidate.firstName[0]}{interview.candidate.lastName[0]}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="min-w-0 text-left">
                           <p className="truncate text-sm font-medium text-neutral-900">
                             {candidateName(interview.candidate.firstName, interview.candidate.lastName)}
@@ -232,6 +234,13 @@ export function InterviewsPageShell({
                     <div className="w-[280px] shrink-0 flex justify-end gap-2">
                       {interview.isBackup ? null : (
                         <>
+                          {interview.meetingUrl ? (
+                            <Button size="sm" variant="outline" asChild>
+                              <a href={interview.meetingUrl} target="_blank" rel="noopener noreferrer">
+                                Start Meeting
+                              </a>
+                            </Button>
+                          ) : null}
                           <Button
                             size="sm"
                             variant={acceptedEventIds.includes(interview.eventId) ? 'outline' : 'default'}

@@ -4,16 +4,17 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
 import { fetchPipelineJobPostingsAction } from '@/modules/candidates/api/atsServerActions';
+import { CandidatesJobPageClient } from './CandidatesJobPageClient';
 
-export default async function CandidatesPage({
+export default async function CandidatesJobPage({
   params,
 }: Readonly<{
-  params: Promise<{ orgSlug: string }>;
+  params: Promise<{ orgSlug: string; jobSlug: string }>;
 }>) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) redirect('/login');
 
-  const { orgSlug } = await params;
+  const { orgSlug, jobSlug } = await params;
   let member: Awaited<ReturnType<typeof requireOrgMembership>>['member'];
 
   try {
@@ -23,18 +24,15 @@ export default async function CandidatesPage({
   }
 
   const postings = await fetchPipelineJobPostingsAction({ orgSlug, memberId: member.id });
-  const sorted = postings.sort((a, b) => a.title.localeCompare(b.title));
-  const first = sorted[0];
-
-  if (first?.slug) {
-    redirect(`/${orgSlug}/candidates/${first.slug}`);
-  }
+  const matched = postings.find((p) => p.slug === jobSlug);
+  if (!matched) redirect(`/${orgSlug}/candidates`);
 
   return (
-    <div className="min-h-full bg-canvas px-6 mt-6">
-      <div className="rounded-xl border border-neutral-100 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
-        No job postings are available yet.
-      </div>
-    </div>
+    <CandidatesJobPageClient
+      orgSlug={orgSlug}
+      memberId={member.id}
+      jobPostingId={matched.id}
+      jobPostings={postings}
+    />
   );
 }

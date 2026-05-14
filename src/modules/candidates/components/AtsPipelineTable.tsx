@@ -61,8 +61,11 @@ interface PipelineTableRow {
   source: string;
   currentStage: string;
   pipelineStageId: string;
-  score: number | null;
+  stageOrder: number;
+  rating: number | null;
   appliedDate: string;
+  lastMovedAt: string | null;
+  status: string;
   application: PipelineApplication;
 }
 
@@ -104,8 +107,11 @@ function buildRows(stages: PipelineStage[]): PipelineTableRow[] {
         source: application.source,
         currentStage: stage.name,
         pipelineStageId: stage.id,
-        score: application.score,
+        stageOrder: stage.order,
+        rating: application.rating,
         appliedDate: application.appliedDate,
+        lastMovedAt: application.lastMovedAt,
+        status: application.status,
         application,
       };
     }),
@@ -145,12 +151,12 @@ export function AtsPipelineTable({
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [targetStageId, setTargetStageId] = useState<string>('');
 
-  const rows = useMemo(() => buildRows(stages), [stages]);
+  const rows = useMemo(() => {
+    const built = buildRows(stages);
+    built.sort((a, b) => b.stageOrder - a.stageOrder);
+    return built;
+  }, [stages]);
   const rowIds = useMemo(() => new Set(rows.map((row) => row.id)), [rows]);
-  const sources = useMemo(
-    () => Array.from(new Set(rows.map((row) => row.source).filter(Boolean))).sort(),
-    [rows],
-  );
   const selectedCount = Object.values(rowSelection).filter(Boolean).length;
 
   useEffect(() => {
@@ -164,7 +170,7 @@ export function AtsPipelineTable({
       .filter(([, selected]) => selected)
       .map(([id]) => id);
 
-    if (!targetStageId || selectedIds.length === 0) return;
+    if (!targetStageId || targetStageId === 'all' || selectedIds.length === 0) return;
 
     try {
       await onMoveSelected(selectedIds, targetStageId);
@@ -210,11 +216,11 @@ export function AtsPipelineTable({
         ),
         cell: ({ row }) => (
           <div className="flex min-w-[240px] items-center gap-3">
-            <Avatar className="size-9 border border-neutral-100">
-              <AvatarFallback className="bg-primary-ghost text-xs font-semibold text-primary">
-                {getInitials(row.original.name)}
-              </AvatarFallback>
-            </Avatar>
+              <Avatar className="size-9 border border-neutral-100">
+                <AvatarFallback className="bg-primary-ghost text-xs font-semibold text-primary">
+                  {getInitials(row.original.name)}
+                </AvatarFallback>
+              </Avatar>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-neutral-900">{row.original.name}</p>
               <p className="truncate text-xs text-neutral-500">{row.original.email}</p>
@@ -223,35 +229,13 @@ export function AtsPipelineTable({
         ),
       },
       {
-        accessorKey: 'source',
-        header: ({ column }) => (
-          <SortButton label="Source" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
-        ),
-        cell: ({ row }) => (
-          <span className="inline-flex rounded-full bg-neutral-50 px-2 py-0.5 text-xs font-medium text-neutral-700">
-            {row.original.source}
-          </span>
-        ),
-      },
-      {
         accessorKey: 'currentStage',
         header: ({ column }) => (
-          <SortButton label="Stage" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
+          <SortButton label="Current Stage" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
         ),
         cell: ({ row }) => (
           <span className="inline-flex rounded-full bg-info-bg px-2 py-0.5 text-xs font-medium text-info-text">
             {row.original.currentStage}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'score',
-        header: ({ column }) => (
-          <SortButton label="Score" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
-        ),
-        cell: ({ row }) => (
-          <span className="font-mono text-[13px] text-neutral-700">
-            {row.original.score ?? '-'}
           </span>
         ),
       },
@@ -263,6 +247,37 @@ export function AtsPipelineTable({
         cell: ({ row }) => (
           <span className="font-mono text-[13px] text-neutral-700">
             {formatDate(row.original.appliedDate)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'lastMovedAt',
+        header: ({ column }) => (
+          <SortButton label="Last Moved" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
+        ),
+        cell: ({ row }) => (
+          <span className="font-mono text-[13px] text-neutral-700">
+            {row.original.lastMovedAt ? formatDate(row.original.lastMovedAt) : '—'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'rating',
+        header: ({ column }) => (
+          <SortButton label="Rating" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm text-neutral-700">{row.original.rating ? `${row.original.rating}/5` : '—'}</span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => (
+          <SortButton label="Status" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
+        ),
+        cell: ({ row }) => (
+          <span className="inline-flex rounded-full bg-neutral-50 px-2 py-0.5 text-xs font-medium text-neutral-700">
+            {row.original.status}
           </span>
         ),
       },
@@ -300,7 +315,9 @@ export function AtsPipelineTable({
         row.original.phone,
         row.original.source,
         row.original.currentStage,
-        row.original.score,
+        row.original.rating,
+        row.original.lastMovedAt,
+        row.original.status,
       ].some((value) => normalize(value).includes(query));
     },
     getCoreRowModel: getCoreRowModel(),
@@ -338,34 +355,16 @@ export function AtsPipelineTable({
               ))}
             </SelectContent>
           </Select>
-
-          <Select
-            value={(table.getColumn('source')?.getFilterValue() as string | undefined) ?? 'all'}
-            onValueChange={(value) =>
-              table.getColumn('source')?.setFilterValue(value === 'all' ? undefined : value)
-            }
-          >
-            <SelectTrigger className="h-9 w-[190px] bg-surface">
-              <SelectValue placeholder="Filter source" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
-              {sources.map((source) => (
-                <SelectItem key={source} value={source}>
-                  {source}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <span className="text-sm font-medium text-neutral-700">{selectedCount} selected</span>
-          <Select value={targetStageId || undefined} onValueChange={setTargetStageId}>
+          <Select value={targetStageId || 'all'} onValueChange={setTargetStageId}>
             <SelectTrigger className="h-9 w-full bg-surface sm:w-[190px]">
               <SelectValue placeholder="Select stage" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All stages</SelectItem>
               {stages.map((stage) => (
                 <SelectItem key={stage.id} value={stage.id}>
                   {stage.name}
@@ -376,7 +375,7 @@ export function AtsPipelineTable({
           <Button
             type="button"
             size="sm"
-            disabled={selectedCount === 0 || !targetStageId || isMoving}
+            disabled={selectedCount === 0 || !targetStageId || targetStageId === 'all' || isMoving}
             onClick={moveSelected}
           >
             {isMoving ? <Loader2 className="size-4 animate-spin" /> : null}

@@ -47,13 +47,13 @@ export function WorkLogDialog({
 
   return (
     <Dialog open={state.open} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-sm border-hairline bg-surface rounded-lg shadow-2">
-        <DialogHeader className="px-0 pt-0">
-          <DialogTitle className="text-[21px] font-semibold tracking-tight text-ink">
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
             {isCreate ? 'Add work log' : 'Edit work log'}
           </DialogTitle>
           {state.date && (
-            <DialogDescription className="text-[14px] font-medium text-ink-muted-48">
+            <DialogDescription>
               {formatDialogDate(state.date)}
             </DialogDescription>
           )}
@@ -65,7 +65,6 @@ export function WorkLogDialog({
             date={state.date}
             initialLog={state.log}
             projects={projects}
-            // Pass slot times as defaults when creating from a dragged selection
             defaultStart={isCreate && state.log ? state.log.startTime : undefined}
             defaultEnd={isCreate && state.log ? state.log.endTime : undefined}
             onSubmit={handleSubmit}

@@ -16,14 +16,17 @@ import {
   fetchHiringTeamsAction,
   fetchMyInterviewsAction,
   fetchPipelineBoardAction,
+  fetchPipelineBoardByJobSlugAction,
   fetchPipelineJobPostingsAction,
   fetchStageWorkspaceAction,
+  fetchStageWorkspaceByJobSlugAction,
   createHiringTeamAction,
   generateEvaluationWorkspaceAction,
   moveApplicationStageAction,
   previewStageInterviewWarningsAction,
   reshuffleInterviewAssignmentAction,
   searchInterviewersAction,
+  updateCandidateApplicationDetailAction,
   updatePipelineStageAction,
 } from '@/modules/candidates/api/atsServerActions';
 import type {
@@ -122,6 +125,15 @@ export function usePipelineBoard(orgSlug: string, memberId: string, jobPostingId
   });
 }
 
+export function usePipelineBoardByJobSlug(orgSlug: string, memberId: string, jobSlug: string | null) {
+  return useQuery<PipelineBoard, Error>({
+    queryKey: jobSlug ? ['ats-pipeline-job-slug', orgSlug, jobSlug] : ['ats-pipeline-job-slug', orgSlug, 'none'],
+    queryFn: () => fetchPipelineBoardByJobSlugAction({ orgSlug, memberId, jobSlug: jobSlug ?? '' }),
+    enabled: !!orgSlug && !!memberId && !!jobSlug,
+    refetchInterval: 30_000,
+  });
+}
+
 export function useCandidateApplicationDetail(
   orgSlug: string,
   memberId: string,
@@ -139,11 +151,52 @@ export function useCandidateApplicationDetail(
   });
 }
 
+export function useUpdateCandidateApplicationDetail(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      applicationId: string;
+      data: { internalNotes?: string | null; rating?: number | null; resumeUrl?: string | null };
+    }) =>
+      updateCandidateApplicationDetailAction({
+        orgSlug,
+        memberId,
+        applicationId: params.applicationId,
+        data: params.data,
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['ats-application-detail', orgSlug, data.id], data);
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
+    },
+  });
+}
+
 export function useStageWorkspace(orgSlug: string, memberId: string, stageSlug: string) {
   return useQuery<StageWorkspace, Error>({
     queryKey: stageWorkspaceKey(orgSlug, stageSlug),
     queryFn: () => fetchStageWorkspaceAction({ orgSlug, memberId, stageSlug }),
     enabled: !!orgSlug && !!memberId && !!stageSlug,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useStageWorkspaceByJobSlug(
+  orgSlug: string,
+  memberId: string,
+  jobSlug: string | null,
+  stageSlug: string | null,
+) {
+  return useQuery<StageWorkspace, Error>({
+    queryKey: ['ats-stage-workspace-job-slug', orgSlug, jobSlug, stageSlug],
+    queryFn: () =>
+      fetchStageWorkspaceByJobSlugAction({
+        orgSlug,
+        memberId,
+        jobSlug: jobSlug ?? '',
+        stageSlug: stageSlug ?? '',
+      }),
+    enabled: !!orgSlug && !!memberId && !!jobSlug && !!stageSlug,
     refetchInterval: 30_000,
   });
 }

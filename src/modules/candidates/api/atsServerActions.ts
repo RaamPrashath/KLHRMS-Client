@@ -93,6 +93,19 @@ export async function fetchPipelineBoardAction(params: {
   return handleResponse<PipelineBoard>(res);
 }
 
+export async function fetchPipelineBoardByJobSlugAction(params: {
+  orgSlug: string;
+  memberId: string;
+  jobSlug: string;
+}): Promise<PipelineBoard> {
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/jobs/${encodeURIComponent(params.jobSlug)}`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<PipelineBoard>(res);
+}
+
 export async function fetchStageWorkspaceAction(params: {
   orgSlug: string;
   memberId: string;
@@ -103,6 +116,23 @@ export async function fetchStageWorkspaceAction(params: {
     headers: buildHeaders(params.orgSlug, params.memberId),
     cache: 'no-store',
   });
+  return handleResponse<StageWorkspace>(res);
+}
+
+export async function fetchStageWorkspaceByJobSlugAction(params: {
+  orgSlug: string;
+  memberId: string;
+  jobSlug: string;
+  stageSlug: string;
+}): Promise<StageWorkspace> {
+  const res = await fetch(
+    `${getApiUrl()}/candidates/pipeline/jobs/${encodeURIComponent(params.jobSlug)}/stages/${encodeURIComponent(params.stageSlug)}/workspace`,
+    {
+      method: 'GET',
+      headers: buildHeaders(params.orgSlug, params.memberId),
+      cache: 'no-store',
+    },
+  );
   return handleResponse<StageWorkspace>(res);
 }
 
@@ -188,6 +218,24 @@ export async function fetchCandidateApplicationDetailAction(params: {
     method: 'GET',
     headers: buildHeaders(params.orgSlug, params.memberId),
     cache: 'no-store',
+  });
+  return handleResponse<CandidateApplicationDetail>(res);
+}
+
+export async function updateCandidateApplicationDetailAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  data: {
+    internalNotes?: string | null;
+    rating?: number | null;
+    resumeUrl?: string | null;
+  };
+}): Promise<CandidateApplicationDetail> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
   });
   return handleResponse<CandidateApplicationDetail>(res);
 }
