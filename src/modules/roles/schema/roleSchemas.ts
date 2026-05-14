@@ -23,6 +23,7 @@ export const HRMS_MODULES = [
   'candidates',
   'interviews',
   'offers',
+  'hiringTeams',
   // Lifecycle
   'onboarding',
   'documentCollection',

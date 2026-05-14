@@ -40,6 +40,7 @@ export function useClockInMutation(orgSlug: string, memberId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
       queryClient.invalidateQueries({ queryKey: ['attendance-me', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['bulk-attendance', orgSlug] });
       queryClient.invalidateQueries({
         queryKey: attendanceQueryKeys.attendanceToday(orgSlug, memberId),
       });
@@ -63,6 +64,7 @@ export function useClockOutMutation(orgSlug: string, memberId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
       queryClient.invalidateQueries({ queryKey: ['attendance-me', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['bulk-attendance', orgSlug] });
       queryClient.invalidateQueries({
         queryKey: attendanceQueryKeys.attendanceToday(orgSlug, memberId),
       });

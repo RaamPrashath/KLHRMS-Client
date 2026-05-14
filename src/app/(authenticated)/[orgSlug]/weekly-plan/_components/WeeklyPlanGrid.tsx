@@ -32,6 +32,8 @@ interface WeeklyPlanGridProps {
       hasClockIn: boolean;
     }
   >;
+  holidayDates?: Set<string>;
+  leaveDates?: Set<string>;
   onDraftChange?: (date: string, draft: DayDraft) => void;
   onSave?: () => void;
 }
@@ -86,6 +88,8 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
   isLoading = false,
   isDirty = false,
   isSaving = false,
+  holidayDates = new Set(),
+  leaveDates = new Set(),
   onDraftChange,
   onSave,
 }: WeeklyPlanGridProps) {
@@ -120,6 +124,11 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
   }, [dayDrafts]);
 
   function handleSelect(date: string, nextLocation: PlanLocationValue) {
+    // Prevent changing holiday or leave cells
+    if (holidayDates.has(date) || leaveDates.has(date)) {
+      return;
+    }
+    
     const current = dayDrafts.find((item) => item.date === date)?.draft ?? {
       work_location: "",
       project: "",
@@ -133,7 +142,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
 
   if (isLoading) {
     return (
-      <div className="overflow-hidden rounded-[22px] border border-border bg-white">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
         <div className="p-6">
         <div className="space-y-4">
           <div className="grid grid-cols-[96px_repeat(5,minmax(0,1fr))] gap-3">
@@ -156,7 +165,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
   }
 
   return (
-    <div className="overflow-hidden rounded-[22px] border border-border bg-white">
+    <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
       <div className="overflow-x-auto px-5 py-5 sm:px-6">
         <div className="min-w-[760px]">
           <div className="grid grid-cols-[96px_repeat(5,minmax(0,1fr))] gap-x-1.5 gap-y-2">
@@ -212,6 +221,9 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                       index < dayDrafts.length - 1 &&
                       dayDrafts[index + 1]?.draft.work_location === rowLocation;
                     const isCurrentDay = isToday(parseISO(item.date));
+                    const isHoliday = holidayDates.has(item.date);
+                    const isLeave = leaveDates.has(item.date);
+                    const isProtected = (isHoliday && item.draft.work_location === "HOLIDAY") || (isLeave && item.draft.work_location === "LEAVE");
 
                     const content = (
                       <div
@@ -225,6 +237,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                                   ? "border-[#00874a]/45 bg-[#f4fbf7]"
                                   : "hover:border-[#d8d8de] hover:bg-[#f2f2f5]",
                               ),
+                          isProtected && "opacity-80 cursor-not-allowed",
                         )}
                       >
                         {isSelected ? (
@@ -250,7 +263,11 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                         key={`${rowLocation}-${item.date}`}
                         type="button"
                         onClick={() => handleSelect(item.date, rowLocation)}
-                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00874a]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                        disabled={isProtected}
+                        className={cn(
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00874a]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+                          isProtected && "cursor-not-allowed"
+                        )}
                         aria-pressed={isSelected}
                         aria-label={`${rowMeta?.label ?? rowLocation} on ${item.date}`}
                       >
@@ -299,7 +316,8 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                   type="button"
                   onClick={onSave}
                   disabled={!isDirty || isSaving}
-                  className="h-11 rounded-full border border-[#0b7a44] bg-[linear-gradient(180deg,#1ac56f_0%,#00874a_100%)] px-6 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(0,135,74,0.22),inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:scale-[1.01] hover:shadow-[0_14px_28px_rgba(0,135,74,0.26),inset_0_1px_0_rgba(255,255,255,0.4)] disabled:border-border disabled:bg-[#e8e8eb] disabled:text-muted-foreground disabled:shadow-none"
+                  className="h-10 rounded-lg px-5 text-sm font-medium"
+                  style={{ backgroundColor: '#00874a' }}
                 >
                   {isSaving ? "Saving..." : "Save plan"}
                 </Button>

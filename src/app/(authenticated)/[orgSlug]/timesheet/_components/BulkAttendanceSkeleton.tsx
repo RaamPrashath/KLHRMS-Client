@@ -2,22 +2,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function BulkAttendanceSkeleton() {
   return (
-    <div className="flex flex-col gap-4 animate-pulse">
-      {/* Toolbar skeleton */}
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-8 w-48" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-8 rounded-md" />
-          <Skeleton className="h-8 w-32 rounded-md" />
-          <Skeleton className="h-8 w-8 rounded-md" />
-        </div>
-        <Skeleton className="h-8 w-24 rounded-md" />
+    <div className="flex flex-col gap-6 flex-1 h-full bg-canvas">
+      {/* Header skeleton */}
+      <div className="ml-7 mt-7 mr-7 shrink-0">
+        <Skeleton className="h-9 w-48" />
       </div>
 
-      {/* Calendar skeleton */}
-      <div className="bg-surface border border-neutral-100 rounded-xl overflow-hidden shadow-[var(--shadow-1)]">
+      {/* Card skeleton */}
+      <div className="mx-7 mb-7 bg-surface border border-neutral-100 rounded-xl overflow-hidden shadow-[var(--shadow-1)] flex-1 min-h-0">
         {/* Day headers */}
-        <div className="grid grid-cols-8 border-b border-neutral-100">
+        <div className="grid grid-cols-8 border-t border-neutral-100">
           <div className="border-r border-neutral-100 p-3" />
           {Array.from({ length: 7 }, (_, i) => (
             <div key={i} className="p-3 border-r border-neutral-100 last:border-r-0">

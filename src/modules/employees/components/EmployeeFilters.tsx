@@ -54,10 +54,10 @@ export function EmployeeFilters({
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
         <Input
-          placeholder="Who's in today? email…"
+          placeholder="Who's in today?"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 bg-neutral-50 border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
+          className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
         />
       </div>
 
@@ -68,7 +68,7 @@ export function EmployeeFilters({
           value={roleId ?? ALL_VALUE}
           onValueChange={(v) => onRoleChange(v === ALL_VALUE ? undefined : v)}
         >
-          <SelectTrigger className="h-9 w-[160px] text-sm border-neutral-200">
+          <SelectTrigger className="h-9 w-[160px] text-sm border-0 bg-canvas">
             <SelectValue placeholder="All Roles" />
           </SelectTrigger>
           <SelectContent>
@@ -92,7 +92,7 @@ export function EmployeeFilters({
             )
           }
         >
-          <SelectTrigger className="h-9 w-[180px] text-sm border-neutral-200">
+          <SelectTrigger className="h-9 w-[180px] text-sm border-0 bg-canvas">
             <SelectValue placeholder="All Attendance" />
           </SelectTrigger>
           <SelectContent>

@@ -82,36 +82,36 @@ export interface AppSidebarProps {
 // Maps urlSuffix → Lucide icon component
 const ic = "h-4 w-4 shrink-0";
 
-const NAV_ICONS: Record<string, React.ReactElement<{ className?: string }>> = {
-    "":                    <LayoutDashboard className={ic} />,
-    "employees":           <Users         className={ic} />,
-    "organization":        <Building2     className={ic} />,
-    "departments":         <Network       className={ic} />,
-    "permissions":         <ShieldCheck   className={ic} />,
-    "attendance":          <CalendarClock className={ic} />,
-    "leaves":              <CalendarOff   className={ic} />,
-    "timesheet":           <ClipboardList className={ic} />,
-    "projects":            <FolderKanban  className={ic} />,
-    "weekly-plan":         <CalendarDays  className={ic} />,
-    "jobs":                <Briefcase     className={ic} />,
-    "candidates":          <UserSearch    className={ic} />,
-    "interviews":          <Calendar      className={ic} />,
-    "offers":              <FileText      className={ic} />,
-    "onboarding":          <UserPlus      className={ic} />,
-    "document-collection": <FolderOpen    className={ic} />,
-    "offboarding":         <UserMinus     className={ic} />,
-    "knowledge-transfer":  <BookOpen      className={ic} />,
-    "okrs":                <Target        className={ic} />,
-    "goals":               <Flag          className={ic} />,
-    "reviews":             <Star          className={ic} />,
-    "feedback":            <MessageCircle className={ic} />,
-    "salary-structures":   <Layers        className={ic} />,
-    "payroll":             <Banknote      className={ic} />,
-    "payslips":            <Receipt       className={ic} />,
-    "tax":                 <Calculator    className={ic} />,
-    "assets":              <Monitor       className={ic} />,
-    "helpdesk":            <Headphones    className={ic} />,
-    "documents":           <FileStack     className={ic} />,
+const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+    "":                    LayoutDashboard,
+    "employees":           Users,
+    "organization":        Building2,
+    "departments":         Network,
+    "permissions":         ShieldCheck,
+    "attendance":          CalendarClock,
+    "leaves":              CalendarOff,
+    "timesheet":           ClipboardList,
+    "projects":            FolderKanban,
+    "weekly-plan":         CalendarDays,
+    "jobs":                Briefcase,
+    "candidates":          UserSearch,
+    "interviews":          Calendar,
+    "offers":              FileText,
+    "onboarding":          UserPlus,
+    "document-collection": FolderOpen,
+    "offboarding":         UserMinus,
+    "knowledge-transfer":  BookOpen,
+    "okrs":                Target,
+    "goals":               Flag,
+    "reviews":             Star,
+    "feedback":            MessageCircle,
+    "salary-structures":   Layers,
+    "payroll":             Banknote,
+    "payslips":            Receipt,
+    "tax":                 Calculator,
+    "assets":              Monitor,
+    "helpdesk":            Headphones,
+    "documents":           FileStack,
 };
 
 function getInitials(name?: string | null, email?: string | null) {
@@ -268,10 +268,10 @@ function SidebarNavigation({
     pathname,
     showSearch,
 }: {
-    allNavGroups: ReturnType<typeof filterNavByPermissions>;
-    orgSlug: string;
-    pathname: string;
-    showSearch: boolean;
+    readonly allNavGroups: ReturnType<typeof filterNavByPermissions>;
+    readonly orgSlug: string;
+    readonly pathname: string;
+    readonly showSearch: boolean;
 }) {
     const [search, setSearch] = useState("");
 
@@ -293,7 +293,7 @@ function SidebarNavigation({
             {showSearch && <NavSearch value={search} onChange={setSearch} />}
 
             {navGroups.length === 0 ? (
-                <div className="px-2 py-4 text-xs text-[var(--color-sidebar-label)] text-center leading-relaxed">
+                <div className="px-2 pb-4 text-xs text-[var(--color-sidebar-label)] text-center leading-relaxed">
                     {search.trim() ? (
                         <>No results for &ldquo;{search}&rdquo;</>
                     ) : (
@@ -301,7 +301,7 @@ function SidebarNavigation({
                     )}
                 </div>
             ) : (
-                <nav className="flex flex-col gap-3.5 mt-1">
+                <nav className="flex flex-col ">
                     {navGroups.map((group) => (
                         <div key={group.title} className="flex flex-col gap-0.5">
                             <SidebarLabel>{group.title}</SidebarLabel>

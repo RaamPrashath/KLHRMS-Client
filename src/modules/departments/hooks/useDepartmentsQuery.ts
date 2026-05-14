@@ -4,10 +4,17 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchDepartmentMetaAction, fetchDepartmentsAction } from '@/modules/departments/api/departmentServerActions';
 import type { DepartmentListResponse, DepartmentMetaResponse } from '@/modules/departments/types/departmentTypes';
 
-export function useDepartmentsQuery(orgSlug: string, memberId: string, search?: string) {
+export interface DepartmentFiltersInput {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export function useDepartmentsQuery(orgSlug: string, memberId: string, filters: Partial<DepartmentFiltersInput> = {}) {
+  const { search, page, pageSize } = filters;
   return useQuery<DepartmentListResponse, Error>({
-    queryKey: ['departments', orgSlug, search ?? ''],
-    queryFn: () => fetchDepartmentsAction({ orgSlug, memberId, search }),
+    queryKey: ['departments', orgSlug, search ?? '', page ?? 1, pageSize ?? 25],
+    queryFn: () => fetchDepartmentsAction({ orgSlug, memberId, search: search || undefined, page, pageSize }),
     enabled: !!orgSlug && !!memberId,
     staleTime: 60_000,
     placeholderData: (previous) => previous,

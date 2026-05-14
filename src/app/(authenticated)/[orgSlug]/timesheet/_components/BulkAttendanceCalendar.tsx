@@ -7,15 +7,17 @@ import moment from 'moment';
 import { format, isSameDay } from 'date-fns';
 import { Plus } from 'lucide-react';
 
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 import { BulkAttendanceEvent } from './BulkAttendanceEvent';
-import { BulkAttendanceEmptyState } from './BulkAttendanceEmptyState';
 
 import type {
   BulkDayState,
   CalendarWorkLogEvent,
   LocalWorkLog,
 } from '@/modules/attendance/types/bulkAttendanceTypes';
-import type { HolidayRecord } from '@/modules/leave/types/leaveTypes';
+import type { HolidayRecord, LeaveRequestRecord } from '@/modules/leave/types/leaveTypes';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ─── react-big-calendar setup ─────────────────────────────────────────────────
@@ -78,6 +80,8 @@ function logsToEvents(dayMap: Map<string, BulkDayState>): CalendarWorkLogEvent[]
         resource: {
           type: 'work-log',
           date: day.date,
+          projectId: log.projectId,
+          projectTaskId: log.projectTaskId,
           title: log.title,
           notes: log.notes,
           isOptimistic: log.isOptimistic,
@@ -104,17 +108,19 @@ interface DayHeaderProps {
   date: Date;
   dayMap: Map<string, BulkDayState>;
   holidayMap: Map<string, HolidayRecord>;
+  leaveMap: Map<string, LeaveRequestRecord>;
   onAddLog: (date: string) => void;
 }
 
-function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHeaderProps>) {
+function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Readonly<DayHeaderProps>) {
   const dateStr = dateToYMD(date);
   const day = dayMap.get(dateStr);
   const isToday = isSameDay(date, new Date());
   const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
   const holiday = holidayMap.get(dateStr);
-  const isOff = isWeekend || !!holiday;
+  const leave = leaveMap.get(dateStr);
+  const isOff = isWeekend || !!holiday || !!leave;
 
   const totalMins = day?.logs.reduce((sum, l) => {
     const diff = l.endTime.getTime() - l.startTime.getTime();
@@ -138,7 +144,7 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
   }
 
   const headerContent = (
-    <div className="flex flex-col h-full relative group">
+    <div className="relative flex h-full flex-col">
       {/* Date section */}
       <div className="flex flex-col items-center pt-3 pb-2 px-1 gap-1">
         <span className={`text-[10px] font-bold uppercase tracking-widest ${labelColor}`}>
@@ -170,29 +176,36 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
         </span>
       </div>
 
-      {/* Add button */}
       <div
-        role="button"
-        tabIndex={0}
-        aria-label={`Add work log for ${format(date, 'EEEE d MMMM')}`}
-        onClick={(e) => { e.stopPropagation(); onAddLog(dateStr); }}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onAddLog(dateStr); } }}
-        className="absolute top-2.5 right-2 size-5 flex items-center justify-center rounded text-neutral-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer"
+        className="pointer-events-none absolute inset-x-0 z-30 flex justify-center"
+        style={{ top: 'calc(100% + 8px)' }}
+        data-date={dateStr}
       >
-        <Plus className="size-3.5" strokeWidth={2.5} />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddLog(dateStr);
+          }}
+          className="pointer-events-auto inline-flex h-7 items-center justify-center rounded-md border border-input bg-white/95 px-3 text-[11px] font-semibold shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-primary hover:text-white"
+        >
+          <Plus className="size-3 mr-1.5" strokeWidth={2.5} />
+          Add worklog
+        </button>
       </div>
     </div>
   );
 
-  // Wrap in tooltip only when there's a holiday name to show
-  if (holiday?.name) {
+  const tooltipLabel = leave?.leaveType.name ?? holiday?.name ?? null;
+
+  if (tooltipLabel) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          {headerContent}
+          <div>{headerContent}</div>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs">
-          {holiday.name}
+        <TooltipContent side="top" className="text-xs">
+          {tooltipLabel}
         </TooltipContent>
       </Tooltip>
     );
@@ -237,6 +250,7 @@ interface BulkAttendanceCalendarProps {
   weekStart: Date;
   dayMap: Map<string, BulkDayState>;
   holidays: HolidayRecord[];
+  leaveRequests: LeaveRequestRecord[];
   onOpenCreate: (date: string, slotStart?: Date, slotEnd?: Date) => void;
   onOpenEdit: (date: string, log: LocalWorkLog) => void;
   onDeleteLog: (date: string, logId: string) => Promise<void>;
@@ -253,13 +267,13 @@ export function BulkAttendanceCalendar({
   weekStart,
   dayMap,
   holidays,
+  leaveRequests,
   onOpenCreate,
   onOpenEdit,
   onDeleteLog,
   onDragLog,
 }: Readonly<BulkAttendanceCalendarProps>) {
   const events = useMemo(() => logsToEvents(dayMap), [dayMap]);
-  const hasAnyLogs = events.length > 0;
 
   // Build a map of date string → holiday for fast lookup
   const holidayMap = useMemo(() => {
@@ -271,6 +285,18 @@ export function BulkAttendanceCalendar({
     }
     return map;
   }, [holidays]);
+
+  const leaveMap = useMemo(() => {
+    const map = new Map<string, LeaveRequestRecord>();
+    for (const leave of leaveRequests) {
+      const start = new Date(leave.startDate);
+      const end = new Date(leave.endDate);
+      for (let current = start; current <= end; current = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1)) {
+        map.set(dateToYMD(current), leave);
+      }
+    }
+    return map;
+  }, [leaveRequests]);
 
   const totalWeekMins = useMemo(() => {
     return Array.from(dayMap.values()).reduce((sum, day) => {
@@ -302,6 +328,7 @@ export function BulkAttendanceCalendar({
             date={date}
             dayMap={dayMap}
             holidayMap={holidayMap}
+            leaveMap={leaveMap}
             onAddLog={onOpenCreate}
           />
         ),
@@ -311,7 +338,7 @@ export function BulkAttendanceCalendar({
       ),
       toolbar: () => null,
     }),
-    [dayMap, holidayMap, onOpenCreate, onOpenEdit, onDeleteLog, totalWeekLabel],
+    [dayMap, holidayMap, leaveMap, onOpenCreate, onOpenEdit, onDeleteLog, totalWeekLabel],
   );
 
   // ── Drag handlers ───────────────────────────────────────────────────────────
@@ -347,11 +374,8 @@ export function BulkAttendanceCalendar({
 
   return (
     <div
-      className="border border-black/[0.03] rounded-2xl overflow-hidden"
-      style={{ 
-        backgroundColor: 'var(--color-surface)', 
-        boxShadow: '0 8px 30px rgb(0,0,0,0.04)'
-      }}
+      className="h-full"
+      style={{ backgroundColor: 'var(--color-surface)' }}
     >
       <style>{`
         /* ── Reset & base ── */
@@ -359,7 +383,8 @@ export function BulkAttendanceCalendar({
           font-family: var(--font-sans) !important;
           background: transparent !important;
           color: var(--color-neutral-900) !important;
-          height: 100% !important;
+          min-height: 100% !important;
+          height: auto !important;
         }
 
         /* ── Time view shell ── */
@@ -367,7 +392,8 @@ export function BulkAttendanceCalendar({
           border: none !important;
           display: flex;
           flex-direction: column;
-          height: 100% !important;
+          min-height: 100% !important;
+          height: auto !important;
         }
 
         /* ── Header area ── */
@@ -375,6 +401,9 @@ export function BulkAttendanceCalendar({
           border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
           background: var(--color-canvas) !important;
           flex-shrink: 0 !important;
+          position: sticky !important;
+          top: 0 !important;
+          z-index: 20 !important;
         }
         .rbc-time-header.rbc-overflowing {
           border-right: none !important;
@@ -385,6 +414,13 @@ export function BulkAttendanceCalendar({
         }
         .rbc-time-header-content {
           border-left: none !important;
+        }
+        .rbc-time-header,
+        .rbc-time-header-content,
+        .rbc-time-header-gutter,
+        .rbc-time-header > .rbc-row:first-child,
+        .rbc-time-header .rbc-header {
+          overflow: visible !important;
         }
 
         /* ── Column headers ── */
@@ -397,12 +433,10 @@ export function BulkAttendanceCalendar({
         .rbc-header + .rbc-header {
           border-left: 1px solid rgba(0, 0, 0, 0.03) !important;
         }
-        .rbc-header > button {
-          all: unset;
+        .rbc-header > * {
           display: block !important;
           width: 100% !important;
           height: 100% !important;
-          cursor: default !important;
         }
 
         /* ── All-day row ── */
@@ -412,12 +446,16 @@ export function BulkAttendanceCalendar({
         /* ── Time body ── */
         .rbc-time-content {
           border-top: none !important;
-          flex: 1 !important;
-          overflow-y: scroll !important;
-          scrollbar-width: none !important;
+          flex: 0 0 auto !important;
+          overflow: visible !important;
         }
-        .rbc-time-content::-webkit-scrollbar {
-          display: none !important;
+
+        /* ── Day columns with sticky button ── */
+        .rbc-day-slot {
+          position: relative !important;
+        }
+        .rbc-time-column {
+          position: relative !important;
         }
 
         /* ── Time gutter ── */
@@ -542,7 +580,7 @@ export function BulkAttendanceCalendar({
         onNavigate={() => {/* controlled externally */}}
         step={15}
         timeslots={4}
-        min={new Date(0, 0, 0, 6, 0, 0)}
+        min={new Date(0, 0, 0, 8, 0, 0)}
         max={new Date(0, 0, 0, 22, 0, 0)}
         selectable
         resizable
@@ -552,7 +590,7 @@ export function BulkAttendanceCalendar({
         onEventDrop={handleEventDrop}
         onEventResize={handleEventResize}
         components={components}
-        className="h-[680px]"
+        className="min-h-full"
         formats={{
           timeGutterFormat: 'HH:mm',
           eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
@@ -562,13 +600,6 @@ export function BulkAttendanceCalendar({
         showMultiDayTimes={false}
         popup={false}
       />
-
-      {/* Empty state */}
-      {!hasAnyLogs && (
-        <div className="border-t border-neutral-100 bg-canvas/50">
-          <BulkAttendanceEmptyState />
-        </div>
-      )}
     </div>
   );
 }

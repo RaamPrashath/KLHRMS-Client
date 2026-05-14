@@ -72,7 +72,7 @@ export function EmployeePagination({
             value={String(pageSize)}
             onValueChange={(v) => onPageSizeChange(Number(v))}
           >
-            <SelectTrigger className="h-8 w-[72px] text-xs">
+            <SelectTrigger className="h-8 w-[72px] text-xs" size='sm'>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

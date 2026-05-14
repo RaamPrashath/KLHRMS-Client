@@ -9,6 +9,11 @@ import type { AttendanceRecord } from '@/modules/attendance/types/attendanceType
 
 export type PivotMode = 'weekly' | 'monthly';
 
+interface EmployeeInfo {
+  member_id: string;
+  name: string;
+}
+
 interface AttendancePivotViewProps {
   mode: PivotMode;
   /** ISO date string — first day of the current week (Mon) or month */
@@ -19,6 +24,9 @@ interface AttendancePivotViewProps {
   records: AttendanceRecord[];
   isLoading: boolean;
   showEmployeeColumn: boolean;
+  allEmployees?: EmployeeInfo[];
+  holidayDates?: Set<string>;
+  leaveDates?: Set<string>;
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -93,9 +101,22 @@ function buildEmployeeRows(
   records: AttendanceRecord[],
   days: Date[],
   showEmployeeColumn: boolean,
+  allEmployees?: EmployeeInfo[],
 ): EmployeeRow[] {
   const daySet = new Set(days.map(toYMD));
   const map = new Map<string, EmployeeRow>();
+
+  // Org scope: pre-populate rows for ALL employees before overlaying records
+  if (allEmployees) {
+    for (const emp of allEmployees) {
+      map.set(emp.member_id, {
+        employeeId: emp.member_id,
+        employeeName: emp.name || 'Unknown',
+        byDate: new Map(),
+        total: 0,
+      });
+    }
+  }
 
   for (const r of records) {
     if (!daySet.has(r.date)) continue;
@@ -111,6 +132,16 @@ function buildEmployeeRows(
     const row = map.get(key)!;
     row.byDate.set(r.date, r);
     row.total += r.totalHours ?? 0;
+  }
+
+  // Self scope: always show at least a "Me" row
+  if (map.size === 0 && !showEmployeeColumn) {
+    map.set('me', {
+      employeeId: 'me',
+      employeeName: 'Me',
+      byDate: new Map(),
+      total: 0,
+    });
   }
 
   return Array.from(map.values()).sort((a, b) =>
@@ -131,6 +162,12 @@ function cellValue(record: AttendanceRecord | undefined): string {
   if (!record) return '–';
   if (record.totalHours == null) return '–';
   return `${record.totalHours.toFixed(1)}h`;
+}
+
+function offDayLabel(ymd: string, holidayDates: Set<string>, leaveDates: Set<string>): string | null {
+  if (holidayDates.has(ymd)) return 'Holiday';
+  if (leaveDates.has(ymd)) return 'Leave';
+  return null;
 }
 
 // ─── Today highlight ──────────────────────────────────────────────────────────
@@ -229,11 +266,16 @@ export function AttendancePivotView({
   records,
   isLoading,
   showEmployeeColumn,
+  allEmployees,
+  holidayDates: holidayDatesProp,
+  leaveDates: leaveDatesProp,
 }: Readonly<AttendancePivotViewProps>) {
   const anchor = parseYMD(periodStart);
   const days = getDays(mode, anchor);
   const periodLabel = formatPeriodLabel(mode, days);
-  const employeeRows = buildEmployeeRows(records, days, showEmployeeColumn);
+  const employeeRows = buildEmployeeRows(records, days, showEmployeeColumn, allEmployees);
+  const holidayDates = holidayDatesProp ?? new Set<string>();
+  const leaveDates = leaveDatesProp ?? new Set<string>();
 
   // For monthly view, group days into weeks for the header (optional — we just show all days)
   const isMonthly = mode === 'monthly';
@@ -367,17 +409,26 @@ export function AttendancePivotView({
                     const ymd = toYMD(d);
                     const record = row.byDate.get(ymd);
                     const today = isToday(d);
+                    const isOff = holidayDates.has(ymd) || leaveDates.has(ymd);
+                    const offLabel = offDayLabel(ymd, holidayDates, leaveDates);
                     return (
                       <td
                         key={ymd}
                         className={cn(
                           'px-2 py-3 text-center text-[13px] tabular-nums',
                           today && 'bg-primary/3',
+                          isOff && !record && 'bg-red-50/40',
                         )}
                       >
-                        <span className={cellClass(record)}>
-                          {cellValue(record)}
-                        </span>
+                        {isOff && !record ? (
+                          <span className="text-[11px] font-medium text-red-500">
+                            {offLabel}
+                          </span>
+                        ) : (
+                          <span className={cn(cellClass(record), isOff && 'line-through decoration-red-300/40')}>
+                            {cellValue(record)}
+                          </span>
+                        )}
                       </td>
                     );
                   })}

@@ -8,7 +8,7 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table';
-import { ArrowUpDown, Filter, RefreshCw, Search } from 'lucide-react';
+import { ArrowUpDown, RefreshCw, Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLeaveBalances } from '@/modules/leave/hooks/useLeaveBalances';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
@@ -38,7 +37,7 @@ import type {
 
 function Card({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="overflow-hidden rounded-xl border border-black/[0.03] bg-surface shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+    <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
       {children}
     </div>
   );
@@ -47,7 +46,7 @@ function Card({ children }: Readonly<{ children: React.ReactNode }>) {
 // Toolbar strip: [search][filters…][action buttons]
 function Toolbar({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-neutral-100 bg-surface px-4 py-3">
+    <div className="flex flex-wrap items-center gap-2 border-b border-black/[0.04] bg-surface px-8 py-6">
       {children}
     </div>
   );
@@ -60,23 +59,22 @@ function SearchInput({
 }: Readonly<{ value: string; onChange: (v: string) => void; placeholder: string }>) {
   return (
     <div className="relative min-w-[200px] flex-1">
-      <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
+      <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
       <Input
         type="text"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 pl-8 text-[13px]"
+        className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
       />
     </div>
   );
 }
 
-function SectionEmpty({ title, body }: Readonly<{ title: string; body: string }>) {
+function SectionEmpty({ title }: Readonly<{ title: string; body?: string }>) {
   return (
-    <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 py-10 text-center">
-      <p className="text-sm font-medium text-neutral-900">{title}</p>
-      <p className="max-w-md text-sm text-neutral-500">{body}</p>
+    <div className="bg-surface py-16 text-center text-sm text-neutral-400">
+      {title}
     </div>
   );
 }
@@ -185,8 +183,7 @@ export function LeaveRequestsView() {
           placeholder="Search by name, email, or leave type…"
         />
         <Select value={filter} onValueChange={(v) => { setFilter(v as FilterOption); setPage(1); }}>
-          <SelectTrigger className="h-8 w-[140px] text-[13px]">
-            <Filter className="mr-1.5 size-3.5 text-neutral-400" />
+          <SelectTrigger className="h-9 w-[140px] text-sm border-0 bg-canvas">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -197,8 +194,7 @@ export function LeaveRequestsView() {
           </SelectContent>
         </Select>
         <Select value={sort} onValueChange={(v) => { setSort(v as SortOption); setPage(1); }}>
-          <SelectTrigger className="h-8 w-[150px] text-[13px]">
-            <ArrowUpDown className="mr-1.5 size-3.5 text-neutral-400" />
+          <SelectTrigger className="h-9 w-[150px] text-sm border-0 bg-canvas">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -210,9 +206,11 @@ export function LeaveRequestsView() {
       </Toolbar>
 
       {requestsQuery.isLoading && (
-        <div className="space-y-2 p-4">
+        <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
           {['a','b','c','d','e'].map((k) => (
-            <Skeleton key={`req-${k}`} className="h-10 w-full rounded-lg" />
+            <div key={`req-${k}`} className="border-b border-black/4 p-6">
+              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            </div>
           ))}
         </div>
       )}
@@ -224,21 +222,21 @@ export function LeaveRequestsView() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50/60">
-                  {showNameColumn && <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Name</th>}
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Leave Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Start Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">End Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Days</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Status</th>
+                <tr className="border-b border-black/[0.04] bg-canvas/50">
+                  {showNameColumn && <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Name</th>}
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Leave Type</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Start Date</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">End Date</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Days</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100 bg-white">
+              <tbody className="divide-y divide-black/4 bg-surface">
                 {paged.map((r: LeaveRequestRecord) => (
                   <tr
                     key={r.id}
                     onClick={() => openRequestDetails(r.id)}
-                    className="cursor-pointer transition-colors hover:bg-neutral-50"
+                    className="cursor-pointer transition-colors hover:bg-black/[0.02]"
                   >
                     {showNameColumn && (
                       <td className="px-6 py-3">
@@ -261,7 +259,7 @@ export function LeaveRequestsView() {
             </table>
           </div>
           {totalPages > 1 && (
-            <div className="border-t border-neutral-100 px-4 py-3">
+            <div className="border-t border-black/[0.04] px-8 py-6">
               <EmployeePagination
                 page={page}
                 totalPages={totalPages}
@@ -311,9 +309,11 @@ export function LeaveBalancesView() {
       </Toolbar>
 
       {balancesQuery.isLoading && (
-        <div className="space-y-2 p-4">
+        <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
           {['a','b','c','d','e'].map((k) => (
-            <Skeleton key={`bal-${k}`} className="h-10 w-full rounded-lg" />
+            <div key={`bal-${k}`} className="border-b border-black/4 p-6">
+              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            </div>
           ))}
         </div>
       )}
@@ -324,18 +324,18 @@ export function LeaveBalancesView() {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-neutral-100 bg-neutral-50/60">
-                {showMemberColumn && <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Member</th>}
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Leave Type</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Allocated</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Used</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Carry</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Remaining</th>
+              <tr className="border-b border-black/[0.04] bg-canvas/50">
+                {showMemberColumn && <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Member</th>}
+                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Leave Type</th>
+                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Allocated</th>
+                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Used</th>
+                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Carry</th>
+                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Remaining</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100 bg-white">
+            <tbody className="divide-y divide-black/4 bg-surface">
               {filtered.map((b: LeaveBalanceRecord) => (
-                <tr key={b.id} className="transition-colors hover:bg-neutral-50">
+                <tr key={b.id} className="transition-colors hover:bg-black/[0.02]">
                   {showMemberColumn && (
                     <td className="px-6 py-3">
                       <p className="font-medium text-neutral-900">{b.member.name ?? b.member.email ?? b.member.memberId}</p>
@@ -393,9 +393,11 @@ export function LeaveTypesView() {
       </Toolbar>
 
       {leaveTypesLoading && (
-        <div className="space-y-2 p-4">
+        <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
           {['a','b','c','d'].map((k) => (
-            <Skeleton key={`lt-${k}`} className="h-10 w-full rounded-lg" />
+            <div key={`lt-${k}`} className="border-b border-black/4 p-6">
+              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            </div>
           ))}
         </div>
       )}
@@ -406,17 +408,17 @@ export function LeaveTypesView() {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-neutral-100 bg-neutral-50/60">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Quota</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Carry Forward</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Paid</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">Action</th>
+              <tr className="border-b border-black/[0.04] bg-canvas/50">
+                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Quota</th>
+                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Carry Forward</th>
+                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Paid</th>
+                <th className="px-6 py-3 text-right text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100 bg-white">
+            <tbody className="divide-y divide-black/4 bg-surface">
               {filtered.map((t: LeaveTypeRecord) => (
-                <tr key={t.id} className="transition-colors hover:bg-neutral-50">
+                <tr key={t.id} className="transition-colors hover:bg-black/[0.02]">
                   <td className="px-6 py-3 font-medium text-neutral-900">{t.name}</td>
                   <td className="px-6 py-3 font-mono text-neutral-700">{t.quota}</td>
                   <td className="px-6 py-3 text-neutral-700">{t.carryForward ? 'Enabled' : 'Off'}</td>
@@ -578,8 +580,7 @@ export function LeaveHolidaysView() {
           placeholder="Search holidays…"
         />
         <Select value={String(filters.month)} onValueChange={(v) => setMonth(Number(v))}>
-          <SelectTrigger className="h-8 w-[150px] text-[13px]">
-            <Filter className="mr-1.5 size-3.5 text-neutral-400" />
+          <SelectTrigger className="h-9 w-[150px] text-sm border-0 bg-canvas">
             <SelectValue placeholder="All months" />
           </SelectTrigger>
           <SelectContent>
@@ -612,9 +613,11 @@ export function LeaveHolidaysView() {
 
       <div className={cn('transition-opacity', isFetching && !isLoading ? 'opacity-60' : 'opacity-100')}>
         {isLoading && (
-          <div className="space-y-2 p-4">
+          <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
             {['a','b','c','d','e'].map((k) => (
-              <Skeleton key={`hol-${k}`} className="h-10 w-full rounded-lg" />
+              <div key={`hol-${k}`} className="border-b border-black/4 p-6">
+                <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+              </div>
             ))}
           </div>
         )}
@@ -625,19 +628,19 @@ export function LeaveHolidaysView() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50/60">
-                  {table.getHeaderGroups().map((hg) =>
-                    hg.headers.map((h) => (
-                      <th key={h.id} className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                        {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
-                      </th>
-                    )),
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100 bg-white">
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="transition-colors hover:bg-neutral-50">
+                  <tr className="border-b border-black/[0.04] bg-canvas/50">
+                    {table.getHeaderGroups().map((hg) =>
+                      hg.headers.map((h) => (
+                        <th key={h.id} className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">
+                          {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                        </th>
+                      )),
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/4 bg-surface">
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="transition-colors hover:bg-black/[0.02]">
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-6 py-3">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -652,7 +655,7 @@ export function LeaveHolidaysView() {
       </div>
 
       {total > 0 && (
-        <div className="border-t border-neutral-100 px-4 py-3">
+        <div className="border-t border-black/[0.04] px-8 py-6">
           <EmployeePagination
             page={filters.page}
             totalPages={totalPages}
