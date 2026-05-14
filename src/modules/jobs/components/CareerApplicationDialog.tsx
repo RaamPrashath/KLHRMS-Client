@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -102,7 +102,7 @@ export function CareerApplicationDialog({
 }: Readonly<CareerApplicationDialogProps>) {
   const mutation = usePublicCareerApplication(jobId);
   const form = useForm<PublicCareerApplicationFormValues>({
-    resolver: zodResolver(publicCareerApplicationSchema),
+    resolver: zodResolver(publicCareerApplicationSchema) as Resolver<PublicCareerApplicationFormValues>,
     defaultValues: {
       firstName: '',
       lastName: '',

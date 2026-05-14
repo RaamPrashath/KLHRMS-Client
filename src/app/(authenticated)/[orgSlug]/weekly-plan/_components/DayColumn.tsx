@@ -158,7 +158,7 @@ export const DayColumn = memo(function DayColumn({
 
       <div
         className={cn(
-          "flex min-h-[100px] flex-1 flex-col rounded-b-[20px] border bg-white p-3 transition-colors duration-300",
+          "flex min-h-25 flex-1 flex-col rounded-b-[20px] border bg-white p-3 transition-colors duration-300",
           theme ? theme.border : "border-border",
         )}
       >

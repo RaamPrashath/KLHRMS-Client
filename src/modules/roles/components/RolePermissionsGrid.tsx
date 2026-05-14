@@ -51,6 +51,7 @@ const MODULE_LABELS: Record<string, string> = {
   payslips:           'Payslips',
   tax:                'Tax',
   assets:             'Assets',
+  maintenance:        'Maintenance',
   helpdesk:           'Helpdesk',
   documents:          'Documents',
 };
@@ -62,7 +63,7 @@ const SECTIONS: { label: string; modules: string[] }[] = [
   { label: 'Recruitment',       modules: ['jobs', 'candidates', 'interviews', 'offers'] },
   { label: 'Lifecycle',         modules: ['onboarding', 'documentCollection', 'offboarding', 'knowledgeTransfer'] },
   { label: 'Payroll & Finance', modules: ['salaryStructures', 'payroll', 'payslips', 'tax'] },
-  { label: 'Operations',        modules: ['assets', 'helpdesk', 'documents'] },
+  { label: 'Operations',        modules: ['assets', 'maintenance', 'helpdesk', 'documents'] },
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────

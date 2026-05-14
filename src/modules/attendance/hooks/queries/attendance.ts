@@ -65,9 +65,6 @@ export function useAttendanceQuery(
         },
       }),
     enabled: !!orgSlug && !!memberId,
-    staleTime: 30_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
   });
 
   return {
@@ -105,9 +102,6 @@ export function useMyAttendanceQuery(
         },
       }),
     enabled: !!orgSlug && !!memberId,
-    staleTime: 30_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
   });
 
   return {
@@ -134,9 +128,6 @@ export function useAttendanceTodayQuery(orgSlug: string, memberId: string, today
         },
       }),
     enabled: !!orgSlug && !!memberId,
-    staleTime: 30_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
   });
 }
 
@@ -153,9 +144,7 @@ export function useMemberProfileQuery(memberId: string) {
     queryKey: attendanceQueryKeys.memberProfile(memberId),
     queryFn: () => fetchMemberProfileAction({ memberId }),
     enabled: !!memberId,
-    staleTime: 300_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+
   });
 }
 
@@ -173,9 +162,6 @@ export function useAttendanceClockContextQuery(
         date: todayIso,
       }),
     enabled: !!orgSlug && !!memberId,
-    staleTime: 300_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
   });
 }
 
@@ -189,7 +175,6 @@ export function useBulkAttendanceRangeQuery(
     queryKey: attendanceQueryKeys.bulkAttendance(orgSlug, from, to),
     queryFn: () => fetchBulkAttendanceRangeAction({ orgSlug, memberId, from, to }),
     enabled: !!orgSlug && !!memberId,
-    staleTime: 30_000,
   });
 }
 

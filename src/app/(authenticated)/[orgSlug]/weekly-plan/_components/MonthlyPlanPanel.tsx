@@ -2,9 +2,17 @@
 
 import { memo, startTransition, useEffect, useMemo, useState } from "react";
 import { format, isToday, parseISO } from "date-fns";
-import { Eraser, Save, Sparkles } from "lucide-react";
+import { CalendarRange, CheckCircle2, Eraser, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -44,7 +52,7 @@ interface MonthlyPlanPanelProps {
 const MonthDayCell = memo(function MonthDayCell({
   day,
   location,
-  selectedLocation,
+  locations,
   isInteractive,
   isCurrentDay,
   isHolidayProtected,
@@ -52,15 +60,141 @@ const MonthDayCell = memo(function MonthDayCell({
 }: {
   day: MonthDayItem;
   location: PlanLocationValue | "";
-  selectedLocation: PlanLocationValue;
+  locations: PlanLocationOption[];
   isInteractive: boolean;
   isCurrentDay: boolean;
   isHolidayProtected: boolean;
   onUpdate: (date: string, loc: PlanLocationValue | "") => void;
 }) {
   const theme = location ? PLAN_LOCATION_THEMES[location] : null;
+  const currentLabel = location ? PLAN_LOCATION_MAP[location].label : "No plan";
+  const helperLabel = !isInteractive
+    ? day.isWeekend
+      ? "Weekend"
+      : "Unavailable"
+    : location
+      ? ""
+      : "Click to edit";
 
   return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={!isInteractive}>
+        <button
+          type="button"
+          disabled={!isInteractive}
+          aria-label={
+            isInteractive
+              ? `${format(day.date, "EEEE, MMMM d")}. ${currentLabel}. Open day location menu.`
+              : `${format(day.date, "EEEE, MMMM d")}. ${helperLabel}.`
+          }
+          className={cn(
+            "relative flex h-24 w-full flex-col rounded-[22px] border p-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2",
+            isInteractive
+              ? "hover:-translate-y-0.5 hover:border-foreground/20 active:scale-[0.985]"
+              : "cursor-not-allowed bg-muted/10 text-muted-foreground",
+            theme
+              ? `${theme.bg} ${theme.border}`
+              : isInteractive
+                ? "border-border bg-background"
+                : "border-border/60 bg-muted/20",
+            !day.isCurrentMonth && "opacity-40 grayscale-[0.5]",
+          )}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col">
+              <span className="mb-1 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/60">
+                {format(day.date, "EEE")}
+              </span>
+              <span className="text-lg font-bold leading-none text-foreground">
+                {format(day.date, "d")}
+              </span>
+            </div>
+
+            {isCurrentDay ? (
+              <span className="rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-background">
+                Today
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-auto flex items-end justify-between gap-2">
+            <div className="flex min-w-0 flex-col gap-1">
+              {location ? (
+                <span
+                  className={cn(
+                    "w-fit rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-tight",
+                    theme
+                      ? `${theme.bg} ${theme.text} ${theme.border}`
+                      : "bg-muted/50 text-muted-foreground",
+                  )}
+                >
+                  {PLAN_LOCATION_MAP[location].short_label}
+                </span>
+              ) : (
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                  {day.isWeekend ? "Off" : "---"}
+                </span>
+              )}
+
+              {helperLabel ? (
+                <span className="truncate text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/55">
+                  {helperLabel}
+                </span>
+              ) : null}
+            </div>
+
+            {isInteractive && location ? (
+              <span className="inline-flex h-2.5 w-2.5 rounded-full bg-foreground/55" aria-hidden="true" />
+            ) : null}
+          </div>
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="start"
+        sideOffset={10}
+        className="w-52 rounded-2xl border border-border bg-background p-2 shadow-lg"
+      >
+        <DropdownMenuLabel className="px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
+          {format(day.date, "EEEE, MMM d")}
+        </DropdownMenuLabel>
+        <DropdownMenuLabel className="px-2 pt-0 text-xs font-semibold text-foreground">
+          {currentLabel}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {locations.map((option) => {
+          const optionTheme = PLAN_LOCATION_THEMES[option.value];
+          const isSelected = location === option.value;
+
+          return (
+            <DropdownMenuItem
+              key={option.value}
+              onSelect={() => onUpdate(day.iso, option.value)}
+              className="rounded-xl px-2.5 py-2"
+            >
+              <span className={cn("h-2.5 w-2.5 rounded-full", optionTheme.dot)} />
+              <span className="flex-1 text-xs font-semibold">{option.label}</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+                {option.short_label}
+              </span>
+              {isSelected ? (
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-foreground">
+                  Current
+                </span>
+              ) : null}
+            </DropdownMenuItem>
+          );
+        })}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={() => onUpdate(day.iso, "")}
+          className="rounded-xl px-2.5 py-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+        >
+          <Eraser className="h-3.5 w-3.5" />
+          <span className="text-xs font-semibold">Clear day</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
     <button
       type="button"
       disabled={!isInteractive || isHolidayProtected}
@@ -376,9 +510,47 @@ export function MonthlyPlanPanel({
   }
 
   const resolvedLocations = locations as PlanLocationOption[];
+  const plannedDaysCount = weekdayDates.length - summary.unset;
+  const completionRatio = weekdayDates.length ? plannedDaysCount / weekdayDates.length : 0;
 
   return (
     <div className="flex flex-col gap-6">
+      <section className="flex flex-col gap-5 pt-2">
+        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-[#f5f5f7] p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
+                <CalendarRange className="h-4 w-4" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">
+                  Monthly Plan
+                </h2>
+                <p className="max-w-xl text-[11px] font-medium leading-5 text-muted-foreground/75">
+                  Set a month-wide default first, then refine any weekday directly from the calendar.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <span
+                className={cn(
+                  "inline-flex min-h-9 items-center rounded-full border px-3 text-[10px] font-semibold uppercase tracking-[0.16em]",
+                  isDirty
+                    ? "border-primary/20 bg-primary/10 text-primary"
+                    : "border-border bg-background text-muted-foreground",
+                )}
+              >
+                {isDirty ? "Unsaved changes" : "All changes saved"}
+              </span>
+              <Button
+                type="button"
+                className="h-10 rounded-full px-6 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                onClick={handleSave}
+                disabled={!isDirty || saveMutation.isPending || isMonthLoading}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {saveMutation.isPending ? "Saving..." : "Save Changes"}
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-col gap-4">
@@ -430,6 +602,85 @@ export function MonthlyPlanPanel({
             </div>
           </div>
 
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-4">
+              <MonthNavigator
+                year={monthState.year}
+                month={monthState.month}
+                onPrevious={() => maybeChangeMonth(-1)}
+                onNext={() => maybeChangeMonth(1)}
+              />
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <Select
+                  value={selectedLocation}
+                  onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}
+                >
+                  <SelectTrigger className="h-11 min-w-[220px] rounded-full border-border bg-background text-xs font-semibold">
+                    <SelectValue placeholder="Choose a location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resolvedLocations.map((location) => (
+                      <SelectItem
+                        key={location.value}
+                        value={location.value}
+                        className="text-xs font-semibold"
+                      >
+                        {location.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-background"
+                  onClick={handleApplyEverywhere}
+                  disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Apply to all weekdays
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-background"
+                  onClick={handleClearAll}
+                  disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
+                >
+                  <Eraser className="mr-2 h-4 w-4" />
+                  Reset draft
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex max-w-sm flex-col gap-1 rounded-2xl border border-border/70 bg-background px-4 py-3">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
+                Editing model
+              </span>
+              <p className="text-xs font-medium leading-5 text-foreground">
+                Use the picker above for bulk planning, then open any weekday cell to override it inline.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-background p-6">
+        <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">
+              Calendar
+            </h3>
+            <p className="text-[11px] font-medium text-muted-foreground/70">
+              Every weekday can be changed in place without leaving the month view.
+            </p>
+          </div>
+          <span className="inline-flex min-h-9 items-center rounded-full bg-muted px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            {plannedDaysCount} of {weekdayDates.length} weekdays planned
+          </span>
           <Button
             type="button"
             className="h-10 rounded-lg px-5 text-sm font-medium"
@@ -441,7 +692,6 @@ export function MonthlyPlanPanel({
             {saveMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
-      </div>
 
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
         <div className="mb-6 grid grid-cols-7 gap-3 px-1">
@@ -470,6 +720,17 @@ export function MonthlyPlanPanel({
           ) : (
             monthRows.map((row, rowIndex) => (
               <div key={rowIndex} className="grid grid-cols-7 gap-3">
+                {row.map((day) => (
+                  <MonthDayCell
+                    key={day.iso}
+                    day={day}
+                    location={drafts[day.iso] || ""}
+                    locations={resolvedLocations}
+                    isInteractive={day.isCurrentMonth && !day.isWeekend}
+                    isCurrentDay={isToday(parseISO(day.iso))}
+                    onUpdate={updateDraft}
+                  />
+                ))}
                 {row.map((day) => {
                   const isHolidayProtected = (holidayDates.has(day.iso) && drafts[day.iso] === "HOLIDAY") || (leaveDates.has(day.iso) && drafts[day.iso] === "LEAVE");
                   
@@ -490,8 +751,33 @@ export function MonthlyPlanPanel({
             ))
           )}
         </div>
-      </div>
+      </section>
 
+      <section className="rounded-2xl border border-border bg-[#f5f5f7] p-6">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr]">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">
+                Coverage
+              </h3>
+              <p className="text-[11px] font-medium leading-5 text-muted-foreground/70">
+                A quick read on how complete the month is before you save it.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background px-4 py-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+                  Completion
+                </span>
+                <span className="text-sm font-semibold text-foreground">
+                  {Math.round(completionRatio * 100)}% planned
+                </span>
+              </div>
+            </div>
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
@@ -505,35 +791,67 @@ export function MonthlyPlanPanel({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {resolvedLocations.map((location) => {
-            const theme = PLAN_LOCATION_THEMES[location.value];
-            return (
+            <div className="h-2 overflow-hidden rounded-full bg-background">
               <div
-                key={location.value}
-                className={cn(
-                  "rounded-[24px] border px-5 py-5 transition-all duration-300",
-                  theme.bg,
-                  theme.border,
-                )}
-              >
-                <div className="flex items-center justify-between gap-3">
+                className="h-full rounded-full bg-foreground transition-[width] duration-200 ease-out"
+                style={{ width: `${completionRatio * 100}%` }}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <span className="rounded-full bg-background px-3 py-2">
+                {plannedDaysCount} set
+              </span>
+              <span className="rounded-full bg-background px-3 py-2">
+                {summary.unset} open
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {resolvedLocations.map((location) => {
+              const theme = PLAN_LOCATION_THEMES[location.value];
+              const count = summary.counts[location.value] ?? 0;
+              const ratio = weekdayDates.length ? count / weekdayDates.length : 0;
+
+              return (
+                <div
+                  key={location.value}
+                  className="grid gap-3 rounded-2xl border border-border/70 bg-background px-4 py-4 sm:grid-cols-[minmax(0,180px)_1fr_auto]"
+                >
                   <div className="flex items-center gap-3">
-                    <div className={cn("h-3 w-3 rounded-full shadow-sm", theme.dot)} />
-                    <div>
-                      <p className={cn("text-[13px] font-bold tracking-tight uppercase", theme.text)}>{location.label}</p>
-                      <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest">{location.short_label}</p>
+                    <div className={cn("h-2.5 w-2.5 rounded-full", theme.dot)} />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-foreground">
+                        {location.label}
+                      </p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+                        {location.short_label}
+                      </p>
                     </div>
                   </div>
-                  <span className="text-3xl font-bold text-foreground tabular-nums">
-                    {summary.counts[location.value] ?? 0}
-                  </span>
+
+                  <div className="flex items-center">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn("h-full rounded-full transition-[width] duration-200 ease-out", theme.dot)}
+                        style={{ width: `${ratio * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="text-left sm:text-right">
+                    <p className="text-sm font-semibold tabular-nums text-foreground">{count}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+                      weekdays
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

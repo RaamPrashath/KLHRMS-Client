@@ -1,0 +1,157 @@
+'use client';
+
+import {
+  AlertTriangle,
+  CircleCheck,
+  Package,
+  Ticket,
+  WrenchIcon,
+} from 'lucide-react';
+import { useDashboardQuery } from '@/modules/assets/hooks/useDashboardQuery';
+import { DashboardKPICard } from './DashboardKPICard';
+import { StatusDonutChart } from './StatusDonutChart';
+import { MonthlyTrendChart } from './MonthlyTrendChart';
+import { ActivityTable } from './ActivityTable';
+import { OpenTicketList } from './OpenTicketList';
+
+function SkeletonLine({ className }: { className?: string }) {
+  return <div className={`animate-pulse rounded-md bg-[#e8e8eb] ${className ?? ''}`} />;
+}
+
+export function DashboardTab({
+  orgSlug,
+  memberId,
+}: {
+  orgSlug: string;
+  memberId: string;
+}) {
+  const { data, isLoading, isError } = useDashboardQuery(orgSlug, memberId);
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center rounded-[18px] border border-[#e5e7eb] bg-white px-6 py-14 text-center">
+        <div>
+          <AlertTriangle className="mx-auto size-6 text-[#9ca3af]" />
+          <p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">Failed to load dashboard</p>
+          <p className="mt-0.5 text-[13px] text-[#6e6e73]">Try refreshing the page</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5">
+        <div className="grid grid-cols-5 gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
+              <SkeletonLine className="mb-2 h-7 w-16" />
+              <SkeletonLine className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-5">
+          <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
+            <SkeletonLine className="mb-4 h-5 w-36" />
+            <SkeletonLine className="h-40 w-full" />
+          </div>
+          <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
+            <SkeletonLine className="mb-4 h-5 w-36" />
+            <SkeletonLine className="h-40 w-full" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-5">
+          <div className="col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white p-5">
+            <SkeletonLine className="mb-4 h-5 w-32" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <SkeletonLine className="size-7 rounded-lg" />
+                  <SkeletonLine className="h-4 flex-1" />
+                  <SkeletonLine className="h-3 w-16" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
+            <SkeletonLine className="mb-4 h-5 w-28" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <SkeletonLine className="mt-1 size-2.5 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <SkeletonLine className="h-4 w-32" />
+                    <SkeletonLine className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const d = data!;
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <DashboardKPICard value={d.totalAssets} label="Total Assets" icon={Package} color="#6b7280" />
+        <DashboardKPICard value={d.availableCount} label="Available" icon={CircleCheck} color="#00874a" />
+        <DashboardKPICard value={d.providedCount} label="Provided" icon={UserCheckIcon} color="#2563eb" />
+        <DashboardKPICard value={d.maintenanceCount} label="In Maintenance" icon={WrenchIcon} color="#d97706" />
+        <DashboardKPICard value={d.openTicketCount} label="Open Tickets" icon={Ticket} color="#dc2626" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
+          <h3 className="mb-4 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+            Status Distribution
+          </h3>
+          <StatusDonutChart data={d.statusDistribution} />
+        </div>
+        <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
+          <h3 className="mb-4 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+            Monthly Additions
+          </h3>
+          <MonthlyTrendChart data={d.monthlyTrends} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="lg:col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
+          <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+            Recent Activity
+          </h3>
+          <ActivityTable items={d.recentActivity} />
+        </div>
+        <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
+          <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+            Open Tickets
+          </h3>
+          <OpenTicketList tickets={d.recentTickets} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UserCheckIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <polyline points="16 11 18 13 22 9" />
+    </svg>
+  );
+}

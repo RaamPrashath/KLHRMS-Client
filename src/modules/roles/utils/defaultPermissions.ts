@@ -239,7 +239,12 @@ export function createHRManagerPermissions(): RolePermissions {
   permissions.assets.create = 'organization';
   permissions.assets.edit = 'organization';
   permissions.assets.delete = 'organization';
-  
+
+  permissions.maintenance.view = 'organization';
+  permissions.maintenance.create = 'organization';
+  permissions.maintenance.edit = 'organization';
+  permissions.maintenance.delete = 'organization';
+
   permissions.helpdesk.view = 'organization';
   permissions.helpdesk.create = 'organization';
   permissions.helpdesk.edit = 'organization';

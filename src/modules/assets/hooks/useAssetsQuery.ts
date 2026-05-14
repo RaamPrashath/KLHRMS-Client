@@ -1,0 +1,49 @@
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+import {
+  fetchAssetDetailAction,
+  fetchAssetMetaAction,
+  fetchAssetsAction,
+  fetchAssetCategoriesAction,
+} from '@/modules/assets/api/assetServerActions';
+import type {
+  AssetCategoryDefinition,
+  AssetDetail,
+  AssetFiltersState,
+  AssetListResponse,
+  AssetMetaResponse,
+} from '@/modules/assets/types/assetTypes';
+
+export function useAssetsQuery(orgSlug: string, memberId: string, filters: AssetFiltersState) {
+  return useQuery<AssetListResponse, Error>({
+    queryKey: ['assets', orgSlug, filters],
+    queryFn: () => fetchAssetsAction({ orgSlug, memberId, filters }),
+    enabled: !!orgSlug && !!memberId,
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useAssetMetaQuery(orgSlug: string, memberId: string) {
+  return useQuery<AssetMetaResponse, Error>({
+    queryKey: ['assets-meta', orgSlug],
+    queryFn: () => fetchAssetMetaAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
+  });
+}
+
+export function useAssetDetailQuery(orgSlug: string, memberId: string, assetId: string | null) {
+  return useQuery<AssetDetail, Error>({
+    queryKey: ['asset', orgSlug, assetId],
+    queryFn: () => fetchAssetDetailAction({ orgSlug, memberId, assetId: assetId! }),
+    enabled: !!orgSlug && !!memberId && !!assetId,
+  });
+}
+
+export function useAssetCategoriesQuery(orgSlug: string, memberId: string) {
+  return useQuery<AssetCategoryDefinition[], Error>({
+    queryKey: ['asset-categories', orgSlug],
+    queryFn: () => fetchAssetCategoriesAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
+  });
+}

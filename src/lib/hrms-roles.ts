@@ -12,7 +12,8 @@
  * }
  *
  * A nav item is visible when the user has ANY non-"none" action on the
- * corresponding permission key.
+ * corresponding permission key. If minAction is set, the user must have
+ * that specific action at a non-"none" scope.
  */
 
 // ─── Permission types ─────────────────────────────────────────────────────────
@@ -32,6 +33,8 @@ export interface HrmsNavItem {
     urlSuffix: string;
     /** Key in the permissions JSON that gates this item. */
     permissionKey?: string;
+    /** If set, the user needs this specific action at a non-"none" scope to see the item. */
+    minAction?: string;
 }
 
 export interface HrmsNavGroup {
@@ -96,6 +99,7 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
         title: "Operations",
         items: [
             { title: "Assets",             urlSuffix: "assets",              permissionKey: "assets"    },
+            { title: "Maintenance",        urlSuffix: "maintenance",         permissionKey: "maintenance" },
             { title: "Helpdesk",           urlSuffix: "helpdesk",            permissionKey: "helpdesk"  },
             { title: "Documents",          urlSuffix: "documents",           permissionKey: "documents" },
         ],
@@ -141,8 +145,14 @@ export function filterNavByPermissions(
 
     return HRMS_NAV_CONFIG.reduce<HrmsNavGroup[]>((acc, group) => {
         const visibleItems = group.items.filter((item) => {
-            if (!item.permissionKey) return true; // always visible
-            return hasPermission(permissions, item.permissionKey);
+            if (!item.permissionKey) return true;
+            if (!hasPermission(permissions, item.permissionKey)) return false;
+            if (item.minAction && item.permissionKey) {
+                if (getScope(permissions, item.permissionKey, item.minAction) === "none") {
+                    return false;
+                }
+            }
+            return true;
         });
         if (visibleItems.length > 0) {
             acc.push({ ...group, items: visibleItems });
