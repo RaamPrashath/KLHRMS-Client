@@ -10,12 +10,7 @@ export function BulkAttendanceEmptyState({ onAddLog }: Readonly<BulkAttendanceEm
       <div className="size-14 rounded-full bg-primary-ghost flex items-center justify-center">
         <CalendarDays className="size-7 text-primary" strokeWidth={1.5} />
       </div>
-      <div className="text-center">
-        <p className="text-sm font-medium text-neutral-900">No work logs this week</p>
-        <p className="text-xs text-neutral-500 mt-1">
-          Click the <span className="font-medium text-neutral-700">+</span> button on any day to add your first work log.
-        </p>
-      </div>
+      
       {onAddLog && (
         <button
           type="button"

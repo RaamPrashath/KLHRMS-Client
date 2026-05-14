@@ -196,6 +196,11 @@ export function createHRManagerPermissions(): RolePermissions {
   permissions.interviews.create = 'organization';
   permissions.interviews.edit = 'organization';
   permissions.interviews.delete = 'organization';
+
+  permissions.hiringTeams.view = 'organization';
+  permissions.hiringTeams.create = 'organization';
+  permissions.hiringTeams.edit = 'organization';
+  permissions.hiringTeams.delete = 'organization';
   
   permissions.offers.view = 'organization';
   permissions.offers.create = 'organization';

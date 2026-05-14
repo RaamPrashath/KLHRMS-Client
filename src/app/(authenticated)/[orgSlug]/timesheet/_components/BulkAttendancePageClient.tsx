@@ -1,18 +1,20 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { addDays, format } from 'date-fns';
 import { toast } from 'sonner';
 
-import { BulkAttendanceToolbar } from './BulkAttendanceToolbar';
 import { BulkAttendanceCalendar } from './BulkAttendanceCalendar';
-import { BulkAttendanceLegend } from './BulkAttendanceLegend';
 import { BulkAttendanceSkeleton } from './BulkAttendanceSkeleton';
+import { BulkAttendanceToolbar } from './BulkAttendanceToolbar';
 import { WorkLogDialog } from './WorkLogDialog';
 import type { WorkLogFormValues } from './WorkLogForm';
 
 import { useBulkAttendanceData } from '@/modules/attendance/hooks/use-bulk-attendance-data';
 import { useBulkAttendancePermissions } from '@/modules/attendance/hooks/queries/attendance';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
+import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
+import { useProjectsForAttendance } from '@/modules/projects/hooks/useProjectsForAttendance';
 
 import type {
   LocalWorkLog,
@@ -48,24 +50,37 @@ export function BulkAttendancePageClient({
   // ── Data ─────────────────────────────────────────────────────────────────────
   const {
     currentWeekStart,
-    goToPrevWeek,
-    goToNextWeek,
-    goToCurrentWeek,
     dayMap,
     isLoading,
     isError,
     refetch,
-    saveState,
-    saveError,
     saveDayLogs,
     deleteDayEntry,
     optimisticUpdateDay,
     rollbackDay,
+    goToPrevWeek,
+    goToNextWeek,
+    goToCurrentWeek,
+    saveState,
+    saveError,
   } = useBulkAttendanceData(orgSlug, memberId);
 
   // ── Holidays ─────────────────────────────────────────────────────────────────
   const currentYear = currentWeekStart.getFullYear();
   const { data: holidays = [] } = useHolidays(orgSlug, memberId, { year: currentYear });
+  const weekStartDate = format(currentWeekStart, 'yyyy-MM-dd');
+  const weekEndDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+  const { data: leaveData } = useLeaveRequests(orgSlug, memberId, {
+    status: 'APPROVED',
+    memberId,
+    fromDate: weekStartDate,
+    toDate: weekEndDate,
+    page: 1,
+    pageSize: 50,
+  });
+
+  // ── Projects ─────────────────────────────────────────────────────────────────
+  const { data: projects = [] } = useProjectsForAttendance(orgSlug, memberId);
 
   // ── Dialog state ─────────────────────────────────────────────────────────────
   const [dialogState, setDialogState] = useState<WorkLogDialogState>(CLOSED_DIALOG);
@@ -92,6 +107,8 @@ export function BulkAttendancePageClient({
         id: crypto.randomUUID(),
         startTime: start,
         endTime: end,
+        projectId: null,
+        projectTaskId: null,
         title: null,
         notes: null,
         isOptimistic: true,
@@ -129,7 +146,9 @@ export function BulkAttendancePageClient({
         id: dialogState.mode === 'edit' && dialogState.log ? dialogState.log.id : crypto.randomUUID(),
         startTime: values.startTime,
         endTime: values.endTime,
-        title: values.title,
+        projectId: values.projectId,
+        projectTaskId: values.projectTaskId,
+        title: dialogState.log?.title ?? null,
         notes: values.notes,
         isOptimistic: true,
       };
@@ -225,6 +244,8 @@ export function BulkAttendancePageClient({
         id: isCrossDay ? crypto.randomUUID() : logId,
         startTime: newStart,
         endTime: newEnd,
+        projectId: sourceDay?.logs.find((l) => l.id === logId)?.projectId ?? null,
+        projectTaskId: sourceDay?.logs.find((l) => l.id === logId)?.projectTaskId ?? null,
         title: sourceDay?.logs.find((l) => l.id === logId)?.title ?? null,
         notes: sourceDay?.logs.find((l) => l.id === logId)?.notes ?? null,
         isOptimistic: true,
@@ -347,34 +368,38 @@ export function BulkAttendancePageClient({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Toolbar */}
-      <BulkAttendanceToolbar
-        weekStart={currentWeekStart}
-        onPrev={goToPrevWeek}
-        onNext={goToNextWeek}
-        onToday={goToCurrentWeek}
-        saveState={saveState}
-        saveError={saveError}
-      />
+    <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-0 max-h-dvh overflow-hidden">
+      {/* Header with nav */}
+      <div className="flex items-center justify-between ml-7 mt-7 mr-7 shrink-0">
+        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">Timesheet</h1>
+        <BulkAttendanceToolbar
+          weekStart={currentWeekStart}
+          onPrev={goToPrevWeek}
+          onNext={goToNextWeek}
+          onToday={goToCurrentWeek}
+          saveState={saveState}
+          saveError={saveError}
+        />
+      </div>
 
-      {/* Calendar */}
-      <BulkAttendanceCalendar
-        weekStart={currentWeekStart}
-        dayMap={dayMap}
-        holidays={holidays}
-        onOpenCreate={handleOpenCreate}
-        onOpenEdit={handleOpenEdit}
-        onDeleteLog={handleDeleteLog}
-        onDragLog={handleDragLog}
-      />
-
-      {/* Legend */}
-      <BulkAttendanceLegend />
+      {/* Card — fills remaining space, calendar scrolls internally */}
+      <div className="mx-7 bg-surface border border-neutral-100 rounded-xl overflow-y-auto overflow-x-hidden overscroll-contain shadow-[var(--shadow-1)] flex-1 min-h-0">
+        <BulkAttendanceCalendar
+          weekStart={currentWeekStart}
+          dayMap={dayMap}
+          holidays={holidays}
+          leaveRequests={leaveData?.items ?? []}
+          onOpenCreate={handleOpenCreate}
+          onOpenEdit={handleOpenEdit}
+          onDeleteLog={handleDeleteLog}
+          onDragLog={handleDragLog}
+        />
+      </div>
 
       {/* Work log dialog */}
       <WorkLogDialog
         state={dialogState}
+        projects={projects}
         onClose={handleCloseDialog}
         onSave={handleDialogSave}
         isPending={isSavingDialog}

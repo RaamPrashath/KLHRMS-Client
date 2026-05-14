@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -14,7 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 
 import { leaveRequestSchema, type LeaveRequestInput } from '@/modules/leave/schema/leaveSchemas';
 import { useCreateLeaveRequest } from '@/modules/leave/hooks/useCreateLeaveRequest';
-import type { LeaveMemberSummary, LeavePermissionScope, LeaveTypeRecord } from '@/modules/leave/types/leaveTypes';
+import { useHolidays } from '@/modules/leave/hooks/useHolidays';
+import type { LeaveMemberSummary, LeavePermissionScope, LeaveTypeRecord, HolidayRecord } from '@/modules/leave/types/leaveTypes';
 import { getLeaveErrorMessage } from '@/modules/leave/utils/errorMessage';
 
 interface ApplyLeaveSheetProps {
@@ -29,11 +30,43 @@ interface ApplyLeaveSheetProps {
 
 type ApplyLeaveFormValues = z.input<typeof leaveRequestSchema>;
 
-function calculateDays(startDate?: string, endDate?: string) {
-  if (!startDate || !endDate || endDate < startDate) return 0;
+function isWeekend(dateStr: string): boolean {
+  const day = new Date(`${dateStr}T00:00:00`).getDay();
+  return day === 0 || day === 6;
+}
+
+function isHoliday(dateStr: string, holidays: HolidayRecord[]): boolean {
+  return holidays.some((h) => h.isHoliday && h.holidayDate.slice(0, 10) === dateStr);
+}
+
+function calculateWorkingDays(startDate: string, endDate: string, holidays: HolidayRecord[]): number {
   const start = new Date(`${startDate}T00:00:00`);
   const end = new Date(`${endDate}T00:00:00`);
-  return Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+  let count = 0;
+  const current = new Date(start);
+  while (current <= end) {
+    const dateStr = current.toISOString().slice(0, 10);
+    if (!isWeekend(dateStr) && !isHoliday(dateStr, holidays)) {
+      count++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  return count;
+}
+
+function getExcludedInfo(startDate: string, endDate: string, holidays: HolidayRecord[]) {
+  const totalDays = Math.floor((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000) + 1;
+  let weekends = 0;
+  let holidaysCount = 0;
+  const current = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  while (current <= end) {
+    const dateStr = current.toISOString().slice(0, 10);
+    if (isWeekend(dateStr)) weekends++;
+    else if (isHoliday(dateStr, holidays)) holidaysCount++;
+    current.setDate(current.getDate() + 1);
+  }
+  return { totalDays, weekends, holidaysCount, netDays: totalDays - weekends - holidaysCount };
 }
 
 export function ApplyLeaveSheet({
@@ -46,6 +79,7 @@ export function ApplyLeaveSheet({
   members,
 }: Readonly<ApplyLeaveSheetProps>) {
   const mutation = useCreateLeaveRequest(orgSlug, memberId);
+  const { data: holidays = [] } = useHolidays(orgSlug, memberId);
   const form = useForm<ApplyLeaveFormValues, unknown, LeaveRequestInput>({
     resolver: zodResolver(leaveRequestSchema),
     defaultValues: {
@@ -61,12 +95,16 @@ export function ApplyLeaveSheet({
   const startDate = form.watch('startDate');
   const endDate = form.watch('endDate');
 
+  const leaveInfo = useMemo(() => {
+    if (!startDate || !endDate || endDate < startDate) return null;
+    return getExcludedInfo(startDate, endDate, holidays);
+  }, [startDate, endDate, holidays]);
+
   useEffect(() => {
-    const days = calculateDays(startDate, endDate);
-    if (days > 0) {
-      form.setValue('days', days, { shouldValidate: true });
+    if (leaveInfo) {
+      form.setValue('days', leaveInfo.netDays, { shouldValidate: true });
     }
-  }, [startDate, endDate, form]);
+  }, [leaveInfo, form]);
 
   async function onSubmit(values: LeaveRequestInput) {
     try {
@@ -183,9 +221,17 @@ export function ApplyLeaveSheet({
                 type="number"
                 step="0.5"
                 min="0.5"
-                className="h-10"
+                className="h-10 bg-neutral-50 text-neutral-900"
+                disabled
                 {...form.register('days', { valueAsNumber: true })}
               />
+              {leaveInfo && leaveInfo.totalDays !== leaveInfo.netDays && (
+                <p className="text-xs text-neutral-500">
+                  {leaveInfo.totalDays} calendar day{leaveInfo.totalDays > 1 ? "s" : ""}
+                  {leaveInfo.weekends > 0 ? ` · ${leaveInfo.weekends} weekend${leaveInfo.weekends > 1 ? "s" : ""} excluded` : ""}
+                  {leaveInfo.holidaysCount > 0 ? ` · ${leaveInfo.holidaysCount} holiday${leaveInfo.holidaysCount > 1 ? "s" : ""} excluded` : ""}
+                </p>
+              )}
               {form.formState.errors.days ? (
                 <p className="text-xs text-destructive-text">{form.formState.errors.days.message}</p>
               ) : null}

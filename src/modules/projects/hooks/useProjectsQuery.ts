@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import {
-  fetchProjectDetailAction,
+  fetchProjectByIdAction,
   fetchProjectMetaAction,
   fetchProjectsAction,
 } from '@/modules/projects/api/projectServerActions';
@@ -16,7 +16,15 @@ import type {
 export function useProjectsQuery(orgSlug: string, memberId: string, filters: ProjectFiltersState) {
   return useQuery<ProjectListResponse, Error>({
     queryKey: ['projects', orgSlug, filters],
-    queryFn: () => fetchProjectsAction({ orgSlug, memberId, filters }),
+    queryFn: () => fetchProjectsAction({ 
+      orgSlug, 
+      memberId, 
+      search: filters.search,
+      status: filters.status,
+      billable: filters.billable,
+      page: filters.page,
+      pageSize: filters.pageSize,
+    }),
     enabled: !!orgSlug && !!memberId,
     staleTime: 60_000,
     placeholderData: (previous) => previous,
@@ -39,7 +47,7 @@ export function useProjectMetaQuery(orgSlug: string, memberId: string) {
 export function useProjectDetailQuery(orgSlug: string, memberId: string, projectId: string | null) {
   return useQuery<ProjectDetail, Error>({
     queryKey: ['project', orgSlug, projectId],
-    queryFn: () => fetchProjectDetailAction({ orgSlug, memberId, projectId: projectId! }),
+    queryFn: () => fetchProjectByIdAction({ orgSlug, memberId, projectId: projectId! }),
     enabled: !!orgSlug && !!memberId && !!projectId,
     staleTime: 30_000,
     refetchOnWindowFocus: false,

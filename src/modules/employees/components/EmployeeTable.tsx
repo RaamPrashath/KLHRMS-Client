@@ -55,7 +55,7 @@ function getInitials(name: string): string {
 
 // Column width distribution (must sum to 100%)
 // Employee 35% | Email 20% | Role 20% | Attendance 25%
-const COL_WIDTHS = ['35%', '20%', '20%', '25%'];
+const COL_WIDTHS = ['25%', '25%', '25%', '25%'];
 
 const SKELETON_COUNT = 20;
 const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-row-${i}`);
@@ -74,11 +74,11 @@ const columns: ColumnDef<EmployeeListItem>[] = [
               {getInitials(name)}
             </AvatarFallback>
           </Avatar>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex flex-col items-start">
             <p className="truncate text-sm font-medium text-neutral-900" title={name}>
               {name}
             </p>
-            <p className="truncate text-xs text-neutral-500" title={email}>
+            <p className="truncate text-[11px] text-neutral-500" title={email}>
               {email}
             </p>
           </div>
@@ -122,72 +122,64 @@ const columns: ColumnDef<EmployeeListItem>[] = [
   },
 ];
 
-// ─── ColGroup ─────────────────────────────────────────────────────────────────
-
-function ColGroup() {
-  return (
-    <colgroup>
-      {COL_WIDTHS.map((w) => (
-        <col key={w} style={{ width: w }} />
-      ))}
-    </colgroup>
-  );
-}
-
-// ─── TableBody sub-component ──────────────────────────────────────────────────
+// No longer using ColGroup or table-specific columns for widths.
 
 interface TableBodyProps {
   isLoading: boolean;
   rows: Row<EmployeeListItem>[];
   pageSize: number;
-  columnCount: number;
 }
 
-function TableBody({ isLoading, rows, pageSize, columnCount }: Readonly<TableBodyProps>) {
+function TableBody({ isLoading, rows, pageSize }: Readonly<TableBodyProps>) {
   if (isLoading) {
     return (
-      <tbody className="divide-y divide-black/4 bg-white">
+      <div className="flex flex-col divide-y divide-black/4 bg-surface">
         {SKELETON_IDS.slice(0, pageSize).map((id) => (
-          <tr key={id} className="border-b border-black/4">
-            <td colSpan={columnCount} className="p-4 lg:px-6">
-              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
-            </td>
-          </tr>
+          <div key={id} className="border-b border-black/4 p-6">
+            <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+          </div>
         ))}
-      </tbody>
+      </div>
     );
   }
 
   if (rows.length === 0) {
     return (
-      <tbody className="bg-white">
-        <tr>
-          <td
-            colSpan={columnCount}
-            className="px-6 py-16 text-center text-sm text-neutral-400"
-          >
-            No employees found.
-          </td>
-        </tr>
-      </tbody>
+      <div className="bg-surface py-16 text-center text-sm text-neutral-400">
+        No employees found.
+      </div>
     );
   }
 
   return (
-    <tbody className="divide-y divide-black/4 bg-white">
+    <div className="flex flex-col divide-y divide-black/4 bg-surface">
       {rows.map((row) => (
-        <tr
+        <div
           key={row.id}
-          className="border-b border-black/4 transition-colors hover:bg-canvas/60"
+          className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4"
         >
-          {row.getVisibleCells().map((cell) => (
-            <td key={cell.id} className="max-w-0 overflow-hidden px-6 py-3.5">
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </td>
-          ))}
-        </tr>
+          {/* Column 1: Name (fixed width for vertical alignment) */}
+          <div className="w-[260px] shrink-0 flex justify-start">
+            {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
+          </div>
+          
+          {/* Column 2: Email */}
+          <div className="w-[240px] shrink-0 flex justify-start">
+            {flexRender(row.getVisibleCells()[1].column.columnDef.cell, row.getVisibleCells()[1].getContext())}
+          </div>
+          
+          {/* Column 3: Role */}
+          <div className="w-[140px] shrink-0 flex justify-start">
+            {flexRender(row.getVisibleCells()[2].column.columnDef.cell, row.getVisibleCells()[2].getContext())}
+          </div>
+          
+          {/* Column 4: Attendance (right aligned) */}
+          <div className="w-[160px] shrink-0 flex justify-end">
+            {flexRender(row.getVisibleCells()[3].column.columnDef.cell, row.getVisibleCells()[3].getContext())}
+          </div>
+        </div>
       ))}
-    </tbody>
+    </div>
   );
 }
 
@@ -220,13 +212,10 @@ export function EmployeeTable({
   });
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* ── Card shell ─────────────────────────────────────────────────────── */}
-      <div className="bg-surface rounded-xl border border-black/3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
-
+    <div className="flex flex-col flex-1 mx-7 mb-7">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
         {/* ── Layer 1: Top actions (filters) ──────────────────────────── */}
-        <div className="p-4 border-b border-neutral-100 bg-surface flex flex-col gap-4">
-          {/* Filters row */}
+        <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
           <EmployeeFilters
             search={search}
             roleId={roleId}
@@ -239,41 +228,28 @@ export function EmployeeTable({
           />
         </div>
 
-        {/* ── Layer 2: Table header ───────────────────────────────────────── */}
-        {/* ── Layer 3: Table body ─────────────────────────────────────────── */}
-        <div className="overflow-x-auto w-full bg-white">
-          <table className="w-full table-fixed border-collapse min-w-[700px]">
-            <ColGroup />
+        {/* ── Layer 2 & 3: Table (Flex) ─────────────────────────────────────────── */}
+        <div className="w-full">
+          {/* Header Row */}
+          <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
+            <div className="w-[260px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Name</div>
+            <div className="w-[240px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Email</div>
+            <div className="w-[140px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Role</div>
+            <div className="w-[160px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-right">Today's Attendance</div>
+          </div>
 
-            <thead>
-              {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id} className="border-b border-black/4 bg-canvas">
-                  {hg.headers.map((h) => (
-                    <th
-                      key={h.id}
-                      className="px-6 py-3 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left"
-                    >
-                      {h.isPlaceholder
-                        ? null
-                        : flexRender(h.column.columnDef.header, h.getContext())}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-
+          <div className="px-4">
             <TableBody
               isLoading={isLoading}
               rows={table.getRowModel().rows}
               pageSize={pageSize}
-              columnCount={columns.length}
             />
-          </table>
+          </div>
         </div>
 
-        {/* ── Pagination (inside card, below body) ────────────────────────── */}
+        {/* ── Pagination (below body) ────────────────────────── */}
         {!isLoading && total > 0 && (
-          <div className="border-t border-black/4 bg-surface px-4 py-3">
+          <div className="px-8 py-6 mt-auto border-t border-black/[0.04] bg-surface">
             <EmployeePagination
               page={page}
               totalPages={totalPages}

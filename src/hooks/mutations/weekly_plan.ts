@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getMonth, getYear, parseISO } from "date-fns";
+import { getISOWeek, getISOWeekYear, getMonth, getYear, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { useApiClient } from "@/hooks/useApiClient";
 import {
@@ -71,6 +71,20 @@ function getTouchedMonths(days: WeeklyPlanDayInput[]) {
   });
 }
 
+function getTouchedWeeks(days: WeeklyPlanDayInput[]) {
+  return Array.from(
+    new Set(
+      days.map((day) => {
+        const parsed = parseISO(day.date);
+        return `${getISOWeekYear(parsed)}-${getISOWeek(parsed)}`;
+      }),
+    ),
+  ).map((value) => {
+    const [isoYear, isoWeek] = value.split("-");
+    return { year: Number(isoYear), week: Number(isoWeek) };
+  });
+}
+
 export function useSaveWeeklyPlanMutation(
   orgSlug: string,
   orgId: string,
@@ -116,6 +130,10 @@ export function useSaveWeeklyPlanMutation(
         queryKey: weeklyPlanKeys.teamWeek(orgSlug, year, week),
       });
       for (const touched of getTouchedMonths(days)) {
+        queryClient.setQueryData<WeeklyPlanEntry[]>(
+          weeklyPlanKeys.myMonth(orgSlug, touched.year, touched.month),
+          (current) => applyPlanDrafts(current, orgId, userId, days),
+        );
         queryClient.invalidateQueries({
           queryKey: weeklyPlanKeys.myMonth(orgSlug, touched.year, touched.month),
         });
@@ -163,8 +181,27 @@ export function useSaveMonthlyPlanMutation(
         error instanceof Error ? error.message : "Failed to save monthly plan";
       toast.error(message);
     },
-    onSuccess: (entries) => {
+    onSuccess: (entries, days) => {
       queryClient.setQueryData(weeklyPlanKeys.myMonth(orgSlug, year, month), entries);
+      for (const touched of getTouchedWeeks(days)) {
+        const weeklyEntries = entries.filter((entry) => {
+          const parsed = parseISO(entry.date);
+          return (
+            getISOWeekYear(parsed) === touched.year &&
+            getISOWeek(parsed) === touched.week
+          );
+        });
+        queryClient.setQueryData<WeeklyPlanEntry[]>(
+          weeklyPlanKeys.myWeek(orgSlug, touched.year, touched.week),
+          weeklyEntries,
+        );
+        queryClient.invalidateQueries({
+          queryKey: weeklyPlanKeys.myWeek(orgSlug, touched.year, touched.week),
+        });
+        queryClient.invalidateQueries({
+          queryKey: weeklyPlanKeys.teamWeek(orgSlug, touched.year, touched.week),
+        });
+      }
     },
   });
 }

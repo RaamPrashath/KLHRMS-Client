@@ -38,7 +38,7 @@ export const FALLBACK_PLAN_LOCATIONS: PlanLocationOption[] = [
     value: "HOLIDAY",
     label: "Holiday",
     short_label: "HOL",
-    color: "#9333ea",
+    color: "#dc2626",
   },
 ];
 
@@ -65,11 +65,11 @@ export const PLAN_LOCATION_THEMES: Record<PlanLocationValue, PlanLocationTheme> 
     tint: "from-rose-100/80 to-white",
   },
   HOLIDAY: {
-    bg: "bg-violet-50",
-    text: "text-violet-800",
-    border: "border-violet-200",
-    dot: "bg-violet-500",
-    tint: "from-violet-100/80 to-white",
+    bg: "bg-red-50",
+    text: "text-red-800",
+    border: "border-red-200",
+    dot: "bg-red-500",
+    tint: "from-red-100/80 to-white",
   },
 };
 

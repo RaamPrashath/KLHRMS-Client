@@ -21,7 +21,6 @@ import { AttendancePermissionGate } from "@/modules/attendance/components/Attend
 import { ClockWidget } from "@/modules/attendance/components/ClockWidget";
 import { ManualAttendanceForm } from "@/modules/attendance/components/ManualAttendanceForm";
 import { AttendanceTable } from "@/modules/attendance/components/AttendanceTable";
-import { getTodayIST } from "@/modules/attendance/utils/attendanceFormatters";
 
 import {
     AlertDialog,
@@ -75,7 +74,6 @@ export function AttendancePageShell({
     const [filters, setFilters] = useState<AttendanceFiltersState>(buildDefaultFilters);
 
     // ── Query selection ────────────────────────────────────────────────────────
-    // Org-scope uses the general list endpoint; self-scope uses /me
     const orgQuery = useAttendanceQuery(orgSlug, memberId, filters);
     const myQuery = useMyAttendanceQuery(orgSlug, memberId, filters);
 
@@ -87,9 +85,7 @@ export function AttendancePageShell({
     } = isOrgScope ? orgQuery : myQuery;
 
     // ── Delete state ───────────────────────────────────────────────────────────
-    const [deleteTarget, setDeleteTarget] = useState<AttendanceRecord | null>(
-        null,
-    );
+    const [deleteTarget, setDeleteTarget] = useState<AttendanceRecord | null>(null);
     const deleteMutation = useDeleteAttendanceMutation(orgSlug);
 
     // ── Manual form state ──────────────────────────────────────────────────────
@@ -150,46 +146,29 @@ export function AttendancePageShell({
     return (
         <>
             <main className="min-h-full bg-canvas">
-                <div className="px-6 py-6 flex flex-col gap-6 max-w-6xl">
-                    {/* Page heading */}
-                    <section aria-labelledby="attendance-heading">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <h1
-                                    id="attendance-heading"
-                                    className="text-4xl font-semibold text-neutral-900 tracking-tight"
-                                >
-                                    Who&apos;s in today?
-                                </h1>
-                            </div>
+                <div className="flex flex-col gap-6 flex-1 min-h-full">
+                    <div className="flex items-start justify-between ml-7 mt-7 mr-7">
+                        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
+                            Who&apos;s in today?
+                        </h1>
 
-                            {/* Bulk attendance link — shown when user has create permission */}
-                            {isOperativeScope(permissions.create) && (
-                                <Link
-                                    href={`/${orgSlug}/timesheet`}
-                                    className="inline-flex items-center gap-2 h-9 px-4 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary-ghost transition-colors duration-100 shrink-0"
-                                >
-                                    <CalendarDays className="size-4" strokeWidth={1.5} />
-                                    Bulk attendance
-                                </Link>
-                            )}
-                        </div>
-                    </section>
+                        {isOperativeScope(permissions.create) && (
+                            <Link
+                                href={`/${orgSlug}/timesheet`}
+                                className="inline-flex items-center gap-2 h-9 px-4 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary-ghost transition-colors duration-100 shrink-0"
+                            >
+                                <CalendarDays className="size-4" strokeWidth={1.5} />
+                                Bulk attendance
+                            </Link>
+                        )}
+                    </div>
 
-                    {/* Clock widget — only for self-scope users */}
-                    {!isOrgScope && (
-                        <AttendancePermissionGate scope={permissions.create}>
-                            <motion.div {...motionProps}>
-                                <ClockWidget
-                                    orgSlug={orgSlug}
-                                    memberId={memberId}
-            
-                                />
-                            </motion.div>
-                        </AttendancePermissionGate>
-                    )}
+                    <AttendancePermissionGate scope={permissions.create}>
+                        <motion.div {...motionProps} className="mx-7">
+                            <ClockWidget orgSlug={orgSlug} memberId={memberId} />
+                        </motion.div>
+                    </AttendancePermissionGate>
 
-                    {/* Manual entry form (sheet) */}
                     <AttendancePermissionGate scope={permissions.edit}>
                         <ManualAttendanceForm
                             orgSlug={orgSlug}
@@ -199,7 +178,6 @@ export function AttendancePageShell({
                         />
                     </AttendancePermissionGate>
 
-                    {/* Attendance history table */}
                     <motion.div {...motionProps}>
                         <AttendanceTable
                             orgSlug={orgSlug}
@@ -213,31 +191,23 @@ export function AttendancePageShell({
                             canEdit={isOperativeScope(permissions.edit)}
                             canDelete={isOperativeScope(permissions.delete)}
                             showEmployeeColumn={isOrgScope}
-                            onEdit={() => {
-                                setManualFormOpen(true);
-                            }}
+                            onEdit={() => { setManualFormOpen(true); }}
                             onDelete={(record) => setDeleteTarget(record)}
                         />
                     </motion.div>
                 </div>
             </main>
 
-            {/* Delete confirmation */}
             <AlertDialog
                 open={deleteTarget !== null}
-                onOpenChange={(open) => {
-                    if (!open) setDeleteTarget(null);
-                }}
+                onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            Delete attendance record?
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Delete attendance record?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This will permanently remove the record for{" "}
-                            {deleteTarget?.date ?? ""}. This action cannot be
-                            undone.
+                            {deleteTarget?.date ?? ""}. This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

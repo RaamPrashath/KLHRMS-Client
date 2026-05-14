@@ -7,6 +7,9 @@ export const clockInSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   accuracy_meters: z.number().min(0).optional(),
+  project_id: z.string().min(1, 'Project is required'),
+  project_task_id: z.string().min(1, 'Task is required'),
+  description: z.string().max(1000).optional().or(z.literal('')),
 });
 
 export const clockOutSchema = z.object({

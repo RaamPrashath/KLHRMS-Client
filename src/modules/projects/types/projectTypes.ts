@@ -1,5 +1,4 @@
 export type ProjectStatus = 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED';
-export type ProjectTaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE' | 'BLOCKED';
 
 export interface ProjectCapacitySummary {
   budgetedHours: number | null;
@@ -41,11 +40,18 @@ export interface ProjectMemberSummary {
 export interface ProjectTaskSummary {
   id: string;
   name: string;
-  description: string | null;
-  status: ProjectTaskStatus;
-  assignedMemberId: string | null;
-  assignedMemberName: string | null;
   createdAt: string;
+}
+
+export interface ProjectTaskOption {
+  id: string;
+  name: string;
+}
+
+export interface ProjectForAttendance {
+  id: string;
+  name: string;
+  tasks: ProjectTaskOption[];
 }
 
 export interface ProjectDetail extends ProjectSummary {

@@ -21,28 +21,6 @@ export default async function BulkAttendancePage({
   }
 
   return (
-    <main className="min-h-full bg-canvas">
-      <div className="px-6 py-6 flex flex-col gap-6 max-w-7xl">
-        {/* Page heading */}
-        <section aria-labelledby="bulk-attendance-heading">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1
-                id="bulk-attendance-heading"
-                className="text-2xl font-bold text-neutral-900 tracking-tight"
-              >
-                Weekly Focus: Your time, your way
-              </h1>
-              <p className="text-sm text-neutral-500 mt-1.5 font-light">
-                Reflect on and log your hours for the week
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Calendar client */}
-        <BulkAttendancePageClient orgSlug={orgSlug} memberId={memberId!} />
-      </div>
-    </main>
+    <BulkAttendancePageClient orgSlug={orgSlug} memberId={memberId!} />
   );
 }

@@ -4,6 +4,8 @@ export interface BulkWorkLogItem {
   id: string;
   startTime: string; // ISO datetime
   endTime: string;   // ISO datetime
+  projectId?: string | null;
+  projectTaskId?: string | null;
   title?: string | null;
   notes?: string | null;
 }
@@ -30,6 +32,8 @@ export interface GetBulkAttendanceDayResponse {
 export interface UpsertBulkWorkLogItemInput {
   startTime: string; // ISO datetime
   endTime: string;   // ISO datetime
+  projectId?: string;
+  projectTaskId?: string;
   title?: string;
   notes?: string;
 }
@@ -54,7 +58,6 @@ export interface DeleteBulkAttendanceDayResponse {
 
 // ─── Calendar event shape ─────────────────────────────────────────────────────
 
-/** A work log mapped to a react-big-calendar event */
 export interface CalendarWorkLogEvent {
   id: string;
   title: string;
@@ -63,6 +66,8 @@ export interface CalendarWorkLogEvent {
   resource: {
     type: 'work-log';
     date: string;       // YYYY-MM-DD
+    projectId: string | null;
+    projectTaskId: string | null;
     title: string | null;
     notes: string | null;
     isOptimistic?: boolean;
@@ -96,6 +101,8 @@ export interface LocalWorkLog {
   id: string;
   startTime: Date;
   endTime: Date;
+  projectId: string | null;
+  projectTaskId: string | null;
   title: string | null;
   notes: string | null;
   /** True while the backend hasn't confirmed this log yet */

@@ -1,5 +1,6 @@
 export interface PipelineJobPosting {
   id: string;
+  slug: string;
   title: string;
   status: string;
 }
@@ -11,6 +12,10 @@ export interface CandidateSummary {
   email: string;
   phone: string | null;
   linkedinUrl: string | null;
+  portfolioUrl: string | null;
+  currentCompany: string | null;
+  currentTitle: string | null;
+  totalExperience: string | null;
   resumeUrl: string | null;
 }
 
@@ -29,8 +34,11 @@ export interface PipelineApplication {
   currentStage: string;
   candidate: CandidateSummary;
   score: number | null;
+  rating: number | null;
   source: string;
   appliedDate: string;
+  lastMovedAt: string | null;
+  status: string;
   resumeUrl: string | null;
   interviewMeeting: ApplicationInterviewMeeting | null;
 }
@@ -57,6 +65,7 @@ export interface PipelineStage {
   id: string;
   jobPostingId: string;
   name: string;
+  slug: string;
   order: number;
   color: string | null;
   isDefault: boolean;
@@ -117,9 +126,138 @@ export interface CandidateApplicationDetail {
   candidate: CandidateSummary;
   source: string;
   score: number | null;
-  notes: string | null;
+  rating: number | null;
+  coverLetter: string | null;
+  internalNotes: string | null;
+  status: string;
   resumeUrl: string | null;
   appliedAt: string;
   lastActivityAt: string;
   stageHistory: StageHistoryItem[];
+}
+
+export interface StageWorkspaceInterviewer {
+  memberId: string;
+  name: string;
+  email: string;
+  department: string | null;
+}
+
+export interface StageWorkspaceAssignment {
+  eventId: string;
+  interviewer: StageWorkspaceInterviewer | null;
+  scheduledStartAt: string;
+  scheduledEndAt: string;
+  meetLink: string | null;
+  status: string;
+  emailSentAt: string | null;
+}
+
+export interface StageWorkspaceCandidate {
+  applicationId: string;
+  candidate: CandidateSummary;
+  jobTitle: string;
+  source: string;
+  score: number | null;
+  rating: number | null;
+  appliedAt: string;
+  currentAssignment: StageWorkspaceAssignment | null;
+}
+
+export interface StageWorkspace {
+  stage: PipelineStage;
+  jobPosting: PipelineJobPosting;
+  candidateCount: number;
+  candidates: StageWorkspaceCandidate[];
+}
+
+export interface InterviewerSearchResponse {
+  items: StageWorkspaceInterviewer[];
+}
+
+export interface StageInterviewAssignment {
+  applicationId: string;
+  interviewerMemberId: string;
+  scheduledStartAt: string;
+  durationMinutes: number;
+  meetLink?: string | null;
+}
+
+export interface StageInterviewWarning {
+  applicationId: string;
+  interviewerMemberId: string;
+  messages: string[];
+}
+
+export interface StageInterviewWarningResponse {
+  warnings: StageInterviewWarning[];
+}
+
+export interface StageInterviewAssignmentResponse {
+  assignedCount: number;
+  warnings: StageInterviewWarning[];
+}
+
+export interface HiringTeamMember {
+  id: string;
+  memberId: string;
+  name: string | null;
+  email: string | null;
+  role: string | null;
+}
+
+export interface HiringTeam {
+  id: string;
+  jobPostingId: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  memberCount: number;
+  members: HiringTeamMember[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamDistributionRequest {
+  hiringTeamId: string;
+  strategy: 'ROUND_ROBIN';
+  applicationIds: string[];
+  scheduledStartAt: string;
+  durationMinutes: number;
+  backupInterviewers?: string[];
+  ignoreWarnings?: boolean;
+}
+
+export interface TeamDistributionResponse {
+  assignedCount: number;
+  warnings: StageInterviewWarning[];
+}
+
+export interface ReshuffleRequest {
+  newInterviewerMemberId?: string;
+}
+
+export interface ReshuffleResponse {
+  eventId: string;
+  newInterviewerMemberId: string;
+  warnings: StageInterviewWarning[];
+}
+
+export interface MyInterview {
+  eventId: string;
+  applicationId: string;
+  stageId: string;
+  stageName: string;
+  candidate: CandidateSummary;
+  jobTitle: string;
+  scheduledStartAt: string;
+  scheduledEndAt: string;
+  status: string;
+  role: 'INTERVIEWER' | 'BACKUP';
+  isBackup: boolean;
+  meetingUrl: string | null;
+}
+
+export interface MyInterviewListResponse {
+  items: MyInterview[];
 }

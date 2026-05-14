@@ -44,6 +44,7 @@ export function KanbanColumn({
   onDelete,
   onMoveLeft,
   onMoveRight,
+  onOpenStageWorkspace,
   onOpenEvaluationWorkspace,
   onScheduleInterview,
   onStartInterview,
@@ -61,6 +62,7 @@ export function KanbanColumn({
   readonly onDelete: (stage: PipelineStage) => void;
   readonly onMoveLeft: (stage: PipelineStage) => void;
   readonly onMoveRight: (stage: PipelineStage) => void;
+  readonly onOpenStageWorkspace: (stage: PipelineStage) => void;
   readonly onOpenEvaluationWorkspace: (stage: PipelineStage) => void;
   readonly onScheduleInterview: (application: PipelineApplication) => void;
   readonly onStartInterview: (application: PipelineApplication) => void;
@@ -87,18 +89,23 @@ export function KanbanColumn({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-primary" />
+              <button
+                type="button"
+                onClick={() => onOpenStageWorkspace(stage)}
+                className="truncate text-left text-sm font-semibold text-neutral-900 hover:text-primary"
+              >
+                {stage.name}
+              </button>
               {stage.evaluationEnabled ? (
                 <button
                   type="button"
                   onClick={() => onOpenEvaluationWorkspace(stage)}
-                  className="flex min-w-0 items-center gap-1 text-left text-sm font-semibold text-neutral-900 hover:text-primary"
+                  className="flex shrink-0 items-center text-neutral-400 hover:text-primary"
+                  aria-label={`Open ${stage.name} evaluation workspace`}
                 >
-                  <span className="truncate">{stage.name}</span>
                   <ExternalLink className="size-3.5 shrink-0 text-neutral-400" />
                 </button>
-              ) : (
-                <h2 className="truncate text-sm font-semibold text-neutral-900">{stage.name}</h2>
-              )}
+              ) : null}
               {stage.dueDate ? (
                 <div className="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text flex-shrink-0">
                   <CalendarDays className="size-3" />

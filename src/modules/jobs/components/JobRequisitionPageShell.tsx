@@ -48,22 +48,11 @@ export function JobRequisitionPageShell({
   return (
     <>
       <main className="min-h-full bg-canvas">
-        <div className="px-6 py-6 flex flex-col gap-6 max-w-7xl">
-          {/* Page heading */}
-          <section aria-labelledby="jobs-heading">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1
-                  id="jobs-heading"
-                  className="text-4xl font-semibold text-neutral-900 tracking-tight"
-                >
-                  {ownedOnly ? 'My Job Requisitions' : 'Job Requisitions'}
-                </h1>
-              </div>
-            </div>
-          </section>
+        <div className="flex flex-col gap-6 flex-1 min-h-full">
+          <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight ml-7 mt-7">
+            {ownedOnly ? 'My Job Requisitions' : 'Job Requisitions'}
+          </h1>
 
-          {/* Job requisitions table */}
           <motion.div {...motionProps}>
             <JobRequisitionTable
               orgSlug={orgSlug}

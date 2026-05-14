@@ -23,6 +23,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useSaveMonthlyPlanMutation } from "@/hooks/mutations/weekly_plan";
 import { useMyMonthlyPlanQuery, usePlanLocationsQuery } from "@/hooks/queries/weekly_plan";
+import { useHolidays } from "@/modules/leave/hooks/useHolidays";
+import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
 import {
   getCurrentMonthState,
   getMonthWeekRows,
@@ -53,6 +55,7 @@ const MonthDayCell = memo(function MonthDayCell({
   locations,
   isInteractive,
   isCurrentDay,
+  isHolidayProtected,
   onUpdate,
 }: {
   day: MonthDayItem;
@@ -60,6 +63,7 @@ const MonthDayCell = memo(function MonthDayCell({
   locations: PlanLocationOption[];
   isInteractive: boolean;
   isCurrentDay: boolean;
+  isHolidayProtected: boolean;
   onUpdate: (date: string, loc: PlanLocationValue | "") => void;
 }) {
   const theme = location ? PLAN_LOCATION_THEMES[location] : null;
@@ -191,6 +195,71 @@ const MonthDayCell = memo(function MonthDayCell({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <button
+      type="button"
+      disabled={!isInteractive || isHolidayProtected}
+      onClick={() => onUpdate(day.iso, selectedLocation)}
+      className={cn(
+        "relative flex h-24 flex-col rounded-[22px] border p-3 text-left transition-all duration-200",
+        isInteractive && !isHolidayProtected
+          ? "hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)] active:scale-[0.97]"
+          : "cursor-not-allowed bg-muted/10 text-muted-foreground",
+        theme
+          ? `${theme.bg} ${theme.border}`
+          : isInteractive && !isHolidayProtected
+            ? "border-border bg-white"
+            : "border-border/60 bg-muted/20",
+        !day.isCurrentMonth && "opacity-40 grayscale-[0.5]",
+        isHolidayProtected && "opacity-70",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/60 leading-none mb-1">
+            {format(day.date, "EEE")}
+          </span>
+          <span className="text-lg font-bold text-foreground leading-none">
+            {format(day.date, "d")}
+          </span>
+        </div>
+
+        {isCurrentDay ? (
+          <span className="rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-background">
+            Today
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-auto flex items-center justify-between gap-2">
+        {location ? (
+          <span
+            className={cn(
+              "rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-tight shadow-sm",
+              theme ? `${theme.bg} ${theme.text} border ${theme.border}` : "bg-muted/50 text-muted-foreground",
+            )}
+          >
+            {PLAN_LOCATION_MAP[location].short_label}
+          </span>
+        ) : (
+          <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
+            {day.isWeekend ? "Off" : "---"}
+          </span>
+        )}
+
+        {isInteractive && location && !isHolidayProtected ? (
+          <span
+            onClick={(event) => {
+              event.stopPropagation();
+              onUpdate(day.iso, "");
+            }}
+            className="inline-flex items-center rounded-full border border-border/70 bg-white/50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-white hover:text-destructive transition-colors"
+          >
+            <Eraser className="h-2.5 w-2.5 mr-1" />
+            Clear
+          </span>
+        ) : null}
+      </div>
+    </button>
   );
 });
 
@@ -232,6 +301,24 @@ export function MonthlyPlanPanel({
     data: monthEntries = [],
     isLoading: isMonthLoading,
   } = useMyMonthlyPlanQuery(orgSlug, orgId, memberId, monthState.year, monthState.month);
+  
+  // Fetch holidays for the current month
+  const { data: holidays = [] } = useHolidays(orgSlug, memberId, {
+    year: monthState.year,
+    month: monthState.month,
+  });
+
+  // Fetch approved leaves for the current month
+  const monthStart = new Date(monthState.year, monthState.month - 1, 1);
+  const monthEnd = new Date(monthState.year, monthState.month, 0);
+  const { data: leaveRequestsData } = useLeaveRequests(orgSlug, memberId, {
+    status: "APPROVED",
+    fromDate: monthStart.toISOString().split("T")[0],
+    toDate: monthEnd.toISOString().split("T")[0],
+    page: 1,
+    pageSize: 100,
+  });
+  
   const saveMutation = useSaveMonthlyPlanMutation(
     orgSlug,
     orgId,
@@ -243,12 +330,51 @@ export function MonthlyPlanPanel({
 
   useEffect(() => {
     const nextBaseline = buildMonthDrafts(monthEntries);
+    
+    // Auto-fill holidays and leaves
+    const autoFilledDrafts = { ...nextBaseline };
+    
+    // Create a set of holiday dates
+    const holidayDates = new Set(
+      holidays
+        .filter((h) => h.isHoliday)
+        .map((h) => h.holidayDate)
+    );
+    
+    // Create a map of leave dates
+    const leaveDates = new Set<string>();
+    if (leaveRequestsData?.items) {
+      leaveRequestsData.items.forEach((leave) => {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dateStr = d.toISOString().split("T")[0];
+          leaveDates.add(dateStr);
+        }
+      });
+    }
+    
+    // Get all weekday dates for the month
+    const weekdayDates = getMonthWeekdayDates(monthState.year, monthState.month);
+    
+    // Auto-fill dates - ALWAYS override with holidays, then leaves if no holiday
+    weekdayDates.forEach((date) => {
+      // ALWAYS set holidays, regardless of existing value
+      if (holidayDates.has(date)) {
+        autoFilledDrafts[date] = "HOLIDAY";
+      } 
+      // Only set leaves if there's no existing entry AND it's not a holiday
+      else if (leaveDates.has(date) && !autoFilledDrafts[date]) {
+        autoFilledDrafts[date] = "LEAVE";
+      }
+    });
+    
     startTransition(() => {
-      setBaselineDrafts(nextBaseline);
-      setDrafts(nextBaseline);
+      setBaselineDrafts(autoFilledDrafts);
+      setDrafts(autoFilledDrafts);
       setIsDirty(false);
     });
-  }, [monthEntries, monthState.month, monthState.year]);
+  }, [monthEntries, monthState.month, monthState.year, holidays, leaveRequestsData]);
 
   useEffect(() => {
     onDirtyChange(isDirty);
@@ -263,6 +389,32 @@ export function MonthlyPlanPanel({
     () => getMonthWeekdayDates(monthState.year, monthState.month),
     [monthState.month, monthState.year],
   );
+
+  // Create a set of holiday dates for protection
+  const holidayDates = useMemo(
+    () =>
+      new Set(
+        holidays
+          .filter((h) => h.isHoliday)
+          .map((h) => h.holidayDate)
+      ),
+    [holidays]
+  );
+
+  // Create a set of leave dates for protection
+  const leaveDates = useMemo(() => {
+    const set = new Set<string>();
+    if (leaveRequestsData?.items) {
+      for (const leave of leaveRequestsData.items) {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          set.add(d.toISOString().split("T")[0]);
+        }
+      }
+    }
+    return set;
+  }, [leaveRequestsData]);
 
   const summary = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -279,6 +431,14 @@ export function MonthlyPlanPanel({
   }, [drafts, weekdayDates]);
 
   function updateDraft(date: string, nextLocation: PlanLocationValue | "") {
+    // Prevent changing holiday or leave cells
+    if (holidayDates.has(date) && drafts[date] === "HOLIDAY") {
+      return;
+    }
+    if (leaveDates.has(date) && drafts[date] === "LEAVE") {
+      return;
+    }
+    
     setDrafts((current) => {
       const nextDrafts = { ...current, [date]: nextLocation };
       const nextDirty = !monthDraftsEqual(nextDrafts, baselineDrafts);
@@ -290,7 +450,7 @@ export function MonthlyPlanPanel({
   function maybeChangeMonth(delta: number) {
     if (
       isDirty &&
-      !window.confirm("You have unsaved monthly changes. Move to another month anyway?")
+      !globalThis.confirm("You have unsaved monthly changes. Move to another month anyway?")
     ) {
       return;
     }
@@ -298,11 +458,15 @@ export function MonthlyPlanPanel({
   }
 
   function handleApplyEverywhere() {
-    const alreadySetCount = weekdayDates.filter((date) => drafts[date]).length;
+    // Count non-holiday, non-leave weekdays
+    const protectedDates = new Set([...holidayDates, ...leaveDates]);
+    const nonProtectedWeekdays = weekdayDates.filter(date => !protectedDates.has(date));
+    const alreadySetCount = nonProtectedWeekdays.filter((date) => drafts[date]).length;
+    
     if (
       alreadySetCount > 0 &&
-      !window.confirm(
-        `Apply ${PLAN_LOCATION_MAP[selectedLocation].label} to all ${weekdayDates.length} weekdays? ` +
+      !globalThis.confirm(
+        `Apply ${PLAN_LOCATION_MAP[selectedLocation].label} to all ${nonProtectedWeekdays.length} non-holiday weekdays? ` +
           `${alreadySetCount} existing day selections will be overwritten.`,
       )
     ) {
@@ -310,8 +474,11 @@ export function MonthlyPlanPanel({
     }
 
     const nextDrafts = { ...drafts };
-    weekdayDates.forEach((date) => {
-      nextDrafts[date] = selectedLocation;
+    nonProtectedWeekdays.forEach((date) => {
+      // Only update if it's not a protected holiday or leave
+      if (!protectedDates.has(date)) {
+        nextDrafts[date] = selectedLocation;
+      }
     });
     setDrafts(nextDrafts);
     setIsDirty(!monthDraftsEqual(nextDrafts, baselineDrafts));
@@ -384,6 +551,53 @@ export function MonthlyPlanPanel({
               >
                 <Save className="mr-2 h-4 w-4" />
                 {saveMutation.isPending ? "Saving..." : "Save Changes"}
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-4">
+            <MonthNavigator
+              year={monthState.year}
+              month={monthState.month}
+              onPrevious={() => maybeChangeMonth(-1)}
+              onNext={() => maybeChangeMonth(1)}
+            />
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Select
+                value={selectedLocation}
+                onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}
+              >
+                <SelectTrigger className="h-10 min-w-[200px] rounded-lg text-sm">
+                  <SelectValue placeholder="Choose a location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {resolvedLocations.map((location) => (
+                    <SelectItem key={location.value} value={location.value} className="text-xs font-bold">
+                      {location.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-lg px-4 text-sm font-medium"
+                onClick={handleApplyEverywhere}
+                disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
+              >
+                <Sparkles className="mr-2 h-3.5 w-3.5" />
+                Apply to all weekdays
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-lg px-4 text-sm font-medium"
+                onClick={handleClearAll}
+                disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
+              >
+                <Eraser className="mr-2 h-3.5 w-3.5" />
+                Clear all
               </Button>
             </div>
           </div>
@@ -467,8 +681,19 @@ export function MonthlyPlanPanel({
           <span className="inline-flex min-h-9 items-center rounded-full bg-muted px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {plannedDaysCount} of {weekdayDates.length} weekdays planned
           </span>
+          <Button
+            type="button"
+            className="h-10 rounded-lg px-5 text-sm font-medium"
+            style={{ backgroundColor: '#00874a' }}
+            onClick={handleSave}
+            disabled={!isDirty || saveMutation.isPending || isMonthLoading}
+          >
+            <Save className="mr-2 h-3.5 w-3.5" />
+            {saveMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
         </div>
 
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
         <div className="mb-6 grid grid-cols-7 gap-3 px-1">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
             <span
@@ -506,6 +731,22 @@ export function MonthlyPlanPanel({
                     onUpdate={updateDraft}
                   />
                 ))}
+                {row.map((day) => {
+                  const isHolidayProtected = (holidayDates.has(day.iso) && drafts[day.iso] === "HOLIDAY") || (leaveDates.has(day.iso) && drafts[day.iso] === "LEAVE");
+                  
+                  return (
+                    <MonthDayCell
+                      key={day.iso}
+                      day={day}
+                      location={drafts[day.iso] || ""}
+                      selectedLocation={selectedLocation}
+                      isInteractive={day.isCurrentMonth && !day.isWeekend}
+                      isCurrentDay={isToday(parseISO(day.iso))}
+                      isHolidayProtected={isHolidayProtected}
+                      onUpdate={updateDraft}
+                    />
+                  );
+                })}
               </div>
             ))
           )}
@@ -537,6 +778,18 @@ export function MonthlyPlanPanel({
                 </span>
               </div>
             </div>
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Month summary</h2>
+            <p className="text-[11px] text-muted-foreground/60 font-medium">
+              Live totals update as you tap weekdays in the strip above.
+            </p>
+          </div>
+          <span className="rounded-full bg-muted/30 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {summary.unset} days remaining
+          </span>
+        </div>
 
             <div className="h-2 overflow-hidden rounded-full bg-background">
               <div
