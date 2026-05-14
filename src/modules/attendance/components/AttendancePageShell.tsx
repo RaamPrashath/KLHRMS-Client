@@ -163,13 +163,11 @@ export function AttendancePageShell({
                         )}
                     </div>
 
-                    {!isOrgScope && (
-                        <AttendancePermissionGate scope={permissions.create}>
-                            <motion.div {...motionProps} className="mx-7">
-                                <ClockWidget orgSlug={orgSlug} memberId={memberId} />
-                            </motion.div>
-                        </AttendancePermissionGate>
-                    )}
+                    <AttendancePermissionGate scope={permissions.create}>
+                        <motion.div {...motionProps} className="mx-7">
+                            <ClockWidget orgSlug={orgSlug} memberId={memberId} />
+                        </motion.div>
+                    </AttendancePermissionGate>
 
                     <AttendancePermissionGate scope={permissions.edit}>
                         <ManualAttendanceForm

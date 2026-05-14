@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { List, CalendarDays, CalendarRange } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AttendanceFilters } from '@/modules/attendance/components/AttendanceFilters';
@@ -14,6 +14,9 @@ import {
   formatHours,
   getTodayIST,
 } from '@/modules/attendance/utils/attendanceFormatters';
+import { useEmployeesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
+import { useHolidays } from '@/modules/leave/hooks/useHolidays';
+import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
 import type {
   AttendanceRecord,
   AttendanceListResponse,
@@ -223,6 +226,52 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
   const columnCount = showEmployeeColumn ? 6 : 5;
 
+  // Fetch all employees for org-scope pivot view
+  const { data: employeeData } = useEmployeesQuery(orgSlug, memberId, {
+    page: 1,
+    pageSize: 200,
+  });
+  const allEmployees = showEmployeeColumn
+    ? (employeeData?.items ?? []).map((e) => ({
+        member_id: e.member_id,
+        name: e.name,
+      }))
+    : undefined;
+
+  // Fetch holidays and leaves for pivot views
+  const pivotYear = pivotAnchor.getFullYear();
+  const pivotMonth = pivotAnchor.getMonth() + 1;
+  const { data: pivotHolidays = [] } = useHolidays(orgSlug, memberId, { year: pivotYear, month: pivotMonth });
+
+  const pivotFrom = pivotDateColumns[0] ?? '';
+  const pivotTo = pivotDateColumns[pivotDateColumns.length - 1] ?? '';
+  const { data: pivotLeaveData } = useLeaveRequests(orgSlug, memberId, {
+    status: 'APPROVED',
+    fromDate: pivotFrom,
+    toDate: pivotTo,
+    page: 1,
+    pageSize: 200,
+  });
+
+  const pivotHolidayDates = useMemo(
+    () => new Set(pivotHolidays.filter((h) => h.isHoliday).map((h) => h.holidayDate)),
+    [pivotHolidays],
+  );
+
+  const pivotLeaveDates = useMemo(() => {
+    const set = new Set<string>();
+    if (pivotLeaveData?.items) {
+      for (const leave of pivotLeaveData.items) {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          set.add(d.toISOString().split('T')[0]);
+        }
+      }
+    }
+    return set;
+  }, [pivotLeaveData]);
+
   return (
     <div className="flex flex-col flex-1 mx-7 mb-7">
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
@@ -364,6 +413,9 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                 records={items}
                 isLoading={isLoading}
                 showEmployeeColumn={showEmployeeColumn}
+                allEmployees={allEmployees}
+                holidayDates={pivotHolidayDates}
+                leaveDates={pivotLeaveDates}
               />
             );
           })()}

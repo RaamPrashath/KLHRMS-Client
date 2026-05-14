@@ -17,7 +17,7 @@ import type {
   CalendarWorkLogEvent,
   LocalWorkLog,
 } from '@/modules/attendance/types/bulkAttendanceTypes';
-import type { HolidayRecord } from '@/modules/leave/types/leaveTypes';
+import type { HolidayRecord, LeaveRequestRecord } from '@/modules/leave/types/leaveTypes';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ─── react-big-calendar setup ─────────────────────────────────────────────────
@@ -108,17 +108,19 @@ interface DayHeaderProps {
   date: Date;
   dayMap: Map<string, BulkDayState>;
   holidayMap: Map<string, HolidayRecord>;
+  leaveMap: Map<string, LeaveRequestRecord>;
   onAddLog: (date: string) => void;
 }
 
-function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHeaderProps>) {
+function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Readonly<DayHeaderProps>) {
   const dateStr = dateToYMD(date);
   const day = dayMap.get(dateStr);
   const isToday = isSameDay(date, new Date());
   const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
   const holiday = holidayMap.get(dateStr);
-  const isOff = isWeekend || !!holiday;
+  const leave = leaveMap.get(dateStr);
+  const isOff = isWeekend || !!holiday || !!leave;
 
   const totalMins = day?.logs.reduce((sum, l) => {
     const diff = l.endTime.getTime() - l.startTime.getTime();
@@ -194,15 +196,16 @@ function DayColumnHeader({ date, dayMap, holidayMap, onAddLog }: Readonly<DayHea
     </div>
   );
 
-  // Wrap in tooltip only when there's a holiday name to show
-  if (holiday?.name) {
+  const tooltipLabel = leave?.leaveType.name ?? holiday?.name ?? null;
+
+  if (tooltipLabel) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <div>{headerContent}</div>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
-          {holiday.name}
+          {tooltipLabel}
         </TooltipContent>
       </Tooltip>
     );
@@ -247,6 +250,7 @@ interface BulkAttendanceCalendarProps {
   weekStart: Date;
   dayMap: Map<string, BulkDayState>;
   holidays: HolidayRecord[];
+  leaveRequests: LeaveRequestRecord[];
   onOpenCreate: (date: string, slotStart?: Date, slotEnd?: Date) => void;
   onOpenEdit: (date: string, log: LocalWorkLog) => void;
   onDeleteLog: (date: string, logId: string) => Promise<void>;
@@ -263,6 +267,7 @@ export function BulkAttendanceCalendar({
   weekStart,
   dayMap,
   holidays,
+  leaveRequests,
   onOpenCreate,
   onOpenEdit,
   onDeleteLog,
@@ -280,6 +285,18 @@ export function BulkAttendanceCalendar({
     }
     return map;
   }, [holidays]);
+
+  const leaveMap = useMemo(() => {
+    const map = new Map<string, LeaveRequestRecord>();
+    for (const leave of leaveRequests) {
+      const start = new Date(leave.startDate);
+      const end = new Date(leave.endDate);
+      for (let current = start; current <= end; current = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1)) {
+        map.set(dateToYMD(current), leave);
+      }
+    }
+    return map;
+  }, [leaveRequests]);
 
   const totalWeekMins = useMemo(() => {
     return Array.from(dayMap.values()).reduce((sum, day) => {
@@ -311,6 +328,7 @@ export function BulkAttendanceCalendar({
             date={date}
             dayMap={dayMap}
             holidayMap={holidayMap}
+            leaveMap={leaveMap}
             onAddLog={onOpenCreate}
           />
         ),
@@ -320,7 +338,7 @@ export function BulkAttendanceCalendar({
       ),
       toolbar: () => null,
     }),
-    [dayMap, holidayMap, onOpenCreate, onOpenEdit, onDeleteLog, totalWeekLabel],
+    [dayMap, holidayMap, leaveMap, onOpenCreate, onOpenEdit, onDeleteLog, totalWeekLabel],
   );
 
   // ── Drag handlers ───────────────────────────────────────────────────────────

@@ -30,8 +30,8 @@ export default async function PlanPage({
   const canViewTeam = ["org", "organization"].includes(weeklyPlanScope);
 
   return (
-    <div className="flex flex-col gap-6 flex-1 min-h-full">
-      <div className="ml-7 mt-7">
+    <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">
+      <div className="ml-7 mt-7 mr-7">
         <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
           Plans
         </h1>

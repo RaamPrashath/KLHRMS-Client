@@ -76,39 +76,30 @@ export function PlanClient({
 
   return (
     <div className="flex flex-col gap-6 mx-7 mb-7">
-      <div className="w-full overflow-x-auto">
-        <div className="inline-flex min-w-fit rounded-2xl border border-border bg-[#f5f5f7] p-1">
-          {TAB_OPTIONS.filter((tab) => !tab.requireTeam || canViewTeam).map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeView === tab.value;
+      <div className="flex items-center gap-1">
+        {TAB_OPTIONS.filter((tab) => !tab.requireTeam || canViewTeam).map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeView === tab.value;
 
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => handleViewChange(tab.value)}
-                className={cn(
-                  "relative flex min-w-[196px] items-center justify-center gap-2 rounded-[14px] px-5 py-3 text-[13px] font-semibold transition-all duration-300",
-                  isActive
-                    ? "text-white"
-                    : "text-muted-foreground hover:bg-white hover:text-foreground",
-                )}
-              >
-                {isActive ? (
-                  <motion.span
-                    layoutId="plan-tab-pill"
-                    className="absolute inset-0 rounded-[14px] bg-[#1d1d1f]"
-                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                  />
-                ) : null}
-                <span className="relative z-10 flex items-center gap-2">
-                  <Icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => handleViewChange(tab.value)}
+              className={cn(
+                'relative px-5 py-2.5 text-sm font-medium rounded-lg transition-colors',
+                isActive
+                  ? 'bg-[#1d1d1f] text-white'
+                  : 'text-neutral-500 hover:text-neutral-900 hover:bg-black/[0.04]',
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="relative min-h-[600px]">

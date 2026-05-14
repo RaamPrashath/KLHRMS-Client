@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { addDays, format } from 'date-fns';
 import { toast } from 'sonner';
 
 import { BulkAttendanceCalendar } from './BulkAttendanceCalendar';
@@ -12,6 +13,7 @@ import type { WorkLogFormValues } from './WorkLogForm';
 import { useBulkAttendanceData } from '@/modules/attendance/hooks/use-bulk-attendance-data';
 import { useBulkAttendancePermissions } from '@/modules/attendance/hooks/queries/attendance';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
+import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
 import { useProjectsForAttendance } from '@/modules/projects/hooks/useProjectsForAttendance';
 
 import type {
@@ -66,6 +68,16 @@ export function BulkAttendancePageClient({
   // ── Holidays ─────────────────────────────────────────────────────────────────
   const currentYear = currentWeekStart.getFullYear();
   const { data: holidays = [] } = useHolidays(orgSlug, memberId, { year: currentYear });
+  const weekStartDate = format(currentWeekStart, 'yyyy-MM-dd');
+  const weekEndDate = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
+  const { data: leaveData } = useLeaveRequests(orgSlug, memberId, {
+    status: 'APPROVED',
+    memberId,
+    fromDate: weekStartDate,
+    toDate: weekEndDate,
+    page: 1,
+    pageSize: 50,
+  });
 
   // ── Projects ─────────────────────────────────────────────────────────────────
   const { data: projects = [] } = useProjectsForAttendance(orgSlug, memberId);
@@ -376,6 +388,7 @@ export function BulkAttendancePageClient({
           weekStart={currentWeekStart}
           dayMap={dayMap}
           holidays={holidays}
+          leaveRequests={leaveData?.items ?? []}
           onOpenCreate={handleOpenCreate}
           onOpenEdit={handleOpenEdit}
           onDeleteLog={handleDeleteLog}

@@ -11,7 +11,8 @@ import type { AttendanceRecord, AttendanceStatus } from '@/modules/attendance/ty
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getStatusInfo(status: AttendanceStatus | null) {
+function getStatusInfo(status: AttendanceStatus | null, isLeave: boolean) {
+  if (isLeave) return { text: 'On Leave', color: '#EA4335' };
   if (status === 'PRESENT') return { text: 'Present', color: '#00874A' };
   if (status === 'ABSENT') return { text: 'Absent', color: '#EA4335' };
   if (status === 'HALF_DAY') return { text: 'Half Day', color: '#FBBC05' };
@@ -125,7 +126,7 @@ export function SelfAttendanceWeekView({
               const holidayName = holidayNameMap.get(dateStr) ?? null;
               const isLeave = leaveDaySet.has(dateStr);
               const isOff = isWeekend || isLeave || !!holidayName;
-              const statusInfo = record ? getStatusInfo(record.status) : null;
+              const statusInfo = isLeave ? getStatusInfo(null, true) : record ? getStatusInfo(record.status, false) : null;
 
               return (
                 <div
@@ -142,9 +143,6 @@ export function SelfAttendanceWeekView({
                     <span className="text-[11px] text-neutral-400">{DAY_NAMES[day.getDay()]}</span>
                     {holidayName && (
                       <span className="text-[10px] text-red-500 font-medium">{holidayName}</span>
-                    )}
-                    {isLeave && !holidayName && (
-                      <span className="text-[10px] text-red-500 font-medium">On Leave</span>
                     )}
                   </div>
 

@@ -143,7 +143,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
       columnHelper.accessor("name", {
         header: "Name",
         cell: (info) => (
-          <span className="text-[14px] font-semibold text-ink">{info.getValue()}</span>
+          <span className="text-[14px] font-semibold text-neutral-900">{info.getValue()}</span>
         ),
       }),
       columnHelper.accessor("mon", {
@@ -207,15 +207,15 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
     <div className="flex flex-col gap-6">
       {/* Header with week navigator and export */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-foreground/5 text-ink border border-hairline">
-            <CalendarDays className="h-5 w-5" aria-hidden="true" />
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <CalendarDays className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-bold text-ink leading-tight tracking-tight">
+            <span className="text-lg font-semibold text-neutral-900 leading-tight tracking-tight">
               {monthLabel}
             </span>
-            <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted-48 mt-0.5">
+            <span className="text-[11px] font-medium text-neutral-400 mt-0.5">
               Week {weekState.week} · {getWeekRangeLabel(weekState.year, weekState.week)}
             </span>
           </div>
@@ -226,7 +226,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
             <button
               type="button"
               onClick={() => changeWeek(-1)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-muted-48 transition-colors hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-focus"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none"
               aria-label="Previous week"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -234,7 +234,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
             <button
               type="button"
               onClick={() => changeWeek(1)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-muted-48 transition-colors hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-focus"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none"
               aria-label="Next week"
             >
               <ChevronRight className="h-4 w-4" />
@@ -247,7 +247,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
             type="button"
             onClick={handleExportCsv}
             disabled={rows.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-pill bg-primary px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-primary-focus active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-focus focus-visible:ring-offset-2 disabled:opacity-40 disabled:pointer-events-none"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.95] disabled:opacity-40 disabled:pointer-events-none"
             aria-label="Export team plans as CSV"
           >
             <FileDown className="size-3.5" aria-hidden="true" />
@@ -322,8 +322,8 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
       {/* Summary footer */}
       {!isLoading && rows.length > 0 && (
         <div className="flex items-center justify-between rounded-2xl bg-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-5 py-3">
-          <p className="text-[13px] font-medium text-ink-muted-48">
-            Showing <span className="font-semibold text-ink">{rows.length}</span> team member{rows.length === 1 ? "" : "s"}
+          <p className="text-[13px] font-medium text-neutral-500">
+            Showing <span className="font-semibold text-neutral-900">{rows.length}</span> team member{rows.length === 1 ? "" : "s"}
           </p>
           <div className="flex items-center gap-4">
             {(["OFFICE", "WFH", "LEAVE", "HOLIDAY"] as PlanLocationValue[]).map((loc) => {
@@ -335,10 +335,10 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
               return (
                 <div key={loc} className="flex items-center gap-1.5">
                   <span className={cn("size-1.5 rounded-full", theme.dot)} />
-                  <span className="text-[12px] font-medium text-ink-muted-48">
+                  <span className="text-[12px] font-medium text-neutral-500">
                     {PLAN_LOCATION_MAP[loc].short_label}
                   </span>
-                  <span className="text-[12px] font-bold tabular-nums text-ink">{count}</span>
+                  <span className="text-[12px] font-bold tabular-nums text-neutral-900">{count}</span>
                 </div>
               );
             })}

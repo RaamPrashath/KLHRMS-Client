@@ -267,6 +267,21 @@ export function MonthlyPlanPanel({
     [holidays]
   );
 
+  // Create a set of leave dates for protection
+  const leaveDates = useMemo(() => {
+    const set = new Set<string>();
+    if (leaveRequestsData?.items) {
+      for (const leave of leaveRequestsData.items) {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          set.add(d.toISOString().split("T")[0]);
+        }
+      }
+    }
+    return set;
+  }, [leaveRequestsData]);
+
   const summary = useMemo(() => {
     const counts: Record<string, number> = {};
     weekdayDates.forEach((date) => {
@@ -282,8 +297,11 @@ export function MonthlyPlanPanel({
   }, [drafts, weekdayDates]);
 
   function updateDraft(date: string, nextLocation: PlanLocationValue | "") {
-    // Prevent changing holiday cells
+    // Prevent changing holiday or leave cells
     if (holidayDates.has(date) && drafts[date] === "HOLIDAY") {
+      return;
+    }
+    if (leaveDates.has(date) && drafts[date] === "LEAVE") {
       return;
     }
     
@@ -306,14 +324,15 @@ export function MonthlyPlanPanel({
   }
 
   function handleApplyEverywhere() {
-    // Count non-holiday weekdays
-    const nonHolidayWeekdays = weekdayDates.filter(date => !holidayDates.has(date));
-    const alreadySetCount = nonHolidayWeekdays.filter((date) => drafts[date]).length;
+    // Count non-holiday, non-leave weekdays
+    const protectedDates = new Set([...holidayDates, ...leaveDates]);
+    const nonProtectedWeekdays = weekdayDates.filter(date => !protectedDates.has(date));
+    const alreadySetCount = nonProtectedWeekdays.filter((date) => drafts[date]).length;
     
     if (
       alreadySetCount > 0 &&
       !globalThis.confirm(
-        `Apply ${PLAN_LOCATION_MAP[selectedLocation].label} to all ${nonHolidayWeekdays.length} non-holiday weekdays? ` +
+        `Apply ${PLAN_LOCATION_MAP[selectedLocation].label} to all ${nonProtectedWeekdays.length} non-holiday weekdays? ` +
           `${alreadySetCount} existing day selections will be overwritten.`,
       )
     ) {
@@ -321,9 +340,9 @@ export function MonthlyPlanPanel({
     }
 
     const nextDrafts = { ...drafts };
-    nonHolidayWeekdays.forEach((date) => {
-      // Only update if it's not a protected holiday
-      if (!holidayDates.has(date) || drafts[date] !== "HOLIDAY") {
+    nonProtectedWeekdays.forEach((date) => {
+      // Only update if it's not a protected holiday or leave
+      if (!protectedDates.has(date)) {
         nextDrafts[date] = selectedLocation;
       }
     });
@@ -360,7 +379,7 @@ export function MonthlyPlanPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-[28px] border border-border/70 bg-white p-5 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-col gap-4">
             <MonthNavigator
@@ -375,7 +394,7 @@ export function MonthlyPlanPanel({
                 value={selectedLocation}
                 onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}
               >
-                <SelectTrigger className="h-11 min-w-[220px] rounded-full border-border/80 bg-muted/20 text-xs font-bold">
+                <SelectTrigger className="h-10 min-w-[200px] rounded-lg text-sm">
                   <SelectValue placeholder="Choose a location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -390,22 +409,22 @@ export function MonthlyPlanPanel({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full h-11 px-6 font-bold text-xs"
+                className="h-10 rounded-lg px-4 text-sm font-medium"
                 onClick={handleApplyEverywhere}
                 disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
               >
-                <Sparkles className="mr-2 h-4 w-4" />
+                <Sparkles className="mr-2 h-3.5 w-3.5" />
                 Apply to all weekdays
               </Button>
 
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full h-11 px-6 font-bold text-xs"
+                className="h-10 rounded-lg px-4 text-sm font-medium"
                 onClick={handleClearAll}
                 disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
               >
-                <Eraser className="mr-2 h-4 w-4" />
+                <Eraser className="mr-2 h-3.5 w-3.5" />
                 Clear all
               </Button>
             </div>
@@ -413,17 +432,18 @@ export function MonthlyPlanPanel({
 
           <Button
             type="button"
-            className="rounded-full h-11 px-8 font-bold text-xs shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+            className="h-10 rounded-lg px-5 text-sm font-medium"
+            style={{ backgroundColor: '#00874a' }}
             onClick={handleSave}
             disabled={!isDirty || saveMutation.isPending || isMonthLoading}
           >
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="mr-2 h-3.5 w-3.5" />
             {saveMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-border/70 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
         <div className="mb-6 grid grid-cols-7 gap-3 px-1">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
             <span
@@ -451,7 +471,7 @@ export function MonthlyPlanPanel({
             monthRows.map((row, rowIndex) => (
               <div key={rowIndex} className="grid grid-cols-7 gap-3">
                 {row.map((day) => {
-                  const isHolidayProtected = holidayDates.has(day.iso) && drafts[day.iso] === "HOLIDAY";
+                  const isHolidayProtected = (holidayDates.has(day.iso) && drafts[day.iso] === "HOLIDAY") || (leaveDates.has(day.iso) && drafts[day.iso] === "LEAVE");
                   
                   return (
                     <MonthDayCell
@@ -472,7 +492,7 @@ export function MonthlyPlanPanel({
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-border/70 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
             <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Month summary</h2>

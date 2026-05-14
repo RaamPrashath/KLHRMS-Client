@@ -99,7 +99,9 @@ export function WorkLogHeatmapCard({ orgSlug, memberId }: Readonly<WorkLogHeatma
     return styles;
   }, [modifiers]);
 
-  function getDayStyle(day: Date, isToday: boolean): React.CSSProperties {
+  function getDayStyle(day: Date, isToday: boolean, isOutside: boolean): React.CSSProperties {
+    if (isOutside) return { color: "#d4d4d4", borderRadius: "4px" };
+
     const dateStr = format(day, "yyyy-MM-dd");
     const todayRing = isToday ? `0 0 0 1.5px` : undefined;
     if (offDayDates.has(dateStr)) {
@@ -110,7 +112,7 @@ export function WorkLogHeatmapCard({ orgSlug, memberId }: Readonly<WorkLogHeatma
     }
     const total = dayTotals.get(dateStr) ?? 0;
     if (total === 0) return {
-      color: "#a3a3a3", borderRadius: "4px",
+      backgroundColor: "#f5f5f5", color: "#a3a3a3", borderRadius: "4px",
       ...(todayRing ? { boxShadow: `${todayRing} #a3a3a3`, fontWeight: 600 } : {}),
     };
     if (total < 4) return {
@@ -128,6 +130,7 @@ export function WorkLogHeatmapCard({ orgSlug, memberId }: Readonly<WorkLogHeatma
   }
 
   function handleDayClick(day: Date) {
+    if (format(day, "yyyy-MM") !== format(month, "yyyy-MM")) return;
     const dateStr = format(day, "yyyy-MM-dd");
     const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0, 0, 0);
     const end = new Date(start.getTime() + 60 * 60_000);
@@ -195,8 +198,8 @@ export function WorkLogHeatmapCard({ orgSlug, memberId }: Readonly<WorkLogHeatma
 
   return (
     <section className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-      <div className="px-6 py-5 border-b border-black/[0.04] flex items-center justify-between">
-        <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight">Heatmap</h2>
+      <div className="px-5 py-3 flex items-center justify-between">
+        <h2 className="text-[15px] font-semibold text-neutral-900 tracking-tight">Heatmap</h2>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -218,7 +221,7 @@ export function WorkLogHeatmapCard({ orgSlug, memberId }: Readonly<WorkLogHeatma
         </div>
       </div>
 
-      <div className="p-5 bg-surface">
+      <div className="bg-surface px-4 pb-4 pt-3">
 
         <Calendar
           month={month}
@@ -228,11 +231,11 @@ export function WorkLogHeatmapCard({ orgSlug, memberId }: Readonly<WorkLogHeatma
           classNames={{
             root: "w-full",
             months: "flex w-full flex-col",
-            month: "mx-auto flex w-fit flex-col gap-2",
+            month: "mx-auto flex w-fit flex-col gap-3",
             month_caption: "hidden",
-            month_grid: "mx-auto border-separate border-spacing-0.5",
+            month_grid: "mx-auto border-separate [border-spacing:6px_7px]",
             weekdays: "",
-            weekday: "h-7 w-9 px-0 text-center text-[10px] font-semibold text-neutral-500 uppercase tracking-wider",
+            weekday: "h-8 w-11 px-0 text-center text-[10px] font-semibold text-neutral-500 uppercase tracking-[0.18em]",
             weeks: "",
             week: "",
             day: "p-0 text-center align-middle",
@@ -249,9 +252,9 @@ export function WorkLogHeatmapCard({ orgSlug, memberId }: Readonly<WorkLogHeatma
                 <button
                   {...rest}
                   type="button"
-                  style={getDayStyle(day.date, dayModifiers.today)}
+                  style={getDayStyle(day.date, dayModifiers.today, dayModifiers.outside)}
                   className={[
-                    "relative inline-flex size-9 items-center justify-center text-xs rounded-md transition-colors cursor-pointer",
+                    "relative inline-flex size-11 items-center justify-center text-sm rounded-lg transition-colors cursor-pointer",
                     dayModifiers.outside ? "text-neutral-300" : "",
                     dayModifiers.disabled ? "text-neutral-200 cursor-not-allowed" : "",
                     dialogState.open && dialogState.date === format(day.date, "yyyy-MM-dd") ? "ring-2 ring-primary" : "",
@@ -266,8 +269,8 @@ export function WorkLogHeatmapCard({ orgSlug, memberId }: Readonly<WorkLogHeatma
           toDate={endOfMonth(month)}
         />
 
-        <div className="flex items-center justify-center gap-3 mt-4 text-[10px] text-neutral-500">
-          <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-canvas border border-neutral-200" /> 0h</span>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[10px] text-neutral-500">
+          <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ backgroundColor: "#f5f5f5" }} /> 0h</span>
           <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ backgroundColor: "rgba(22,163,74,0.08)" }} /> &lt;4h</span>
           <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ backgroundColor: "rgba(22,163,74,0.25)" }} /> 4–8h</span>
           <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ backgroundColor: "rgba(22,163,74,0.6)" }} /> &gt;8h</span>

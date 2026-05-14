@@ -287,6 +287,21 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     [holidays]
   );
 
+  // Create a set of leave dates for protection
+  const leaveDates = useMemo(() => {
+    const set = new Set<string>();
+    if (leaveRequestsData?.items) {
+      for (const leave of leaveRequestsData.items) {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          set.add(d.toISOString().split("T")[0]);
+        }
+      }
+    }
+    return set;
+  }, [leaveRequestsData]);
+
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-5">
@@ -314,7 +329,7 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-full border-border bg-white px-5 text-[11px] font-semibold uppercase tracking-wider text-foreground hover:bg-white"
+                className="h-10 rounded-lg px-5 text-[13px] font-medium"
                 onClick={handleCopyPreviousWeek}
                 disabled={isWeekLoading || isLocationsLoading || saveMutation.isPending}
               >
@@ -336,6 +351,7 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
           isSaving={saveMutation.isPending}
           actualByDate={actualByDate}
           holidayDates={holidayDates}
+          leaveDates={leaveDates}
           onDraftChange={updateDraft}
           onSave={handleSave}
         />
