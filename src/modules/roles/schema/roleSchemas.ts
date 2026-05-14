@@ -35,6 +35,7 @@ export const HRMS_MODULES = [
   'tax',
   // Operations
   'assets',
+  'maintenance',
   'helpdesk',
   'documents',
 ] as const;

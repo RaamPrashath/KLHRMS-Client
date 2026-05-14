@@ -24,7 +24,7 @@ export default async function MaintenancePage({
     redirect('/organizations');
   }
 
-  if (!permissions || !hasPermission(permissions, 'assets')) redirect(`/${orgSlug}`);
+  if (!permissions || !hasPermission(permissions, 'maintenance')) redirect(`/${orgSlug}`);
 
   const canManageAssets =
     getScope(permissions, 'assets', 'create') === 'organization' ||

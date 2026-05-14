@@ -3,16 +3,16 @@
 import {
   AlertTriangle,
   CircleCheck,
-  CircleOff,
-  Hammer,
   Package,
-  Wrench,
+  Ticket,
+  WrenchIcon,
 } from 'lucide-react';
 import { useDashboardQuery } from '@/modules/assets/hooks/useDashboardQuery';
 import { DashboardKPICard } from './DashboardKPICard';
 import { StatusDonutChart } from './StatusDonutChart';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
-import { RecentActivityList } from './RecentActivityList';
+import { ActivityTable } from './ActivityTable';
+import { OpenTicketList } from './OpenTicketList';
 
 function SkeletonLine({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-[#e8e8eb] ${className ?? ''}`} />;
@@ -42,8 +42,8 @@ export function DashboardTab({
   if (isLoading) {
     return (
       <div className="space-y-5">
-        <div className="grid grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-5 gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
               <SkeletonLine className="mb-2 h-7 w-16" />
               <SkeletonLine className="h-4 w-20" />
@@ -60,19 +60,32 @@ export function DashboardTab({
             <SkeletonLine className="h-40 w-full" />
           </div>
         </div>
-        <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
-          <SkeletonLine className="mb-4 h-5 w-32" />
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <SkeletonLine className="size-8 rounded-xl" />
-                <div className="flex-1 space-y-1.5">
-                  <SkeletonLine className="h-4 w-44" />
-                  <SkeletonLine className="h-3 w-28" />
+        <div className="grid grid-cols-3 gap-5">
+          <div className="col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white p-5">
+            <SkeletonLine className="mb-4 h-5 w-32" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <SkeletonLine className="size-7 rounded-lg" />
+                  <SkeletonLine className="h-4 flex-1" />
+                  <SkeletonLine className="h-3 w-16" />
                 </div>
-                <SkeletonLine className="h-3 w-16" />
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
+            <SkeletonLine className="mb-4 h-5 w-28" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <SkeletonLine className="mt-1 size-2.5 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <SkeletonLine className="h-4 w-32" />
+                    <SkeletonLine className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -83,11 +96,12 @@ export function DashboardTab({
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <DashboardKPICard value={d.totalAssets} label="Total Assets" icon={Package} color="#6b7280" />
         <DashboardKPICard value={d.availableCount} label="Available" icon={CircleCheck} color="#00874a" />
         <DashboardKPICard value={d.providedCount} label="Provided" icon={UserCheckIcon} color="#2563eb" />
-        <DashboardKPICard value={d.maintenanceCount} label="In Maintenance" icon={Wrench} color="#d97706" />
+        <DashboardKPICard value={d.maintenanceCount} label="In Maintenance" icon={WrenchIcon} color="#d97706" />
+        <DashboardKPICard value={d.openTicketCount} label="Open Tickets" icon={Ticket} color="#dc2626" />
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -105,11 +119,19 @@ export function DashboardTab({
         </div>
       </div>
 
-      <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-        <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-          Recent Activity
-        </h3>
-        <RecentActivityList items={d.recentActivity} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="lg:col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
+          <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+            Recent Activity
+          </h3>
+          <ActivityTable items={d.recentActivity} />
+        </div>
+        <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
+          <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+            Open Tickets
+          </h3>
+          <OpenTicketList tickets={d.recentTickets} />
+        </div>
       </div>
     </div>
   );

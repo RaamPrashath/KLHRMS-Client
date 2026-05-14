@@ -14,6 +14,16 @@ export interface RecentActivityItem {
   assetName: string;
   memberName?: string | null;
   date: string;
+  detail?: string | null;
+}
+
+export interface TicketAlertItem {
+  id: string;
+  assetName: string;
+  maintenanceType: string;
+  status: string;
+  issueDescription: string;
+  createdAt: string;
 }
 
 export interface DashboardData {
@@ -23,7 +33,9 @@ export interface DashboardData {
   maintenanceCount: number;
   damagedCount: number;
   retiredCount: number;
+  openTicketCount: number;
   statusDistribution: StatusCount[];
   monthlyTrends: MonthlyTrend[];
   recentActivity: RecentActivityItem[];
+  recentTickets: TicketAlertItem[];
 }

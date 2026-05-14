@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { PackagePlus, Plus, Search } from 'lucide-react';
+import { Hammer, PackagePlus, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ import { AssetIdManager } from '@/modules/assets/components/AssetIdManager';
 import { CategoryTab } from '@/modules/assets/components/CategoryTab';
 import { DashboardTab } from '@/modules/assets/components/dashboard/DashboardTab';
 import { IssueAssetTab } from '@/modules/assets/components/IssueAssetTab';
+import { RaiseTicketDialog } from '@/modules/assets/components/RaiseTicketDialog';
 import { ReportsTab } from '@/modules/assets/components/ReportsTab';
 import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog';
 import { AssetFormDialog } from '@/modules/assets/components/AssetFormDialog';
@@ -80,6 +81,7 @@ export function AssetsPageShell({
   const [assetForm, setAssetForm] = useState<AssetInput>(defaultAssetForm);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'create' | 'manage'>('manage');
+  const [raiseTicketOpen, setRaiseTicketOpen] = useState(false);
 
   const router = useRouter();
   const tabOptions = useMemo(() => getAssetTabOptions(canManageAssets), [canManageAssets]);
@@ -225,6 +227,18 @@ export function AssetsPageShell({
     await mutations.deleteCategory.mutateAsync(categoryId);
   }
 
+  async function handleRaiseTicket(data: { assetId: string; maintenanceType: string; issueDescription: string }) {
+    await mutations.createMaintenance.mutateAsync({
+      assetId: data.assetId,
+      maintenanceType: data.maintenanceType as any,
+      issueDescription: data.issueDescription,
+      serviceDate: new Date().toISOString().split('T')[0],
+      status: 'OPEN',
+      conditionBeforeMaintenance: 'GOOD',
+      notes: '',
+    });
+  }
+
   async function handleDecommissionAsset(assetId: string) {
     try {
       const asset = allFetchedAssets.find((a) => a.id === assetId);
@@ -252,9 +266,19 @@ export function AssetsPageShell({
   if (!canManageAssets) {
     return (
       <div className="w-full">
-        <div className="mb-6">
-          <h1 className="text-[22px] font-semibold tracking-tight text-[#111827]">Assets</h1>
-          <p className="mt-1 text-[14px] text-[#6b7280]">View equipment and devices assigned to you</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight text-[#111827]">Assets</h1>
+            <p className="mt-1 text-[14px] text-[#6b7280]">View equipment and devices assigned to you</p>
+          </div>
+          <Button
+            onClick={() => setRaiseTicketOpen(true)}
+            className="h-9 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm"
+            style={{ backgroundColor: '#b3261e' }}
+          >
+            <Hammer className="mr-1.5 size-4" />
+            Report Issue
+          </Button>
         </div>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="w-full sm:max-w-xs flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2">
@@ -321,6 +345,13 @@ export function AssetsPageShell({
           onProvide={() => {}}
           onReturn={() => {}}
           onMaintenance={seedMaintenanceForm}
+        />
+        <RaiseTicketDialog
+          open={raiseTicketOpen}
+          onOpenChange={setRaiseTicketOpen}
+          assets={allFetchedAssets}
+          memberId={memberId}
+          onSubmit={handleRaiseTicket}
         />
       </div>
     );
