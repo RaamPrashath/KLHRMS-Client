@@ -44,7 +44,7 @@ export function AtsPipelinePageShell({
 
   return (
     <div className="min-h-full bg-canvas px-6 mt-6">
-      <div className="mb-6 flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">ATS Pipeline</h1>
       </div>
 

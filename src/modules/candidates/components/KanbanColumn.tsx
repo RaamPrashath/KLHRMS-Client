@@ -1,15 +1,16 @@
 'use client';
 
 import { useDroppable } from '@dnd-kit/core';
+import { AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
   ExternalLink,
-  MoreHorizontal,
+  LoaderCircle,
+  MoreVertical,
   Pencil,
   Plus,
-  Search,
   Trash2,
 } from 'lucide-react';
 
@@ -21,7 +22,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import type { PipelineApplication, PipelineStage } from '@/modules/candidates/types/atsTypes';
@@ -49,9 +49,9 @@ export function KanbanColumn({
   onScheduleInterview,
   onStartInterview,
   onCompleteInterview,
-  searchValue,
-  onSearchChange,
   filteredApplications,
+  previewApplication,
+  isUpdating = false,
 }: {
   readonly stage: PipelineStage;
   readonly isFirst: boolean;
@@ -67,9 +67,9 @@ export function KanbanColumn({
   readonly onScheduleInterview: (application: PipelineApplication) => void;
   readonly onStartInterview: (application: PipelineApplication) => void;
   readonly onCompleteInterview: (application: PipelineApplication) => void;
-  readonly searchValue: string;
-  readonly onSearchChange: (stageId: string, value: string) => void;
   readonly filteredApplications: PipelineApplication[];
+  readonly previewApplication?: PipelineApplication | null;
+  readonly isUpdating?: boolean;
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: stage.id,
@@ -80,15 +80,14 @@ export function KanbanColumn({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex w-[300px] shrink-0 flex-col rounded-xl bg-white shadow-sm',
-        isOver && 'ring-2 ring-primary bg-primary-ghost',
+        'flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden border-r border-neutral-200/70 px-2 pt-2 last:border-r-0',
+        isOver && ' bg-neutral-100/90',
       )}
     >
-      <header className="sticky top-0 z-10 border-b border-neutral-100 bg-white p-3">
-        <div className="flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-10 mb-3">
+        <div className="flex min-w-0 items-start gap-2 rounded-xl bg-surface px-3 py-2 shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-primary" />
               <button
                 type="button"
                 onClick={() => onOpenStageWorkspace(stage)}
@@ -106,23 +105,35 @@ export function KanbanColumn({
                   <ExternalLink className="size-3.5 shrink-0 text-neutral-400" />
                 </button>
               ) : null}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="text-xs text-neutral-500">
+                {filteredApplications.length}
+                {filteredApplications.length !== stage.applications.length ? ` of ${stage.applications.length}` : ''} candidates
+              </p>
               {stage.dueDate ? (
-                <div className="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text flex-shrink-0">
+                <div className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text">
                   <CalendarDays className="size-3" />
                   {formatStageDate(stage.dueDate)}
                 </div>
               ) : null}
             </div>
-            <p className="mt-0.5 text-xs text-neutral-500">
-              {filteredApplications.length}
-              {filteredApplications.length !== stage.applications.length ? ` of ${stage.applications.length}` : ''} candidates
-            </p>
           </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon-sm" variant="ghost" aria-label={`${stage.name} actions`}>
-                <MoreHorizontal className="size-4" />
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label={`${stage.name} actions`}
+                className="size-7 rounded-md text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700 mt-1.5"
+                disabled={isUpdating}
+              >
+                {isUpdating ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <MoreVertical className="size-4" />
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
@@ -155,32 +166,36 @@ export function KanbanColumn({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
-        <div className="relative mt-3">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
-          <Input
-            value={searchValue}
-            onChange={(event) => onSearchChange(stage.id, event.target.value)}
-            placeholder="Search column"
-            className="h-8 bg-neutral-50 pl-8 text-xs"
-          />
-        </div>
       </header>
 
-      <div className="space-y-3 p-3 pb-6">
-        {filteredApplications.map((application) => (
-          <CandidateCard
-            key={application.id}
-            application={application}
-            onOpen={onOpenCandidate}
-            meetingEnabled={stage.meetingEnabled}
-            onScheduleInterview={onScheduleInterview}
-            onStartInterview={onStartInterview}
-            onCompleteInterview={onCompleteInterview}
-          />
-        ))}
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto no-scrollbar pb-6">
+        <AnimatePresence initial={false}>
+          {previewApplication ? (
+            <CandidateCard
+              key={`preview-${previewApplication.id}-${stage.id}`}
+              application={previewApplication}
+              meetingEnabled={stage.meetingEnabled}
+              onScheduleInterview={onScheduleInterview}
+              onStartInterview={onStartInterview}
+              onCompleteInterview={onCompleteInterview}
+              compact
+              draggable={false}
+            />
+          ) : null}
+          {filteredApplications.map((application) => (
+            <CandidateCard
+              key={application.id}
+              application={application}
+              onOpen={onOpenCandidate}
+              meetingEnabled={stage.meetingEnabled}
+              onScheduleInterview={onScheduleInterview}
+              onStartInterview={onStartInterview}
+              onCompleteInterview={onCompleteInterview}
+            />
+          ))}
+        </AnimatePresence>
         {filteredApplications.length === 0 && (
-          <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50/60 p-4 text-center text-xs text-neutral-500">
+          <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 p-4 text-center text-xs text-neutral-500">
             {stage.applications.length === 0 ? 'Drop candidates here' : 'No candidates match'}
           </div>
         )}
