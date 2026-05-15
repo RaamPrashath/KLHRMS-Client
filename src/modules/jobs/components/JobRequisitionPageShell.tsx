@@ -20,7 +20,6 @@ interface JobRequisitionPageShellProps {
   memberId: string;
   departments: JobDepartmentOption[];
   permissions: RolePermissions | null;
-  ownedOnly: boolean;
 }
 
 export function JobRequisitionPageShell({
@@ -28,12 +27,17 @@ export function JobRequisitionPageShell({
   memberId,
   departments,
   permissions,
-  ownedOnly,
 }: Readonly<JobRequisitionPageShellProps>) {
   const shouldReduceMotion = useReducedMotion();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const jobsViewScope = getScope(permissions, 'jobs', 'view');
   const jobsDeleteScope = getScope(permissions, 'jobs', 'delete');
-  const { data = [], isLoading, isError, error, refetch } = useJobRequisitionsQuery(orgSlug, memberId, ownedOnly);
+  const showRaisedBy = jobsViewScope === 'organization';
+  const canClose = jobsDeleteScope === 'organization' || jobsDeleteScope === 'self';
+  const { data = [], isLoading, isError, error, refetch } = useJobRequisitionsQuery(orgSlug, memberId, jobsViewScope);
+  const visibleRequisitions = jobsViewScope === 'self'
+    ? data.filter((requisition) => requisition.raisedById === memberId)
+    : data;
   const submitMutation = useSubmitJobRequisition(orgSlug, memberId);
   const approveMutation = useApproveJobRequisition(orgSlug, memberId);
   const rejectMutation = useRejectJobRequisition(orgSlug, memberId);
@@ -49,21 +53,21 @@ export function JobRequisitionPageShell({
     <>
       <main className="min-h-full bg-canvas">
         <div className="flex flex-col gap-6 flex-1 min-h-full">
-          <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight ml-7 mt-7">
-            {ownedOnly ? 'My Job Requisitions' : 'Job Requisitions'}
-          </h1>
+          <div className="flex items-start justify-between ml-7 mt-7 mr-7">
+            <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
+              Job Requisitions
+            </h1>
+          </div>
 
           <motion.div {...motionProps}>
             <JobRequisitionTable
-              orgSlug={orgSlug}
-              ownedOnly={ownedOnly}
-              data={data}
+              data={visibleRequisitions}
               isLoading={isLoading}
               isError={isError}
               error={error}
               onRetry={refetch}
-              showRaisedBy={!ownedOnly}
-              canClose={jobsDeleteScope === 'organization'}
+              showRaisedBy={showRaisedBy}
+              canClose={canClose}
               submitLoading={submitMutation.isPending}
               approveLoading={approveMutation.isPending}
               rejectLoading={rejectMutation.isPending}

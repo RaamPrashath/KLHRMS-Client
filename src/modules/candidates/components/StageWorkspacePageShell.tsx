@@ -454,28 +454,53 @@ export function StageWorkspacePageShell({
     <div className="min-h-full bg-canvas px-8 py-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-10">
-          <Button asChild variant="ghost" size="sm" className="-ml-2 mb-6 text-neutral-500 hover:text-neutral-900">
-            <Link href={`/${orgSlug}/candidates`}>
-              <ChevronLeft className="mr-1 size-4" />
-              Pipeline
-            </Link>
-          </Button>
-
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
-                {workspace.stage.name}
-              </h1>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
-                <span className="size-1 rounded-full bg-neutral-300" />
-                <span className="font-mono text-xs font-medium text-neutral-400 uppercase tracking-wider">
-                  {workspace.candidateCount} Candidates
-                </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button asChild variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900">
+                <Link href={`/${orgSlug}/candidates`}>
+                  <ChevronLeft className="size-5" />
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight text-neutral-900">
+                  {workspace.stage.name}
+                </h1>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
+                  <span className="size-1 rounded-full bg-neutral-300" />
+                  <span className="font-mono text-xs font-medium text-neutral-400 uppercase tracking-wider">
+                    {workspace.candidateCount} Candidates
+                  </span>
+                </div>
               </div>
             </div>
 
-{/* Direct / Automatic toggle removed for now */}
+            <div className="flex items-center gap-1 rounded-lg border border-neutral-200 bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setAssignmentMode('direct')}
+                className={cn(
+                  "rounded-md px-4 py-2 text-sm font-semibold transition-all",
+                  assignmentMode === 'direct'
+                    ? "bg-neutral-900 text-white shadow-sm"
+                    : "text-neutral-600 hover:text-neutral-900"
+                )}
+              >
+                Direct
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignmentMode('automatic')}
+                className={cn(
+                  "rounded-md px-4 py-2 text-sm font-semibold transition-all",
+                  assignmentMode === 'automatic'
+                    ? "bg-neutral-900 text-white shadow-sm"
+                    : "text-neutral-600 hover:text-neutral-900"
+                )}
+              >
+                Automatic
+              </button>
+            </div>
           </div>
         </div>
 

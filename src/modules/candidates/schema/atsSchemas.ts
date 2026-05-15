@@ -11,12 +11,16 @@ export const createPipelineStageSchema = z.object({
   afterStageId: z.string().min(1).optional().nullable(),
   stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).default('DEFAULT'),
   evaluationEnabled: z.boolean().default(false),
+  evaluationType: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).optional().nullable(),
+  evaluationIncludeTotal: z.boolean().default(false),
+  evaluationIncludeAnalysis: z.boolean().default(false),
   dueDate: z.string().datetime().optional().nullable(),
   evaluationCategories: z
     .array(
       z.object({
         id: z.string().min(1).optional().nullable(),
         name: z.string().trim().min(1, 'Category name is required').max(120),
+        type: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).default('NUMERIC'),
         order: z.number().int().min(1).optional(),
       }),
     )
@@ -28,6 +32,9 @@ export const updatePipelineStageSchema = z.object({
   order: z.number().optional(),
   stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).optional(),
   evaluationEnabled: z.boolean().optional(),
+  evaluationType: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).optional().nullable(),
+  evaluationIncludeTotal: z.boolean().optional(),
+  evaluationIncludeAnalysis: z.boolean().optional(),
   dueDate: z.string().datetime().optional().nullable(),
   dueDateEnabled: z.boolean().optional(),
   evaluationCategories: z
@@ -35,6 +42,7 @@ export const updatePipelineStageSchema = z.object({
       z.object({
         id: z.string().min(1).optional().nullable(),
         name: z.string().trim().min(1, 'Category name is required').max(120),
+        type: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).default('NUMERIC'),
         order: z.number().int().min(1).optional(),
       }),
     )
@@ -85,6 +93,7 @@ export interface MoveApplicationStageInput {
 export interface StageEvaluationCategoryInput {
   id?: string | null;
   name: string;
+  type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
   order?: number;
 }
 
@@ -94,6 +103,9 @@ export interface CreatePipelineStageInput {
   afterStageId?: string | null;
   stageType: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
   evaluationEnabled: boolean;
+  evaluationType?: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
+  evaluationIncludeTotal: boolean;
+  evaluationIncludeAnalysis: boolean;
   dueDate?: string | null;
   evaluationCategories: StageEvaluationCategoryInput[];
 }
@@ -103,6 +115,9 @@ export interface UpdatePipelineStageInput {
   order?: number;
   stageType?: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
   evaluationEnabled?: boolean;
+  evaluationType?: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
+  evaluationIncludeTotal?: boolean;
+  evaluationIncludeAnalysis?: boolean;
   dueDate?: string | null;
   dueDateEnabled?: boolean;
   evaluationCategories?: StageEvaluationCategoryInput[];

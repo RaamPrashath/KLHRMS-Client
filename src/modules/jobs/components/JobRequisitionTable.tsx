@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { Eye, FileCheck2, Send, XCircle, Search, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,8 +21,6 @@ import { RequisitionDecisionDialog } from '@/modules/jobs/components/Requisition
 import type { JobRequisitionRecord } from '@/modules/jobs/types/jobRequisitionTypes';
 
 interface JobRequisitionTableProps {
-  orgSlug: string;
-  ownedOnly: boolean;
   data: JobRequisitionRecord[];
   isLoading: boolean;
   isError: boolean;
@@ -83,8 +80,6 @@ function parseError(error: Error | null) {
 const SKELETON_IDS = Array.from({ length: 10 }, (_, i) => `skeleton-row-${i}`);
 
 export function JobRequisitionTable({
-  orgSlug,
-  ownedOnly,
   data,
   isLoading,
   isError,
@@ -123,41 +118,37 @@ export function JobRequisitionTable({
         <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
           {/* ── Filter bar ──────────────────────────────────────────────── */}
           <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
-                <Input
-                  placeholder="Search requisitions..."
-                  value={globalFilter}
-                  onChange={(event) => setGlobalFilter(event.target.value)}
-                  className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
-                />
-                {globalFilter && (
-                  <button
-                    type="button"
-                    onClick={() => setGlobalFilter('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+              <div className="flex flex-col gap-2">
+                <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight">
+                  Requisitions
+                </h2>
               </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {!ownedOnly ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/${orgSlug}/jobs/requisitions`}>My Requisitions</Link>
-                  </Button>
-                ) : (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/${orgSlug}/jobs`}>All Jobs</Link>
-                  </Button>
-                )}
+              <div className="shrink-0">
                 <Button onClick={onNewRequisition} size="sm">
                   <Plus className="mr-1.5 size-4" />
                   New Requisition
                 </Button>
               </div>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+              <Input
+                placeholder="Search requisitions..."
+                value={globalFilter}
+                onChange={(event) => setGlobalFilter(event.target.value)}
+                className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
+              />
+              {globalFilter && (
+                <button
+                  type="button"
+                  onClick={() => setGlobalFilter('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -184,28 +175,6 @@ export function JobRequisitionTable({
                 );
               }
 
-              if (isLoading) {
-                return (
-                  <div className="flex flex-col divide-y divide-black/4 bg-surface">
-                    {SKELETON_IDS.map((id) => (
-                      <div key={id} className="border-b border-black/4 p-6">
-                        <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
-                      </div>
-                    ))}
-                  </div>
-                );
-              }
-
-              if (filteredData.length === 0) {
-                return (
-                  <div className="bg-surface py-16 text-center text-sm text-neutral-400">
-                    {globalFilter
-                      ? 'No requisitions match your search.'
-                      : 'No requisitions found.'}
-                  </div>
-                );
-              }
-
               return (
                 <>
                   {/* Header */}
@@ -221,125 +190,143 @@ export function JobRequisitionTable({
                     <div className="w-[200px] shrink-0 text-right text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Actions</div>
                   </div>
 
-                  {/* Rows */}
-                  <div className="flex flex-col bg-surface">
-                    {filteredData.map((record) => (
-                      <div
-                        key={record.id}
-                        className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-8"
-                      >
-                        <div className="flex-1 flex flex-col items-center justify-center overflow-hidden px-1">
-                          <p className="truncate text-sm font-medium text-neutral-900 w-full text-center">{record.title}</p>
-                          <p className="truncate text-[11px] text-neutral-500 w-full text-center">
-                            {record.departmentName ?? 'No department'} &bull; {record.employmentType.replaceAll('_', ' ')}
-                          </p>
-                        </div>
-
-                        <div className="flex-1 flex justify-center">
-                          <span className="text-sm font-medium text-neutral-900">{record.openings}</span>
-                        </div>
-
-                        <div className="flex-1 flex justify-center">
-                          <span className="text-sm text-neutral-700 whitespace-nowrap">{formatDate(record.createdAt)}</span>
-                        </div>
-
-                        <div className="flex-1 flex justify-center">
-                          <span className="text-sm text-neutral-700">{progressLabel(record)}</span>
-                        </div>
-
-                        <div className="flex-1 flex justify-center">
-                          <Badge className={cn('border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap', getStatusClasses(record.status))}>
-                            {record.status}
-                          </Badge>
-                        </div>
-
-                        {showRaisedBy && (
-                          <div className="flex-1 flex justify-center">
-                            <span className="block truncate text-sm text-neutral-700">{record.raisedByName ?? 'Unknown'}</span>
+                  {/* Body */}
+                  <div className="px-4">
+                    {isLoading ? (
+                      <div className="flex flex-col divide-y divide-black/4 bg-surface">
+                        {SKELETON_IDS.map((id) => (
+                          <div key={id} className="border-b border-black/4 p-6">
+                            <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
                           </div>
-                        )}
-
-                        <div className="w-[200px] shrink-0 flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => setSelectedRecord(record)}
-                            title="View details"
-                            className="shrink-0"
+                        ))}
+                      </div>
+                    ) : filteredData.length === 0 ? (
+                      <div className="bg-surface py-16 text-center text-sm text-neutral-400">
+                        {globalFilter
+                          ? 'No requisitions match your search.'
+                          : 'No requisitions found.'}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col bg-surface">
+                        {filteredData.map((record) => (
+                          <div
+                            key={record.id}
+                            className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4"
                           >
-                            <Eye className="size-3.5" />
-                          </Button>
+                            <div className="flex-1 flex flex-col items-center justify-center overflow-hidden px-1">
+                              <p className="truncate text-sm font-medium text-neutral-900 w-full text-center">{record.title}</p>
+                              <p className="truncate text-[11px] text-neutral-500 w-full text-center">
+                                {record.departmentName ?? 'No department'} &bull; {record.employmentType.replaceAll('_', ' ')}
+                              </p>
+                            </div>
 
-                          {record.canSubmit && (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={submitLoading}
-                              onClick={async () => {
-                                try {
-                                  await onSubmit(record.id);
-                                  toast.success('Requisition submitted for approval');
-                                } catch (error) {
-                                  toast.error(getErrorMessage(error, 'Failed to submit requisition'));
-                                }
-                              }}
-                              title="Submit for approval"
-                              className="shrink-0"
-                            >
-                              <Send className="size-3.5" />
-                            </Button>
-                          )}
+                            <div className="flex-1 flex justify-center">
+                              <span className="text-sm font-medium text-neutral-900">{record.openings}</span>
+                            </div>
 
-                          {record.currentUserCanApprove && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedRecord(record);
-                                  setDecisionMode('approve');
-                                }}
-                                className="h-7 px-2 text-[11px] shrink-0"
-                              >
-                                <FileCheck2 className="mr-1 size-3.5" />
-                                Approve
-                              </Button>
+                            <div className="flex-1 flex justify-center">
+                              <span className="text-sm text-neutral-700 whitespace-nowrap">{formatDate(record.createdAt)}</span>
+                            </div>
+
+                            <div className="flex-1 flex justify-center">
+                              <span className="text-sm text-neutral-700">{progressLabel(record)}</span>
+                            </div>
+
+                            <div className="flex-1 flex justify-center">
+                              <Badge className={cn('border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap', getStatusClasses(record.status))}>
+                                {record.status}
+                              </Badge>
+                            </div>
+
+                            {showRaisedBy && (
+                              <div className="flex-1 flex justify-center">
+                                <span className="block truncate text-sm text-neutral-700">{record.raisedByName ?? 'Unknown'}</span>
+                              </div>
+                            )}
+
+                            <div className="w-[200px] shrink-0 flex justify-end gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => {
-                                  setSelectedRecord(record);
-                                  setDecisionMode('reject');
-                                }}
-                                title="Reject"
+                                onClick={() => setSelectedRecord(record)}
+                                title="View details"
                                 className="shrink-0"
                               >
-                                <XCircle className="size-3.5" />
+                                <Eye className="size-3.5" />
                               </Button>
-                            </>
-                          )}
 
-                          {canClose && record.status !== 'CLOSED' && (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={closeLoading}
-                              onClick={async () => {
-                                try {
-                                  await onClose(record.id);
-                                  toast.success('Requisition closed');
-                                } catch (error) {
-                                  toast.error(getErrorMessage(error, 'Failed to close requisition'));
-                                }
-                              }}
-                              title="Close requisition"
-                              className="shrink-0"
-                            >
-                              <X className="size-3.5" />
-                            </Button>
-                          )}
-                        </div>
+                              {record.canSubmit && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  disabled={submitLoading}
+                                  onClick={async () => {
+                                    try {
+                                      await onSubmit(record.id);
+                                      toast.success('Requisition submitted for approval');
+                                    } catch (error) {
+                                      toast.error(getErrorMessage(error, 'Failed to submit requisition'));
+                                    }
+                                  }}
+                                  title="Submit for approval"
+                                  className="shrink-0"
+                                >
+                                  <Send className="size-3.5" />
+                                </Button>
+                              )}
+
+                              {record.currentUserCanApprove && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedRecord(record);
+                                      setDecisionMode('approve');
+                                    }}
+                                    className="h-7 px-2 text-[11px] shrink-0"
+                                  >
+                                    <FileCheck2 className="mr-1 size-3.5" />
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={() => {
+                                      setSelectedRecord(record);
+                                      setDecisionMode('reject');
+                                    }}
+                                    title="Reject"
+                                    className="shrink-0"
+                                  >
+                                    <XCircle className="size-3.5" />
+                                  </Button>
+                                </>
+                              )}
+
+                              {canClose && record.status !== 'CLOSED' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  disabled={closeLoading}
+                                  onClick={async () => {
+                                    try {
+                                      await onClose(record.id);
+                                      toast.success('Requisition closed');
+                                    } catch (error) {
+                                      toast.error(getErrorMessage(error, 'Failed to close requisition'));
+                                    }
+                                  }}
+                                  title="Close requisition"
+                                  className="shrink-0"
+                                >
+                                  <X className="size-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </>
               );

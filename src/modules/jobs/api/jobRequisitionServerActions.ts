@@ -1,5 +1,10 @@
 'use server';
 
+import { headers } from 'next/headers';
+
+import { auth } from '@/lib/auth';
+import { getScope, type RolePermissions } from '@/lib/hrms-roles';
+import { requireOrgMembership } from '@/lib/organizations';
 import {
   createJobRequisitionSchema,
   jobRequisitionDecisionSchema,
@@ -22,6 +27,14 @@ function buildHeaders(orgSlug: string, memberId: string): HeadersInit {
   };
 }
 
+async function getCurrentOrgMember(orgSlug: string) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) {
+    throw new Error(JSON.stringify({ status: 401, message: 'Unauthorized' }));
+  }
+  return requireOrgMembership(session.user.id, orgSlug);
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (res.ok) {
     if (res.status === 204) return undefined as T;
@@ -40,29 +53,29 @@ async function handleResponse<T>(res: Response): Promise<T> {
   throw new Error(JSON.stringify({ status: res.status, message }));
 }
 
-function buildQuery(params: Record<string, string | boolean | undefined | null>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      search.set(key, String(value));
-    }
-  }
-  const query = search.toString();
-  return query ? `?${query}` : '';
-}
-
 export async function fetchJobRequisitionsAction(params: {
   orgSlug: string;
   memberId: string;
-  ownedOnly?: boolean;
 }): Promise<JobRequisitionRecord[]> {
-  const query = buildQuery({ owned_only: params.ownedOnly ?? false });
-  const res = await fetch(`${getApiUrl()}/jobs/requisitions${query}`, {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const permissions = (member.role?.permissions as RolePermissions | null) ?? null;
+  const jobsViewScope = getScope(permissions, 'jobs', 'view');
+
+  const res = await fetch(`${getApiUrl()}/jobs/requisitions`, {
     method: 'GET',
-    headers: buildHeaders(params.orgSlug, params.memberId),
+    headers: buildHeaders(params.orgSlug, member.id),
     cache: 'no-store',
   });
-  return handleResponse<JobRequisitionRecord[]>(res);
+  const requisitions = await handleResponse<JobRequisitionRecord[]>(res);
+
+  if (jobsViewScope === 'organization') {
+    return requisitions;
+  }
+  if (jobsViewScope === 'self') {
+    return requisitions.filter((requisition) => requisition.raisedById === member.id);
+  }
+
+  throw new Error(JSON.stringify({ status: 403, message: 'you dont have permission' }));
 }
 
 export async function createJobRequisitionAction(params: {

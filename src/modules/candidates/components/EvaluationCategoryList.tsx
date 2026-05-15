@@ -1,18 +1,26 @@
 'use client';
 
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { type Control, type UseFormRegister, useFieldArray } from 'react-hook-form';
+import { type Control, type UseFormRegister, type UseFormSetValue, useFieldArray } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { CreatePipelineStageInput } from '@/modules/candidates/schema/atsSchemas';
 
 interface EvaluationCategoryListProps {
   control: Control<CreatePipelineStageInput>;
   register: UseFormRegister<CreatePipelineStageInput>;
+  setValue: UseFormSetValue<CreatePipelineStageInput>;
 }
 
-export function EvaluationCategoryList({ control, register }: EvaluationCategoryListProps) {
+export function EvaluationCategoryList({ control, register, setValue }: EvaluationCategoryListProps) {
   const { fields, append, remove, move } = useFieldArray({
     control,
     name: 'evaluationCategories',
@@ -26,7 +34,7 @@ export function EvaluationCategoryList({ control, register }: EvaluationCategory
           type="button"
           size="sm"
           variant="outline"
-          onClick={() => append({ name: '', order: fields.length + 1 })}
+          onClick={() => append({ name: '', type: 'NUMERIC', order: fields.length + 1 })}
         >
           <Plus className="size-4" />
           Add
@@ -34,12 +42,27 @@ export function EvaluationCategoryList({ control, register }: EvaluationCategory
       </div>
       <div className="space-y-2">
         {fields.map((field, index) => (
-          <div key={field.id} className="flex items-center gap-2">
+          <div key={field.id} className="grid grid-cols-[minmax(0,1fr)_130px_32px_32px_32px] items-center gap-2">
             <Input
               {...register(`evaluationCategories.${index}.name`)}
               placeholder="Category name"
               className="h-9"
             />
+            <Select
+              defaultValue={field.type ?? 'NUMERIC'}
+              onValueChange={(value) =>
+                setValue(`evaluationCategories.${index}.type`, value as 'NUMERIC' | 'TEXT' | 'CHECKBOX')
+              }
+            >
+              <SelectTrigger className="h-9 w-full bg-surface">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NUMERIC">Numeric</SelectItem>
+                <SelectItem value="TEXT">Text</SelectItem>
+                <SelectItem value="CHECKBOX">Checkbox</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               type="button"
               size="icon-sm"

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
+import { AtsJobOverviewDashboard } from '@/modules/candidates/components/AtsJobOverviewDashboard';
 
 export default async function CandidatesOverviewPage({
   params,
@@ -12,17 +13,20 @@ export default async function CandidatesOverviewPage({
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) redirect('/login');
 
-  const { orgSlug } = await params;
+  const { orgSlug, jobSlug } = await params;
+  let member: Awaited<ReturnType<typeof requireOrgMembership>>['member'];
 
   try {
-    await requireOrgMembership(session.user.id, orgSlug);
+    ({ member } = await requireOrgMembership(session.user.id, orgSlug));
   } catch {
     redirect('/organizations');
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-neutral-900">Overview</h1>
-    </div>
+    <AtsJobOverviewDashboard
+      orgSlug={orgSlug}
+      memberId={member.id}
+      jobSlug={jobSlug}
+    />
   );
 }

@@ -195,71 +195,6 @@ const MonthDayCell = memo(function MonthDayCell({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <button
-      type="button"
-      disabled={!isInteractive || isHolidayProtected}
-      onClick={() => onUpdate(day.iso, selectedLocation)}
-      className={cn(
-        "relative flex h-24 flex-col rounded-[22px] border p-3 text-left transition-all duration-200",
-        isInteractive && !isHolidayProtected
-          ? "hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)] active:scale-[0.97]"
-          : "cursor-not-allowed bg-muted/10 text-muted-foreground",
-        theme
-          ? `${theme.bg} ${theme.border}`
-          : isInteractive && !isHolidayProtected
-            ? "border-border bg-white"
-            : "border-border/60 bg-muted/20",
-        !day.isCurrentMonth && "opacity-40 grayscale-[0.5]",
-        isHolidayProtected && "opacity-70",
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col">
-          <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/60 leading-none mb-1">
-            {format(day.date, "EEE")}
-          </span>
-          <span className="text-lg font-bold text-foreground leading-none">
-            {format(day.date, "d")}
-          </span>
-        </div>
-
-        {isCurrentDay ? (
-          <span className="rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-background">
-            Today
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-auto flex items-center justify-between gap-2">
-        {location ? (
-          <span
-            className={cn(
-              "rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-tight shadow-sm",
-              theme ? `${theme.bg} ${theme.text} border ${theme.border}` : "bg-muted/50 text-muted-foreground",
-            )}
-          >
-            {PLAN_LOCATION_MAP[location].short_label}
-          </span>
-        ) : (
-          <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
-            {day.isWeekend ? "Off" : "---"}
-          </span>
-        )}
-
-        {isInteractive && location && !isHolidayProtected ? (
-          <span
-            onClick={(event) => {
-              event.stopPropagation();
-              onUpdate(day.iso, "");
-            }}
-            className="inline-flex items-center rounded-full border border-border/70 bg-white/50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-white hover:text-destructive transition-colors"
-          >
-            <Eraser className="h-2.5 w-2.5 mr-1" />
-            Clear
-          </span>
-        ) : null}
-      </div>
-    </button>
   );
 });
 
@@ -551,58 +486,13 @@ export function MonthlyPlanPanel({
               >
                 <Save className="mr-2 h-4 w-4" />
                 {saveMutation.isPending ? "Saving..." : "Save Changes"}
-      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-col gap-4">
-            <MonthNavigator
-              year={monthState.year}
-              month={monthState.month}
-              onPrevious={() => maybeChangeMonth(-1)}
-              onNext={() => maybeChangeMonth(1)}
-            />
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Select
-                value={selectedLocation}
-                onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}
-              >
-                <SelectTrigger className="h-10 min-w-[200px] rounded-lg text-sm">
-                  <SelectValue placeholder="Choose a location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {resolvedLocations.map((location) => (
-                    <SelectItem key={location.value} value={location.value} className="text-xs font-bold">
-                      {location.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 rounded-lg px-4 text-sm font-medium"
-                onClick={handleApplyEverywhere}
-                disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
-              >
-                <Sparkles className="mr-2 h-3.5 w-3.5" />
-                Apply to all weekdays
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 rounded-lg px-4 text-sm font-medium"
-                onClick={handleClearAll}
-                disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
-              >
-                <Eraser className="mr-2 h-3.5 w-3.5" />
-                Clear all
               </Button>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex flex-col gap-4">
               <MonthNavigator
                 year={monthState.year}
@@ -611,21 +501,17 @@ export function MonthlyPlanPanel({
                 onNext={() => maybeChangeMonth(1)}
               />
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Select
                   value={selectedLocation}
                   onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}
                 >
-                  <SelectTrigger className="h-11 min-w-[220px] rounded-full border-border bg-background text-xs font-semibold">
+                  <SelectTrigger className="h-10 min-w-[200px] rounded-lg text-sm">
                     <SelectValue placeholder="Choose a location" />
                   </SelectTrigger>
                   <SelectContent>
                     {resolvedLocations.map((location) => (
-                      <SelectItem
-                        key={location.value}
-                        value={location.value}
-                        className="text-xs font-semibold"
-                      >
+                      <SelectItem key={location.value} value={location.value} className="text-xs font-bold">
                         {location.label}
                       </SelectItem>
                     ))}
@@ -635,34 +521,25 @@ export function MonthlyPlanPanel({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-background"
+                  className="h-10 rounded-lg px-4 text-sm font-medium"
                   onClick={handleApplyEverywhere}
                   disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
                 >
-                  <Sparkles className="mr-2 h-4 w-4" />
+                  <Sparkles className="mr-2 h-3.5 w-3.5" />
                   Apply to all weekdays
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-background"
+                  className="h-10 rounded-lg px-4 text-sm font-medium"
                   onClick={handleClearAll}
                   disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
                 >
-                  <Eraser className="mr-2 h-4 w-4" />
-                  Reset draft
+                  <Eraser className="mr-2 h-3.5 w-3.5" />
+                  Clear all
                 </Button>
               </div>
-            </div>
-
-            <div className="flex max-w-sm flex-col gap-1 rounded-2xl border border-border/70 bg-background px-4 py-3">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
-                Editing model
-              </span>
-              <p className="text-xs font-medium leading-5 text-foreground">
-                Use the picker above for bulk planning, then open any weekday cell to override it inline.
-              </p>
             </div>
           </div>
         </div>
@@ -720,17 +597,6 @@ export function MonthlyPlanPanel({
           ) : (
             monthRows.map((row, rowIndex) => (
               <div key={rowIndex} className="grid grid-cols-7 gap-3">
-                {row.map((day) => (
-                  <MonthDayCell
-                    key={day.iso}
-                    day={day}
-                    location={drafts[day.iso] || ""}
-                    locations={resolvedLocations}
-                    isInteractive={day.isCurrentMonth && !day.isWeekend}
-                    isCurrentDay={isToday(parseISO(day.iso))}
-                    onUpdate={updateDraft}
-                  />
-                ))}
                 {row.map((day) => {
                   const isHolidayProtected = (holidayDates.has(day.iso) && drafts[day.iso] === "HOLIDAY") || (leaveDates.has(day.iso) && drafts[day.iso] === "LEAVE");
                   
@@ -739,7 +605,7 @@ export function MonthlyPlanPanel({
                       key={day.iso}
                       day={day}
                       location={drafts[day.iso] || ""}
-                      selectedLocation={selectedLocation}
+                      locations={resolvedLocations}
                       isInteractive={day.isCurrentMonth && !day.isWeekend}
                       isCurrentDay={isToday(parseISO(day.iso))}
                       isHolidayProtected={isHolidayProtected}
@@ -751,6 +617,7 @@ export function MonthlyPlanPanel({
             ))
           )}
         </div>
+      </div>
       </section>
 
       <section className="rounded-2xl border border-border bg-[#f5f5f7] p-6">
@@ -778,18 +645,6 @@ export function MonthlyPlanPanel({
                 </span>
               </div>
             </div>
-      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Month summary</h2>
-            <p className="text-[11px] text-muted-foreground/60 font-medium">
-              Live totals update as you tap weekdays in the strip above.
-            </p>
-          </div>
-          <span className="rounded-full bg-muted/30 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {summary.unset} days remaining
-          </span>
-        </div>
 
             <div className="h-2 overflow-hidden rounded-full bg-background">
               <div

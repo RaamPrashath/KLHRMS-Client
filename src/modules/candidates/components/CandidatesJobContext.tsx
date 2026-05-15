@@ -6,6 +6,7 @@ interface CandidatesJobContextValue {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   addStageSignal: number;
+  consumeAddStageSignal: () => void;
 }
 
 export const CandidatesJobContext = createContext<CandidatesJobContextValue | null>(null);

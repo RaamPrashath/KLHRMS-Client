@@ -240,6 +240,35 @@ export async function updateCandidateApplicationDetailAction(params: {
   return handleResponse<CandidateApplicationDetail>(res);
 }
 
+export async function createCandidateApplicationNoteAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  body: string;
+}): Promise<CandidateApplicationDetail> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/notes`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ body: params.body }),
+  });
+  return handleResponse<CandidateApplicationDetail>(res);
+}
+
+export async function updateCandidateApplicationNoteAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  noteId: string;
+  body: string;
+}): Promise<CandidateApplicationDetail> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/notes/${params.noteId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ body: params.body }),
+  });
+  return handleResponse<CandidateApplicationDetail>(res);
+}
+
 export async function createInterviewMeetingAction(params: {
   orgSlug: string;
   memberId: string;
@@ -264,10 +293,15 @@ export async function completeInterviewMeetingAction(params: {
   memberId: string;
   applicationId: string;
   eventId: string;
+  data?: {
+    values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
+    notes?: string | null;
+  };
 }): Promise<InterviewMeeting> {
   const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/interview-meetings/${params.eventId}/complete`, {
     method: 'POST',
     headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data ?? { values: [] }),
   });
   return handleResponse<InterviewMeeting>(res);
 }

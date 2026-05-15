@@ -49,6 +49,7 @@ export interface StageEvaluationCategory {
   id: string;
   stageId: string;
   name: string;
+  type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
   order: number;
 }
 
@@ -104,6 +105,62 @@ export interface StageHistoryItem {
   createdAt: string;
 }
 
+export interface CandidateApplicationNote {
+  id: string;
+  authorMemberId: string;
+  authorName: string;
+  authorEmail: string | null;
+  body: string;
+  canEdit: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InterviewParticipant {
+  memberId: string;
+  name: string;
+  email: string | null;
+  role: string | null;
+  isBackup: boolean;
+}
+
+export interface InterviewFeedbackValue {
+  categoryId: string;
+  categoryName: string;
+  categoryType: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
+  value: string | number | boolean | null;
+}
+
+export interface InterviewFeedback {
+  id: string;
+  memberId: string;
+  memberName: string;
+  outcome: string;
+  score: number | null;
+  notes: string | null;
+  values: InterviewFeedbackValue[];
+  createdAt: string;
+}
+
+export interface ApplicationInterviewEvent {
+  id: string;
+  stageId: string;
+  stageName: string | null;
+  title: string;
+  status: string;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+  completedAt: string | null;
+  durationMinutes: number | null;
+  meetingUrl: string | null;
+  createdByName: string | null;
+  completedByName: string | null;
+  participants: InterviewParticipant[];
+  feedbacks: InterviewFeedback[];
+  notes: string | null;
+  createdAt: string;
+}
+
 export interface InterviewMeeting {
   id: string;
   applicationId: string;
@@ -136,6 +193,8 @@ export interface CandidateApplicationDetail {
   appliedAt: string;
   lastActivityAt: string;
   stageHistory: StageHistoryItem[];
+  interviewEvents: ApplicationInterviewEvent[];
+  notes: CandidateApplicationNote[];
 }
 
 export interface StageWorkspaceInterviewer {

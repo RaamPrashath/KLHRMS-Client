@@ -44,7 +44,6 @@ export default async function JobsPage({
       memberId={member.id}
       departments={departments}
       permissions={(member.role?.permissions as RolePermissions) ?? null}
-      ownedOnly={false}
     />
   );
 }
