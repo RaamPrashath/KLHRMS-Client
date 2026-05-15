@@ -1,39 +1,49 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useMemo } from 'react';
 
 import { AtsKanbanBoard } from '@/modules/candidates/components/AtsKanbanBoard';
+import { usePipelineJobPostings } from '@/modules/candidates/hooks/useAtsPipeline';
 
 interface CandidatesJobPageClientProps {
   orgSlug: string;
   memberId: string;
-  jobPostingId: string;
-  jobPostings: Array<{ id: string; slug?: string; title: string; status?: string }>;
+  jobSlug: string;
+  defaultView?: 'kanban' | 'table';
 }
 
 export function CandidatesJobPageClient({
   orgSlug,
   memberId,
-  jobPostingId,
-  jobPostings,
+  jobSlug,
+  defaultView,
 }: Readonly<CandidatesJobPageClientProps>) {
   const router = useRouter();
+  const postingsQuery = usePipelineJobPostings(orgSlug, memberId);
+  const postings = useMemo(() => postingsQuery.data ?? [], [postingsQuery.data]);
+
+  const currentPosting = useMemo(
+    () => postings.find((p) => p.slug === jobSlug) ?? null,
+    [jobSlug, postings],
+  );
 
   return (
     <AtsKanbanBoard
       orgSlug={orgSlug}
       memberId={memberId}
-      jobPostingId={jobPostingId}
-      jobPostings={jobPostings}
+      jobPostingId={currentPosting?.id ?? null}
+      jobPostings={postings}
       onJobPostingChange={(postingId) => {
-        const posting = jobPostings.find((item) => item.id === postingId);
+        const posting = postings.find((item) => item.id === postingId);
         if (posting?.slug) {
-          router.push(`/${orgSlug}/candidates/${posting.slug}`);
+          router.push(`/${orgSlug}/candidates/${posting.slug}/kanban`);
         }
       }}
-      isLoadingPostings={false}
+      isLoadingPostings={postingsQuery.isLoading}
       showJobSelector={false}
       pipelineBasePath={`/${orgSlug}/candidates/stage`}
+      defaultView={defaultView}
     />
   );
 }

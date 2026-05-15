@@ -8,9 +8,11 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { FileSpreadsheet, KanbanSquare, List, Plus, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { FileSpreadsheet, KanbanSquare, List } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -25,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useCandidatesJobContext } from '@/modules/candidates/components/CandidatesJobContext';
 import {
   Select,
   SelectContent,
@@ -59,6 +62,8 @@ import type { PipelineApplication, PipelineStage } from '@/modules/candidates/ty
 const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
+const DRAG_EDGE_SCROLL_THRESHOLD = 40;
+const DRAG_EDGE_SCROLL_SPEED = 18;
 
 type PendingGoogleAction =
   | { kind: 'create-stage'; data: CreatePipelineStageInput }
@@ -150,10 +155,34 @@ function istDateTimeInputToIso(value: string): string {
   return new Date(`${value}:00+05:30`).toISOString();
 }
 
+function getStageReorderOrder(
+  stages: PipelineStage[],
+  stageId: string,
+  direction: -1 | 1,
+): number | null {
+  const orderedStages = [...stages].sort((left, right) => left.order - right.order);
+  const currentIndex = orderedStages.findIndex((stage) => stage.id === stageId);
+  if (currentIndex === -1) return null;
+
+  if (direction === -1) {
+    if (currentIndex === 0) return null;
+    const targetIndex = currentIndex - 1;
+    const previous = orderedStages[targetIndex - 1];
+    const target = orderedStages[targetIndex];
+    return previous ? (previous.order + target.order) / 2 : target.order - 1;
+  }
+
+  if (currentIndex === orderedStages.length - 1) return null;
+  const targetIndex = currentIndex + 1;
+  const target = orderedStages[targetIndex];
+  const next = orderedStages[targetIndex + 1];
+  return next ? (target.order + next.order) / 2 : target.order + 1;
+}
+
 function BoardSkeleton() {
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="space-y-2">
           <Skeleton className="h-4 w-32 rounded-md" />
           <Skeleton className="h-3 w-72 rounded-md" />
@@ -194,6 +223,7 @@ export function AtsKanbanBoard({
   isLoadingPostings,
   showJobSelector = true,
   pipelineBasePath,
+  defaultView,
 }: {
   readonly orgSlug: string;
   readonly memberId: string;
@@ -203,10 +233,12 @@ export function AtsKanbanBoard({
   readonly isLoadingPostings: boolean;
   readonly showJobSelector?: boolean;
   readonly pipelineBasePath?: string;
+  readonly defaultView?: 'kanban' | 'table';
 }) {
   const router = useRouter();
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [activeApplication, setActiveApplication] = useState<PipelineApplication | null>(null);
+  const [hoverStageId, setHoverStageId] = useState<string | null>(null);
   const [addAfterStageId, setAddAfterStageId] = useState<string | null>(null);
   const [renamingStage, setRenamingStage] = useState<PipelineStage | null>(null);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
@@ -214,11 +246,21 @@ export function AtsKanbanBoard({
     const stored = window.localStorage.getItem('pipeline-view-preference');
     return stored === 'table' ? 'table' : 'kanban';
   });
-  const [globalSearch, setGlobalSearch] = useState('');
-  const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
-  const deferredGlobalSearch = useDeferredValue(globalSearch);
+  const resolvedViewMode = defaultView ?? viewMode;
+  const { searchQuery, addStageSignal } = useCandidatesJobContext();
+  const deferredGlobalSearch = useDeferredValue(searchQuery);
+
+  const addStageHandledRef = useRef(0);
 
   const boardQuery = usePipelineBoard(orgSlug, memberId, jobPostingId);
+
+  useEffect(() => {
+    const stages = boardQuery.data?.stages ?? [];
+    if (addStageSignal > 0 && addStageSignal !== addStageHandledRef.current) {
+      addStageHandledRef.current = addStageSignal;
+      setAddAfterStageId(stages.at(-1)?.id ?? null);
+    }
+  }, [addStageSignal, boardQuery.data?.stages]);
   const moveApplication = useMoveApplicationStage(orgSlug, memberId, jobPostingId);
   const createStage = useCreatePipelineStage(orgSlug, memberId, jobPostingId);
   const updateStage = useUpdatePipelineStage(orgSlug, memberId, jobPostingId);
@@ -237,6 +279,11 @@ export function AtsKanbanBoard({
   const [meetingStartLocal, setMeetingStartLocal] = useState('');
   const [meetingDuration, setMeetingDuration] = useState(30);
   const pendingMeetingWindowRef = useRef<Window | null>(null);
+  const boardScrollRef = useRef<HTMLDivElement | null>(null);
+  const dragPointerXRef = useRef<number | null>(null);
+  const dragEdgeDirectionRef = useRef<-1 | 0 | 1>(0);
+  const lockedScrollLeftRef = useRef(0);
+  const dragScrollFrameRef = useRef<number | null>(null);
   const currentPosting = useMemo(
     () => jobPostings.find((posting) => posting.id === jobPostingId) ?? null,
     [jobPostingId, jobPostings],
@@ -366,6 +413,56 @@ export function AtsKanbanBoard({
     window.localStorage.setItem('pipeline-view-preference', viewMode);
   }, [viewMode]);
 
+  useEffect(() => {
+    if (!activeApplication) return;
+
+    const updateEdgeDirection = () => {
+      const container = boardScrollRef.current;
+      const pointerX = dragPointerXRef.current;
+      if (!container || pointerX === null) {
+        dragEdgeDirectionRef.current = 0;
+        return;
+      }
+
+      const rect = container.getBoundingClientRect();
+      if (pointerX <= rect.left + DRAG_EDGE_SCROLL_THRESHOLD) {
+        dragEdgeDirectionRef.current = -1;
+      } else if (pointerX >= rect.right - DRAG_EDGE_SCROLL_THRESHOLD) {
+        dragEdgeDirectionRef.current = 1;
+      } else {
+        dragEdgeDirectionRef.current = 0;
+      }
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      dragPointerXRef.current = event.clientX;
+      updateEdgeDirection();
+    };
+
+    const tick = () => {
+      const container = boardScrollRef.current;
+      if (container && dragEdgeDirectionRef.current !== 0) {
+        const nextScrollLeft = container.scrollLeft + dragEdgeDirectionRef.current * DRAG_EDGE_SCROLL_SPEED;
+        container.scrollLeft = nextScrollLeft;
+        lockedScrollLeftRef.current = container.scrollLeft;
+      }
+      dragScrollFrameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    dragScrollFrameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      if (dragScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragScrollFrameRef.current);
+        dragScrollFrameRef.current = null;
+      }
+      dragPointerXRef.current = null;
+      dragEdgeDirectionRef.current = 0;
+    };
+  }, [activeApplication]);
+
   function handleDragStart(event: DragStartEvent) {
     const applicationId = String(event.active.id);
     const application =
@@ -373,11 +470,18 @@ export function AtsKanbanBoard({
         .flatMap((stage) => stage.applications)
         .find((item) => item.id === applicationId) ?? null;
     setActiveApplication(application);
+    setHoverStageId(null);
+    lockedScrollLeftRef.current = boardScrollRef.current?.scrollLeft ?? 0;
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    setHoverStageId(event.over ? String(event.over.id) : null);
   }
 
   function handleDragEnd(event: DragEndEvent) {
     if (!event.over) {
       setActiveApplication(null);
+      setHoverStageId(null);
       return;
     }
     const applicationId = String(event.active.id);
@@ -385,10 +489,14 @@ export function AtsKanbanBoard({
     const currentStageId = event.active.data.current?.stageId;
     if (toStageId === currentStageId) {
       setActiveApplication(null);
+      setHoverStageId(null);
       return;
     }
     moveApplication.mutate({ applicationId, toStageId });
-    window.requestAnimationFrame(() => setActiveApplication(null));
+    window.requestAnimationFrame(() => {
+      setActiveApplication(null);
+      setHoverStageId(null);
+    });
   }
 
   function handleCreateStage(data: CreatePipelineStageInput) {
@@ -451,7 +559,9 @@ export function AtsKanbanBoard({
   }
 
   function moveStage(stage: PipelineStage, direction: -1 | 1) {
-    updateStage.mutate({ stageId: stage.id, data: { order: stage.order + direction } });
+    const nextOrder = getStageReorderOrder(stages, stage.id, direction);
+    if (nextOrder === null) return;
+    updateStage.mutate({ stageId: stage.id, data: { order: nextOrder } });
   }
 
   function startInterviewNow(application: PipelineApplication) {
@@ -500,10 +610,6 @@ export function AtsKanbanBoard({
         durationMinutes: meetingDuration,
       },
     });
-  }
-
-  function updateColumnSearch(stageId: string, value: string) {
-    setColumnSearch((current) => ({ ...current, [stageId]: value }));
   }
 
   async function moveSelectedApplications(applicationIds: string[], toStageId: string) {
@@ -558,17 +664,8 @@ export function AtsKanbanBoard({
 
   return (
     <>
-      <div className="mb-4 flex flex-col gap-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-            <Input
-              value={globalSearch}
-              onChange={(event) => setGlobalSearch(event.target.value)}
-              placeholder="Search all candidates"
-              className="h-9 bg-white pl-9"
-            />
-          </div>
+      {(showJobSelector || !defaultView) && (
+        <div className=" flex flex-col gap-3">
           {showJobSelector ? (
             <Select
               value={jobPostingId ?? undefined}
@@ -587,44 +684,41 @@ export function AtsKanbanBoard({
               </SelectContent>
             </Select>
           ) : null}
-          <Button size="sm" onClick={() => setAddAfterStageId(stages.at(-1)?.id ?? null)}>
-            <Plus className="size-4" />
-            Stage
-          </Button>
+          {!defaultView ? (
+            <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode('kanban')}
+                aria-pressed={viewMode === 'kanban'}
+                className={cn(
+                  'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+                  viewMode === 'kanban'
+                    ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                    : 'text-neutral-500 hover:text-neutral-900',
+                )}
+              >
+                <KanbanSquare className="size-3.5" />
+                Kanban
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                aria-pressed={viewMode === 'table'}
+                className={cn(
+                  'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+                  viewMode === 'table'
+                    ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                    : 'text-neutral-500 hover:text-neutral-900',
+                )}
+              >
+                <List className="size-3.5" />
+                Table
+              </button>
+            </div>
+          ) : null}
         </div>
-        <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
-          <button
-            type="button"
-            onClick={() => setViewMode('kanban')}
-            aria-pressed={viewMode === 'kanban'}
-            className={cn(
-              'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
-              viewMode === 'kanban'
-                ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-                : 'text-neutral-500 hover:text-neutral-900',
-            )}
-          >
-            <KanbanSquare className="size-3.5" />
-            Kanban
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('table')}
-            aria-pressed={viewMode === 'table'}
-            className={cn(
-              'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
-              viewMode === 'table'
-                ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-                : 'text-neutral-500 hover:text-neutral-900',
-            )}
-          >
-            <List className="size-3.5" />
-            Table
-          </button>
-        </div>
-      </div>
-
-      {viewMode === 'table' ? (
+      )}
+      {resolvedViewMode === 'table' ? (
         <AtsPipelineTable
           stages={stages}
           globalSearch={deferredGlobalSearch}
@@ -634,20 +728,53 @@ export function AtsKanbanBoard({
         />
       ) : (
         <DndContext
+          autoScroll={false}
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
-          onDragCancel={() => setActiveApplication(null)}
+          onDragOver={handleDragOver}
+          onDragCancel={() => {
+            setActiveApplication(null);
+            setHoverStageId(null);
+          }}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 overflow-x-auto p-1 no-scrollbar">
+          <div
+            ref={boardScrollRef}
+            className="flex h-[calc(100dvh-140px)] items-stretch overflow-x-auto overflow-y-hidden no-scrollbar"
+            onScroll={(event) => {
+              if (!activeApplication) return;
+              const container = event.currentTarget;
+              if (dragEdgeDirectionRef.current === 0) {
+                if (container.scrollLeft !== lockedScrollLeftRef.current) {
+                  container.scrollLeft = lockedScrollLeftRef.current;
+                }
+                return;
+              }
+              lockedScrollLeftRef.current = container.scrollLeft;
+            }}
+          >
             {stages.map((stage, index) => {
-              const stageSearch = columnSearch[stage.id] ?? '';
-              const filteredApplications = stage.applications.filter(
-                (application) =>
-                  matchesApplicationSearch(application, stage.name, deferredGlobalSearch) &&
-                  matchesApplicationSearch(application, stage.name, stageSearch),
-              );
+              const activeStageId = activeApplication?.pipelineStageId ?? null;
+              const filteredApplications = stage.applications.filter((application) => {
+                if (activeApplication && stage.id === activeStageId && application.id === activeApplication.id) {
+                  return false;
+                }
+                return matchesApplicationSearch(application, stage.name, deferredGlobalSearch);
+              });
+              const previewApplication =
+                activeApplication &&
+                hoverStageId === stage.id &&
+                stage.id !== activeStageId &&
+                matchesApplicationSearch(activeApplication, stage.name, deferredGlobalSearch)
+                  ? activeApplication
+                  : null;
+
+              const showEmptyState = filteredApplications.length === 0 && previewApplication === null;
+
+              const visibleApplications = showEmptyState
+                ? []
+                : filteredApplications;
 
               return (
                 <KanbanColumn
@@ -655,9 +782,9 @@ export function AtsKanbanBoard({
                   stage={stage}
                   isFirst={index === 0}
                   isLast={index === stages.length - 1}
-                  searchValue={stageSearch}
-                  filteredApplications={filteredApplications}
-                  onSearchChange={updateColumnSearch}
+                  filteredApplications={visibleApplications}
+                  previewApplication={previewApplication}
+                  isUpdating={updateStage.isPending && updateStage.variables?.stageId === stage.id}
                   onOpenCandidate={setSelectedApplicationId}
                   onAddAfter={setAddAfterStageId}
                   onRename={setRenamingStage}
@@ -673,11 +800,15 @@ export function AtsKanbanBoard({
               );
             })}
           </div>
-          <DragOverlay dropAnimation={null} zIndex={9999}>
+          <DragOverlay zIndex={9999}>
             {activeApplication ? (
-              <div className="w-[276px]">
-                <CandidateCard application={activeApplication} isOverlay />
-              </div>
+              <motion.div
+                initial={{ width: 276, scale: 1, opacity: 0.98 }}
+                animate={{ width: 248, scale: 0.96, opacity: 1 }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <CandidateCard application={activeApplication} isOverlay compact draggable={false} />
+              </motion.div>
             ) : null}
           </DragOverlay>
         </DndContext>

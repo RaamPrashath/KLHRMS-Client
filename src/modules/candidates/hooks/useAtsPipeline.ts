@@ -113,6 +113,8 @@ export function usePipelineJobPostings(orgSlug: string, memberId: string) {
     queryKey: ['ats-pipeline-postings', orgSlug],
     queryFn: () => fetchPipelineJobPostingsAction({ orgSlug, memberId }),
     enabled: !!orgSlug && !!memberId,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
   });
 }
 
@@ -121,6 +123,8 @@ export function usePipelineBoard(orgSlug: string, memberId: string, jobPostingId
     queryKey: jobPostingId ? boardKey(orgSlug, jobPostingId) : ['ats-pipeline', orgSlug, 'none'],
     queryFn: () => fetchPipelineBoardAction({ orgSlug, memberId, jobPostingId: jobPostingId ?? '' }),
     enabled: !!orgSlug && !!memberId && !!jobPostingId,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
     refetchInterval: 30_000,
   });
 }

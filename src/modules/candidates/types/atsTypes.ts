@@ -25,6 +25,8 @@ export interface ApplicationInterviewMeeting {
   scheduledStartAt: string;
   scheduledEndAt: string;
   meetingUrl: string | null;
+  interviewerName?: string | null;
+  completedAt?: string | null;
 }
 
 export interface PipelineApplication {
