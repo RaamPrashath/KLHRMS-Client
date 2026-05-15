@@ -99,7 +99,7 @@ export function DashboardTab({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <DashboardKPICard value={d.totalAssets} label="Total Assets" icon={Package} color="#6b7280" />
         <DashboardKPICard value={d.availableCount} label="Available" icon={CircleCheck} color="#00874a" />
-        <DashboardKPICard value={d.providedCount} label="Provided" icon={UserCheckIcon} color="#2563eb" />
+        <DashboardKPICard value={d.providedCount} label="Issued" icon={UserCheckIcon} color="#2563eb" />
         <DashboardKPICard value={d.maintenanceCount} label="In Maintenance" icon={WrenchIcon} color="#d97706" />
         <DashboardKPICard value={d.openTicketCount} label="Open Tickets" icon={Ticket} color="#dc2626" />
       </div>

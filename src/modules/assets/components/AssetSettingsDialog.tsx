@@ -214,25 +214,28 @@ function EditCategoryDialog({
   open,
   onOpenChange,
   currentName,
+  currentAssetCode,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   currentName: string;
-  onSave: (name: string) => Promise<void>;
+  currentAssetCode: string | null;
+  onSave: (name: string, assetCode?: string | null) => Promise<void>;
 }) {
   const [name, setName] = useState(currentName);
+  const [assetCode, setAssetCode] = useState(currentAssetCode ?? '');
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await onSave(name.trim());
+      await onSave(name.trim(), assetCode.trim() || null);
       onOpenChange(false);
-      toast.success('Category renamed');
+      toast.success('Category updated');
     } catch (error) {
-      toast.error(readError(error, 'Failed to rename category'));
+      toast.error(readError(error, 'Failed to update category'));
     } finally {
       setSaving(false);
     }
@@ -244,13 +247,22 @@ function EditCategoryDialog({
         <div className="px-5 py-4 border-b border-[#eef0f3]">
           <DialogTitle className="text-[18px] font-semibold text-[#111827]">Edit Category</DialogTitle>
         </div>
-        <div className="px-5 py-4">
+        <div className="px-5 py-4 space-y-4">
           <div className="grid gap-1.5">
             <Label className="text-[13px] text-[#6b7280]">Category Name</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Category name"
+              className="h-11 rounded-xl border-[#e5e7eb] text-[15px]"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-[13px] text-[#6b7280]">Asset ID / Code</Label>
+            <Input
+              value={assetCode}
+              onChange={(e) => setAssetCode(e.target.value)}
+              placeholder="e.g. AST-LAP"
               className="h-11 rounded-xl border-[#e5e7eb] text-[15px]"
             />
           </div>
@@ -424,6 +436,7 @@ export function AssetSettingsDialog({
 
   // Create tab
   const [catName, setCatName] = useState('');
+  const [catAssetCode, setCatAssetCode] = useState('');
   const [fields, setFields] = useState<AssetCategoryFieldCreateInput[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -452,7 +465,7 @@ export function AssetSettingsDialog({
     if (!catName.trim()) return;
     setIsSaving(true);
     try {
-      const cat = await onCreateCategory({ name: catName.trim() });
+      const cat = await onCreateCategory({ name: catName.trim(), assetCode: catAssetCode.trim() || null });
       const catId = cat.id;
       for (const field of fields.filter((f) => f.fieldName.trim())) {
         await onCreateField(catId, {
@@ -463,6 +476,7 @@ export function AssetSettingsDialog({
         });
       }
       setCatName('');
+      setCatAssetCode('');
       setFields([]);
       setActiveTab('manage');
       toast.success('Category created');
@@ -502,6 +516,11 @@ export function AssetSettingsDialog({
         cell: ({ getValue, row }) => (
           <div className="flex items-center gap-2">
             <span className="text-[14px] font-medium text-[#111827]">{getValue() as string}</span>
+            {row.original.assetCode && (
+              <span className="rounded-md bg-[#f0f4f8] px-2 py-0.5 text-[11px] font-mono text-[#6b7280]">
+                {row.original.assetCode}
+              </span>
+            )}
             <Badge className="rounded-full bg-[#f0f4f8] px-2 py-0.5 text-[10px] text-[#6b7280]">
               {(row.original.fields || []).length} fields
             </Badge>
@@ -608,9 +627,19 @@ export function AssetSettingsDialog({
                       <Input
                         value={catName}
                         onChange={(e) => setCatName(e.target.value)}
-                        placeholder="e.g. Electronics, Furniture"
+                        placeholder="e.g. Laptop, Accessories"
                         className="h-11 rounded-xl border-[#e5e7eb] text-[15px]"
                       />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label className="text-[13px] text-[#6b7280]">Asset ID / Code</Label>
+                      <Input
+                        value={catAssetCode}
+                        onChange={(e) => setCatAssetCode(e.target.value)}
+                        placeholder="e.g. AST-LAP (reusable for all assets in this category)"
+                        className="h-11 rounded-xl border-[#e5e7eb] text-[15px]"
+                      />
+                      <p className="text-[11px] text-[#9ca3af]">This code will be reused by all physical assets in this category. Not required to be unique.</p>
                     </div>
 
                     <div>
@@ -753,9 +782,10 @@ export function AssetSettingsDialog({
         open={!!editTarget}
         onOpenChange={(v) => { if (!v) setEditTarget(null); }}
         currentName={editCategory?.name ?? ''}
-        onSave={async (name) => {
+        currentAssetCode={editCategory?.assetCode ?? null}
+        onSave={async (name, assetCode) => {
           if (!editTarget) return;
-          await onUpdateCategory(editTarget, { name });
+          await onUpdateCategory(editTarget, { name, assetCode });
         }}
       />
 

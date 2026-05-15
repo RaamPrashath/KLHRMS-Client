@@ -20,8 +20,8 @@ import type {
   AssetInput,
   AssetMaintenanceCreateInput,
   AssetMaintenanceUpdateInput,
-  AssetProvideInput,
   AssetReturnInput,
+  BulkAssetCreateInput,
 } from '@/modules/assets/schema/assetSchemas';
 import type { AssetMaintenanceSummary, AssetReportType } from '@/modules/assets/types/assetTypes';
 
@@ -99,17 +99,15 @@ export const defaultAssetForm: AssetInput = {
   units: [],
 };
 
-export function createProvideForm(memberId: string): AssetProvideInput {
-  return {
-    memberId: '',
-    assetId: '',
-    assetUnitId: null,
-    providedDate: '',
-    conditionWhileProviding: 'GOOD',
-    providedByMemberId: memberId,
-    notes: '',
-  };
-}
+export const defaultBulkAssetForm: BulkAssetCreateInput = {
+  assetCode: '',
+  name: '',
+  categoryDefinitionId: null,
+  condition: 'GOOD',
+  location: '',
+  serialNumbers: [''],
+  customFields: [],
+};
 
 export function createReturnForm(memberId: string): AssetReturnInput {
   return {

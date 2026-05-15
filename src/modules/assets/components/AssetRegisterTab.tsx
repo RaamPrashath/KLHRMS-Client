@@ -127,6 +127,19 @@ export function AssetRegisterTab({
         ),
       },
       {
+        id: 'serial',
+        header: 'Serial No.',
+        accessorKey: 'serialNumber',
+        cell: ({ getValue }) => {
+          const sn = getValue() as string | null;
+          return (
+            <span className="text-[13px] font-mono text-[#6b7280]">
+              {sn || '\u2014'}
+            </span>
+          );
+        },
+      },
+      {
         id: 'holder',
         header: 'Holder',
         accessorKey: 'currentHolderName',
