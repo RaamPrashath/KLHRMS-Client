@@ -13,10 +13,8 @@ interface RequisitionHeaderProps {
   onEdit: () => void;
   onApprove: () => void;
   onReject: () => void;
-  onClose: () => void;
   onReopen: () => void;
   submitLoading: boolean;
-  closeLoading: boolean;
   reopenLoading: boolean;
 }
 
@@ -56,16 +54,13 @@ export function RequisitionHeader({
   onEdit,
   onApprove,
   onReject,
-  onClose,
   onReopen,
   submitLoading,
-  closeLoading,
   reopenLoading,
 }: Readonly<RequisitionHeaderProps>) {
   const canShowApprovalActions =
     (requisition.status === 'PENDING_APPROVAL' || requisition.status === 'PARTIALLY_APPROVED') &&
     requisition.currentUserCanApprove;
-  const canClose = !['DRAFT', 'CLOSED', 'ARCHIVED'].includes(requisition.status);
   const canReopen = requisition.status === 'CLOSED' || requisition.status === 'ARCHIVED';
 
   return (
@@ -132,12 +127,6 @@ export function RequisitionHeader({
             </Button>
           ) : null}
 
-          {canClose ? (
-            <Button type="button" variant="outline" onClick={onClose} disabled={closeLoading}>
-              <XCircle className="size-4" />
-              {closeLoading ? 'Closing...' : 'Close'}
-            </Button>
-          ) : null}
         </div>
       </div>
     </header>

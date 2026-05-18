@@ -36,12 +36,12 @@ export function AtsJobPipelinePageShell({
       onJobPostingChange={(postingId) => {
         const posting = postings.find((item) => item.id === postingId);
         if (posting) {
-          router.push(`/${orgSlug}/jobs/${posting.slug}/pipeline`);
+          router.push(`/${orgSlug}/candidates/${posting.slug}/overview`);
         }
       }}
       isLoadingPostings={postingsQuery.isLoading}
       showJobSelector={true}
-      pipelineBasePath={`/${orgSlug}/jobs/${jobSlug}/pipeline`}
+      pipelineBasePath={`/${orgSlug}/candidates/${jobSlug}`}
     />
   );
 }

@@ -42,6 +42,8 @@ import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer
 import { AtsPipelineTable } from '@/modules/candidates/components/AtsPipelineTable';
 import { KanbanColumn } from '@/modules/candidates/components/KanbanColumn';
 import { StageConfigDrawer } from '@/modules/candidates/components/StageConfigDrawer';
+import { PipelineSetupCard } from '@/modules/jobs/components/PipelineSetupCard';
+import { PipelineSetupDialog } from '@/modules/jobs/components/PipelineSetupDialog';
 import { authClient } from '@/lib/auth-client';
 import {
   useCreatePipelineStage,
@@ -52,12 +54,17 @@ import {
   usePipelineBoard,
   useUpdatePipelineStage,
 } from '@/modules/candidates/hooks/useAtsPipeline';
+import {
+  useCreateDefaultPipeline as useCreateRequisitionDefaultPipeline,
+  useImportPipeline as useImportRequisitionPipeline,
+} from '@/modules/jobs/hooks/usePipelineMutations';
 import type {
   CreateInterviewMeetingInput,
   CreatePipelineStageInput,
   UpdatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
 import type { PipelineApplication, PipelineStage } from '@/modules/candidates/types/atsTypes';
+import type { CreatePipelineStageInput as SetupCreatePipelineStageInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 
 const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
@@ -277,7 +284,7 @@ export function AtsKanbanBoard({
   readonly orgSlug: string;
   readonly memberId: string;
   readonly jobPostingId: string | null;
-  readonly jobPostings: Array<{ id: string; slug?: string; title: string; status?: string }>;
+  readonly jobPostings: Array<{ id: string; slug?: string; title: string; status?: string; requisitionId?: string | null }>;
   readonly onJobPostingChange: (id: string) => void;
   readonly isLoadingPostings: boolean;
   readonly showJobSelector?: boolean;
@@ -290,6 +297,9 @@ export function AtsKanbanBoard({
   const [hoverStageId, setHoverStageId] = useState<string | null>(null);
   const [addAfterStageId, setAddAfterStageId] = useState<string | null>(null);
   const [renamingStage, setRenamingStage] = useState<PipelineStage | null>(null);
+  const [setupDialogOpen, setSetupDialogOpen] = useState(false);
+  const [setupInitialSelection, setSetupInitialSelection] = useState<'new' | 'default' | 'import'>('new');
+  const [importingJobId, setImportingJobId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
     if (typeof window === 'undefined') return 'kanban';
     const stored = window.localStorage.getItem('pipeline-view-preference');
@@ -300,6 +310,7 @@ export function AtsKanbanBoard({
   const deferredGlobalSearch = useDeferredValue(searchQuery);
 
   const addStageHandledRef = useRef(0);
+  const autoOpenedSetupRef = useRef(false);
 
   const boardQuery = usePipelineBoard(orgSlug, memberId, jobPostingId);
 
@@ -337,6 +348,9 @@ export function AtsKanbanBoard({
     () => jobPostings.find((posting) => posting.id === jobPostingId) ?? null,
     [jobPostingId, jobPostings],
   );
+  const setupRequisitionId = currentPosting?.requisitionId ?? '';
+  const createDefaultPipeline = useCreateRequisitionDefaultPipeline(orgSlug, memberId, setupRequisitionId);
+  const importPipeline = useImportRequisitionPipeline(orgSlug, memberId, setupRequisitionId);
 
   const hasGoogleAccess = useCallback(async (scope: string) => {
     const result = await authClient.listAccounts();
@@ -562,6 +576,72 @@ export function AtsKanbanBoard({
     void runStageAction({ kind: 'create-stage', data });
   }
 
+  function openSetupDialog(selection: 'new' | 'default' | 'import') {
+    if (!setupRequisitionId) {
+      toast.error('This posting is not linked to a requisition yet');
+      return;
+    }
+    setSetupInitialSelection(selection);
+    setSetupDialogOpen(true);
+  }
+
+  function handleSetupCreateStage(data: SetupCreatePipelineStageInput) {
+    if (!jobPostingId) return;
+    void runStageAction({
+      kind: 'create-stage',
+      data: {
+        jobPostingId,
+        name: data.name,
+        afterStageId: stages[0]?.id ?? null,
+        stageType: data.stageType ?? 'DEFAULT',
+        evaluationEnabled: data.evaluationEnabled ?? false,
+        evaluationType: data.evaluationType ?? null,
+        evaluationIncludeTotal: data.evaluationIncludeTotal ?? false,
+        evaluationIncludeAnalysis: data.evaluationIncludeAnalysis ?? false,
+        dueDate: data.dueDate ?? null,
+        evaluationCategories: (data.evaluationCategories ?? []).map((category, index) => ({
+          id: category.id ?? null,
+          name: category.name,
+          type: category.type ?? 'NUMERIC',
+          order: category.order ?? index + 1,
+        })),
+      },
+    });
+  }
+
+  async function createSetupDefaultPipeline() {
+    if (!setupRequisitionId) {
+      toast.error('This posting is not linked to a requisition yet');
+      return;
+    }
+    try {
+      await createDefaultPipeline.mutateAsync();
+      setSetupDialogOpen(false);
+      await boardQuery.refetch();
+      toast.success('Default pipeline created');
+    } catch (error) {
+      toast.error(readActionError(error, 'Failed to create default pipeline'));
+    }
+  }
+
+  async function importSetupPipeline(sourceJobPostingId: string) {
+    if (!setupRequisitionId) {
+      toast.error('This posting is not linked to a requisition yet');
+      return;
+    }
+    try {
+      setImportingJobId(sourceJobPostingId);
+      await importPipeline.mutateAsync(sourceJobPostingId);
+      setSetupDialogOpen(false);
+      await boardQuery.refetch();
+      toast.success('Pipeline imported');
+    } catch (error) {
+      toast.error(readActionError(error, 'Failed to import pipeline'));
+    } finally {
+      setImportingJobId(null);
+    }
+  }
+
   function handleRenameStage(data: CreatePipelineStageInput) {
     if (!renamingStage) return;
     void runStageAction({
@@ -712,9 +792,26 @@ export function AtsKanbanBoard({
   }
 
   function openStageWorkspace(stage: PipelineStage) {
-    const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/jobs/${currentPosting.slug}/pipeline` : `/${orgSlug}/candidates`);
+    const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/candidates/${currentPosting.slug}` : `/${orgSlug}/candidates`);
     router.push(`${basePath}/${stage.slug}`);
   }
+
+  const stages = boardQuery.data?.stages ?? [];
+  const onlyAppliedSetup =
+    resolvedViewMode === 'kanban' &&
+    stages.length === 1 &&
+    stages[0]?.name.trim().toLowerCase() === 'applied' &&
+    stages[0]?.order === 1;
+
+  useEffect(() => {
+    if (!boardQuery.isSuccess || !onlyAppliedSetup || autoOpenedSetupRef.current || !setupRequisitionId) return;
+    autoOpenedSetupRef.current = true;
+    const timeout = window.setTimeout(() => {
+      setSetupInitialSelection('new');
+      setSetupDialogOpen(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [boardQuery.isSuccess, onlyAppliedSetup, setupRequisitionId]);
 
   if (!jobPostingId) {
     return (
@@ -728,7 +825,15 @@ export function AtsKanbanBoard({
     return resolvedViewMode === 'table' ? <TableSkeleton /> : <BoardSkeleton />;
   }
 
-  const stages = boardQuery.data?.stages ?? [];
+  const setupApplications = onlyAppliedSetup
+    ? [...(stages[0]?.applications ?? [])]
+        .sort((left, right) => {
+          const leftTime = new Date(left.lastMovedAt ?? left.appliedDate).getTime();
+          const rightTime = new Date(right.lastMovedAt ?? right.appliedDate).getTime();
+          return rightTime - leftTime;
+        })
+        .filter((application) => matchesApplicationSearch(application, stages[0].name, deferredGlobalSearch))
+    : [];
 
   return (
     <>
@@ -794,6 +899,39 @@ export function AtsKanbanBoard({
           onOpenCandidate={setSelectedApplicationId}
           onMoveSelected={moveSelectedApplications}
         />
+      ) : onlyAppliedSetup ? (
+        <DndContext sensors={sensors} collisionDetection={closestCorners}>
+          <div className="grid h-[calc(100dvh-140px)] min-w-0 grid-cols-[300px_minmax(0,1fr)] gap-5 overflow-hidden rounded-xl bg-canvas">
+            <KanbanColumn
+              stage={stages[0]}
+              isFirst
+              isLast
+              filteredApplications={setupApplications}
+              previewApplication={null}
+              isUpdating={false}
+              onOpenCandidate={setSelectedApplicationId}
+              onAddAfter={setAddAfterStageId}
+              onRename={setRenamingStage}
+              onDelete={(item) => deleteStage.mutate(item.id)}
+              onMoveLeft={(item) => moveStage(item, -1)}
+              onMoveRight={(item) => moveStage(item, 1)}
+              onOpenStageWorkspace={openStageWorkspace}
+              onOpenEvaluationWorkspace={openEvaluationWorkspace}
+              onScheduleInterview={openScheduleInterview}
+              onStartInterview={startInterviewNow}
+              onCompleteInterview={markInterviewCompleted}
+            />
+            <div className="flex min-h-0 items-center justify-center">
+              <PipelineSetupCard
+                creatingDefault={createDefaultPipeline.isPending}
+                importing={importPipeline.isPending}
+                onAddStage={() => openSetupDialog('new')}
+                onUseDefault={() => openSetupDialog('default')}
+                onImport={() => openSetupDialog('import')}
+              />
+            </div>
+          </div>
+        </DndContext>
       ) : (
         <DndContext
           autoScroll={false}
@@ -904,6 +1042,21 @@ export function AtsKanbanBoard({
         submitting={updateStage.isPending}
         onOpenChange={(open) => setRenamingStage(open ? renamingStage : null)}
         onSubmit={handleRenameStage}
+      />
+      <PipelineSetupDialog
+        key={`${setupInitialSelection}-${setupDialogOpen ? 'open' : 'closed'}-${jobPostingId}`}
+        open={setupDialogOpen}
+        initialSelection={setupInitialSelection}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        requisitionId={setupRequisitionId}
+        creatingStage={createStage.isPending}
+        creatingDefault={createDefaultPipeline.isPending}
+        importingJobId={importingJobId}
+        onOpenChange={setSetupDialogOpen}
+        onCreateStage={handleSetupCreateStage}
+        onCreateDefault={createSetupDefaultPipeline}
+        onImport={importSetupPipeline}
       />
       <CandidateDrawer
         orgSlug={orgSlug}

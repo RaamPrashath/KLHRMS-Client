@@ -125,13 +125,17 @@ export function AtsPipelineSectionLayout({
         <div className="sticky top-0 z-20 bg-canvas/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 p-7 pb-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-4xl font-semibold tracking-tight text-neutral-900">
-                {currentPosting?.title ?? 'Recruitment pipeline'}
-              </p>
+              {postingsQuery.isLoading ? (
+                <Skeleton className="h-10 w-64 rounded-lg" />
+              ) : (
+                <p className="text-4xl font-semibold tracking-tight text-neutral-900">
+                  {currentPosting?.title ?? 'Recruitment pipeline'}
+                </p>
+              )}
             </div>
             <Select
               value={currentPosting?.slug}
-              onValueChange={(value) => router.push(`/${orgSlug}/jobs/${value}/pipeline`)}
+              onValueChange={(value) => router.push(`/${orgSlug}/candidates/${value}/overview`)}
               disabled={postingsQuery.isLoading || postings.length === 0}
             >
               <SelectTrigger className="w-full bg-surface lg:w-[320px]">

@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, ArrowLeft, Save, Send } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Save, Send, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -20,6 +20,7 @@ import { useSubmitJobRequisition } from '@/modules/jobs/hooks/useJobRequisitionM
 import {
   createJobRequisitionSchema,
   type CreateJobRequisitionInput,
+  type JobRequisitionDecisionInput,
 } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import type {
   JobDepartmentOption,
@@ -34,6 +35,11 @@ interface CreateJobRequisitionPageProps {
   orgMembers: OrgMemberOption[];
   permissions: RolePermissions | null;
   initialData?: JobRequisitionRecord | null;
+  mode?: 'create' | 'edit' | 'review' | 'readonly';
+  approveLoading?: boolean;
+  rejectLoading?: boolean;
+  onApprove?: (values: JobRequisitionDecisionInput) => Promise<void>;
+  onReject?: () => void;
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -90,12 +96,21 @@ export function CreateJobRequisitionPage({
   orgMembers,
   permissions,
   initialData,
+  mode,
+  approveLoading,
+  rejectLoading,
+  onApprove,
+  onReject,
 }: Readonly<CreateJobRequisitionPageProps>) {
   const router = useRouter();
   const submitMutation = useSubmitJobRequisition(orgSlug, memberId);
   const createScope = getScope(permissions, 'jobs', 'create');
   const canCreate = createScope !== 'none';
   const isEdit = !!initialData;
+  const pageMode = mode ?? (isEdit ? 'edit' : 'create');
+  const isReview = pageMode === 'review';
+  const isReadOnly = pageMode === 'readonly';
+  const canUsePage = canCreate || isReview || isReadOnly;
 
   const form = useForm<CreateJobRequisitionInput>({
     resolver: zodResolver(createJobRequisitionSchema),
@@ -109,7 +124,7 @@ export function CreateJobRequisitionPage({
     memberId,
     formValues: watchedValues as Record<string, unknown>,
     draftId: initialData?.id ?? null,
-    enabled: canCreate,
+    enabled: canCreate && !isReview && !isReadOnly,
   });
 
   useEffect(() => {
@@ -123,7 +138,7 @@ export function CreateJobRequisitionPage({
   }, [form.formState.isDirty]);
 
   const handleSaveDraft = useCallback(async () => {
-    if (!canCreate) {
+    if (!canCreate || isReview || isReadOnly) {
       toast.error('You do not have permission to create requisitions');
       return;
     }
@@ -138,10 +153,10 @@ export function CreateJobRequisitionPage({
     } catch (saveError) {
       toast.error(getErrorMessage(saveError, isEdit ? 'Failed to update requisition' : 'Failed to save draft'));
     }
-  }, [canCreate, form, isEdit, save, watchedValues.title]);
+  }, [canCreate, form, isEdit, isReadOnly, isReview, save, watchedValues.title]);
 
   const handleSubmitForApproval = form.handleSubmit(async () => {
-    if (!canCreate) {
+    if (!canCreate || isReview || isReadOnly) {
       toast.error('You do not have permission to submit requisitions');
       return;
     }
@@ -160,7 +175,33 @@ export function CreateJobRequisitionPage({
     }
   });
 
-  if (!canCreate) {
+  const handleApprove = form.handleSubmit(async (values) => {
+    if (!onApprove) return;
+    await onApprove(values);
+  });
+
+  const sectionCompletion = useMemo(
+    () => ({
+      basicInfo: !!(watchedValues.title && watchedValues.departmentId),
+      hiringContext: !!watchedValues.hiringReason,
+      compensation: watchedValues.salaryMin != null || watchedValues.salaryMax != null,
+      requirements:
+        (watchedValues.skills?.length ?? 0) > 0 ||
+        (watchedValues.certifications?.length ?? 0) > 0 ||
+        !!watchedValues.experienceLevel ||
+        watchedValues.minExperience != null ||
+        !!watchedValues.education?.trim(),
+      postingContent:
+        !!watchedValues.roleSummary?.trim() ||
+        !!watchedValues.responsibilities?.trim() ||
+        !!watchedValues.requirementsRich?.trim() ||
+        !!watchedValues.benefits?.trim() ||
+        !!watchedValues.aboutTeam?.trim(),
+    }),
+    [watchedValues],
+  );
+
+  if (!canUsePage) {
     return (
       <div className="min-h-full bg-canvas px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
@@ -168,10 +209,10 @@ export function CreateJobRequisitionPage({
             <AlertCircle className="mt-0.5 size-5 text-warning-text" />
             <div>
               <h1 className="text-xl font-semibold text-neutral-900">
-                {isEdit ? 'Edit Requisition' : 'Create Requisition'}
+                {isEdit ? 'View Requisition' : 'Create Requisition'}
               </h1>
               <p className="mt-1 text-sm text-neutral-500">
-                Your role does not include permission to create job requisitions.
+                Your role does not include permission to view this requisition form.
               </p>
               <Button
                 type="button"
@@ -189,17 +230,6 @@ export function CreateJobRequisitionPage({
     );
   }
 
-  const sectionCompletion = useMemo(
-    () => ({
-      basicInfo: !!(watchedValues.title && watchedValues.departmentId),
-      hiringContext: !!watchedValues.hiringReason,
-      compensation: true,
-      requirements: (watchedValues.skills?.length ?? 0) > 0 || !!watchedValues.experienceLevel,
-      postingContent: !!watchedValues.roleSummary,
-    }),
-    [watchedValues],
-  );
-
   return (
     <div className="min-h-full bg-canvas">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -213,34 +243,59 @@ export function CreateJobRequisitionPage({
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
-            {isEdit ? 'Edit Requisition' : 'Create Requisition'}
+          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+            {isReview ? 'Review Requisition' : isReadOnly ? 'View Requisition' : isEdit ? 'Edit Requisition' : 'Create Requisition'}
           </h1>
         </div>
 
         <div className="flex items-center gap-2">
           {error ? <span className="text-xs text-destructive-text">Autosave failed</span> : null}
-          <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
-            <Save className="size-4" />
-            {isEdit ? 'Save Changes' : 'Save Draft'}
-          </Button>
-          <Button type="submit" form="job-requisition-form" disabled={submitMutation.isPending || isSaving}>
-            <Send className="size-4" />
-            {submitMutation.isPending ? 'Submitting...' : 'Submit for Approval'}
-          </Button>
+          {isReview ? (
+            <>
+              <Button type="button" variant="destructive" onClick={onReject} disabled={approveLoading || rejectLoading}>
+                <XCircle className="size-4" />
+                Reject
+              </Button>
+              <Button type="submit" form="job-requisition-form" disabled={approveLoading || rejectLoading}>
+                <CheckCircle2 className="size-4" />
+                {approveLoading ? 'Approving...' : 'Approve'}
+              </Button>
+            </>
+          ) : isReadOnly ? null : (
+            <>
+              <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
+                <Save className="size-4" />
+                {isEdit ? 'Save Changes' : 'Save Draft'}
+              </Button>
+              <Button type="submit" form="job-requisition-form" disabled={submitMutation.isPending || isSaving}>
+                <Send className="size-4" />
+                {submitMutation.isPending ? 'Submitting...' : 'Submit for Approval'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="mx-auto flex max-w-7xl gap-12 px-4 pb-12 sm:px-6 lg:px-8">
-        <form id="job-requisition-form" className="min-w-0 flex-1 space-y-10" onSubmit={handleSubmitForApproval}>
-          <BasicInfoSection form={form} departments={departments} />
-          <HiringContextSection form={form} orgMembers={orgMembers} />
-          <CompensationSection form={form} />
-          <CandidateRequirementsSection form={form} />
-          <PostingContentSection form={form} />
+        <form
+          id="job-requisition-form"
+          className="min-w-0 flex-1 space-y-10"
+          onSubmit={isReview ? handleApprove : handleSubmitForApproval}
+        >
+          <fieldset disabled={isReadOnly} className="space-y-10">
+            <BasicInfoSection form={form} departments={departments} />
+            <HiringContextSection form={form} orgMembers={orgMembers} />
+            <CompensationSection form={form} />
+            <CandidateRequirementsSection form={form} />
+            <PostingContentSection form={form} readOnly={isReadOnly} />
+          </fieldset>
         </form>
 
-        <StickySummaryPanel sectionCompletion={sectionCompletion} />
+        <StickySummaryPanel
+          sectionCompletion={sectionCompletion}
+          approvals={initialData?.approvals}
+          showApprovals={!!initialData && initialData.status !== 'DRAFT'}
+        />
       </div>
     </div>
   );

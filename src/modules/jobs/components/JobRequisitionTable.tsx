@@ -1,17 +1,11 @@
 'use client';
 
-import { format } from 'date-fns';
 import {
-  Eye,
-  FileCheck2,
   Plus,
   Search,
-  Send,
   X,
-  XCircle,
 } from 'lucide-react';
-import { useState, type MouseEvent } from 'react';
-import { toast } from 'sonner';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,12 +23,6 @@ interface JobRequisitionTableProps {
   error: Error | null;
   onRetry: () => void;
   showRaisedBy: boolean;
-  canClose: boolean;
-  submitLoading: boolean;
-  closeLoading: boolean;
-  onSubmit: (requisitionId: string) => Promise<void>;
-  onClose: (requisitionId: string) => Promise<void>;
-  onView: (requisitionId: string) => void;
   onRowClick: (requisitionId: string) => void;
   onNewRequisition: () => void;
 }
@@ -47,11 +35,6 @@ function formatLabel(value: string) {
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
-}
-
-function formatDate(value: string | null) {
-  if (!value) return 'Not set';
-  return format(new Date(value), 'MMM d, yyyy');
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -126,10 +109,6 @@ function ApprovalAvatarStack({
   );
 }
 
-function stopAction(event: MouseEvent<HTMLButtonElement>) {
-  event.stopPropagation();
-}
-
 export function JobRequisitionTable({
   data,
   isLoading,
@@ -137,12 +116,6 @@ export function JobRequisitionTable({
   error,
   onRetry,
   showRaisedBy,
-  canClose,
-  submitLoading,
-  closeLoading,
-  onSubmit,
-  onClose,
-  onView,
   onRowClick,
   onNewRequisition,
 }: Readonly<JobRequisitionTableProps>) {
@@ -203,24 +176,22 @@ export function JobRequisitionTable({
             <div className="overflow-x-auto">
               <div
                 className={cn(
-                  'grid min-w-[1050px] items-center border-b border-neutral-100 bg-canvas/70 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500',
+                  'grid min-w-[650px] items-center border-b border-neutral-100 bg-canvas/70 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500',
                   showRaisedBy
-                    ? 'grid-cols-[2.2fr_0.8fr_0.55fr_0.85fr_0.95fr_0.85fr_0.9fr_180px]'
-                    : 'grid-cols-[2.2fr_0.8fr_0.55fr_0.85fr_0.95fr_0.85fr_180px]',
+                    ? 'grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr]'
+                    : 'grid-cols-[2fr_1fr_1fr_1fr_1fr]',
                 )}
               >
-                <div>Requisition</div>
+                <div className="text-left">Requisition</div>
                 <div className="text-center">Priority</div>
                 <div className="text-center">Positions</div>
-                <div className="text-center">Created</div>
                 <div className="text-center">Approval</div>
                 <div className="text-center">Status</div>
                 {showRaisedBy ? <div className="text-center">Raised By</div> : null}
-                <div className="text-right">Actions</div>
               </div>
 
               {isLoading ? (
-                <div className="min-w-[1050px] divide-y divide-neutral-100">
+                <div className="divide-y divide-neutral-100">
                   {SKELETON_IDS.map((id) => (
                     <div key={id} className="px-4 py-4">
                       <div className="h-12 animate-pulse rounded-lg bg-neutral-100" />
@@ -236,7 +207,7 @@ export function JobRequisitionTable({
               ) : null}
 
               {!isLoading && filteredData.length > 0 ? (
-                <div className="min-w-[1050px] divide-y divide-neutral-100">
+                <div className="divide-y divide-neutral-100">
                   {filteredData.map((record) => (
                     <div
                       key={record.id}
@@ -249,29 +220,27 @@ export function JobRequisitionTable({
                       className={cn(
                         'grid cursor-pointer items-center px-4 py-3 transition-colors hover:bg-canvas',
                         showRaisedBy
-                          ? 'grid-cols-[2.2fr_0.8fr_0.55fr_0.85fr_0.95fr_0.85fr_0.9fr_180px]'
-                          : 'grid-cols-[2.2fr_0.8fr_0.55fr_0.85fr_0.95fr_0.85fr_180px]',
+                          ? 'grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr]'
+                          : 'grid-cols-[2fr_1fr_1fr_1fr_1fr]',
                       )}
                     >
-                      <div className="min-w-0 pr-3">
+                      <div className="min-w-0 text-left">
                         <p className="truncate text-sm font-medium text-neutral-900">{record.title}</p>
                         <p className="truncate text-xs text-neutral-500">
                           {record.departmentName ?? 'No department'} &bull; {formatLabel(record.employmentType)}
                         </p>
-                        <p className="mt-1 font-mono text-[11px] text-neutral-400">
-                          {record.requisitionLabel ?? 'REQ not assigned'}
-                        </p>
                       </div>
                       <div className="flex justify-center">
-                        <Badge className={cn('border', getPriorityClasses(record.priority))}>
+                        <Badge className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', getPriorityClasses(record.priority))}>
                           {formatLabel(record.priority)}
                         </Badge>
                       </div>
                       <div className="text-center font-mono text-sm text-neutral-900">{record.openings}</div>
-                      <div className="text-center text-sm text-neutral-700">{formatDate(record.createdAt)}</div>
-                      <ApprovalAvatarStack approvals={record.approvals} summary={record.approvalSummary} />
                       <div className="flex justify-center">
-                        <Badge className={cn('border', getStatusClasses(record.status))}>
+                        <ApprovalAvatarStack approvals={record.approvals} summary={record.approvalSummary} />
+                      </div>
+                      <div className="flex justify-center">
+                        <Badge className={cn('rounded-md px-2.5 py-1 text-xs font-semibold', getStatusClasses(record.status))}>
                           {formatLabel(record.status)}
                         </Badge>
                       </div>
@@ -280,88 +249,6 @@ export function JobRequisitionTable({
                           {record.raisedByName ?? 'Unknown'}
                         </div>
                       ) : null}
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          title="View details"
-                          onClick={(event) => {
-                            stopAction(event);
-                            onView(record.id);
-                          }}
-                        >
-                          <Eye className="size-3.5" />
-                        </Button>
-                        {record.canSubmit ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={submitLoading}
-                            title="Submit for approval"
-                            onClick={async (event) => {
-                              stopAction(event);
-                              try {
-                                await onSubmit(record.id);
-                                toast.success('Requisition submitted for approval');
-                              } catch (submitError) {
-                                toast.error(getErrorMessage(submitError, 'Failed to submit requisition'));
-                              }
-                            }}
-                          >
-                            <Send className="size-3.5" />
-                          </Button>
-                        ) : null}
-                        {record.currentUserCanApprove ? (
-                          <>
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="h-8 px-2 text-xs"
-                              onClick={(event) => {
-                                stopAction(event);
-                                onView(record.id);
-                              }}
-                            >
-                              <FileCheck2 className="size-3.5" />
-                              Approve
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              title="Reject"
-                              onClick={(event) => {
-                                stopAction(event);
-                                onView(record.id);
-                              }}
-                            >
-                              <XCircle className="size-3.5" />
-                            </Button>
-                          </>
-                        ) : null}
-                        {canClose && !['CLOSED', 'ARCHIVED'].includes(record.status) ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={closeLoading}
-                            title="Close requisition"
-                            onClick={async (event) => {
-                              stopAction(event);
-                              try {
-                                await onClose(record.id);
-                                toast.success('Requisition closed');
-                              } catch (closeError) {
-                                toast.error(getErrorMessage(closeError, 'Failed to close requisition'));
-                              }
-                            }}
-                          >
-                            <X className="size-3.5" />
-                          </Button>
-                        ) : null}
-                      </div>
                     </div>
                   ))}
                 </div>

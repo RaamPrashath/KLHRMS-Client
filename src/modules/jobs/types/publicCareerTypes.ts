@@ -21,6 +21,12 @@ export interface PublicCareerPosting {
   isRemote: boolean;
   targetDate: string | null;
   skills: string[];
+  experienceLevel: string | null;
+  minExperience: number | null;
+  education: string | null;
+  certifications: string[];
+  departmentName: string | null;
+  hiringReason: string | null;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;

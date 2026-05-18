@@ -22,9 +22,9 @@ export function PipelineSetupCard({
   const busy = creatingDefault || importing;
 
   return (
-    <aside className="relative w-full max-w-[320px] rounded-xl border border-neutral-100 bg-surface p-6 shadow-[var(--shadow-1)]">
+    <aside className="relative w-full max-w-[320px] rounded-xl border border-neutral-100 bg-canvas p-6 shadow-[var(--shadow-1)]">
       {importing ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-surface/80 backdrop-blur-sm">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-canvas/80 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-sm font-medium text-neutral-700">
             <Loader2 className="size-4 animate-spin text-primary" />
             Importing stages...

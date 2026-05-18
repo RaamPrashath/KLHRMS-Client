@@ -155,7 +155,13 @@ export interface PipelineStageRecord {
   stageType: (typeof PIPELINE_STAGE_TYPES)[number];
   meetingEnabled: boolean;
   offerLetterEnabled: boolean;
+  evaluationEnabled: boolean;
+  evaluationType: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
+  evaluationIncludeTotal: boolean;
+  evaluationIncludeAnalysis: boolean;
   dueDate: string | null;
+  extendToNextWorkingDay: boolean;
+  evaluationCategories: StageEvaluationCategory[];
 }
 
 export interface PipelineBoardData {
@@ -163,9 +169,25 @@ export interface PipelineBoardData {
   stages: PipelineStageRecord[];
 }
 
+export interface StageEvaluationCategory {
+  id: string;
+  stageId: string;
+  name: string;
+  type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
+  order: number;
+}
+
+export interface StageEvaluationCategoryInput {
+  id?: string | null;
+  name: string;
+  type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
+  order?: number;
+}
+
 export interface ImportableJobPosting {
   id: string;
   title: string;
   departmentName: string | null;
   stageCount: number;
+  stages: PipelineStageRecord[];
 }

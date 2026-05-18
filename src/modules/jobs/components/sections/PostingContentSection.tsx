@@ -9,6 +9,7 @@ import type { CreateJobRequisitionInput } from '@/modules/jobs/schema/jobRequisi
 
 interface PostingContentSectionProps {
   form: UseFormReturn<CreateJobRequisitionInput>;
+  readOnly?: boolean;
 }
 
 const EDITOR_FIELDS = [
@@ -46,6 +47,7 @@ const EDITOR_FIELDS = [
 
 export function PostingContentSection({
   form,
+  readOnly,
 }: Readonly<PostingContentSectionProps>) {
   const allValues = useWatch({ control: form.control }) as Record<string, string>;
   const contentError = form.formState.errors.roleSummary?.message;
@@ -66,6 +68,7 @@ export function PostingContentSection({
                 }
                 placeholder={field.placeholder}
                 minHeight={field.minHeight}
+                readOnly={readOnly}
               />
             </div>
           );

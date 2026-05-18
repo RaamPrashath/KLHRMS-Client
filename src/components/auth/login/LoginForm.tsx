@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 // import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
@@ -22,6 +22,8 @@ import { authClient } from "@/lib/auth-client";
 
 export function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const redirectTo = searchParams.get("redirect") ?? "/organizations";
     const [formError, setFormError] = useState<string | null>(null);
 
     const {
@@ -63,7 +65,7 @@ export function LoginForm() {
             if (user?.onboarded === false) {
                 router.replace("/onboarding");
             } else {
-                router.replace("/organizations");
+                router.replace(redirectTo);
             }
         } catch {
             setFormError("Something went wrong. Please try again.");

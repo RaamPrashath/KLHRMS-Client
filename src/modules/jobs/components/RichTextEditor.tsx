@@ -23,6 +23,7 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   minHeight?: number;
+  readOnly?: boolean;
 }
 
 export function RichTextEditor({
@@ -30,6 +31,7 @@ export function RichTextEditor({
   onChange,
   placeholder = 'Start writing...',
   minHeight = 120,
+  readOnly,
 }: Readonly<RichTextEditorProps>) {
   const editor = useEditor({
     extensions: [
@@ -42,6 +44,7 @@ export function RichTextEditor({
       Placeholder.configure({ placeholder }),
     ],
     content,
+    editable: !readOnly,
     onUpdate: ({ editor: currentEditor }) => {
       const html = currentEditor.getHTML();
       onChange(html === '<p></p>' ? '' : html);
@@ -71,10 +74,15 @@ export function RichTextEditor({
     editor.commands.setContent(content || '', { emitUpdate: false });
   }, [content, editor]);
 
+  useEffect(() => {
+    editor?.setEditable(!readOnly);
+  }, [editor, readOnly]);
+
   if (!editor) return null;
 
   return (
     <div className="group/editor overflow-hidden rounded-lg border border-neutral-200 bg-surface transition-colors focus-within:border-primary/40">
+      {!readOnly ? (
       <div className="flex items-center gap-0.5 border-b border-neutral-100 bg-surface-subtle/60 px-2 py-1 opacity-60 transition-opacity duration-150 group-hover/editor:opacity-100 group-focus-within/editor:opacity-100">
         <ToolbarButton
           active={editor.isActive('bold')}
@@ -128,6 +136,7 @@ export function RichTextEditor({
           label="Redo"
         />
       </div>
+      ) : null}
       <EditorContent editor={editor} style={{ minHeight }} />
     </div>
   );

@@ -14,9 +14,9 @@ export function SectionCard({
   required,
 }: Readonly<SectionCardProps>) {
   return (
-    <section id={id} className="scroll-mt-24">
-      <div className="mb-6 border-b border-neutral-100 pb-3">
-        <h2 className="text-sm font-semibold text-neutral-900">
+    <section id={id} className="scroll-mt-24 rounded-xl bg-surface p-6 shadow-[var(--shadow-1)]">
+      <div className="mb-5 border-b border-neutral-200 pb-3">
+        <h2 className="text-xl font-semibold text-neutral-900">
           {title}
           {required ? <RequiredMark /> : null}
         </h2>

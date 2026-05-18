@@ -1,17 +1,15 @@
 'use client';
 
 import { AlertCircle, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AddStageDialog } from '@/modules/jobs/components/AddStageDialog';
-import { DefaultPipelineConfirmDialog } from '@/modules/jobs/components/DefaultPipelineConfirmDialog';
-import { ImportJobSelector } from '@/modules/jobs/components/ImportJobSelector';
 import { PipelineBoard } from '@/modules/jobs/components/PipelineBoard';
 import { PipelineColumn } from '@/modules/jobs/components/PipelineColumn';
 import { PipelineSetupCard } from '@/modules/jobs/components/PipelineSetupCard';
+import { PipelineSetupDialog } from '@/modules/jobs/components/PipelineSetupDialog';
 import {
   useCreateDefaultPipeline,
   useCreatePipelineStage,
@@ -54,10 +52,10 @@ function PipelineSkeleton() {
 }
 
 export function PipelineTab({ orgSlug, memberId, requisition }: Readonly<PipelineTabProps>) {
-  const [addStageOpen, setAddStageOpen] = useState(false);
-  const [defaultConfirmOpen, setDefaultConfirmOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [setupInitialSelection, setSetupInitialSelection] = useState<'new' | 'default' | 'import'>('new');
   const [importingJobId, setImportingJobId] = useState<string | null>(null);
+  const autoOpenedSetupRef = useRef(false);
 
   const pipelineQuery = usePipelineBoardQuery(orgSlug, memberId, requisition.id);
   const createStage = useCreatePipelineStage(orgSlug, memberId, requisition.id);
@@ -70,10 +68,25 @@ export function PipelineTab({ orgSlug, memberId, requisition }: Readonly<Pipelin
     stages[0]?.name.trim().toLowerCase() === 'applied' &&
     stages[0]?.order === 1;
 
+  useEffect(() => {
+    if (!pipelineQuery.isSuccess || !onlyApplied || autoOpenedSetupRef.current) return;
+    autoOpenedSetupRef.current = true;
+    const timeout = window.setTimeout(() => {
+      setSetupInitialSelection('new');
+      setSetupOpen(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [onlyApplied, pipelineQuery.isSuccess]);
+
+  function openSetup(selection: 'new' | 'default' | 'import') {
+    setSetupInitialSelection(selection);
+    setSetupOpen(true);
+  }
+
   async function handleCreateStage(values: CreatePipelineStageInput) {
     try {
       await createStage.mutateAsync(values);
-      setAddStageOpen(false);
+      setSetupOpen(false);
       toast.success('Pipeline stage created');
     } catch (error) {
       toast.error(readActionError(error, 'Failed to create pipeline stage'));
@@ -83,7 +96,7 @@ export function PipelineTab({ orgSlug, memberId, requisition }: Readonly<Pipelin
   async function handleCreateDefault() {
     try {
       await createDefault.mutateAsync();
-      setDefaultConfirmOpen(false);
+      setSetupOpen(false);
       toast.success('Default pipeline created');
     } catch (error) {
       toast.error(readActionError(error, 'Failed to create default pipeline'));
@@ -94,7 +107,7 @@ export function PipelineTab({ orgSlug, memberId, requisition }: Readonly<Pipelin
     try {
       setImportingJobId(sourceJobPostingId);
       await importPipeline.mutateAsync(sourceJobPostingId);
-      setImportOpen(false);
+      setSetupOpen(false);
       toast.success('Pipeline imported');
     } catch (error) {
       toast.error(readActionError(error, 'Failed to import pipeline'));
@@ -131,42 +144,38 @@ export function PipelineTab({ orgSlug, memberId, requisition }: Readonly<Pipelin
 
   return (
     <>
-      <div className="rounded-xl border border-neutral-100 bg-surface p-4 shadow-[var(--shadow-1)]">
+      <div className="rounded-xl border border-neutral-100 bg-canvas p-4 shadow-[var(--shadow-1)]">
         {onlyApplied ? (
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <div className="grid min-h-[calc(100vh-320px)] gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
             <PipelineColumn stage={stages[0]} />
-            <PipelineSetupCard
-              creatingDefault={createDefault.isPending}
-              importing={importPipeline.isPending}
-              onAddStage={() => setAddStageOpen(true)}
-              onUseDefault={() => setDefaultConfirmOpen(true)}
-              onImport={() => setImportOpen(true)}
-            />
+            <div className="flex min-h-[420px] items-center justify-center">
+              <PipelineSetupCard
+                creatingDefault={createDefault.isPending}
+                importing={importPipeline.isPending}
+                onAddStage={() => openSetup('new')}
+                onUseDefault={() => openSetup('default')}
+                onImport={() => openSetup('import')}
+              />
+            </div>
           </div>
         ) : (
-          <PipelineBoard stages={stages} onAddStage={() => setAddStageOpen(true)} />
+          <PipelineBoard stages={stages} onAddStage={() => openSetup('new')} />
         )}
       </div>
 
-      <AddStageDialog
-        open={addStageOpen}
-        submitting={createStage.isPending}
-        onOpenChange={setAddStageOpen}
-        onSubmit={handleCreateStage}
-      />
-      <DefaultPipelineConfirmDialog
-        open={defaultConfirmOpen}
-        loading={createDefault.isPending}
-        onOpenChange={setDefaultConfirmOpen}
-        onConfirm={handleCreateDefault}
-      />
-      <ImportJobSelector
-        open={importOpen}
+      <PipelineSetupDialog
+        key={`${setupInitialSelection}-${setupOpen ? 'open' : 'closed'}`}
+        open={setupOpen}
+        initialSelection={setupInitialSelection}
         orgSlug={orgSlug}
         memberId={memberId}
         requisitionId={requisition.id}
+        creatingStage={createStage.isPending}
+        creatingDefault={createDefault.isPending}
         importingJobId={importingJobId}
-        onOpenChange={setImportOpen}
+        onOpenChange={setSetupOpen}
+        onCreateStage={handleCreateStage}
+        onCreateDefault={handleCreateDefault}
         onImport={handleImport}
       />
     </>

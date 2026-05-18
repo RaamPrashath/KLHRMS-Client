@@ -3,6 +3,7 @@ export interface PipelineJobPosting {
   slug: string;
   title: string;
   status: string;
+  requisitionId: string | null;
 }
 
 export interface CandidateSummary {
