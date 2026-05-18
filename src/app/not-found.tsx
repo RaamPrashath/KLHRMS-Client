@@ -18,10 +18,10 @@ export default function NotFound() {
             </div>
 
             <Link
-                href="/organizations"
+                href="/post-auth"
                 className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
             >
-                Back to organizations
+                Back to workspace
             </Link>
         </div>
     );

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 // import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import NeumorphButton from "@/components/ui/neumorph-button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 
@@ -79,7 +79,7 @@ export function LoginForm() {
 
             <form
                 onSubmit={handleSubmit(onSubmit)}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-4"
             >
                 {formError && (
                     <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive animate-in fade-in zoom-in-95 duration-200">
@@ -87,7 +87,7 @@ export function LoginForm() {
                     </div>
                 )}
 
-                <div className="space-y-5">
+                <div className="space-y-3.5">
                     <Field>
                         <FieldLabel htmlFor="email">Email address</FieldLabel>
                         <Input
@@ -95,7 +95,7 @@ export function LoginForm() {
                             type="email"
                             placeholder="name@company.com"
                             autoComplete="email"
-                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            className="h-11 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
                             {...register("email")}
                         />
                         {errors.email && (
@@ -118,7 +118,7 @@ export function LoginForm() {
                             id="password"
                             placeholder="••••••••"
                             autoComplete="current-password"
-                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            className="h-11 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
                             {...register("password")}
                         />
 
@@ -128,9 +128,10 @@ export function LoginForm() {
                     </Field>
                 </div>
 
-                <Button
+                <NeumorphButton
                     type="submit"
-                    className="btn-pill-primary h-12 w-full text-[17px] shadow-sm hover:shadow-md active:scale-[0.98]"
+                    intent="primary"
+                    className="mt-1 h-11 w-full rounded-2xl"
                     disabled={isSubmitting}
                 >
                     {isSubmitting ? (
@@ -141,14 +142,14 @@ export function LoginForm() {
                     ) : (
                         "Sign in"
                     )}
-                </Button>
+                </NeumorphButton>
             </form>
 
-            <AuthDivider className="my-8" />
+            <AuthDivider className="my-3.5" />
 
             <SocialButtons onError={setFormError} />
 
-            <div className="mt-10 text-center">
+            <div className="mt-6 text-center">
                 <AuthFooterLink
                     text="Don't have an account yet?"
                     linkText="Create an account"

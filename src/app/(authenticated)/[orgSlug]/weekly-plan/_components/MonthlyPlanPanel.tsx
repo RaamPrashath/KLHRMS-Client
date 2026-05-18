@@ -72,16 +72,18 @@ const MonthDayCell = memo(function MonthDayCell({
     ? day.isWeekend
       ? "Weekend"
       : "Unavailable"
-    : location
-      ? ""
-      : "Click to edit";
+    : isHolidayProtected
+      ? "Protected"
+      : location
+        ? ""
+        : "Click to edit";
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={!isInteractive}>
+      <DropdownMenuTrigger asChild disabled={!isInteractive || isHolidayProtected}>
         <button
           type="button"
-          disabled={!isInteractive}
+          disabled={!isInteractive || isHolidayProtected}
           aria-label={
             isInteractive
               ? `${format(day.date, "EEEE, MMMM d")}. ${currentLabel}. Open day location menu.`
@@ -89,15 +91,16 @@ const MonthDayCell = memo(function MonthDayCell({
           }
           className={cn(
             "relative flex h-24 w-full flex-col rounded-[22px] border p-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2",
-            isInteractive
+            isInteractive && !isHolidayProtected
               ? "hover:-translate-y-0.5 hover:border-foreground/20 active:scale-[0.985]"
               : "cursor-not-allowed bg-muted/10 text-muted-foreground",
             theme
               ? `${theme.bg} ${theme.border}`
-              : isInteractive
+              : isInteractive && !isHolidayProtected
                 ? "border-border bg-background"
                 : "border-border/60 bg-muted/20",
             !day.isCurrentMonth && "opacity-40 grayscale-[0.5]",
+            isHolidayProtected && "opacity-80",
           )}
         >
           <div className="flex items-start justify-between gap-2">
@@ -105,9 +108,7 @@ const MonthDayCell = memo(function MonthDayCell({
               <span className="mb-1 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/60">
                 {format(day.date, "EEE")}
               </span>
-              <span className="text-lg font-bold leading-none text-foreground">
-                {format(day.date, "d")}
-              </span>
+              <span className="text-lg font-bold leading-none text-foreground">{format(day.date, "d")}</span>
             </div>
 
             {isCurrentDay ? (
@@ -123,9 +124,7 @@ const MonthDayCell = memo(function MonthDayCell({
                 <span
                   className={cn(
                     "w-fit rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-tight",
-                    theme
-                      ? `${theme.bg} ${theme.text} ${theme.border}`
-                      : "bg-muted/50 text-muted-foreground",
+                    theme ? `${theme.bg} ${theme.text} ${theme.border}` : "bg-muted/50 text-muted-foreground",
                   )}
                 >
                   {PLAN_LOCATION_MAP[location].short_label}
@@ -178,9 +177,7 @@ const MonthDayCell = memo(function MonthDayCell({
                 {option.short_label}
               </span>
               {isSelected ? (
-                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-foreground">
-                  Current
-                </span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-foreground">Current</span>
               ) : null}
             </DropdownMenuItem>
           );
@@ -195,71 +192,6 @@ const MonthDayCell = memo(function MonthDayCell({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <button
-      type="button"
-      disabled={!isInteractive || isHolidayProtected}
-      onClick={() => onUpdate(day.iso, selectedLocation)}
-      className={cn(
-        "relative flex h-24 flex-col rounded-[22px] border p-3 text-left transition-all duration-200",
-        isInteractive && !isHolidayProtected
-          ? "hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)] active:scale-[0.97]"
-          : "cursor-not-allowed bg-muted/10 text-muted-foreground",
-        theme
-          ? `${theme.bg} ${theme.border}`
-          : isInteractive && !isHolidayProtected
-            ? "border-border bg-white"
-            : "border-border/60 bg-muted/20",
-        !day.isCurrentMonth && "opacity-40 grayscale-[0.5]",
-        isHolidayProtected && "opacity-70",
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col">
-          <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/60 leading-none mb-1">
-            {format(day.date, "EEE")}
-          </span>
-          <span className="text-lg font-bold text-foreground leading-none">
-            {format(day.date, "d")}
-          </span>
-        </div>
-
-        {isCurrentDay ? (
-          <span className="rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-background">
-            Today
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-auto flex items-center justify-between gap-2">
-        {location ? (
-          <span
-            className={cn(
-              "rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-tight shadow-sm",
-              theme ? `${theme.bg} ${theme.text} border ${theme.border}` : "bg-muted/50 text-muted-foreground",
-            )}
-          >
-            {PLAN_LOCATION_MAP[location].short_label}
-          </span>
-        ) : (
-          <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
-            {day.isWeekend ? "Off" : "---"}
-          </span>
-        )}
-
-        {isInteractive && location && !isHolidayProtected ? (
-          <span
-            onClick={(event) => {
-              event.stopPropagation();
-              onUpdate(day.iso, "");
-            }}
-            className="inline-flex items-center rounded-full border border-border/70 bg-white/50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-white hover:text-destructive transition-colors"
-          >
-            <Eraser className="h-2.5 w-2.5 mr-1" />
-            Clear
-          </span>
-        ) : null}
-      </div>
-    </button>
   );
 });
 
@@ -277,38 +209,27 @@ function monthDraftsEqual(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-export function MonthlyPlanPanel({
-  orgSlug,
-  orgId,
-  memberId,
-  userId,
-  onDirtyChange,
-}: MonthlyPlanPanelProps) {
+export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChange }: MonthlyPlanPanelProps) {
   const [monthState, setMonthState] = useState(getCurrentMonthState);
-  const [baselineDrafts, setBaselineDrafts] = useState<Record<string, PlanLocationValue | "">>(
-    {},
-  );
+  const [baselineDrafts, setBaselineDrafts] = useState<Record<string, PlanLocationValue | "">>({});
   const [drafts, setDrafts] = useState<Record<string, PlanLocationValue | "">>({});
   const [isDirty, setIsDirty] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<PlanLocationValue>("OFFICE");
 
-  const { data: locations = [], isLoading: isLocationsLoading } = usePlanLocationsQuery(
+  const { data: locations = [], isLoading: isLocationsLoading } = usePlanLocationsQuery(orgSlug, orgId, memberId);
+  const { data: monthEntries = [], isLoading: isMonthLoading } = useMyMonthlyPlanQuery(
     orgSlug,
     orgId,
     memberId,
+    monthState.year,
+    monthState.month,
   );
-  const {
-    data: monthEntries = [],
-    isLoading: isMonthLoading,
-  } = useMyMonthlyPlanQuery(orgSlug, orgId, memberId, monthState.year, monthState.month);
-  
-  // Fetch holidays for the current month
+
   const { data: holidays = [] } = useHolidays(orgSlug, memberId, {
     year: monthState.year,
     month: monthState.month,
   });
 
-  // Fetch approved leaves for the current month
   const monthStart = new Date(monthState.year, monthState.month - 1, 1);
   const monthEnd = new Date(monthState.year, monthState.month, 0);
   const { data: leaveRequestsData } = useLeaveRequests(orgSlug, memberId, {
@@ -318,7 +239,7 @@ export function MonthlyPlanPanel({
     page: 1,
     pageSize: 100,
   });
-  
+
   const saveMutation = useSaveMonthlyPlanMutation(
     orgSlug,
     orgId,
@@ -327,58 +248,6 @@ export function MonthlyPlanPanel({
     monthState.year,
     monthState.month,
   );
-
-  useEffect(() => {
-    const nextBaseline = buildMonthDrafts(monthEntries);
-    
-    // Auto-fill holidays and leaves
-    const autoFilledDrafts = { ...nextBaseline };
-    
-    // Create a set of holiday dates
-    const holidayDates = new Set(
-      holidays
-        .filter((h) => h.isHoliday)
-        .map((h) => h.holidayDate)
-    );
-    
-    // Create a map of leave dates
-    const leaveDates = new Set<string>();
-    if (leaveRequestsData?.items) {
-      leaveRequestsData.items.forEach((leave) => {
-        const start = new Date(leave.startDate);
-        const end = new Date(leave.endDate);
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          const dateStr = d.toISOString().split("T")[0];
-          leaveDates.add(dateStr);
-        }
-      });
-    }
-    
-    // Get all weekday dates for the month
-    const weekdayDates = getMonthWeekdayDates(monthState.year, monthState.month);
-    
-    // Auto-fill dates - ALWAYS override with holidays, then leaves if no holiday
-    weekdayDates.forEach((date) => {
-      // ALWAYS set holidays, regardless of existing value
-      if (holidayDates.has(date)) {
-        autoFilledDrafts[date] = "HOLIDAY";
-      } 
-      // Only set leaves if there's no existing entry AND it's not a holiday
-      else if (leaveDates.has(date) && !autoFilledDrafts[date]) {
-        autoFilledDrafts[date] = "LEAVE";
-      }
-    });
-    
-    startTransition(() => {
-      setBaselineDrafts(autoFilledDrafts);
-      setDrafts(autoFilledDrafts);
-      setIsDirty(false);
-    });
-  }, [monthEntries, monthState.month, monthState.year, holidays, leaveRequestsData]);
-
-  useEffect(() => {
-    onDirtyChange(isDirty);
-  }, [isDirty, onDirtyChange]);
 
   const monthRows = useMemo(
     () => getMonthWeekRows(monthState.year, monthState.month),
@@ -390,18 +259,16 @@ export function MonthlyPlanPanel({
     [monthState.month, monthState.year],
   );
 
-  // Create a set of holiday dates for protection
   const holidayDates = useMemo(
     () =>
       new Set(
         holidays
           .filter((h) => h.isHoliday)
-          .map((h) => h.holidayDate)
+          .map((h) => h.holidayDate),
       ),
-    [holidays]
+    [holidays],
   );
 
-  // Create a set of leave dates for protection
   const leaveDates = useMemo(() => {
     const set = new Set<string>();
     if (leaveRequestsData?.items) {
@@ -415,6 +282,29 @@ export function MonthlyPlanPanel({
     }
     return set;
   }, [leaveRequestsData]);
+
+  useEffect(() => {
+    const nextBaseline = buildMonthDrafts(monthEntries);
+    const autoFilledDrafts = { ...nextBaseline };
+
+    weekdayDates.forEach((date) => {
+      if (holidayDates.has(date)) {
+        autoFilledDrafts[date] = "HOLIDAY";
+      } else if (leaveDates.has(date) && !autoFilledDrafts[date]) {
+        autoFilledDrafts[date] = "LEAVE";
+      }
+    });
+
+    startTransition(() => {
+      setBaselineDrafts(autoFilledDrafts);
+      setDrafts(autoFilledDrafts);
+      setIsDirty(false);
+    });
+  }, [monthEntries, weekdayDates, holidayDates, leaveDates]);
+
+  useEffect(() => {
+    onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const summary = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -431,18 +321,12 @@ export function MonthlyPlanPanel({
   }, [drafts, weekdayDates]);
 
   function updateDraft(date: string, nextLocation: PlanLocationValue | "") {
-    // Prevent changing holiday or leave cells
-    if (holidayDates.has(date) && drafts[date] === "HOLIDAY") {
-      return;
-    }
-    if (leaveDates.has(date) && drafts[date] === "LEAVE") {
-      return;
-    }
-    
+    if (holidayDates.has(date) && drafts[date] === "HOLIDAY") return;
+    if (leaveDates.has(date) && drafts[date] === "LEAVE") return;
+
     setDrafts((current) => {
       const nextDrafts = { ...current, [date]: nextLocation };
-      const nextDirty = !monthDraftsEqual(nextDrafts, baselineDrafts);
-      setIsDirty(nextDirty);
+      setIsDirty(!monthDraftsEqual(nextDrafts, baselineDrafts));
       return nextDrafts;
     });
   }
@@ -458,11 +342,10 @@ export function MonthlyPlanPanel({
   }
 
   function handleApplyEverywhere() {
-    // Count non-holiday, non-leave weekdays
     const protectedDates = new Set([...holidayDates, ...leaveDates]);
-    const nonProtectedWeekdays = weekdayDates.filter(date => !protectedDates.has(date));
+    const nonProtectedWeekdays = weekdayDates.filter((date) => !protectedDates.has(date));
     const alreadySetCount = nonProtectedWeekdays.filter((date) => drafts[date]).length;
-    
+
     if (
       alreadySetCount > 0 &&
       !globalThis.confirm(
@@ -475,11 +358,9 @@ export function MonthlyPlanPanel({
 
     const nextDrafts = { ...drafts };
     nonProtectedWeekdays.forEach((date) => {
-      // Only update if it's not a protected holiday or leave
-      if (!protectedDates.has(date)) {
-        nextDrafts[date] = selectedLocation;
-      }
+      nextDrafts[date] = selectedLocation;
     });
+
     setDrafts(nextDrafts);
     setIsDirty(!monthDraftsEqual(nextDrafts, baselineDrafts));
   }
@@ -515,155 +396,85 @@ export function MonthlyPlanPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-5 pt-2">
-        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-[#f5f5f7] p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
-                <CalendarRange className="h-4 w-4" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">
-                  Monthly Plan
-                </h2>
-                <p className="max-w-xl text-[11px] font-medium leading-5 text-muted-foreground/75">
-                  Set a month-wide default first, then refine any weekday directly from the calendar.
-                </p>
-              </div>
+      <section className="rounded-2xl border border-border bg-[#f5f5f7] p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
+              <CalendarRange className="h-4 w-4" />
             </div>
-
-            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-              <span
-                className={cn(
-                  "inline-flex min-h-9 items-center rounded-full border px-3 text-[10px] font-semibold uppercase tracking-[0.16em]",
-                  isDirty
-                    ? "border-primary/20 bg-primary/10 text-primary"
-                    : "border-border bg-background text-muted-foreground",
-                )}
-              >
-                {isDirty ? "Unsaved changes" : "All changes saved"}
-              </span>
-              <Button
-                type="button"
-                className="h-10 rounded-full px-6 text-[11px] font-semibold uppercase tracking-[0.14em]"
-                onClick={handleSave}
-                disabled={!isDirty || saveMutation.isPending || isMonthLoading}
-              >
-                <Save className="mr-2 h-4 w-4" />
-                {saveMutation.isPending ? "Saving..." : "Save Changes"}
-      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-col gap-4">
-            <MonthNavigator
-              year={monthState.year}
-              month={monthState.month}
-              onPrevious={() => maybeChangeMonth(-1)}
-              onNext={() => maybeChangeMonth(1)}
-            />
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Select
-                value={selectedLocation}
-                onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}
-              >
-                <SelectTrigger className="h-10 min-w-[200px] rounded-lg text-sm">
-                  <SelectValue placeholder="Choose a location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {resolvedLocations.map((location) => (
-                    <SelectItem key={location.value} value={location.value} className="text-xs font-bold">
-                      {location.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 rounded-lg px-4 text-sm font-medium"
-                onClick={handleApplyEverywhere}
-                disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
-              >
-                <Sparkles className="mr-2 h-3.5 w-3.5" />
-                Apply to all weekdays
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 rounded-lg px-4 text-sm font-medium"
-                onClick={handleClearAll}
-                disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
-              >
-                <Eraser className="mr-2 h-3.5 w-3.5" />
-                Clear all
-              </Button>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Monthly Plan</h2>
+              <p className="max-w-xl text-[11px] font-medium leading-5 text-muted-foreground/75">
+                Set defaults and refine weekdays directly from the calendar.
+              </p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex flex-col gap-4">
-              <MonthNavigator
-                year={monthState.year}
-                month={monthState.month}
-                onPrevious={() => maybeChangeMonth(-1)}
-                onNext={() => maybeChangeMonth(1)}
-              />
+          <span
+            className={cn(
+              "inline-flex min-h-9 items-center rounded-full border px-3 text-[10px] font-semibold uppercase tracking-[0.16em]",
+              isDirty
+                ? "border-primary/20 bg-primary/10 text-primary"
+                : "border-border bg-background text-muted-foreground",
+            )}
+          >
+            {isDirty ? "Unsaved changes" : "All changes saved"}
+          </span>
+        </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <Select
-                  value={selectedLocation}
-                  onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}
-                >
-                  <SelectTrigger className="h-11 min-w-[220px] rounded-full border-border bg-background text-xs font-semibold">
-                    <SelectValue placeholder="Choose a location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {resolvedLocations.map((location) => (
-                      <SelectItem
-                        key={location.value}
-                        value={location.value}
-                        className="text-xs font-semibold"
-                      >
-                        {location.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <MonthNavigator
+            year={monthState.year}
+            month={monthState.month}
+            onPrevious={() => maybeChangeMonth(-1)}
+            onNext={() => maybeChangeMonth(1)}
+          />
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-background"
-                  onClick={handleApplyEverywhere}
-                  disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Apply to all weekdays
-                </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={selectedLocation} onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}>
+              <SelectTrigger className="h-11 min-w-[220px] rounded-full border-border bg-background text-xs font-semibold">
+                <SelectValue placeholder="Choose a location" />
+              </SelectTrigger>
+              <SelectContent>
+                {resolvedLocations.map((location) => (
+                  <SelectItem key={location.value} value={location.value} className="text-xs font-semibold">
+                    {location.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-background"
-                  onClick={handleClearAll}
-                  disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
-                >
-                  <Eraser className="mr-2 h-4 w-4" />
-                  Reset draft
-                </Button>
-              </div>
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              onClick={handleApplyEverywhere}
+              disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Apply to all weekdays
+            </Button>
 
-            <div className="flex max-w-sm flex-col gap-1 rounded-2xl border border-border/70 bg-background px-4 py-3">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
-                Editing model
-              </span>
-              <p className="text-xs font-medium leading-5 text-foreground">
-                Use the picker above for bulk planning, then open any weekday cell to override it inline.
-              </p>
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              onClick={handleClearAll}
+              disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
+            >
+              <Eraser className="mr-2 h-4 w-4" />
+              Reset draft
+            </Button>
+
+            <Button
+              type="button"
+              className="h-11 rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              onClick={handleSave}
+              disabled={!isDirty || saveMutation.isPending || isMonthLoading}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {saveMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </div>
       </section>
@@ -671,29 +482,16 @@ export function MonthlyPlanPanel({
       <section className="rounded-2xl border border-border bg-background p-6">
         <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">
-              Calendar
-            </h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Calendar</h3>
             <p className="text-[11px] font-medium text-muted-foreground/70">
-              Every weekday can be changed in place without leaving the month view.
+              Protected holiday/leave days cannot be edited.
             </p>
           </div>
           <span className="inline-flex min-h-9 items-center rounded-full bg-muted px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {plannedDaysCount} of {weekdayDates.length} weekdays planned
           </span>
-          <Button
-            type="button"
-            className="h-10 rounded-lg px-5 text-sm font-medium"
-            style={{ backgroundColor: '#00874a' }}
-            onClick={handleSave}
-            disabled={!isDirty || saveMutation.isPending || isMonthLoading}
-          >
-            <Save className="mr-2 h-3.5 w-3.5" />
-            {saveMutation.isPending ? "Saving..." : "Save Changes"}
-          </Button>
         </div>
 
-      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
         <div className="mb-6 grid grid-cols-7 gap-3 px-1">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
             <span
@@ -706,50 +504,39 @@ export function MonthlyPlanPanel({
         </div>
 
         <div className="flex flex-col gap-3">
-          {isMonthLoading || isLocationsLoading ? (
-            Array.from({ length: 5 }, (_, rowIndex) => (
-              <div key={rowIndex} className="grid grid-cols-7 gap-3">
-                {Array.from({ length: 7 }, (_, columnIndex) => (
-                  <div
-                    key={`${rowIndex}-${columnIndex}`}
-                    className="h-24 animate-pulse rounded-[22px] border border-border/50 bg-muted/10"
-                  />
-                ))}
-              </div>
-            ))
-          ) : (
-            monthRows.map((row, rowIndex) => (
-              <div key={rowIndex} className="grid grid-cols-7 gap-3">
-                {row.map((day) => (
-                  <MonthDayCell
-                    key={day.iso}
-                    day={day}
-                    location={drafts[day.iso] || ""}
-                    locations={resolvedLocations}
-                    isInteractive={day.isCurrentMonth && !day.isWeekend}
-                    isCurrentDay={isToday(parseISO(day.iso))}
-                    onUpdate={updateDraft}
-                  />
-                ))}
-                {row.map((day) => {
-                  const isHolidayProtected = (holidayDates.has(day.iso) && drafts[day.iso] === "HOLIDAY") || (leaveDates.has(day.iso) && drafts[day.iso] === "LEAVE");
-                  
-                  return (
-                    <MonthDayCell
-                      key={day.iso}
-                      day={day}
-                      location={drafts[day.iso] || ""}
-                      selectedLocation={selectedLocation}
-                      isInteractive={day.isCurrentMonth && !day.isWeekend}
-                      isCurrentDay={isToday(parseISO(day.iso))}
-                      isHolidayProtected={isHolidayProtected}
-                      onUpdate={updateDraft}
+          {isMonthLoading || isLocationsLoading
+            ? Array.from({ length: 5 }, (_, rowIndex) => (
+                <div key={rowIndex} className="grid grid-cols-7 gap-3">
+                  {Array.from({ length: 7 }, (_, columnIndex) => (
+                    <div
+                      key={`${rowIndex}-${columnIndex}`}
+                      className="h-24 animate-pulse rounded-[22px] border border-border/50 bg-muted/10"
                     />
-                  );
-                })}
-              </div>
-            ))
-          )}
+                  ))}
+                </div>
+              ))
+            : monthRows.map((row, rowIndex) => (
+                <div key={rowIndex} className="grid grid-cols-7 gap-3">
+                  {row.map((day) => {
+                    const isHolidayProtected =
+                      (holidayDates.has(day.iso) && drafts[day.iso] === "HOLIDAY") ||
+                      (leaveDates.has(day.iso) && drafts[day.iso] === "LEAVE");
+
+                    return (
+                      <MonthDayCell
+                        key={day.iso}
+                        day={day}
+                        location={drafts[day.iso] || ""}
+                        locations={resolvedLocations}
+                        isInteractive={day.isCurrentMonth && !day.isWeekend}
+                        isCurrentDay={isToday(parseISO(day.iso))}
+                        isHolidayProtected={isHolidayProtected}
+                        onUpdate={updateDraft}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
         </div>
       </section>
 
@@ -757,9 +544,7 @@ export function MonthlyPlanPanel({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr]">
           <div className="flex flex-col gap-4">
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">
-                Coverage
-              </h3>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Coverage</h3>
               <p className="text-[11px] font-medium leading-5 text-muted-foreground/70">
                 A quick read on how complete the month is before you save it.
               </p>
@@ -778,18 +563,6 @@ export function MonthlyPlanPanel({
                 </span>
               </div>
             </div>
-      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden p-6">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Month summary</h2>
-            <p className="text-[11px] text-muted-foreground/60 font-medium">
-              Live totals update as you tap weekdays in the strip above.
-            </p>
-          </div>
-          <span className="rounded-full bg-muted/30 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {summary.unset} days remaining
-          </span>
-        </div>
 
             <div className="h-2 overflow-hidden rounded-full bg-background">
               <div
@@ -799,12 +572,8 @@ export function MonthlyPlanPanel({
             </div>
 
             <div className="flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              <span className="rounded-full bg-background px-3 py-2">
-                {plannedDaysCount} set
-              </span>
-              <span className="rounded-full bg-background px-3 py-2">
-                {summary.unset} open
-              </span>
+              <span className="rounded-full bg-background px-3 py-2">{plannedDaysCount} set</span>
+              <span className="rounded-full bg-background px-3 py-2">{summary.unset} open</span>
             </div>
           </div>
 
@@ -822,9 +591,7 @@ export function MonthlyPlanPanel({
                   <div className="flex items-center gap-3">
                     <div className={cn("h-2.5 w-2.5 rounded-full", theme.dot)} />
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-foreground">
-                        {location.label}
-                      </p>
+                      <p className="truncate text-xs font-semibold text-foreground">{location.label}</p>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
                         {location.short_label}
                       </p>

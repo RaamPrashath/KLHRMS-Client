@@ -8,18 +8,18 @@ datasource db {
 }
 
 model User {
-    id                String      @id @default(uuid())
-    email             String      @unique
-    name              String?
-    emailVerified     Boolean     @default(false)
-    onboarded         Boolean     @default(false)
-    image             String?
-    createdAt         DateTime    @default(now())
-    updatedAt         DateTime    @updatedAt
-    sessions          Session[]
-    accounts          Account[]
-    members           Member[]
-    candidateProfiles Candidate[]
+    id                      String               @id @default(uuid())
+    email                   String               @unique
+    name                    String?
+    emailVerified           Boolean              @default(false)
+    onboarded               Boolean              @default(false)
+    image                   String?
+    createdAt               DateTime             @default(now())
+    updatedAt               DateTime             @updatedAt
+    sessions                Session[]
+    accounts                Account[]
+    members                 Member[]
+    sentOrganizationInvites OrganizationInvite[]
 
     @@map("user")
 }
@@ -73,31 +73,38 @@ model Verification {
 }
 
 model Organization {
-    id   String  @id @default(uuid())
-    name String
-    slug String  @unique
-    logo String?
-
-    latitude  Float?
-    longitude Float?
-
-    createdAt DateTime @default(now())
-
-    members                   Member[]
-    roles                     Role[]
-    leaveTypes                LeaveType[]
-    leaveRequests             LeaveRequest[]
-    leaveBalances             LeaveBalance[]
-    holidays                  Holiday[]
-    candidates                Candidate[]
-    candidateApplications     CandidateApplication[]
-    pipelineStages            PipelineStage[]
-    stageEvaluationCategories StageEvaluationCategory[]
-    stageEvaluationWorkspaces StageEvaluationWorkspace[]
-    jobPostings               JobPosting[]
-    applicationStageHistories ApplicationStageHistory[]
+    id         String   @id @default(uuid())
+    name       String
+    slug       String   @unique
+    logo       String?
+    latitude   Float?
+    longitude  Float?
+    createdAt  DateTime @default(now())
+    members    Member[]
+    roles      Role[]
+    invites    OrganizationInvite[]
 
     @@map("organization")
+}
+
+model OrganizationInvite {
+    id              String   @id @default(uuid())
+    organizationId  String
+    email           String
+    roleId          String
+    invitedByUserId String
+    status          String   @default("PENDING")
+    createdAt       DateTime @default(now())
+    acceptedAt      DateTime?
+    organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    role            Role         @relation(fields: [organizationId, roleId], references: [organizationId, id])
+    invitedByUser   User         @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+    @@unique([organizationId, email])
+    @@index([email])
+    @@index([organizationId])
+    @@index([status])
+    @@map("organization_invite")
 }
 
 model Member {
@@ -105,19 +112,10 @@ model Member {
     organizationId String
     userId         String
     createdAt      DateTime @default(now())
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    roleId            String?
-    role              Role?              @relation(fields: [organizationId, roleId], references: [organizationId, id])
-    departmentMembers DepartmentMember[]
-
-    leaveRequests             LeaveRequest[]            @relation("LeaveRequestMember")
-    approvedLeaveRequests     LeaveRequest[]            @relation("LeaveRequestApprover")
-    leaveBalances             LeaveBalance[]            @relation("LeaveBalanceMember")
-    movedApplicationHistories ApplicationStageHistory[] @relation("ApplicationHistoryMovedBy")
-    createdEvaluationWorkspaces StageEvaluationWorkspace[] @relation("EvaluationWorkspaceCreatedBy")
+    roleId         String?
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    role           Role?        @relation(fields: [organizationId, roleId], references: [organizationId, id])
 
     @@unique([organizationId, userId])
     @@index([organizationId])
@@ -132,484 +130,12 @@ model Role {
     permissions    Json
     createdAt      DateTime @default(now())
     updatedAt      DateTime @updatedAt
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    members      Member[]
+    organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    members        Member[]
+    invites        OrganizationInvite[]
 
     @@unique([organizationId, id])
     @@unique([organizationId, name])
     @@index([organizationId])
     @@map("role")
-}
-
-model AttendanceRecord {
-    id                 String    @id @default(cuid())
-    employeeId         String
-    organizationId     String
-    date               DateTime  @db.Date
-    clockIn            DateTime?
-    clockOut           DateTime?
-    projectId          String?
-    projectTaskId      String?
-    description        String?
-    totalHours         Float?
-    overtimeHours      Float?
-    status             String    @default("ABSENT")
-    enteredByManagerId String?
-    createdAt          DateTime  @default(now())
-
-    workLog AttendanceWorkLog[]
-
-    @@unique([employeeId, date])
-    @@index([organizationId])
-    @@index([organizationId, date])
-    @@index([organizationId, employeeId])
-    @@index([projectId])
-    @@index([projectTaskId])
-    @@map("attendanceRecord")
-}
-
-// Add this new model:
-model AttendanceWorkLog {
-    id                 String    @id @default(cuid())
-    attendanceRecordId String
-    organizationId     String
-    employeeId         String
-    date               DateTime  @db.Date
-    startTime          DateTime?
-    endTime            DateTime?
-    projectId          String?
-    projectTaskId      String?
-    title              String?
-    notes              String?
-    createdAt          DateTime  @default(now())
-
-    attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
-
-    @@index([attendanceRecordId])
-    @@index([organizationId])
-    @@index([organizationId, employeeId])
-    @@index([organizationId, date])
-    @@index([projectId])
-    @@index([projectTaskId])
-    @@map("attendanceWorkLog")
-}
-
-model WorkHourPolicy {
-    id                   String @id @default(cuid())
-    organizationId       String @unique
-    standardHoursPerDay  Float  @default(8)
-    overtimeThreshold    Float  @default(8)
-    lateThresholdMinutes Int    @default(15)
-    workStartHour        Int    @default(9)
-    workStartMinute      Int    @default(0)
-    halfDayMaxHours      Float  @default(4)
-    absentAfterHour      Int    @default(18)
-
-    @@map("workHourPolicy")
-}
-
-model Department {
-    id                 String   @id @default(cuid())
-    organizationId     String
-    name               String
-    parentDepartmentId String?
-    headMemberId       String?
-    status             String   @default("ACTIVE")
-    createdAt          DateTime @default(now())
-    updatedAt          DateTime @updatedAt
-
-    parentDepartment Department?        @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-    childDepartments Department[]       @relation("DepartmentHierarchy")
-    members          DepartmentMember[]
-
-    @@index([organizationId])
-    @@index([organizationId, status])
-    @@index([parentDepartmentId])
-    @@index([headMemberId])
-    @@map("department")
-}
-
-model DepartmentMember {
-    id           String   @id @default(cuid())
-    departmentId String
-    memberId     String
-    joinedAt     DateTime @default(now())
-
-    department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-    member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-    @@unique([departmentId, memberId])
-    @@index([departmentId])
-    @@index([memberId])
-    @@map("departmentMember")
-}
-
-enum LeaveRequestStatus {
-    PENDING
-    APPROVED
-    REJECTED
-    CANCELLED
-}
-
-model LeaveType {
-    id             String  @id @default(cuid())
-    organizationId String
-    name           String
-    quota          Float
-    carryForward   Boolean @default(false)
-    isPaid         Boolean @default(true)
-    color          String?
-
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
-    deletedAt DateTime?
-
-    organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    balances     LeaveBalance[]
-    requests     LeaveRequest[]
-
-    @@unique([organizationId, name])
-    @@index([organizationId])
-    @@index([organizationId, deletedAt])
-    @@map("leave_type")
-}
-
-model LeaveRequest {
-    id             String @id @default(cuid())
-    organizationId String
-    memberId       String
-    leaveTypeId    String
-
-    startDate DateTime           @db.Date
-    endDate   DateTime           @db.Date
-    days      Float
-    reason    String?
-    status    LeaveRequestStatus @default(PENDING)
-
-    approvedById    String?
-    approverComment String?
-
-    createdAt   DateTime  @default(now())
-    updatedAt   DateTime  @updatedAt
-    cancelledAt DateTime?
-    deletedAt   DateTime?
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    member       Member       @relation("LeaveRequestMember", fields: [memberId], references: [id], onDelete: Cascade)
-    leaveType    LeaveType    @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
-    approvedBy   Member?      @relation("LeaveRequestApprover", fields: [approvedById], references: [id], onDelete: SetNull)
-
-    @@index([organizationId])
-    @@index([organizationId, memberId])
-    @@index([organizationId, status])
-    @@index([organizationId, leaveTypeId])
-    @@index([organizationId, startDate])
-    @@index([organizationId, startDate, endDate])
-    @@index([approvedById])
-    @@map("leave_request")
-}
-
-model LeaveBalance {
-    id             String @id @default(cuid())
-    organizationId String
-    memberId       String
-    leaveTypeId    String
-    year           Int
-
-    allocated      Float @default(0)
-    used           Float @default(0)
-    remaining      Float @default(0)
-    carriedForward Float @default(0)
-    lapsed         Float @default(0)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    member       Member       @relation("LeaveBalanceMember", fields: [memberId], references: [id], onDelete: Cascade)
-    leaveType    LeaveType    @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
-
-    @@unique([organizationId, memberId, leaveTypeId, year])
-    @@index([organizationId])
-    @@index([organizationId, memberId, year])
-    @@index([organizationId, leaveTypeId, year])
-    @@map("leave_balance")
-}
-
-model Holiday {
-    id             String   @id @default(cuid())
-    organizationId String
-    name           String
-    holidayDate    DateTime @db.Date
-    isHoliday      Boolean  @default(true)
-    isRecurring    Boolean  @default(false)
-    description    String?
-
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
-    deletedAt DateTime?
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    @@index([organizationId])
-    @@index([organizationId, holidayDate])
-    @@index([organizationId, deletedAt])
-    @@map("holiday")
-}
-
-model PublicHolidayMaster {
-    id          String   @id @default(cuid())
-    name        String
-    date        DateTime @db.Date
-    year        Int
-    location    String   @default("IN-TN")
-    description String?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@unique([date, name, location])
-    @@index([year, location])
-    @@map("public_holiday_master")
-}
-
-enum JobPostingStatus {
-    DRAFT
-    PUBLISHED
-    CLOSED
-}
-
-enum ApplicationSource {
-    LINKEDIN
-    REFERRAL
-    COMPANY_WEBSITE
-    JOB_BOARD
-    DIRECT
-    OTHER
-}
-
-enum StageType {
-    DEFAULT
-    INTERVIEW
-    OFFER
-    HIRED
-    REJECTED
-}
-
-model Candidate {
-    id             String  @id @default(cuid())
-    organizationId String
-    userId         String?
-
-    firstName String
-    lastName  String
-
-    email String
-    phone String?
-
-    linkedinUrl String?
-    resumeUrl   String?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-    applications CandidateApplication[]
-
-    @@unique([organizationId, email])
-    @@index([organizationId])
-    @@index([userId])
-    @@map("candidate")
-}
-
-model JobPosting {
-    id             String @id @default(cuid())
-    organizationId String
-
-    title        String
-    description  String
-    requirements String?
-
-    status JobPostingStatus @default(DRAFT)
-
-    publishedAt DateTime?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    applications   CandidateApplication[]
-    pipelineStages PipelineStage[]
-
-    @@index([organizationId])
-    @@index([organizationId, status])
-    @@map("job_posting")
-}
-
-model PipelineStage {
-    id             String @id @default(cuid())
-    organizationId String
-    jobPostingId   String
-
-    name  String
-    order Int
-
-    color String?
-
-    isDefault Boolean @default(false)
-    isFinal   Boolean @default(false)
-
-    stageType StageType @default(DEFAULT)
-
-    meetingEnabled            Boolean   @default(false)
-    offerLetterEnabled        Boolean   @default(false)
-    evaluationEnabled         Boolean   @default(false)
-    evaluationType            String?
-    evaluationIncludeTotal    Boolean   @default(false)
-    evaluationIncludeAnalysis Boolean   @default(false)
-    dueDate                   DateTime?
-    extendToNextWorkingDay    Boolean   @default(false)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
-
-    applications CandidateApplication[]
-
-    evaluationCategories StageEvaluationCategory[]
-    evaluationWorkspace StageEvaluationWorkspace?
-
-    fromStageHistories ApplicationStageHistory[] @relation("HistoryFromStage")
-
-    toStageHistories ApplicationStageHistory[] @relation("HistoryToStage")
-
-    @@unique([jobPostingId, order])
-    @@index([organizationId])
-    @@index([jobPostingId])
-    @@map("pipeline_stage")
-}
-
-model StageEvaluationCategory {
-    id             String @id @default(cuid())
-    organizationId String
-    stageId        String
-
-    name  String
-    order Int
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    stage        PipelineStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
-
-    @@unique([stageId, order])
-    @@index([organizationId])
-    @@index([stageId])
-    @@index([organizationId, stageId])
-    @@map("stage_evaluation_category")
-}
-
-model StageEvaluationWorkspace {
-    id             String @id @default(cuid())
-    organizationId String
-    stageId        String @unique
-
-    googleSpreadsheetId  String
-    googleSpreadsheetUrl String
-    googleSheetId        Int?
-    googleSheetTitle     String
-    createdByMemberId    String?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    stage        PipelineStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
-    createdBy    Member?       @relation("EvaluationWorkspaceCreatedBy", fields: [createdByMemberId], references: [id], onDelete: SetNull)
-
-    @@unique([organizationId, stageId])
-    @@index([organizationId])
-    @@index([stageId])
-    @@index([createdByMemberId])
-    @@index([organizationId, stageId])
-    @@map("stage_evaluation_workspace")
-}
-
-model CandidateApplication {
-    id             String @id @default(cuid())
-    organizationId String
-
-    candidateId  String
-    jobPostingId String
-
-    pipelineStageId String
-
-    source ApplicationSource @default(DIRECT)
-
-    score Int?
-
-    notes String?
-
-    appliedAt      DateTime @default(now())
-    lastActivityAt DateTime @updatedAt
-
-    candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
-
-    pipelineStage PipelineStage @relation(fields: [pipelineStageId], references: [id], onDelete: Restrict)
-
-    stageHistory ApplicationStageHistory[]
-
-    @@unique([candidateId, jobPostingId])
-    @@index([organizationId])
-    @@index([jobPostingId])
-    @@index([pipelineStageId])
-    @@index([organizationId, pipelineStageId])
-    @@map("candidate_application")
-}
-
-model ApplicationStageHistory {
-    id String @id @default(cuid())
-
-    organizationId String
-
-    applicationId String
-
-    fromStageId String?
-    toStageId   String
-
-    movedByMemberId String?
-
-    note String?
-
-    createdAt DateTime @default(now())
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    application CandidateApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-    fromStage PipelineStage? @relation("HistoryFromStage", fields: [fromStageId], references: [id], onDelete: SetNull)
-
-    toStage PipelineStage @relation("HistoryToStage", fields: [toStageId], references: [id], onDelete: Restrict)
-
-    movedBy Member? @relation("ApplicationHistoryMovedBy", fields: [movedByMemberId], references: [id], onDelete: SetNull)
-
-    @@index([organizationId])
-    @@index([applicationId])
-    @@index([fromStageId])
-    @@index([toStageId])
-    @@index([movedByMemberId])
-    @@map("application_stage_history")
 }

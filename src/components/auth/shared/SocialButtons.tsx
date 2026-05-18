@@ -47,7 +47,7 @@ export function SocialButtons({ onError }: SocialButtonsProps) {
             await authClient.signOut();
             const result = await authClient.signIn.social({
                 provider,
-                callbackURL: "/organizations",
+                callbackURL: "/post-auth",
             });
             if (result.error) {
                 throw new Error(result.error.message ?? "Social login failed");

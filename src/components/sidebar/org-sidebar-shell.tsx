@@ -3,6 +3,7 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import type { SidebarOrganizationOption } from "@/components/sidebar/organization-switcher";
 import { type RolePermissions } from "@/lib/hrms-roles";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ export interface OrgSidebarShellProps {
     readonly orgName: string;
     readonly roleName: string | null;
     readonly permissions: RolePermissions | null;
+    readonly organizations: SidebarOrganizationOption[];
     readonly user: {
         name?: string | null;
         email?: string | null;
@@ -25,6 +27,7 @@ export function OrgSidebarShell({
     orgName,
     roleName,
     permissions,
+    organizations,
     user,
 }: OrgSidebarShellProps) {
     const pathname = usePathname();
@@ -47,6 +50,7 @@ export function OrgSidebarShell({
                 orgName={orgName}
                 roleName={roleName}
                 permissions={permissions}
+                organizations={organizations}
                 user={user}
             />
             <main className="flex-1 min-h-0 overflow-y-auto">

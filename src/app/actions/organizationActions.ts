@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import organizations from '@/lib/organizations';
 import { requireServerSession } from '@/lib/server-session';
@@ -22,21 +23,6 @@ export async function createOrganizationAction(formData: FormData) {
   redirect(`/${org.slug}`);
 }
 
-export async function joinOrganizationAction(organizationId: string) {
-  const session = await requireServerSession();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-
-  await organizations.joinOrganization(session.user.id, organizationId);
-
-  const { prisma } = await import('@/lib/prisma');
-  const org = await prisma.organization.findUnique({
-    where: { id: organizationId },
-    select: { slug: true },
-  });
-
-  redirect(`/${org?.slug ?? 'organizations'}`);
-}
-
 export async function updateOrganizationAction(slug: string, formData: FormData) {
   const name = formData.get('name');
 
@@ -50,6 +36,7 @@ export async function updateOrganizationAction(slug: string, formData: FormData)
   await organizations.requireOrgOwner(session.user.id, slug);
   await organizations.updateOrganizationNameBySlug(slug, name);
 
+  revalidatePath(`/${slug}/settings`);
   redirect(`/${slug}/settings`);
 }
 
@@ -66,5 +53,59 @@ export async function deleteOrganizationAction(slug: string, formData: FormData)
   await organizations.requireOrgOwner(session.user.id, slug);
   await organizations.deleteOrganizationBySlug(slug);
 
-  redirect('/organizations');
+  const destination = await organizations.resolvePostAuthDestination({
+    userId: session.user.id,
+    email: session.user.email ?? null,
+  });
+
+  redirect(destination);
+}
+
+export async function addOrganizationMemberAction(slug: string, formData: FormData) {
+  const email = formData.get('email');
+  const roleId = formData.get('roleId');
+
+  if (!email || typeof email !== 'string') {
+    throw new Error('Email is required');
+  }
+
+  if (!roleId || typeof roleId !== 'string') {
+    throw new Error('Role is required');
+  }
+
+  const session = await requireServerSession();
+  const { org } = await organizations.requireOrgOwner(session.user.id, slug);
+
+  await organizations.addOrganizationMemberByEmail({
+    organizationId: org.id,
+    email,
+    roleId,
+    invitedByUserId: session.user.id,
+  });
+
+  revalidatePath(`/${slug}/settings`);
+}
+
+export async function updateOrganizationMemberRoleAction(slug: string, formData: FormData) {
+  const memberId = formData.get('memberId');
+  const roleId = formData.get('roleId');
+
+  if (!memberId || typeof memberId !== 'string') {
+    throw new Error('Member is required');
+  }
+
+  if (!roleId || typeof roleId !== 'string') {
+    throw new Error('Role is required');
+  }
+
+  const session = await requireServerSession();
+  const { org } = await organizations.requireOrgOwner(session.user.id, slug);
+
+  await organizations.updateOrganizationMemberRole({
+    organizationId: org.id,
+    memberId,
+    roleId,
+  });
+
+  revalidatePath(`/${slug}/settings`);
 }

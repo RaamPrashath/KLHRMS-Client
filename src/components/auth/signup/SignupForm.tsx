@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import NeumorphButton from "@/components/ui/neumorph-button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { AuthHeader } from "@/components/auth/shared/AuthHeader";
@@ -102,7 +102,7 @@ export function SignupForm() {
                 subtitle="Join Kovan Labs to start managing your team."
             />
 
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6" aria-label="Sign up form">
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4" aria-label="Sign up form">
                 {/* Error Summary */}
                 {(formError || Object.keys(errors).length > 0) && (
                     <div
@@ -125,7 +125,7 @@ export function SignupForm() {
                     </div>
                 )}
 
-                <div className="space-y-5">
+                <div className="space-y-3.5">
                     <Field>
                         <FieldLabel htmlFor="signup-email">Email address</FieldLabel>
                         <Input
@@ -134,7 +134,7 @@ export function SignupForm() {
                             placeholder="name@company.com"
                             autoComplete="email"
                             aria-invalid={!!errors.email}
-                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            className="h-11 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
                             {...register("email")}
                             ref={(e) => {
                                 register("email").ref(e);
@@ -151,7 +151,7 @@ export function SignupForm() {
                             placeholder="••••••••"
                             autoComplete="new-password"
                             aria-invalid={!!errors.password}
-                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            className="h-11 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
                             showGenerator
                             value={passwordValue}
                             onChange={handlePasswordChange}
@@ -161,7 +161,7 @@ export function SignupForm() {
                             }}
                         />
                         {errors.password && <FieldError id="signup-password-error">{errors.password.message}</FieldError>}
-                        <div className="pt-2">
+                        <div className="pt-1.5">
                             <PasswordRules password={passwordValue} />
                         </div>
                     </Field>
@@ -173,7 +173,7 @@ export function SignupForm() {
                             placeholder="••••••••"
                             autoComplete="new-password"
                             aria-invalid={!!errors.confirmPassword}
-                            className="h-12 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
+                            className="h-11 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
                             {...register("confirmPassword")}
                         />
                         {errors.confirmPassword && (
@@ -182,9 +182,10 @@ export function SignupForm() {
                     </Field>
                 </div>
 
-                <Button
+                <NeumorphButton
                     type="submit"
-                    className="btn-pill-primary h-12 w-full text-[17px] shadow-sm hover:shadow-md active:scale-[0.98] mt-2"
+                    intent="primary"
+                    className="mt-1 h-11 w-full rounded-2xl"
                     disabled={isSubmitting}
                     aria-busy={isSubmitting}
                 >
@@ -196,14 +197,14 @@ export function SignupForm() {
                     ) : (
                         "Create account"
                     )}
-                </Button>
+                </NeumorphButton>
             </form>
 
-            <AuthDivider />
+            <AuthDivider className="my-3.5" />
 
             <SocialButtons onError={setFormError} />
 
-            <div className="mt-10 text-center">
+            <div className="mt-6 text-center">
                 <AuthFooterLink
                     text="Already have an account?"
                     linkText="Sign in"
