@@ -33,7 +33,11 @@ function formatNum(n: number): string {
 }
 
 export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardProps>) {
-  const { data: allReqs = [], isLoading } = useJobRequisitionsQuery(orgSlug, memberId, false);
+  const { data: allReqs = [], isLoading } = useJobRequisitionsQuery(
+    orgSlug,
+    memberId,
+    "organization",
+  );
   const [selectedReq, setSelectedReq] = useState<JobRequisitionRecord | null>(null);
 
   const openings = useMemo(() => allReqs.filter((r) => r.status === "APPROVED"), [allReqs]);

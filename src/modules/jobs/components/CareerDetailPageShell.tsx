@@ -58,6 +58,33 @@ function formatDate(value: string | null) {
   });
 }
 
+function RichSection({
+  title,
+  html,
+  fallback,
+}: Readonly<{
+  title: string;
+  html: string | null;
+  fallback?: string;
+}>) {
+  const content = html ?? fallback;
+  if (!content) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div
+          className="max-w-none whitespace-pre-wrap text-sm leading-6 text-foreground [&_a]:text-primary [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function CareerDetailPageShell({
   jobId,
 }: Readonly<CareerDetailPageShellProps>) {
@@ -189,27 +216,15 @@ export function CareerDetailPageShell({
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Description</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
-                    {data.description}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Requirements</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
-                    {data.requirements || 'No additional requirements were provided for this posting.'}
-                  </div>
-                </CardContent>
-              </Card>
+              <RichSection title="Role Summary" html={data.roleSummary} fallback={data.description} />
+              <RichSection title="Responsibilities" html={data.responsibilities} />
+              <RichSection
+                title="Requirements"
+                html={data.requirementsRich}
+                fallback={data.requirements || 'No additional requirements were provided for this posting.'}
+              />
+              <RichSection title="Benefits" html={data.benefits} />
+              <RichSection title="About Team" html={data.aboutTeam} />
 
               <Card>
                 <CardHeader>

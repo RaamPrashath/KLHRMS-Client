@@ -6,6 +6,12 @@ export interface PublicCareerPosting {
   title: string;
   description: string;
   requirements: string | null;
+  roleSummary: string | null;
+  responsibilities: string | null;
+  requirementsRich: string | null;
+  benefits: string | null;
+  aboutTeam: string | null;
+  requisitionId: string | null;
   location: string | null;
   employmentType: string | null;
   openings: number | null;

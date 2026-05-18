@@ -145,93 +145,103 @@ function buildTimeline(detail: CandidateApplicationDetail): TimelineEntry[] {
   );
 }
 
-function InfoItem({
+function ProfileField({
   label,
   value,
   icon: Icon,
 }: {
-  label: string;
-  value: React.ReactNode;
-  icon: typeof Mail;
+  readonly label: string;
+  readonly value: React.ReactNode;
+  readonly icon: typeof Mail;
 }) {
   return (
-    <div className="min-w-0 rounded-xl border border-neutral-100 bg-surface p-4">
-      <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">{label}</p>
-      <div className="mt-2 flex min-w-0 items-center gap-2 text-sm text-neutral-900">
-        <Icon className="size-4 shrink-0 text-neutral-400" />
-        <div className="min-w-0 truncate">{value}</div>
-      </div>
+    <div className="grid grid-cols-[24px_112px_minmax(0,1fr)] items-center gap-3 border-b border-neutral-100 py-3 last:border-b-0">
+      <Icon className="size-4 text-neutral-400" />
+      <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{label}</p>
+      <div className="min-w-0 truncate text-sm font-medium text-neutral-900">{value}</div>
     </div>
   );
 }
 
-function ProfileTab({ detail }: { detail: CandidateApplicationDetail }) {
+function LinkRow({
+  label,
+  href,
+  icon: Icon,
+}: {
+  readonly label: string;
+  readonly href: string | null;
+  readonly icon: typeof LinkIcon;
+}) {
   return (
-    <div className="grid gap-5">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <InfoItem label="Email" icon={Mail} value={detail.candidate.email} />
-        <InfoItem label="Phone" icon={Phone} value={detail.candidate.phone ?? 'Not provided'} />
-        <InfoItem label="Applied" icon={CalendarClock} value={formatDateTime(detail.appliedAt)} />
-        <InfoItem label="Current company" icon={BriefcaseBusiness} value={detail.candidate.currentCompany ?? 'Not provided'} />
-        <InfoItem label="Current title" icon={UserRound} value={detail.candidate.currentTitle ?? 'Not provided'} />
-        <InfoItem label="Experience" icon={Clock3} value={detail.candidate.totalExperience ?? 'Not provided'} />
+    <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3 last:border-b-0">
+      <div className="flex min-w-0 items-center gap-3">
+        <Icon className="size-4 shrink-0 text-neutral-400" />
+        <span className="truncate text-sm font-medium text-neutral-900">{label}</span>
       </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <section className="rounded-xl border border-neutral-100 bg-surface p-4 md:col-span-1">
-          <p className="text-sm font-semibold text-neutral-900">Resume</p>
-          <p className="mt-1 text-xs text-neutral-500">Stored resume link for this application.</p>
-          <div className="mt-4">
-            {detail.resumeUrl ? (
-              <Button asChild size="sm" variant="outline">
-                <a href={detail.resumeUrl} target="_blank" rel="noreferrer">
-                  <FileDown className="size-4" />
-                  Open resume
-                </a>
-              </Button>
-            ) : (
-              <span className="text-sm text-neutral-500">No resume uploaded</span>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-neutral-100 bg-surface p-4 md:col-span-2">
-          <p className="text-sm font-semibold text-neutral-900">Links</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {detail.candidate.linkedinUrl ? (
-              <Button asChild size="sm" variant="outline" className="justify-start">
-                <a href={detail.candidate.linkedinUrl} target="_blank" rel="noreferrer">
-                  <LinkIcon className="size-4" />
-                  LinkedIn
-                  <ExternalLink className="ml-auto size-3.5" />
-                </a>
-              </Button>
-            ) : (
-              <p className="rounded-md bg-neutral-50 px-3 py-2 text-sm text-neutral-500">No LinkedIn profile</p>
-            )}
-            {detail.candidate.portfolioUrl ? (
-              <Button asChild size="sm" variant="outline" className="justify-start">
-                <a href={detail.candidate.portfolioUrl} target="_blank" rel="noreferrer">
-                  <FileText className="size-4" />
-                  Portfolio
-                  <ExternalLink className="ml-auto size-3.5" />
-                </a>
-              </Button>
-            ) : (
-              <p className="rounded-md bg-neutral-50 px-3 py-2 text-sm text-neutral-500">No portfolio link</p>
-            )}
-          </div>
-        </section>
-      </div>
+      {href ? (
+        <Button asChild size="sm" variant="ghost" className="h-8 shrink-0 px-2 text-primary">
+          <a href={href} target="_blank" rel="noreferrer">
+            Open
+            <ExternalLink className="size-3.5" />
+          </a>
+        </Button>
+      ) : (
+        <span className="shrink-0 text-xs text-neutral-500">Not provided</span>
+      )}
     </div>
   );
 }
 
-function FeedbackTable({ event }: { event: ApplicationInterviewEvent }) {
+function ProfileTab({ detail }: { readonly detail: CandidateApplicationDetail }) {
+  return (
+    <div className="space-y-7">
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-neutral-900">Candidate dossier</p>
+          <Badge variant={statusTone(detail.status)} className="text-xs">{detail.status}</Badge>
+        </div>
+        <div className="rounded-lg border border-neutral-100 bg-surface px-4">
+          <ProfileField label="Email" icon={Mail} value={detail.candidate.email} />
+          <ProfileField label="Phone" icon={Phone} value={detail.candidate.phone ?? 'Not provided'} />
+          <ProfileField label="Applied" icon={CalendarClock} value={formatDateTime(detail.appliedAt)} />
+          <ProfileField label="Company" icon={BriefcaseBusiness} value={detail.candidate.currentCompany ?? 'Not provided'} />
+          <ProfileField label="Title" icon={UserRound} value={detail.candidate.currentTitle ?? 'Not provided'} />
+          <ProfileField label="Experience" icon={Clock3} value={detail.candidate.totalExperience ?? 'Not provided'} />
+        </div>
+      </section>
+
+      <section>
+        <p className="mb-3 text-sm font-semibold text-neutral-900">Documents and links</p>
+        <div className="rounded-lg border border-neutral-100 bg-surface px-4">
+          <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <FileDown className="size-4 shrink-0 text-neutral-400" />
+              <span className="truncate text-sm font-medium text-neutral-900">Resume</span>
+            </div>
+            {detail.resumeUrl ? (
+              <Button asChild size="sm" variant="ghost" className="h-8 shrink-0 px-2 text-primary">
+                <a href={detail.resumeUrl} target="_blank" rel="noreferrer">
+                  Open
+                  <ExternalLink className="size-3.5" />
+                </a>
+              </Button>
+            ) : (
+              <span className="shrink-0 text-xs text-neutral-500">Not uploaded</span>
+            )}
+          </div>
+          <LinkRow label="LinkedIn" href={detail.candidate.linkedinUrl} icon={LinkIcon} />
+          <LinkRow label="Portfolio" href={detail.candidate.portfolioUrl} icon={FileText} />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FeedbackTable({ event }: { readonly event: ApplicationInterviewEvent }) {
   const feedbacks = event.feedbacks ?? [];
   if (feedbacks.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-neutral-200 bg-canvas px-3 py-3 text-sm text-neutral-500">
+      <div className="rounded-md border border-dashed border-neutral-200 bg-canvas px-3 py-3 text-sm text-neutral-500">
         No marks submitted for this interview yet.
       </div>
     );
@@ -246,37 +256,37 @@ function FeedbackTable({ event }: { event: ApplicationInterviewEvent }) {
   );
 
   return (
-    <div className="overflow-hidden rounded-lg border border-neutral-100">
+    <div className="overflow-hidden rounded-md border border-neutral-100 bg-surface">
       <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-canvas text-xs font-semibold uppercase tracking-wider text-neutral-500">
+        <table className="min-w-full text-left text-xs">
+          <thead className="bg-canvas text-[11px] font-semibold uppercase tracking-wider text-neutral-500 border-b border-neutral-100">
             <tr>
-              <th className="px-3 py-2">Assigned by</th>
-              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2 whitespace-nowrap">Assigned by</th>
+              <th className="px-3 py-2 whitespace-nowrap">Status</th>
               {categories.map((category) => (
-                <th key={category.categoryId} className="px-3 py-2">{category.categoryName}</th>
+                <th key={category.categoryId} className="px-3 py-2 whitespace-nowrap">{category.categoryName}</th>
               ))}
-              <th className="px-3 py-2">Total</th>
-              <th className="px-3 py-2">Notes</th>
+              <th className="px-3 py-2 whitespace-nowrap">Total</th>
+              <th className="px-3 py-2 whitespace-nowrap">Notes</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100 bg-surface">
+          <tbody className="divide-y divide-neutral-100">
             {feedbacks.map((feedback) => (
-              <tr key={feedback.id}>
+              <tr key={feedback.id} className="hover:bg-neutral-50 transition-colors">
                 <td className="whitespace-nowrap px-3 py-2 font-medium text-neutral-900">{feedback.memberName}</td>
                 <td className="px-3 py-2">
-                  <Badge variant={statusTone(feedback.outcome)}>{feedback.outcome}</Badge>
+                  <Badge variant={statusTone(feedback.outcome)} className="text-xs">{feedback.outcome}</Badge>
                 </td>
                 {categories.map((category) => {
                   const value = feedback.values.find((item) => item.categoryId === category.categoryId)?.value;
                   return (
-                    <td key={category.categoryId} className="px-3 py-2 text-neutral-700">
+                    <td key={category.categoryId} className="px-3 py-2 text-neutral-700 text-xs">
                       {value === null || value === undefined || value === '' ? '-' : String(value)}
                     </td>
                   );
                 })}
-                <td className="px-3 py-2 font-mono text-[13px] text-neutral-900">{feedback.score ?? '-'}</td>
-                <td className="max-w-[220px] px-3 py-2 text-neutral-600">{feedback.notes ?? '-'}</td>
+                <td className="px-3 py-2 font-mono text-[12px] text-neutral-900 font-semibold">{feedback.score ?? '-'}</td>
+                <td className="max-w-[12.5rem] px-3 py-2 text-neutral-600 text-xs">{feedback.notes ?? '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -286,53 +296,55 @@ function FeedbackTable({ event }: { event: ApplicationInterviewEvent }) {
   );
 }
 
-function InterviewBlock({ event, index }: { event: ApplicationInterviewEvent; index: number }) {
+function InterviewBlock({ event, index }: { readonly event: ApplicationInterviewEvent; readonly index: number }) {
   const lead = event.participants.find((participant) => !participant.isBackup) ?? event.participants[0];
   const guests = event.participants.filter((participant) => participant.memberId !== lead?.memberId);
 
   return (
-    <div className="rounded-xl border border-neutral-100 bg-surface p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
+    <div className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 transition-colors hover:bg-surface">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5">
             <p className="text-sm font-semibold text-neutral-900">Interview {index + 1}</p>
-            <Badge variant={statusTone(event.status)}>{event.status}</Badge>
+            <Badge variant={statusTone(event.status)} className="text-xs">{event.status}</Badge>
           </div>
-          <p className="mt-1 text-sm text-neutral-600">
+          <p className="mt-2 text-sm text-neutral-600">
             {formatDateTime(event.scheduledStartAt)}
-            {event.durationMinutes ? ` (${event.durationMinutes} min)` : ''}
+            {event.durationMinutes ? ` - ${event.durationMinutes} min` : ''}
           </p>
         </div>
         {event.meetingUrl ? (
           <Button asChild size="sm" variant="outline">
             <a href={event.meetingUrl} target="_blank" rel="noreferrer">
               <ExternalLink className="size-4" />
-              Meeting
+              Join meeting
             </a>
           </Button>
         ) : null}
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[260px_1fr]">
-        <div className="rounded-lg bg-canvas p-3">
-          <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">Interview panel</p>
+      <div className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr]">
+        <div className="rounded-md border border-neutral-100 bg-surface p-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Interview panel</p>
           <div className="mt-3 space-y-2">
-            <div className="flex items-center gap-2 text-sm text-neutral-900">
-              <UserRound className="size-4 text-neutral-400" />
+            <div className="flex items-center gap-2.5 text-sm text-neutral-900 font-medium">
+              <div className="size-6 rounded-full bg-primary-ghost text-primary flex items-center justify-center text-xs font-semibold">
+                <UserRound className="size-3.5" />
+              </div>
               <span className="truncate">{lead?.name ?? event.createdByName ?? 'Unassigned'}</span>
             </div>
             {guests.length > 0 ? (
-              <div className="flex items-start gap-2 text-sm text-neutral-600">
+              <div className="flex items-start gap-2.5 text-sm text-neutral-700">
                 <UsersRound className="mt-0.5 size-4 shrink-0 text-neutral-400" />
-                <span>{guests.map((guest) => guest.name).join(', ')}</span>
+                <span className="text-xs">{guests.map((guest) => guest.name).join(', ')}</span>
               </div>
             ) : (
-              <p className="text-xs text-neutral-500">No additional guests</p>
+              <p className="text-xs text-neutral-500 ml-7">No additional guests</p>
             )}
             {event.completedByName ? (
-              <div className="flex items-center gap-2 text-sm text-success-text">
+              <div className="flex items-center gap-2.5 text-sm text-success-text font-medium mt-2 pt-2 border-t border-neutral-100">
                 <CheckCircle2 className="size-4" />
-                <span>Completed by {event.completedByName}</span>
+                <span className="text-xs">Completed by {event.completedByName}</span>
               </div>
             ) : null}
           </div>
@@ -343,38 +355,38 @@ function InterviewBlock({ event, index }: { event: ApplicationInterviewEvent; in
   );
 }
 
-function HistoryTab({ detail }: { detail: CandidateApplicationDetail }) {
+function HistoryTab({ detail }: { readonly detail: CandidateApplicationDetail }) {
   const timeline = useMemo(() => buildTimeline(detail), [detail]);
 
   return (
-    <div className="relative pl-5">
-      <div className="absolute bottom-8 left-[15px] top-4 w-px bg-neutral-200" />
-      <div className="space-y-5">
+    <div className="relative pl-6">
+      <div className="absolute bottom-8 left-[11px] top-4 w-px bg-neutral-200" />
+      <div className="space-y-6">
         {timeline.map((entry) => (
           <div key={entry.id} className="relative">
-            <span className="absolute -left-[22px] top-4 flex size-8 items-center justify-center rounded-full border border-neutral-200 bg-surface shadow-[var(--shadow-1)]">
-              {entry.type === 'applied' ? <FileDown className="size-4 text-primary" /> : <ArrowRight className="size-4 text-neutral-500" />}
+            <span className="absolute -left-[25px] top-5 flex size-7 items-center justify-center rounded-full border border-neutral-200 bg-surface text-neutral-600 shadow-sm">
+              {entry.type === 'applied' ? <FileDown className="size-4" /> : <ArrowRight className="size-3.5" />}
             </span>
-            <section className="rounded-xl border border-neutral-100 bg-surface p-4 shadow-[var(--shadow-1)]">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
+            <section className="rounded-lg border border-neutral-100 bg-surface p-4 transition-colors hover:bg-neutral-50">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-neutral-900">
                     {entry.type === 'applied'
                       ? `Applied to ${detail.jobPostingTitle}`
                       : `Moved to ${entry.stageName}`}
                   </p>
                   {entry.type === 'stage' && entry.history.movedByName ? (
-                    <p className="mt-1 text-sm text-neutral-600">by {entry.history.movedByName}</p>
+                    <p className="mt-1 text-xs text-neutral-600">by {entry.history.movedByName}</p>
                   ) : null}
                 </div>
-                <div className="text-right">
-                  <p className="text-xs font-medium text-neutral-700">{formatDate(entry.at)}</p>
+                <div className="text-right whitespace-nowrap">
+                  <p className="text-xs font-semibold text-neutral-900">{formatDate(entry.at)}</p>
                   <p className="mt-0.5 text-xs text-neutral-500">{formatDateTime(entry.at)}</p>
                 </div>
               </div>
 
               {entry.type === 'stage' && entry.history.note ? (
-                <p className="mt-3 rounded-lg bg-canvas px-3 py-2 text-sm text-neutral-700">{entry.history.note}</p>
+                <p className="mt-3 rounded-md border border-neutral-100 bg-surface px-3 py-2 text-sm text-neutral-700">{entry.history.note}</p>
               ) : null}
 
               {entry.type === 'stage' && entry.interviews.length > 0 ? (
@@ -399,28 +411,28 @@ function NoteCard({
   onSave,
   saving,
 }: {
-  note: CandidateApplicationNote;
-  draft: string;
-  onDraftChange: (value: string) => void;
-  onSave: () => void;
-  saving: boolean;
+  readonly note: CandidateApplicationNote;
+  readonly draft: string;
+  readonly onDraftChange: (value: string) => void;
+  readonly onSave: () => void;
+  readonly saving: boolean;
 }) {
   const initials = candidateInitials(note.authorName);
 
   return (
-    <section className="rounded-xl border border-neutral-100 bg-surface p-4">
+    <section className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 transition-colors hover:bg-surface">
       <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-sm font-semibold text-primary">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-xs font-semibold text-primary">
           {initials}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-neutral-900">{note.authorName}</p>
-              <p className="text-xs text-neutral-500">{formatDateTime(note.updatedAt)}</p>
+              <p className="text-xs text-neutral-500 mt-0.5">{formatDateTime(note.updatedAt)}</p>
             </div>
             {note.canEdit ? (
-              <Badge variant="outline">
+              <Badge variant="outline" className="text-xs">
                 <Pencil className="mr-1 size-3" />
                 Editable
               </Badge>
@@ -430,7 +442,7 @@ function NoteCard({
           {note.canEdit ? (
             <div className="mt-3">
               <Textarea
-                className="min-h-[120px] resize-y"
+                className="min-h-25 resize-y"
                 value={draft}
                 onChange={(event) => onDraftChange(event.target.value)}
               />
@@ -455,9 +467,9 @@ function NotesTab({
   createNote,
   updateNote,
 }: {
-  detail: CandidateApplicationDetail;
-  createNote: ReturnType<typeof useCreateCandidateApplicationNote>;
-  updateNote: ReturnType<typeof useUpdateCandidateApplicationNote>;
+  readonly detail: CandidateApplicationDetail;
+  readonly createNote: ReturnType<typeof useCreateCandidateApplicationNote>;
+  readonly updateNote: ReturnType<typeof useUpdateCandidateApplicationNote>;
 }) {
   const [composer, setComposer] = useState('');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -475,30 +487,38 @@ function NotesTab({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(300px,360px)_1fr]">
-      <section className="rounded-xl border border-neutral-100 bg-surface p-4">
-        <div className="flex items-center gap-2">
-          <MessageSquareText className="size-4 text-primary" />
+    <div className="space-y-5">
+      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-md bg-primary-light/20">
+            <MessageSquareText className="size-4 text-primary" />
+          </div>
           <p className="text-sm font-semibold text-neutral-900">Add internal note</p>
         </div>
         <Textarea
-          className="mt-3 min-h-[260px] resize-y"
+          className="mt-4 min-h-32 resize-y"
           placeholder="Write a note for the hiring team..."
           value={composer}
           onChange={(event) => setComposer(event.target.value)}
         />
         <div className="mt-3 flex justify-end">
-          <Button size="sm" onClick={() => { void handleCreate(); }} disabled={createNote.isPending || !composer.trim()}>
+          <Button 
+            size="sm" 
+            onClick={() => { void handleCreate(); }} 
+            disabled={createNote.isPending || !composer.trim()}
+            className="w-full"
+          >
             <Save className="size-4" />
             {createNote.isPending ? 'Saving' : 'Save note'}
           </Button>
         </div>
       </section>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {(detail.notes ?? []).length === 0 ? (
-          <div className="rounded-xl border border-dashed border-neutral-200 bg-canvas p-6 text-sm text-neutral-500">
-            No internal notes yet.
+          <div className="rounded-lg border border-dashed border-neutral-200 bg-canvas p-8 text-center">
+            <MessageSquareText className="size-8 text-neutral-300 mx-auto mb-2" />
+            <p className="text-sm text-neutral-500">No internal notes yet.</p>
           </div>
         ) : (
           detail.notes.map((note) => (
@@ -524,11 +544,11 @@ export function CandidateDrawer({
   open,
   onOpenChange,
 }: {
-  orgSlug: string;
-  memberId: string;
-  applicationId: string | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  readonly orgSlug: string;
+  readonly memberId: string;
+  readonly applicationId: string | null;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
 }) {
   const detailQuery = useCandidateApplicationDetail(orgSlug, memberId, applicationId);
   const createNote = useCreateCandidateApplicationNote(orgSlug, memberId);
@@ -542,23 +562,23 @@ export function CandidateDrawer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[88vh] w-[min(1120px,96vw)] max-w-none flex-col overflow-hidden rounded-2xl border border-neutral-100 bg-surface p-0 shadow-[var(--shadow-4)]">
-        <DialogHeader className="border-b border-neutral-100 px-6 py-5">
+      <DialogContent className="!fixed !bottom-0 !right-0 !left-auto !top-0 z-50 flex h-dvh max-h-dvh w-full !max-w-none !translate-x-0 !translate-y-0 flex-col overflow-hidden rounded-none border-0 border-l border-neutral-100 bg-surface p-0 shadow-[var(--shadow-4)] duration-200 data-open:slide-in-from-right-full data-open:zoom-in-100 data-closed:slide-out-to-right-full data-closed:zoom-out-100 sm:w-[40vw]">
+        <DialogHeader className="border-b border-neutral-100 bg-surface px-5 py-5">
           <div className="flex items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-base font-semibold text-primary">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-base font-semibold text-primary ring-1 ring-primary-light/40">
               {initials}
             </div>
             <div className="min-w-0 flex-1">
               <DialogTitle className="truncate text-2xl font-semibold text-neutral-900">{candidateName}</DialogTitle>
               {detail ? (
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
-                  <span>{detail.jobPostingTitle}</span>
-                  <span className="size-1 rounded-full bg-neutral-300" />
+                <div className="mt-2 flex flex-wrap items-center gap-2.5 text-sm text-neutral-600">
+                  <span className="font-medium text-neutral-900">{detail.jobPostingTitle}</span>
+                  <span className="h-5 w-px bg-neutral-200" />
                   <span>{relativeAppliedDate(detail.appliedAt)}</span>
-                  <Badge variant={statusTone(detail.status)}>{detail.currentStage}</Badge>
+                  <Badge variant={statusTone(detail.status)} className="text-xs">{detail.currentStage}</Badge>
                   {detail.rating ? (
-                    <span className="inline-flex items-center gap-1 text-neutral-700">
-                      <Star className="size-3.5 fill-warning-text text-warning-text" />
+                    <span className="inline-flex items-center gap-1.5 font-medium text-neutral-900">
+                      <Star className="size-4 fill-warning-text text-warning-text" />
                       {detail.rating}/5
                     </span>
                   ) : null}
@@ -569,7 +589,7 @@ export function CandidateDrawer({
         </DialogHeader>
 
         {detailQuery.isLoading ? (
-          <div className="grid gap-4 p-6">
+          <div className="grid gap-4 p-5">
             <Skeleton className="h-12 rounded-xl" />
             <Skeleton className="h-36 rounded-xl" />
             <Skeleton className="h-52 rounded-xl" />
@@ -578,23 +598,23 @@ export function CandidateDrawer({
 
         {detail ? (
           <Tabs defaultValue="profile" className="flex min-h-0 flex-1 flex-col">
-            <div className="border-b border-neutral-100 px-6 py-3">
-              <TabsList className="grid w-full max-w-[380px] grid-cols-3 bg-neutral-50">
-                <TabsTrigger value="profile">Profile</TabsTrigger>
-                <TabsTrigger value="history">History</TabsTrigger>
-                <TabsTrigger value="notes">Notes</TabsTrigger>
+            <div className="border-b border-neutral-100 bg-surface px-5 py-3">
+              <TabsList className="grid w-full grid-cols-3 gap-4 bg-transparent p-0">
+                <TabsTrigger value="profile" className="rounded-none border-b-2 border-transparent px-0 py-2 font-semibold text-neutral-600 data-active:border-primary data-active:text-primary data-active:shadow-none">Profile</TabsTrigger>
+                <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent px-0 py-2 font-semibold text-neutral-600 data-active:border-primary data-active:text-primary data-active:shadow-none">History</TabsTrigger>
+                <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent px-0 py-2 font-semibold text-neutral-600 data-active:border-primary data-active:text-primary data-active:shadow-none">Notes</TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="profile" className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <TabsContent value="profile" className="min-h-0 flex-1 overflow-y-auto px-5 py-5 data-active:animate-in data-active:fade-in-0 data-active:slide-in-from-bottom-1">
               <ProfileTab detail={detail} />
             </TabsContent>
 
-            <TabsContent value="history" className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <TabsContent value="history" className="min-h-0 flex-1 overflow-y-auto px-5 py-5 data-active:animate-in data-active:fade-in-0 data-active:slide-in-from-bottom-1">
               <HistoryTab detail={detail} />
             </TabsContent>
 
-            <TabsContent value="notes" className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <TabsContent value="notes" className="min-h-0 flex-1 overflow-y-auto px-5 py-5 data-active:animate-in data-active:fade-in-0 data-active:slide-in-from-bottom-1">
               <NotesTab detail={detail} createNote={createNote} updateNote={updateNote} />
             </TabsContent>
           </Tabs>

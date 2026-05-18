@@ -2,10 +2,9 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { requireOrgMembership } from '@/lib/organizations';
 import { type RolePermissions } from '@/lib/hrms-roles';
-import { JobRequisitionPageShell } from '@/modules/jobs/components/JobRequisitionPageShell';
+import { JobRequisitionsPage } from '@/modules/jobs/pages/JobRequisitionsPage';
 
 export default async function JobsPage({
   params,
@@ -24,25 +23,10 @@ export default async function JobsPage({
     redirect('/organizations');
   }
 
-  const departments = await prisma.department.findMany({
-    where: {
-      organizationId: member.organizationId,
-      status: 'ACTIVE',
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-    orderBy: {
-      name: 'asc',
-    },
-  });
-
   return (
-    <JobRequisitionPageShell
+    <JobRequisitionsPage
       orgSlug={orgSlug}
       memberId={member.id}
-      departments={departments}
       permissions={(member.role?.permissions as RolePermissions) ?? null}
     />
   );
