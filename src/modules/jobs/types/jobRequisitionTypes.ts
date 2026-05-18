@@ -50,6 +50,14 @@ export const EXPERIENCE_LEVELS = [
   'EXECUTIVE',
 ] as const;
 
+export const PIPELINE_STAGE_TYPES = [
+  'DEFAULT',
+  'INTERVIEW',
+  'OFFER',
+  'HIRED',
+  'REJECTED',
+] as const;
+
 export interface JobRequisitionApprovalSummary {
   approvedCount: number;
   rejectedCount: number;
@@ -133,4 +141,31 @@ export interface OrgMemberOption {
   id: string;
   name: string;
   email: string;
+}
+
+export interface PipelineStageRecord {
+  id: string;
+  jobPostingId: string;
+  name: string;
+  slug: string;
+  order: number;
+  color: string | null;
+  isDefault: boolean;
+  isFinal: boolean;
+  stageType: (typeof PIPELINE_STAGE_TYPES)[number];
+  meetingEnabled: boolean;
+  offerLetterEnabled: boolean;
+  dueDate: string | null;
+}
+
+export interface PipelineBoardData {
+  jobPostingId: string;
+  stages: PipelineStageRecord[];
+}
+
+export interface ImportableJobPosting {
+  id: string;
+  title: string;
+  departmentName: string | null;
+  stageCount: number;
 }

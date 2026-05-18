@@ -2,24 +2,34 @@ import type { ReactNode } from 'react';
 
 interface SectionCardProps {
   title: string;
-  description?: string;
   children: ReactNode;
+  id?: string;
+  required?: boolean;
 }
 
 export function SectionCard({
   title,
-  description,
   children,
+  id,
+  required,
 }: Readonly<SectionCardProps>) {
   return (
-    <section className="space-y-5 rounded-xl border border-neutral-100 bg-surface p-5 shadow-[var(--shadow-1)] sm:p-6">
-      <div>
-        <h2 className="text-[17px] font-semibold text-neutral-900">{title}</h2>
-        {description ? (
-          <p className="mt-0.5 text-sm text-neutral-500">{description}</p>
-        ) : null}
+    <section id={id} className="scroll-mt-24">
+      <div className="mb-6 border-b border-neutral-100 pb-3">
+        <h2 className="text-sm font-semibold text-neutral-900">
+          {title}
+          {required ? <RequiredMark /> : null}
+        </h2>
       </div>
-      {children}
+      <div className="space-y-5">{children}</div>
     </section>
+  );
+}
+
+export function RequiredMark() {
+  return (
+    <span className="ml-1 text-sm font-semibold text-destructive-text" aria-hidden="true">
+      *
+    </span>
   );
 }

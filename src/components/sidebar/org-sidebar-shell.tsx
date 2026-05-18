@@ -54,7 +54,7 @@ export function OrgSidebarShell({
         pathname.includes("/maintenance");
 
     return (
-        <div className="flex h-dvh overflow-hidden">
+        <div className="fixed inset-0 flex overflow-hidden bg-canvas">
             <AppSidebar
                 orgSlug={orgSlug}
                 orgName={orgName}
@@ -62,7 +62,7 @@ export function OrgSidebarShell({
                 permissions={permissions}
                 user={user}
             />
-            <main className="flex-1 min-h-0 overflow-y-auto">
+            <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                 <div
                     className={cn(
                         "w-full",

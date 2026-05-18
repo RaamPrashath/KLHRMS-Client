@@ -10,7 +10,6 @@ import {
   Heading2,
   Heading3,
   Italic,
-  Link as LinkIcon,
   List,
   ListOrdered,
   Redo2,
@@ -74,20 +73,9 @@ export function RichTextEditor({
 
   if (!editor) return null;
 
-  const toggleLink = () => {
-    const previousUrl = editor.getAttributes('link').href as string | undefined;
-    const url = window.prompt('URL', previousUrl);
-    if (url === null) return;
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-  };
-
   return (
-    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-surface">
-      <div className="flex items-center gap-0.5 border-b border-neutral-100 bg-neutral-50 px-2 py-1.5">
+    <div className="group/editor overflow-hidden rounded-lg border border-neutral-200 bg-surface transition-colors focus-within:border-primary/40">
+      <div className="flex items-center gap-0.5 border-b border-neutral-100 bg-surface-subtle/60 px-2 py-1 opacity-60 transition-opacity duration-150 group-hover/editor:opacity-100 group-focus-within/editor:opacity-100">
         <ToolbarButton
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -125,13 +113,6 @@ export function RichTextEditor({
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           icon={<ListOrdered className="size-3.5" />}
           label="Ordered list"
-        />
-        <div className="mx-1 h-4 w-px bg-neutral-200" />
-        <ToolbarButton
-          active={editor.isActive('link')}
-          onClick={toggleLink}
-          icon={<LinkIcon className="size-3.5" />}
-          label="Link"
         />
         <div className="flex-1" />
         <ToolbarButton
@@ -177,7 +158,7 @@ function ToolbarButton({
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
         active
           ? 'bg-primary-ghost text-primary'
-          : 'text-neutral-500 hover:bg-surface hover:text-neutral-900',
+          : 'text-neutral-400 hover:bg-surface hover:text-neutral-900',
         disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
       )}
     >

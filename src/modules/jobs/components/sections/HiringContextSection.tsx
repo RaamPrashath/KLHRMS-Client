@@ -17,7 +17,7 @@ import {
   PRIORITIES,
   type OrgMemberOption,
 } from '@/modules/jobs/types/jobRequisitionTypes';
-import { SectionCard } from '@/modules/jobs/components/sections/SectionCard';
+import { RequiredMark, SectionCard } from '@/modules/jobs/components/sections/SectionCard';
 
 interface HiringContextSectionProps {
   form: UseFormReturn<CreateJobRequisitionInput>;
@@ -38,20 +38,21 @@ export function HiringContextSection({
 }: Readonly<HiringContextSectionProps>) {
   const hiringReason = useWatch({ control: form.control, name: 'hiringReason' });
   const priority = useWatch({ control: form.control, name: 'priority' });
+  const { errors } = form.formState;
 
   return (
-    <SectionCard title="Hiring Context" description="Explain why this role is needed now.">
+    <SectionCard id="hiring-context" title="Hiring context" required>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label>Hiring reason</Label>
+          <Label>Hiring reason<RequiredMark /></Label>
           <Select
             value={hiringReason ?? ''}
             onValueChange={(value) =>
               form.setValue('hiringReason', value as CreateJobRequisitionInput['hiringReason'], { shouldDirty: true })
             }
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select reason" />
+            <SelectTrigger className="w-full" aria-required="true" aria-invalid={!!errors.hiringReason}>
+              <SelectValue placeholder="Why is this role needed?" />
             </SelectTrigger>
             <SelectContent>
               {HIRING_REASONS.map((reason) => (
@@ -61,6 +62,7 @@ export function HiringContextSection({
               ))}
             </SelectContent>
           </Select>
+          {errors.hiringReason ? <p className="text-xs text-destructive-text">{errors.hiringReason.message}</p> : null}
         </div>
 
         <div className="flex flex-col gap-1.5">

@@ -1,15 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, ArrowLeft, CheckCircle2, Save, Send } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Save, Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { getScope, type RolePermissions } from '@/lib/hrms-roles';
-import { ApprovalPreviewSection } from '@/modules/jobs/components/sections/ApprovalPreviewSection';
 import { BasicInfoSection } from '@/modules/jobs/components/sections/BasicInfoSection';
 import { CandidateRequirementsSection } from '@/modules/jobs/components/sections/CandidateRequirementsSection';
 import { CompensationSection } from '@/modules/jobs/components/sections/CompensationSection';
@@ -105,22 +104,13 @@ export function CreateJobRequisitionPage({
   });
 
   const watchedValues = useWatch({ control: form.control });
-  const { draftId, error, isSaving, lastSaved, save } = useAutoSaveDraft({
+  const { draftId, error, isSaving, save } = useAutoSaveDraft({
     orgSlug,
     memberId,
     formValues: watchedValues as Record<string, unknown>,
     draftId: initialData?.id ?? null,
     enabled: canCreate,
   });
-
-  const completedSections = [
-    !!watchedValues.title?.trim(),
-    !!watchedValues.hiringReason && !!watchedValues.businessJustification?.trim(),
-    watchedValues.salaryMin != null || watchedValues.salaryMax != null,
-    (watchedValues.skills?.length ?? 0) > 0 || !!watchedValues.experienceLevel,
-    !!watchedValues.roleSummary || !!watchedValues.responsibilities || !!watchedValues.requirementsRich,
-    true,
-  ].filter(Boolean).length;
 
   useEffect(() => {
     if (!form.formState.isDirty) return undefined;
@@ -173,7 +163,7 @@ export function CreateJobRequisitionPage({
   if (!canCreate) {
     return (
       <div className="min-h-full bg-canvas px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-xl border border-neutral-100 bg-surface p-6 shadow-[var(--shadow-1)]">
+        <div className="mx-auto max-w-3xl">
           <div className="flex items-start gap-3">
             <AlertCircle className="mt-0.5 size-5 text-warning-text" />
             <div>
@@ -199,75 +189,58 @@ export function CreateJobRequisitionPage({
     );
   }
 
+  const sectionCompletion = useMemo(
+    () => ({
+      basicInfo: !!(watchedValues.title && watchedValues.departmentId),
+      hiringContext: !!watchedValues.hiringReason,
+      compensation: true,
+      requirements: (watchedValues.skills?.length ?? 0) > 0 || !!watchedValues.experienceLevel,
+      postingContent: !!watchedValues.roleSummary,
+    }),
+    [watchedValues],
+  );
+
   return (
     <div className="min-h-full bg-canvas">
-      <div className="sticky top-0 z-20 border-b border-neutral-100 bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div className="flex items-start gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Back to requisitions"
-              onClick={() => router.push(`/${orgSlug}/jobs`)}
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
-                {isEdit ? 'Edit Requisition' : 'Create Requisition'}
-              </h1>
-              <p className="text-sm text-neutral-500">
-                {isEdit
-                  ? 'Update the draft requisition before sending it for approval.'
-                  : 'Build the hiring request, save a draft, then send it for approval.'}
-              </p>
-            </div>
-          </div>
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Back to requisitions"
+            onClick={() => router.push(`/${orgSlug}/jobs`)}
+          >
+            <ArrowLeft className="size-4" />
+          </Button>
+          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+            {isEdit ? 'Edit Requisition' : 'Create Requisition'}
+          </h1>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-2 pl-11 lg:pl-0">
-            {isSaving ? (
-              <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500">
-                <Save className="size-3.5" />
-                Saving...
-              </span>
-            ) : lastSaved ? (
-              <span className="inline-flex items-center gap-1.5 text-xs text-success-text">
-                <CheckCircle2 className="size-3.5" />
-                Saved {lastSaved.toLocaleTimeString()}
-              </span>
-            ) : null}
-            {error ? <span className="text-xs text-destructive-text">Autosave failed</span> : null}
-            <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
-              <Save className="size-4" />
-              {isEdit ? 'Save Changes' : 'Save Draft'}
-            </Button>
-            <Button type="button" onClick={handleSubmitForApproval} disabled={submitMutation.isPending || isSaving}>
-              <Send className="size-4" />
-              {submitMutation.isPending ? 'Submitting...' : 'Submit for Approval'}
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          {error ? <span className="text-xs text-destructive-text">Autosave failed</span> : null}
+          <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
+            <Save className="size-4" />
+            {isEdit ? 'Save Changes' : 'Save Draft'}
+          </Button>
+          <Button type="submit" form="job-requisition-form" disabled={submitMutation.isPending || isSaving}>
+            <Send className="size-4" />
+            {submitMutation.isPending ? 'Submitting...' : 'Submit for Approval'}
+          </Button>
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:px-8">
-        <form className="flex-1 space-y-6 lg:max-w-3xl" onSubmit={(event) => event.preventDefault()}>
+      <div className="mx-auto flex max-w-7xl gap-12 px-4 pb-12 sm:px-6 lg:px-8">
+        <form id="job-requisition-form" className="min-w-0 flex-1 space-y-10" onSubmit={handleSubmitForApproval}>
           <BasicInfoSection form={form} departments={departments} />
           <HiringContextSection form={form} orgMembers={orgMembers} />
           <CompensationSection form={form} />
           <CandidateRequirementsSection form={form} />
           <PostingContentSection form={form} />
-          <ApprovalPreviewSection />
         </form>
 
-        <StickySummaryPanel
-          status="Draft"
-          createdByName="You"
-          completionCount={completedSections}
-          totalSections={6}
-          isSaving={isSaving}
-          lastSaved={lastSaved}
-        />
+        <StickySummaryPanel sectionCompletion={sectionCompletion} />
       </div>
     </div>
   );

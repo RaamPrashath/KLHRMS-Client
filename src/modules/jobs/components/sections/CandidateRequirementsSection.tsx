@@ -52,7 +52,7 @@ export function CandidateRequirementsSection({
   };
 
   return (
-    <SectionCard title="Candidate Requirements" description="Capture the skills, level, and qualifications reviewers should evaluate.">
+    <SectionCard id="candidate-requirements" title="Candidate requirements">
       <div className="flex flex-col gap-2">
         <Label htmlFor="skill-input">Skills</Label>
         {skills.length > 0 ? (
@@ -138,7 +138,7 @@ export function CandidateRequirementsSection({
             {certifications.map((certification) => (
               <span
                 key={certification}
-                className="inline-flex items-center gap-1.5 rounded-full border border-warning-border bg-warning-bg px-3 py-1 text-xs font-medium text-warning-text"
+                className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium text-neutral-700"
               >
                 {certification}
                 <button
@@ -147,7 +147,7 @@ export function CandidateRequirementsSection({
                   onClick={() =>
                     form.setValue('certifications', certifications.filter((item) => item !== certification), { shouldDirty: true })
                   }
-                  className="rounded-full text-warning-text hover:text-neutral-900"
+                  className="rounded-full text-neutral-400 hover:text-neutral-900"
                 >
                   <X className="size-3" />
                 </button>

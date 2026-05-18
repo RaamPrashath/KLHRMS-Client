@@ -11,67 +11,65 @@ interface PostingContentSectionProps {
   form: UseFormReturn<CreateJobRequisitionInput>;
 }
 
+const EDITOR_FIELDS = [
+  {
+    key: 'roleSummary',
+    label: 'Role summary',
+    placeholder: 'Brief overview of the role...',
+    minHeight: 100,
+  },
+  {
+    key: 'responsibilities',
+    label: 'Responsibilities',
+    placeholder: 'Key responsibilities and day-to-day work...',
+    minHeight: 120,
+  },
+  {
+    key: 'requirementsRich',
+    label: 'Requirements',
+    placeholder: 'Required qualifications and experience...',
+    minHeight: 120,
+  },
+  {
+    key: 'benefits',
+    label: 'Benefits',
+    placeholder: 'Compensation, perks, and benefits...',
+    minHeight: 100,
+  },
+  {
+    key: 'aboutTeam',
+    label: 'About team',
+    placeholder: 'Describe the team culture and collaboration style...',
+    minHeight: 100,
+  },
+] as const;
+
 export function PostingContentSection({
   form,
 }: Readonly<PostingContentSectionProps>) {
-  const roleSummary = useWatch({ control: form.control, name: 'roleSummary' });
-  const responsibilities = useWatch({ control: form.control, name: 'responsibilities' });
-  const requirementsRich = useWatch({ control: form.control, name: 'requirementsRich' });
-  const benefits = useWatch({ control: form.control, name: 'benefits' });
-  const aboutTeam = useWatch({ control: form.control, name: 'aboutTeam' });
+  const allValues = useWatch({ control: form.control }) as Record<string, string>;
+  const contentError = form.formState.errors.roleSummary?.message;
 
   return (
-    <SectionCard title="Job Posting Content" description="Draft the public-facing copy once, then reuse it after approval.">
+    <SectionCard id="job-posting-content" title="Job posting content" required>
+      {contentError ? <p className="text-xs text-destructive-text">{contentError}</p> : null}
       <div className="space-y-5">
-        <div className="space-y-1.5">
-          <Label>Role summary</Label>
-          <RichTextEditor
-            content={roleSummary ?? ''}
-            onChange={(html) => form.setValue('roleSummary', html, { shouldDirty: true })}
-            placeholder="Brief overview of the role..."
-            minHeight={100}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Responsibilities</Label>
-          <RichTextEditor
-            content={responsibilities ?? ''}
-            onChange={(html) => form.setValue('responsibilities', html, { shouldDirty: true })}
-            placeholder="Key responsibilities and day-to-day work..."
-            minHeight={120}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Requirements</Label>
-          <RichTextEditor
-            content={requirementsRich ?? ''}
-            onChange={(html) => form.setValue('requirementsRich', html, { shouldDirty: true })}
-            placeholder="Required qualifications and experience..."
-            minHeight={120}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Benefits</Label>
-          <RichTextEditor
-            content={benefits ?? ''}
-            onChange={(html) => form.setValue('benefits', html, { shouldDirty: true })}
-            placeholder="Compensation, perks, and benefits..."
-            minHeight={100}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>About team</Label>
-          <RichTextEditor
-            content={aboutTeam ?? ''}
-            onChange={(html) => form.setValue('aboutTeam', html, { shouldDirty: true })}
-            placeholder="Describe the team culture and collaboration style..."
-            minHeight={100}
-          />
-        </div>
+        {EDITOR_FIELDS.map((field) => {
+          const content = allValues[field.key] ?? '';
+          return (
+            <div key={field.key} className="space-y-1.5">
+              <Label>{field.label}</Label>
+              <RichTextEditor
+                content={content}
+                onChange={(html) =>
+                  form.setValue(field.key as keyof CreateJobRequisitionInput, html as never, { shouldDirty: true })
+                }
+                placeholder={field.placeholder}
+                minHeight={field.minHeight}
+              />
+            </div>
+          );
+        })}
       </div>
     </SectionCard>
   );

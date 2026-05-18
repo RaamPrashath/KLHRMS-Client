@@ -25,7 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import type { CreateJobRequisitionInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import type { JobDepartmentOption } from '@/modules/jobs/types/jobRequisitionTypes';
-import { SectionCard } from '@/modules/jobs/components/sections/SectionCard';
+import { RequiredMark, SectionCard } from '@/modules/jobs/components/sections/SectionCard';
 
 interface BasicInfoSectionProps {
   form: UseFormReturn<CreateJobRequisitionInput>;
@@ -44,26 +44,27 @@ export function BasicInfoSection({
   const { errors } = form.formState;
 
   return (
-    <SectionCard title="Basic Information" description="Core details about the role and where it sits.">
+    <SectionCard id="basic-information" title="Basic information" required>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="requisition-title">Job title</Label>
+        <Label htmlFor="requisition-title">Job title<RequiredMark /></Label>
         <Input
           id="requisition-title"
           {...form.register('title')}
           placeholder="Senior Frontend Engineer"
           aria-invalid={!!errors.title}
+          aria-required="true"
         />
         {errors.title ? <p className="text-xs text-destructive-text">{errors.title.message}</p> : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label>Department</Label>
+          <Label>Department<RequiredMark /></Label>
           <Select
             value={departmentId ?? ''}
             onValueChange={(value) => form.setValue('departmentId', value || undefined, { shouldDirty: true })}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full" aria-required="true" aria-invalid={!!errors.departmentId}>
               <SelectValue placeholder="Select department" />
             </SelectTrigger>
             <SelectContent>
@@ -74,17 +75,18 @@ export function BasicInfoSection({
               ))}
             </SelectContent>
           </Select>
+          {errors.departmentId ? <p className="text-xs text-destructive-text">{errors.departmentId.message}</p> : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label>Employment type</Label>
+          <Label>Employment type<RequiredMark /></Label>
           <Select
             value={employmentType}
             onValueChange={(value) =>
               form.setValue('employmentType', value as CreateJobRequisitionInput['employmentType'], { shouldDirty: true })
             }
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full" aria-required="true">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -99,13 +101,14 @@ export function BasicInfoSection({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="requisition-openings">Openings</Label>
+          <Label htmlFor="requisition-openings">Openings<RequiredMark /></Label>
           <Input
             id="requisition-openings"
             type="number"
             min={1}
             {...form.register('openings', { valueAsNumber: true })}
             aria-invalid={!!errors.openings}
+            aria-required="true"
           />
           {errors.openings ? <p className="text-xs text-destructive-text">{errors.openings.message}</p> : null}
         </div>
@@ -121,11 +124,8 @@ export function BasicInfoSection({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex min-h-10 items-center justify-between rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
-          <div>
-            <Label htmlFor="requisition-remote">Remote role</Label>
-            <p className="text-xs text-neutral-500">Mark as remote-friendly.</p>
-          </div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="requisition-remote">Remote role</Label>
           <Switch
             id="requisition-remote"
             checked={isRemote ?? false}
@@ -134,10 +134,11 @@ export function BasicInfoSection({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label>Target hire date</Label>
+          <Label htmlFor="target-hire-date">Target hire date</Label>
           <Popover open={targetDateOpen} onOpenChange={setTargetDateOpen}>
             <PopoverTrigger asChild>
               <Button
+                id="target-hire-date"
                 type="button"
                 variant="outline"
                 className={cn('w-full justify-start text-left font-normal', !targetDate && 'text-neutral-400')}

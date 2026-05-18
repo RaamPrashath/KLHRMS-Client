@@ -31,28 +31,44 @@ export function useAutoSaveDraft({
   const [error, setError] = useState<string | null>(null);
   const [createdDraftId, setCreatedDraftId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialSerializedRef = useRef<string | null>(null);
+  const lastSavedSerializedRef = useRef<string | null>(null);
+  const latestValuesRef = useRef(formValues);
   const createMutation = useCreateJobRequisition(orgSlug, memberId);
   const updateMutation = useUpdateJobRequisition(orgSlug, memberId);
   const serializedValues = JSON.stringify(formValues);
   const currentDraftId = draftId ?? createdDraftId;
 
+  useEffect(() => {
+    latestValuesRef.current = formValues;
+  }, [formValues]);
+
   const save = useCallback(async (): Promise<string | null> => {
     if (!enabled) return currentDraftId;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    const valuesToSave = latestValuesRef.current;
+    const serializedValuesToSave = JSON.stringify(valuesToSave);
     setIsSaving(true);
     setError(null);
     try {
       if (currentDraftId) {
         await updateMutation.mutateAsync({
           requisitionId: currentDraftId,
-          data: formValues as UpdateJobRequisitionInput,
+          data: valuesToSave as UpdateJobRequisitionInput,
         });
+        lastSavedSerializedRef.current = serializedValuesToSave;
         setLastSaved(new Date());
         return currentDraftId;
       } else {
         const result = await createMutation.mutateAsync(
-          formValues as CreateJobRequisitionInput,
+          valuesToSave as CreateJobRequisitionInput,
         );
         setCreatedDraftId(result.id);
+        lastSavedSerializedRef.current = serializedValuesToSave;
         setLastSaved(new Date());
         return result.id;
       }
@@ -62,16 +78,22 @@ export function useAutoSaveDraft({
     } finally {
       setIsSaving(false);
     }
-  }, [createMutation, currentDraftId, enabled, formValues, updateMutation]);
+  }, [createMutation, currentDraftId, enabled, updateMutation]);
 
   useEffect(() => {
     if (!enabled) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (!formValues.title) return;
+    if (initialSerializedRef.current === null) {
+      initialSerializedRef.current = serializedValues;
+      return;
+    }
+    if (serializedValues === initialSerializedRef.current) return;
+    if (serializedValues === lastSavedSerializedRef.current) return;
+    if (typeof formValues.title !== 'string' || !formValues.title.trim()) return;
 
     timerRef.current = setTimeout(() => {
       void save().catch(() => undefined);
-    }, 3000);
+    }, 2000);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);

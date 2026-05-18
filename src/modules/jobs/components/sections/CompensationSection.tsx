@@ -14,10 +14,7 @@ import {
 } from '@/components/ui/select';
 import type { CreateJobRequisitionInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import { SectionCard } from '@/modules/jobs/components/sections/SectionCard';
-import {
-  formatInrSalary,
-  parseAnnualSalaryInput,
-} from '@/modules/jobs/utils/salaryParser';
+import { parseAnnualSalaryInput } from '@/modules/jobs/utils/salaryParser';
 
 interface CompensationSectionProps {
   form: UseFormReturn<CreateJobRequisitionInput>;
@@ -28,8 +25,6 @@ export function CompensationSection({
 }: Readonly<CompensationSectionProps>) {
   const currency = useWatch({ control: form.control, name: 'currency' });
   const salaryVisibility = useWatch({ control: form.control, name: 'salaryVisibility' });
-  const salaryMin = useWatch({ control: form.control, name: 'salaryMin' });
-  const salaryMax = useWatch({ control: form.control, name: 'salaryMax' });
   const [salaryMinInput, setSalaryMinInput] = useState('');
   const [salaryMaxInput, setSalaryMaxInput] = useState('');
   const [salaryError, setSalaryError] = useState<string | null>(null);
@@ -45,7 +40,7 @@ export function CompensationSection({
       return;
     }
     if (parsed == null) {
-      setSalaryError('Use amounts like 4.5 l, 8 lakhs, 1 crore, or 650000.');
+      setSalaryError('Use amounts like 4.5 lakhs, 1 crore, or 650000.');
       return;
     }
     form.setValue(field, parsed, { shouldDirty: true, shouldValidate: true });
@@ -53,7 +48,7 @@ export function CompensationSection({
   };
 
   return (
-    <SectionCard title="Compensation" description="Salary can stay internal while the request is being reviewed.">
+    <SectionCard id="compensation" title="Compensation">
       <div className="grid gap-4 sm:grid-cols-[140px_1fr]">
         <div className="flex flex-col gap-1.5">
           <Label>Currency</Label>
@@ -103,7 +98,7 @@ export function CompensationSection({
               setSalaryMinInput(event.target.value);
               updateSalary('salaryMin', event.target.value);
             }}
-            placeholder="4.5 l"
+            placeholder="e.g. 4.5 lakhs"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -116,22 +111,14 @@ export function CompensationSection({
               setSalaryMaxInput(event.target.value);
               updateSalary('salaryMax', event.target.value);
             }}
-            placeholder="8 LPA"
+            placeholder="e.g. 8 lakhs"
           />
         </div>
       </div>
 
       {salaryError ? (
         <p className="text-xs text-destructive-text">{salaryError}</p>
-      ) : (
-        <p className="text-xs text-neutral-500">
-          Indian notation is supported. Parsed range:{' '}
-          <span className="font-mono text-neutral-700">
-            {salaryMin != null ? `${currency} ${formatInrSalary(salaryMin)}` : 'Not set'}
-            {salaryMax != null ? ` - ${formatInrSalary(salaryMax)}` : ''}
-          </span>
-        </p>
-      )}
+      ) : null}
       {form.formState.errors.salaryMax ? (
         <p className="text-xs text-destructive-text">{form.formState.errors.salaryMax.message}</p>
       ) : null}

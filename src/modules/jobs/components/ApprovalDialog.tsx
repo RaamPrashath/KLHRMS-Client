@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -103,18 +102,18 @@ export function ApprovalDialog({
 
     try {
       if (isApprove) {
-        const salaryMin = parseAnnualSalaryInput(form.salaryMin);
-        const salaryMax = parseAnnualSalaryInput(form.salaryMax);
-        if (salaryMin == null) {
-          setFormError('Annual salary is required. Try 4.5 l, 8 lakhs, or 1 crore.');
+        const salaryMin = form.salaryMin.trim() ? parseAnnualSalaryInput(form.salaryMin) : null;
+        const salaryMax = form.salaryMax.trim() ? parseAnnualSalaryInput(form.salaryMax) : null;
+        if (form.salaryMin.trim() && salaryMin == null) {
+          setFormError('Minimum salary must be a valid amount.');
           return;
         }
         if (form.salaryMax.trim() && salaryMax == null) {
           setFormError('Maximum salary must be a valid amount.');
           return;
         }
-        if (salaryMax != null && salaryMax < salaryMin) {
-          setFormError('Maximum salary must be greater than or equal to annual salary.');
+        if (salaryMin != null && salaryMax != null && salaryMax < salaryMin) {
+          setFormError('Maximum salary must be greater than or equal to minimum salary.');
           return;
         }
         await onConfirm({
@@ -153,9 +152,6 @@ export function ApprovalDialog({
           <DialogTitle className="text-xl font-semibold text-neutral-900">
             {isApprove ? 'Approve Requisition' : 'Reject Requisition'}
           </DialogTitle>
-          <DialogDescription>
-            Review the request summary before recording your decision.
-          </DialogDescription>
         </DialogHeader>
 
         {requisition ? (
@@ -229,19 +225,19 @@ export function ApprovalDialog({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="approval-salary-min">Annual salary</Label>
+                <Label htmlFor="approval-salary-min">Minimum salary</Label>
                 <Input
                   id="approval-salary-min"
-                  placeholder="4.5 l"
+                  placeholder="Optional"
                   value={form.salaryMin}
                   onChange={(event) => updateForm('salaryMin', event.target.value)}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="approval-salary-max">Annual salary max</Label>
+                <Label htmlFor="approval-salary-max">Maximum salary</Label>
                 <Input
                   id="approval-salary-max"
-                  placeholder="Optional range max"
+                  placeholder="Optional"
                   value={form.salaryMax}
                   onChange={(event) => updateForm('salaryMax', event.target.value)}
                 />
@@ -260,7 +256,6 @@ export function ApprovalDialog({
               <div className="flex items-center justify-between rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
                 <div>
                   <Label htmlFor="approval-remote">Remote role</Label>
-                  <p className="text-xs text-neutral-500">Mark as remote-friendly.</p>
                 </div>
                 <Switch
                   id="approval-remote"

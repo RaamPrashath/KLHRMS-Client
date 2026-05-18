@@ -206,7 +206,7 @@ export function JobRequisitionDetailPage({
           </TabsContent>
           {showApprovedTabs ? (
             <TabsContent value="pipeline" className="mt-5">
-              <PipelineTab requisition={requisition} />
+              <PipelineTab orgSlug={orgSlug} memberId={memberId} requisition={requisition} />
             </TabsContent>
           ) : null}
           {showApprovedTabs ? (

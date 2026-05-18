@@ -4,6 +4,7 @@ import {
   EMPLOYMENT_TYPES,
   EXPERIENCE_LEVELS,
   HIRING_REASONS,
+  PIPELINE_STAGE_TYPES,
   PRIORITIES,
   SALARY_VISIBILITY_OPTIONS,
 } from '@/modules/jobs/types/jobRequisitionTypes';
@@ -122,19 +123,14 @@ export const jobRequisitionDecisionSchema = z.object({
     message: 'Maximum salary must be greater than or equal to minimum salary',
     path: ['salaryMax'],
   },
-).refine(
-  (value) => {
-    if (Object.prototype.hasOwnProperty.call(value, 'salaryMin')) {
-      return value.salaryMin != null;
-    }
-    return true;
-  },
-  {
-    message: 'Annual salary is required to approve a requisition',
-    path: ['salaryMin'],
-  },
 );
+
+export const createPipelineStageSchema = z.object({
+  name: z.string().trim().min(1, 'Stage name is required').max(50, 'Stage name is too long'),
+  stageType: z.enum(PIPELINE_STAGE_TYPES).default('DEFAULT'),
+});
 
 export type CreateJobRequisitionInput = z.input<typeof createJobRequisitionSchema>;
 export type UpdateJobRequisitionInput = z.input<typeof updateJobRequisitionSchema>;
 export type JobRequisitionDecisionInput = z.input<typeof jobRequisitionDecisionSchema>;
+export type CreatePipelineStageInput = z.input<typeof createPipelineStageSchema>;
