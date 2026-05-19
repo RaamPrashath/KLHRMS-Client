@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { hashPassword } from "better-auth/crypto";
 import type { Prisma } from "../../generated/prisma/client";
 import { prisma } from "./prisma";
 import { getScope, type RolePermissions } from "./hrms-roles";
@@ -440,6 +441,93 @@ export async function addOrganizationMemberByEmail(params: {
   });
 }
 
+export async function addOrganizationMemberWithAccount(params: {
+  organizationId: string;
+  email: string;
+  roleId: string;
+  defaultPassword?: string;
+}) {
+  const email = normalizeEmail(params.email);
+  const password = params.defaultPassword ?? "org123";
+
+  return prisma.$transaction(async (tx) => {
+    const role = await tx.role.findFirst({
+      where: { id: params.roleId, organizationId: params.organizationId },
+      select: { id: true, name: true },
+    });
+
+    if (!role) {
+      throw new Error("Selected role does not belong to this organization");
+    }
+
+    const existingUser = await tx.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (existingUser) {
+      const existingMember = await tx.member.findUnique({
+        where: {
+          organizationId_userId: {
+            organizationId: params.organizationId,
+            userId: existingUser.id,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (existingMember) {
+        throw new Error("That user is already a member of this organization");
+      }
+
+      const member = await tx.member.create({
+        data: {
+          organizationId: params.organizationId,
+          userId: existingUser.id,
+          roleId: role.id,
+        },
+        include: {
+          role: { select: { id: true, name: true } },
+          user: { select: { id: true, email: true, name: true } },
+        },
+      });
+
+      return { kind: "member" as const, member, wasCreated: false as const };
+    }
+
+    const hashedPassword = await hashPassword(password);
+
+    const user = await tx.user.create({
+      data: {
+        email,
+        emailVerified: true,
+        onboarded: true,
+        accounts: {
+          create: {
+            accountId: email,
+            providerId: "credential",
+            password: hashedPassword,
+          },
+        },
+      },
+    });
+
+    const member = await tx.member.create({
+      data: {
+        organizationId: params.organizationId,
+        userId: user.id,
+        roleId: role.id,
+      },
+      include: {
+        role: { select: { id: true, name: true } },
+        user: { select: { id: true, email: true, name: true } },
+      },
+    });
+
+    return { kind: "member" as const, member, wasCreated: true as const };
+  });
+}
+
 export async function updateOrganizationMemberRole(params: {
   organizationId: string;
   memberId: string;
@@ -526,6 +614,7 @@ const organizations = {
   resolvePostAuthDestination,
   createOrganizationForUser,
   addOrganizationMemberByEmail,
+  addOrganizationMemberWithAccount,
   updateOrganizationMemberRole,
   updateOrganizationNameBySlug,
   deleteOrganizationBySlug,

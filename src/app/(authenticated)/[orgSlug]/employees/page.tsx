@@ -32,7 +32,7 @@ export default async function EmployeesPage({
 
   return (
     <div className="min-h-full bg-canvas flex flex-col flex-1">
-      <EmployeePageShell orgSlug={orgSlug} memberId={memberId!} />
+      <EmployeePageShell orgSlug={orgSlug} memberId={memberId!} permissions={permissions} />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import organizations from '@/lib/organizations';
+import { getScope, type RolePermissions } from '@/lib/hrms-roles';
 import { requireServerSession } from '@/lib/server-session';
 
 export async function createOrganizationAction(formData: FormData) {
@@ -108,4 +109,43 @@ export async function updateOrganizationMemberRoleAction(slug: string, formData:
   });
 
   revalidatePath(`/${slug}/settings`);
+}
+
+export async function updateEmployeeRoleAction(
+  slug: string,
+  formData: FormData,
+): Promise<{ success: boolean; error?: string }> {
+  const memberId = formData.get('memberId');
+  const roleId = formData.get('roleId');
+
+  if (!memberId || typeof memberId !== 'string') {
+    return { success: false, error: 'Member is required' };
+  }
+
+  if (!roleId || typeof roleId !== 'string') {
+    return { success: false, error: 'Role is required' };
+  }
+
+  try {
+    const session = await requireServerSession();
+    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+
+    const { org, member } = await organizations.requireOrgMembership(session.user.id, slug);
+    const permissions = member.role?.permissions as RolePermissions | null;
+    if (!permissions || getScope(permissions, 'employees', 'edit') === 'none') {
+      return { success: false, error: 'You do not have permission to edit employee roles' };
+    }
+
+    await organizations.updateOrganizationMemberRole({
+      organizationId: org.id,
+      memberId,
+      roleId,
+    });
+
+    revalidatePath(`/${slug}/employees`);
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update role';
+    return { success: false, error: message };
+  }
 }

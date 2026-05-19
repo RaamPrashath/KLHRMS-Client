@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { RolePermissions } from "@/lib/hrms-roles";
-import { hasPermission } from "@/lib/hrms-roles";
+import { getScope, hasPermission } from "@/lib/hrms-roles";
 import { useAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
 import { resolveAttendancePermissions } from "@/modules/attendance/utils/attendancePermissions";
 import { getTodayIST } from "@/modules/attendance/utils/attendanceFormatters";
@@ -26,6 +26,8 @@ import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
 import { useRejectLeaveRequest } from "@/modules/leave/hooks/useRejectLeaveRequest";
 import type { LeaveRequestRecord } from "@/modules/leave/types/leaveTypes";
 import { canApproveLeaves, resolveLeavePermissions } from "@/modules/leave/utils/leavePermissions";
+import { InviteEmployeeDialog } from "@/modules/employees/components/InviteEmployeeDialog";
+import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import { DashboardClockWidget } from "./DashboardClockWidget";
 import { TodayWorkLogsCard } from "./TodayWorkLogsCard";
 import { WorkLogHeatmapCard } from "./WorkLogHeatmapCard";
@@ -148,7 +150,7 @@ function AttendanceOverviewSection({
         {sections.map((s) => {
           const filtered = s.members.filter(filterFn);
           return (
-            <div key={s.label} className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            <div key={s.label} className="rounded-[8px] border border-zinc-200/80 bg-white/80 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-[#0A0A0C] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.015)]">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">
                 {s.label} <span className="ml-1.5 text-neutral-900">{filtered.length}</span>
               </p>
@@ -204,13 +206,13 @@ function PendingLeaveRequestsSection({
           {[1, 2, 3].map((i) => <div key={i} className="h-14 flex-1 animate-pulse rounded-2xl bg-neutral-100" />)}
         </div>
       ) : (leaveRequestsQuery.data?.items?.length ?? 0) > 0 ? (
-        <div className="rounded-2xl bg-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+        <div className="rounded-[8px] border border-zinc-200/80 bg-white/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-[#0A0A0C] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.015)] overflow-hidden">
           {(leaveRequestsQuery.data?.items ?? []).map((request) => (
             <LeaveRequestRow key={request.id} request={request} isApproving={approveMutation.isPending} isRejecting={rejectMutation.isPending} onApprove={handleApprove} onReject={handleReject} />
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-neutral-200 bg-surface px-5 py-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="rounded-[8px] border border-dashed border-zinc-200 bg-white/80 px-5 py-8 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-[#0A0A0C]">
           <div className="mx-auto flex max-w-sm flex-col items-center text-center">
             <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-neutral-50 text-neutral-400">
               <Inbox className="size-5" />
@@ -253,9 +255,9 @@ function LeaveRequestRow({
   );
 }
 
-// ─── Tier 3: Quick Links (compact action tiles) ─────────────────────────────
+// ─── Quick Links stack (vertical, for bento bottom-left cell) ───────────────
 
-function QuickLinksGrid({ orgSlug }: { orgSlug: string }) {
+function QuickLinksStack({ orgSlug }: { orgSlug: string }) {
   const links = [
     { href: `/${orgSlug}/weekly-plan`, label: "Weekly Plan", icon: CalendarDays, color: "bg-[#e8f8f1] text-primary" },
     { href: `/${orgSlug}/timesheet`, label: "Timesheet", icon: Clock, color: "bg-[#eef2ff] text-[#4f46e5]" },
@@ -263,26 +265,97 @@ function QuickLinksGrid({ orgSlug }: { orgSlug: string }) {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
-      {links.map((link) => {
-        const Icon = link.icon;
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="flex items-center gap-3 rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-200 hover:scale-[1.02] hover:shadow-md"
-          >
-            <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${link.color}`}>
-              <Icon className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-neutral-900">{link.label}</p>
-            </div>
-            <ArrowRight className="size-4 text-neutral-400 shrink-0" />
-          </Link>
-        );
-      })}
+    <div className="flex h-full flex-col justify-between gap-4">
+      <div className="flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.04] pb-3">
+        <h2 className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">Quick Links</h2>
+      </div>
+      <div className="flex flex-1 flex-col justify-between gap-3">
+        {links.map((link) => {
+          const Icon = link.icon;
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="flex flex-1 items-center gap-3 rounded-xl border border-zinc-200/80 bg-white/60 px-4 py-3 transition-all duration-300 hover:border-zinc-300 hover:bg-white hover:scale-[1.015] dark:border-zinc-800/60 dark:bg-zinc-950/60 dark:hover:bg-zinc-900/80 dark:hover:border-zinc-700/80 shadow-[0_1px_2px_rgba(0,0,0,0.015)]"
+            >
+              <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${link.color}`}>
+                <Icon className="size-4" />
+              </div>
+              <p className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                {link.label}
+              </p>
+              <ArrowRight className="size-4 shrink-0 text-neutral-400" />
+            </Link>
+          );
+        })}
+      </div>
     </div>
+  );
+}
+
+// ─── Bento dashboard layout ──────────────────────────────────────────────────
+
+function BentoDashboardGrid({
+  orgSlug,
+  memberId,
+  roleName,
+  variant = "admin",
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName"> & {
+  variant?: "admin" | "employee";
+}>) {
+  const isEmployeeVariant = variant === "employee";
+
+  return (
+    <BentoGrid
+      className={cn(
+        "max-w-none md:grid-cols-8 gap-6",
+        isEmployeeVariant
+          ? "md:auto-rows-[31rem] lg:auto-rows-[32.5rem] xl:auto-rows-[34rem]"
+          : "md:auto-rows-[24rem] lg:auto-rows-[25rem] xl:auto-rows-[26rem]",
+      )}
+    >
+      {/* ── Top-left: Clock In / Clock Out ── */}
+      <BentoGridItem
+        className="md:col-span-4 p-6 flex flex-col justify-between h-full"
+        header={
+          <DashboardClockWidget
+            orgSlug={orgSlug}
+            memberId={memberId}
+            roleName={roleName}
+          />
+        }
+      />
+
+      {/* ── Top-right: Calendar heatmap ── */}
+      <BentoGridItem
+        className="md:col-span-4 p-6 flex flex-col h-full"
+        header={
+          <WorkLogHeatmapCard
+            orgSlug={orgSlug}
+            memberId={memberId}
+            variant={isEmployeeVariant ? "employee" : "default"}
+          />
+        }
+      />
+
+      {/* ── Bottom-left: Quick Links stack ── */}
+      <BentoGridItem
+        className="md:col-span-3 p-6 flex flex-col justify-between h-full"
+        header={
+          <QuickLinksStack orgSlug={orgSlug} />
+        }
+      />
+
+      {/* ── Bottom-right: Open Positions ── */}
+      <BentoGridItem
+        className="md:col-span-5 p-6 flex flex-col h-full overflow-hidden"
+        header={
+          <div className="h-full overflow-auto">
+            <JobOpeningsCard orgSlug={orgSlug} memberId={memberId} />
+          </div>
+        }
+      />
+    </BentoGrid>
   );
 }
 
@@ -298,26 +371,31 @@ function AdminDashboardContent({
 
   return (
     <div className="flex flex-col gap-8 p-4 sm:p-6">
-      {/* Tier 1: Today Hub */}
-      <DashboardClockWidget orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
+      {/* Primary bento grid */}
+      <BentoDashboardGrid orgSlug={orgSlug} memberId={memberId} roleName={roleName} variant="admin" />
 
-      {/* Tier 2 (admin): Attendance overview + Leave requests */}
+      {/* Admin-only: Attendance overview + Leave requests */}
       <div className="flex flex-col gap-6">
         {canViewOrgAttendance ? <AttendanceOverviewSection orgSlug={orgSlug} memberId={memberId} /> : null}
         {canApproveLeave ? <PendingLeaveRequestsSection orgSlug={orgSlug} memberId={memberId} /> : null}
       </div>
 
-      {/* Quick Links */}
-      <QuickLinksGrid orgSlug={orgSlug} />
+      {/* Invite Employee */}
+      {getScope(permissions, 'employees', 'create') !== 'none' && (
+        <section>
+          <h2 className="text-base font-semibold text-neutral-900 mb-4">Quick Actions</h2>
+          <div className="relative overflow-hidden rounded-[8px] border border-zinc-200/80 bg-white/80 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-[#0A0A0C] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.015)] flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Invite a new employee</p>
+              <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                Add someone to the organization with a role and default password
+              </p>
+            </div>
+            <InviteEmployeeDialog orgSlug={orgSlug} memberId={memberId} />
+          </div>
+        </section>
+      )}
 
-      {/* Tier 3: Work + Calendar */}
-      <div className="grid gap-8 lg:grid-cols-2">
-        <TodayWorkLogsCard orgSlug={orgSlug} memberId={memberId} />
-        <WorkLogHeatmapCard orgSlug={orgSlug} memberId={memberId} />
-      </div>
-
-      {/* Tier 4: Secondary */}
-      <JobOpeningsCard orgSlug={orgSlug} memberId={memberId} />
     </div>
   );
 }
@@ -327,20 +405,11 @@ function DefaultDashboardContent({
 }: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName">>) {
   return (
     <div className="flex flex-col gap-8 p-4 sm:p-6">
-      {/* Tier 1: Today Hub */}
-      <DashboardClockWidget orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
+      {/* Primary bento grid */}
+      <BentoDashboardGrid orgSlug={orgSlug} memberId={memberId} roleName={roleName} variant="employee" />
 
-      {/* Quick Links */}
-      <QuickLinksGrid orgSlug={orgSlug} />
-
-      {/* Tier 2: Work + Calendar */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <TodayWorkLogsCard orgSlug={orgSlug} memberId={memberId} />
-        <WorkLogHeatmapCard orgSlug={orgSlug} memberId={memberId} />
-      </div>
-
-      {/* Tier 3: Secondary */}
-      <JobOpeningsCard orgSlug={orgSlug} memberId={memberId} />
+      {/* Today's Work Logs below the bento */}
+      <TodayWorkLogsCard orgSlug={orgSlug} memberId={memberId} />
     </div>
   );
 }

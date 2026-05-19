@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -153,12 +152,6 @@ function getDashboardClockStatus(widgetState: WidgetState): string {
   if (widgetState === "COMPLETED") return "Done for today";
   if (widgetState === "LOADING") return "Checking status";
   return "Not clocked in";
-}
-
-function getInitials(name: string | null | undefined): string {
-  const parts = name?.split(" ").filter(Boolean).slice(0, 2) ?? [];
-  const initials = parts.map((part) => part[0]?.toUpperCase()).join("");
-  return initials || "HR";
 }
 
 function mapPlanLocationToChoice(planLocation: PlanLocation): ClockChoice | null {
@@ -395,7 +388,6 @@ export function AttendanceClockCard({
   const clockOutMutation = useClockOutMutation(orgSlug, memberId);
 
   const firstName = profile?.name?.split(" ")[0] ?? "there";
-  const fullName = profile?.name?.trim() || "Team member";
   const greeting = useMemo(() => getGreeting(firstName), [firstName]);
   const todayRecord = todayData ? findTodayRecord(todayData.items) : undefined;
   const planChoice = mapPlanLocationToChoice(clockContext?.plannedLocation ?? null);
@@ -625,30 +617,28 @@ export function AttendanceClockCard({
     <>
       <div
         className={[
-          "relative overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+          "relative overflow-hidden",
           isDashboard
-            ? "flex h-full min-h-[148px] flex-col border border-hairline shadow-[0_10px_30px_rgba(15,23,42,0.04)]"
-            : "border-none",
+            ? "flex w-full h-full bg-transparent shadow-none border-none flex-col"
+            : "rounded-2xl bg-white border border-zinc-200/80 dark:border-zinc-800/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:bg-[#0A0A0C]",
         ].join(" ")}
       >
         <div
           className={[
-            "relative flex min-h-[100px] justify-between gap-6 p-6 md:p-8",
+            "relative flex min-h-[100px] justify-between gap-6",
             isDashboard
-              ? "flex-1 flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center"
-              : "flex-col md:flex-row md:items-center md:gap-0",
+              ? "flex-1 flex-col items-center justify-start gap-3 text-center p-0 md:p-0"
+              : "p-6 md:p-8 flex-col md:flex-row md:items-center md:gap-0",
           ].join(" ")}
         >
-          <div className={isDashboard ? "flex min-w-0 items-center gap-4 text-left" : "flex min-w-0 flex-col text-left"}>
+          <div className={isDashboard ? "flex w-full min-w-0 flex-col items-center justify-start text-center" : "flex min-w-0 flex-col text-left"}>
             {widgetState === "LOADING" ? (
               <>
                 {isDashboard ? (
                   <>
-                    <div className="size-11 animate-pulse rounded-full bg-neutral-100" />
-                    <div>
-                      <div className="h-7 w-40 animate-pulse rounded-lg bg-neutral-100" />
-                      <div className="mt-2 h-4 w-28 animate-pulse rounded-lg bg-neutral-100" />
-                    </div>
+                    <div className="h-7 w-40 animate-pulse rounded-lg bg-neutral-100" />
+                    <div className="mt-2 h-4 w-28 animate-pulse rounded-lg bg-neutral-100" />
+                    <div className="mt-5 h-12 w-36 animate-pulse rounded-xl bg-neutral-100" />
                   </>
                 ) : (
                   <>
@@ -661,14 +651,14 @@ export function AttendanceClockCard({
               <>
                 {isDashboard ? (
                   <>
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#e8f8f1] text-lg font-semibold text-primary">
-                      {getInitials(fullName)}
-                    </div>
                     <div className="min-w-0">
-                      <h2 className="truncate font-sans text-xl font-medium text-neutral-900" title={greeting}>
+                      <h2 className="max-w-[24rem] text-balance font-sans text-xl font-medium leading-tight text-neutral-900" title={greeting}>
                         {greeting}
                       </h2>
                       <p className="mt-0.5 text-sm text-neutral-500">{subtitle}</p>
+                      <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-neutral-400">
+                        {todayLabel}
+                      </p>
                     </div>
                   </>
                 ) : (
@@ -688,23 +678,7 @@ export function AttendanceClockCard({
             )}
           </div>
 
-          {isDashboard ? (
-            <div className="hidden items-center justify-center md:flex md:border-l md:border-r md:border-divider-soft md:px-6">
-              {widgetState === "CLOCKED_IN" ? (
-                <div className="flex items-center gap-3">
-                  <p
-                    className="text-[2.25rem] font-light tracking-tight text-ink tabular-nums"
-                    aria-live="polite"
-                  >
-                    {elapsedDisplay}
-                  </p>
-                  <span className="inline-flex size-3 rounded-full bg-[#2fb56f]" />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className={isDashboard ? "flex items-center justify-start md:justify-end" : "flex items-center shrink-0 min-h-[48px]"}>
+          <div className={isDashboard ? "flex w-full flex-1 flex-col items-center justify-center gap-4" : "flex items-center shrink-0 min-h-[48px]"}>
             <AnimatePresence mode="wait">
               {widgetState === "LOADING" && (
                 <motion.div
@@ -725,7 +699,7 @@ export function AttendanceClockCard({
                   exit={{ opacity: 0, filter: "blur(4px)" }}
                   transition={{ duration: 0.25 }}
                 >
-                  <div className={isDashboard ? "scale-[0.98] origin-right" : ""}>
+                  <div className={isDashboard ? "scale-[0.98]" : ""}>
                     <ClockInButton
                       onClockIn={handleOpenClockInDialog}
                       isPending={clockInMutation.isPending || isClockContextLoading}
@@ -741,8 +715,19 @@ export function AttendanceClockCard({
                   animate={{ opacity: 1, filter: "blur(0px)" }}
                   exit={{ opacity: 0, filter: "blur(4px)" }}
                   transition={{ duration: 0.25 }}
-                  className={isDashboard ? "flex flex-col items-start gap-4 md:items-end" : "flex items-center gap-6"}
+                  className={isDashboard ? "flex flex-col items-center gap-4" : "flex items-center gap-6"}
                 >
+                  {isDashboard ? (
+                    <div className="flex items-center gap-3">
+                      <p
+                        className="text-[2.25rem] font-light tracking-tight text-ink tabular-nums"
+                        aria-live="polite"
+                      >
+                        {elapsedDisplay}
+                      </p>
+                      <span className="inline-flex size-3 rounded-full bg-[#2fb56f]" />
+                    </div>
+                  ) : null}
                   {!isDashboard ? (
                     <div className="flex items-center gap-3">
                       <p
