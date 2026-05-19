@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { CalendarDays, Landmark, PlaneTakeoff, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -56,14 +57,15 @@ export type LeaveSection = 'requests' | 'balances' | 'leave-types' | 'holidays';
 interface TabItem {
   key: LeaveSection;
   label: string;
+  icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
 }
 
 const TABS: TabItem[] = [
-  { key: 'requests', label: 'Requests' },
-  { key: 'balances', label: 'Balances' },
-  { key: 'leave-types', label: 'Leave Types', adminOnly: true },
-  { key: 'holidays', label: 'Holidays', adminOnly: true },
+  { key: 'requests', label: 'Requests', icon: PlaneTakeoff },
+  { key: 'balances', label: 'Balances', icon: Landmark },
+  { key: 'leave-types', label: 'Leave Types', icon: Sparkles, adminOnly: true },
+  { key: 'holidays', label: 'Holidays', icon: CalendarDays, adminOnly: true },
 ];
 
 const SECTION_COPY: Record<LeaveSection, { title: string; description: string }> = {
@@ -184,39 +186,43 @@ export function LeaveSectionShell({
   return (
     <LeaveShellContext.Provider value={shellContext}>
       <div className="flex flex-col gap-6 flex-1 min-h-full">
-        <div className="flex items-start justify-between ml-7 mt-7 mr-7">
+        <div className="ml-7 mt-7 mr-7">
           <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
             {sectionCopy.title}
           </h1>
+        </div>
+
+        {/* ── Tab bar ─────────────────────────────────────────────────────── */}
+        <div className="mx-7 mt-2 flex items-center justify-between gap-4">
+          <div className="mt-2 flex items-center self-start rounded-xl bg-neutral-50 p-1 border border-black/4">
+            {visibleTabs.map((tab) => {
+              const isActive = tab.key === activeSection;
+              const Icon = tab.icon;
+              return (
+                <Link
+                  key={tab.key}
+                  href={`/${orgSlug}/leaves/${tab.key}`}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg transition-all duration-200 ease-out',
+                    isActive
+                      ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                      : 'text-neutral-500 hover:text-neutral-900',
+                  )}
+                >
+                  <Icon className="size-3.5 shrink-0" />
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
           {canCreate && (
             <Button
-              className="shrink-0 bg-primary px-5 text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover"
+              className="h-8 shrink-0 bg-primary px-4 text-[13px] font-medium text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover"
               onClick={() => setApplyOpen(true)}
             >
               Apply Leave
             </Button>
           )}
-        </div>
-
-        {/* ── Tab bar ─────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-1 mx-7">
-          {visibleTabs.map((tab) => {
-            const isActive = tab.key === activeSection;
-            return (
-              <Link
-                key={tab.key}
-                href={`/${orgSlug}/leaves/${tab.key}`}
-                className={cn(
-                  'relative px-5 py-2.5 text-sm font-medium rounded-lg transition-colors',
-                  isActive
-                    ? 'bg-[#1d1d1f] text-white'
-                    : 'text-neutral-500 hover:text-neutral-900 hover:bg-black/[0.04]',
-                )}
-              >
-                {tab.label}
-              </Link>
-            );
-          })}
         </div>
 
         {/* ── Content ─────────────────────────────────────────────────────── */}

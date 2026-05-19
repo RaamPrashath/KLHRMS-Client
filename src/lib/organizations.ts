@@ -130,7 +130,7 @@ export async function getOrganizationWithMembers(slug: string) {
             role: {
               select: { id: true, name: true },
             },
-            invitedBy: {
+            invitedByUser: {
               select: { id: true, name: true, email: true },
             },
           },
@@ -558,6 +558,22 @@ export async function updateOrganizationNameBySlug(slug: string, name: string) {
   });
 }
 
+export async function updateOrganizationSettingsBySlug(params: {
+  slug: string;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+}) {
+  return prisma.organization.update({
+    where: { slug: params.slug },
+    data: {
+      name: params.name,
+      latitude: params.latitude,
+      longitude: params.longitude,
+    },
+  });
+}
+
 export async function deleteOrganizationBySlug(slug: string) {
   return prisma.organization.delete({
     where: { slug },
@@ -617,6 +633,7 @@ const organizations = {
   addOrganizationMemberWithAccount,
   updateOrganizationMemberRole,
   updateOrganizationNameBySlug,
+  updateOrganizationSettingsBySlug,
   deleteOrganizationBySlug,
   requireOrgMembership,
   requireOrgOwner,

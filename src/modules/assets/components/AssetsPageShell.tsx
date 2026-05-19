@@ -222,7 +222,7 @@ export function AssetsPageShell({
       <div className="w-full">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-[#111827]">Assets</h1>
+            <h1 className="text-4xl font-semibold tracking-tight text-[#111827]">Assets</h1>
             <p className="mt-1 text-[14px] text-[#6b7280]">View equipment and devices assigned to you</p>
           </div>
           <Button

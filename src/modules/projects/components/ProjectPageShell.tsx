@@ -183,7 +183,7 @@ export function ProjectPageShell({
       // ignore parse errors
     }
     return (
-      <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-neutral-100 bg-surface p-8">
+      <div className="flex min-h-50 items-center justify-center rounded-xl border border-neutral-100 bg-surface p-8">
         <p className="text-sm text-destructive-text">{message}</p>
       </div>
     );

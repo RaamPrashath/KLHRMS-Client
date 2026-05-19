@@ -45,13 +45,16 @@ export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardP
   return (
     <>
       <section className="bg-transparent border-none p-0 flex flex-col h-full w-full">
-        <div className="py-4 border-b border-black/[0.04] dark:border-white/[0.04] flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">Open Positions</h2>
-          {!isLoading && <span className="text-xs text-neutral-500">{openings.length} open</span>}
+        <div className="flex items-start justify-between gap-4 border-b border-black/4 px-6 py-5 dark:border-white/4">
+          <div>
+            <h2 className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">Open Internal Positions</h2>
+            <p className="mt-0.5 text-xs text-neutral-500">Explore open roles and project-based internal shifting tracks.</p>
+          </div>
+          {!isLoading && <span className="shrink-0 text-xs text-neutral-500">{openings.length} Active</span>}
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col divide-y divide-black/4 py-4">
+          <div className="flex flex-col divide-y divide-black/4 px-6 py-5">
             {[1, 2, 3].map((i) => (
               <div key={i} className="border-b border-black/4 py-4">
                 <div className="h-5 w-3/4 animate-pulse rounded-lg bg-neutral-100" />
@@ -60,9 +63,17 @@ export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardP
             ))}
           </div>
         ) : openings.length === 0 ? (
-          <div className="py-12 text-center text-sm text-neutral-400">No open positions right now.</div>
+          <div className="px-6 py-6">
+            <div className="flex min-h-60 flex-col items-center justify-center rounded-[20px] border border-dashed border-[#dbe4ef] text-center">
+              <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-[#f4f6fb]">
+                <Briefcase className="size-6 text-neutral-400" />
+              </div>
+              <p className="text-sm font-medium text-neutral-900">No open positions right now</p>
+              <p className="mt-1 text-xs text-neutral-500">Check back later for internal career updates and organizational postings.</p>
+            </div>
+          </div>
         ) : (
-          <div className="flex flex-col">
+          <div className="flex flex-col px-6">
             {openings.map((req) => (
               <button
                 key={req.id}

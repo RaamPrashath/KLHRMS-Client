@@ -49,9 +49,9 @@ export default async function OrganizationSettingsPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Rename organization</CardTitle>
+          <CardTitle>Organization details</CardTitle>
           <CardDescription>
-            This updates the display name. The slug stays immutable.
+            Update the display name and office coordinates used during attendance clock-in.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -60,6 +60,42 @@ export default async function OrganizationSettingsPage({
               <FieldLabel htmlFor="name">Organization name</FieldLabel>
               <Input id="name" name="name" type="text" defaultValue={org.name} required />
             </Field>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="latitude">Office latitude</FieldLabel>
+                <Input
+                  id="latitude"
+                  name="latitude"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min={-90}
+                  max={90}
+                  defaultValue={org.latitude ?? ''}
+                  placeholder="e.g. 13.0827"
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="longitude">Office longitude</FieldLabel>
+                <Input
+                  id="longitude"
+                  name="longitude"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min={-180}
+                  max={180}
+                  defaultValue={org.longitude ?? ''}
+                  placeholder="e.g. 80.2707"
+                />
+              </Field>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Leave either coordinate empty to clear the saved office location.
+            </p>
 
             <Button type="submit" className="w-full sm:w-fit">
               Save changes

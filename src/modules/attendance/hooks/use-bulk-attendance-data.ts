@@ -85,6 +85,20 @@ function parseDateSafe(iso: string | null | undefined): Date | null {
   }
 }
 
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) {
+    try {
+      const parsed = JSON.parse(err.message) as { message?: unknown };
+      if (typeof parsed.message === 'string' && parsed.message.trim().length > 0) {
+        return parsed.message;
+      }
+    } catch {
+      if (err.message.trim().length > 0) return err.message;
+    }
+  }
+  return fallback;
+}
+
 function normalizeDayFromApi(day: BulkAttendanceDay): BulkDayState {
   return {
     date: day.date,
@@ -258,7 +272,7 @@ export function useBulkAttendanceData(
 
         markSaved();
       } catch (err: unknown) {
-        const msg = (err as { message?: string }).message ?? 'Failed to save attendance';
+        const msg = getErrorMessage(err, 'Failed to save attendance');
         markError(msg);
         throw err;
       }
@@ -280,7 +294,7 @@ export function useBulkAttendanceData(
         });
         markSaved();
       } catch (err: unknown) {
-        const msg = (err as { message?: string }).message ?? 'Failed to delete attendance';
+        const msg = getErrorMessage(err, 'Failed to delete attendance');
         markError(msg);
         throw err;
       }

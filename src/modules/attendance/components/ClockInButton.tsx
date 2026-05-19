@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Play } from "lucide-react";
 
 interface ClockInButtonProps {
   onClockIn: () => void;
@@ -20,9 +21,9 @@ export function ClockInButton({
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
       aria-label="Clock in"
-      className="relative group overflow-hidden bg-[#00874A] text-white text-sm font-medium px-8 py-3 rounded-xl shadow-[0_8px_20px_rgba(0,135,74,0.2)] disabled:opacity-60 disabled:pointer-events-none transition-all"
+      className="relative overflow-hidden rounded-lg bg-[#17c79b] px-7 py-3.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(23,199,155,0.22)] transition-all disabled:pointer-events-none disabled:opacity-60"
     >
-      <span className="relative z-10 flex items-center justify-center gap-2">
+      <span className="relative z-10 flex items-center justify-center gap-2.5">
         {isPending ? (
           <svg
             className="animate-spin size-4"
@@ -45,11 +46,11 @@ export function ClockInButton({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-        ) : null}
-        Clock In
+        ) : (
+          <Play className="size-4 fill-white" aria-hidden="true" />
+        )}
+        Clock In Now
       </span>
-      {/* Shimmer effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
     </motion.button>
   );
 }

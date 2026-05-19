@@ -44,7 +44,7 @@ export interface HrmsNavGroup {
 
 export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
     {
-        title: "",
+        title: "Main",
         items: [
             { title: "Dashboard", urlSuffix: "" }, // base /{orgSlug} route — always visible
         ],

@@ -68,7 +68,7 @@ export function EmployeeFilters({
           value={roleId ?? ALL_VALUE}
           onValueChange={(v) => onRoleChange(v === ALL_VALUE ? undefined : v)}
         >
-          <SelectTrigger className="h-9 w-[160px] text-sm border-0 bg-canvas">
+          <SelectTrigger className="h-9 w-40 text-sm border-0 bg-canvas">
             <SelectValue placeholder="All Roles" />
           </SelectTrigger>
           <SelectContent>

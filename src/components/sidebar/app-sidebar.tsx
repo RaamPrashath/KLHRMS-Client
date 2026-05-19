@@ -153,7 +153,7 @@ function NavSearch({
                 placeholder="Search"
                 aria-label="Search navigation"
                 className={cn(
-                    "h-9 w-full rounded-full pl-9 pr-8 text-[13px]",
+                    "h-9 w-full rounded-lg pl-9 pr-8 text-[13px]",
                     "border border-white/5 bg-white/5",
                     "text-white placeholder:text-white/30",
                     "focus:border-white/10 focus:bg-white/10 focus:outline-none",
@@ -241,8 +241,8 @@ function SidebarNavigation({
                                                     className={cn(
                                                         ic,
                                                         isActive
-                                                            ? "text-[var(--color-sidebar-active-text)]"
-                                                            : "text-[var(--color-sidebar-text)]",
+                                                            ? "text-(--color-sidebar-active-text)"
+                                                            : "text-(--color-sidebar-text)",
                                                     )}
                                                 />
                                             ) : null,
