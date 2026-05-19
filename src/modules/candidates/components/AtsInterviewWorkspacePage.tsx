@@ -265,7 +265,7 @@ export function AtsInterviewWorkspacePage({
     <div className="space-y-6">
       <div className="rounded-2xl border border-neutral-100 bg-surface p-6 shadow-[var(--shadow-1)]">
         <Button asChild variant="ghost" size="sm" className="-ml-2 mb-4 text-neutral-500 hover:text-neutral-900">
-          <Link href={`/${orgSlug}/jobs/${jobSlug}/pipeline`}>
+          <Link href={`/${orgSlug}/candidates/${jobSlug}/overview`}>
             <ChevronLeft className="mr-1 size-4" />
             Back to Pipeline
           </Link>
@@ -301,7 +301,9 @@ export function AtsInterviewWorkspacePage({
                 </TableCell>
                 <TableCell className="font-mono text-[13px] text-neutral-700">{formatDateTime(candidate.appliedAt)}</TableCell>
                 <TableCell className="text-sm text-neutral-700">{candidate.currentAssignment?.interviewer?.name ?? '—'}</TableCell>
-                <TableCell className="text-sm text-neutral-700">{candidate.currentAssignment ? formatDateTime(candidate.currentAssignment.scheduledStartAt) : '—'}</TableCell>
+                <TableCell className="text-sm text-neutral-700">
+                  {candidate.currentAssignment?.scheduledStartAt ? formatDateTime(candidate.currentAssignment.scheduledStartAt) : '—'}
+                </TableCell>
                 <TableCell className="text-sm text-neutral-700">{deriveStatus(candidate)}</TableCell>
                 <TableCell className="text-right">
                   <Button
@@ -311,7 +313,7 @@ export function AtsInterviewWorkspacePage({
                     onClick={() => {
                       setSelectedCandidate(candidate);
                       setSelectedInterviewer(candidate.currentAssignment?.interviewer ?? null);
-                      setScheduledLocal(candidate.currentAssignment ? toLocalDateTimeInput(candidate.currentAssignment.scheduledStartAt) : '');
+                      setScheduledLocal(candidate.currentAssignment?.scheduledStartAt ? toLocalDateTimeInput(candidate.currentAssignment.scheduledStartAt) : '');
                       setWarningMessage(null);
                     }}
                   >

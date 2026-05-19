@@ -3,6 +3,7 @@ export interface PipelineJobPosting {
   slug: string;
   title: string;
   status: string;
+  requisitionId: string | null;
 }
 
 export interface CandidateSummary {
@@ -49,6 +50,7 @@ export interface StageEvaluationCategory {
   id: string;
   stageId: string;
   name: string;
+  type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
   order: number;
 }
 
@@ -104,6 +106,62 @@ export interface StageHistoryItem {
   createdAt: string;
 }
 
+export interface CandidateApplicationNote {
+  id: string;
+  authorMemberId: string;
+  authorName: string;
+  authorEmail: string | null;
+  body: string;
+  canEdit: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InterviewParticipant {
+  memberId: string;
+  name: string;
+  email: string | null;
+  role: string | null;
+  isBackup: boolean;
+}
+
+export interface InterviewFeedbackValue {
+  categoryId: string;
+  categoryName: string;
+  categoryType: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
+  value: string | number | boolean | null;
+}
+
+export interface InterviewFeedback {
+  id: string;
+  memberId: string;
+  memberName: string;
+  outcome: string;
+  score: number | null;
+  notes: string | null;
+  values: InterviewFeedbackValue[];
+  createdAt: string;
+}
+
+export interface ApplicationInterviewEvent {
+  id: string;
+  stageId: string;
+  stageName: string | null;
+  title: string;
+  status: string;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+  completedAt: string | null;
+  durationMinutes: number | null;
+  meetingUrl: string | null;
+  createdByName: string | null;
+  completedByName: string | null;
+  participants: InterviewParticipant[];
+  feedbacks: InterviewFeedback[];
+  notes: string | null;
+  createdAt: string;
+}
+
 export interface InterviewMeeting {
   id: string;
   applicationId: string;
@@ -136,6 +194,8 @@ export interface CandidateApplicationDetail {
   appliedAt: string;
   lastActivityAt: string;
   stageHistory: StageHistoryItem[];
+  interviewEvents: ApplicationInterviewEvent[];
+  notes: CandidateApplicationNote[];
 }
 
 export interface StageWorkspaceInterviewer {
@@ -148,10 +208,10 @@ export interface StageWorkspaceInterviewer {
 export interface StageWorkspaceAssignment {
   eventId: string;
   interviewer: StageWorkspaceInterviewer | null;
-  scheduledStartAt: string;
-  scheduledEndAt: string;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
   meetLink: string | null;
-  status: string;
+  status: 'PENDING' | 'PENDING_ACCEPTANCE' | 'ACCEPTED' | 'SCHEDULED' | 'REJECTED' | 'COMPLETED' | 'UNASSIGNED' | string;
   emailSentAt: string | null;
 }
 
@@ -180,9 +240,10 @@ export interface InterviewerSearchResponse {
 export interface StageInterviewAssignment {
   applicationId: string;
   interviewerMemberId: string;
-  scheduledStartAt: string;
+  scheduledStartAt?: string | null;
   durationMinutes: number;
   meetLink?: string | null;
+  backupInterviewers?: string[];
 }
 
 export interface StageInterviewWarning {
@@ -224,7 +285,7 @@ export interface TeamDistributionRequest {
   hiringTeamId: string;
   strategy: 'ROUND_ROBIN';
   applicationIds: string[];
-  scheduledStartAt: string;
+  scheduledStartAt?: string | null;
   durationMinutes: number;
   backupInterviewers?: string[];
   ignoreWarnings?: boolean;
@@ -245,6 +306,19 @@ export interface ReshuffleResponse {
   warnings: StageInterviewWarning[];
 }
 
+export interface AcceptInterviewResponse {
+  eventId: string;
+  status: string;
+  meeting: InterviewMeeting | null;
+}
+
+export interface RejectInterviewResponse {
+  eventId: string;
+  newInterviewerMemberId: string | null;
+  status: 'ESCALATED' | 'UNASSIGNED';
+  warnings: StageInterviewWarning[];
+}
+
 export interface MyInterview {
   eventId: string;
   applicationId: string;
@@ -252,8 +326,8 @@ export interface MyInterview {
   stageName: string;
   candidate: CandidateSummary;
   jobTitle: string;
-  scheduledStartAt: string;
-  scheduledEndAt: string;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
   status: string;
   role: 'INTERVIEWER' | 'BACKUP';
   isBackup: boolean;

@@ -4,8 +4,8 @@ import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
 import { type RolePermissions } from '@/lib/hrms-roles';
+import { JobRequisitionsPage } from '@/modules/jobs/pages/JobRequisitionsPage';
 import { fetchDepartmentMetaAction } from '@/modules/departments/api/departmentServerActions';
-import { JobRequisitionPageShell } from '@/modules/jobs/components/JobRequisitionPageShell';
 
 export default async function JobsPage({
   params,
@@ -34,12 +34,10 @@ export default async function JobsPage({
   }));
 
   return (
-    <JobRequisitionPageShell
+    <JobRequisitionsPage
       orgSlug={orgSlug}
       memberId={member.id}
-      departments={departments}
       permissions={(member.role?.permissions as RolePermissions) ?? null}
-      ownedOnly={false}
     />
   );
 }

@@ -12,12 +12,12 @@ import { HRMS_MODULES, getActionsForModule } from '@/modules/roles/schema/roleSc
 export function createEmptyPermissions(): RolePermissions {
   const permissions: RolePermissions = {};
   
-  for (const module of HRMS_MODULES) {
-    const actions = getActionsForModule(module);
-    permissions[module] = {};
+  for (const moduleKey of HRMS_MODULES) {
+    const actions = getActionsForModule(moduleKey);
+    permissions[moduleKey] = {};
     
     for (const action of actions) {
-      permissions[module][action] = 'none';
+      permissions[moduleKey][action] = 'none';
     }
   }
   
@@ -53,7 +53,25 @@ export function createEmployeePermissions(): RolePermissions {
   permissions.weeklyPlan.view = 'self';
   permissions.weeklyPlan.create = 'self';
   permissions.weeklyPlan.edit = 'self';
-  
+
+  permissions.jobs.view = 'self';
+  permissions.jobs.create = 'self';
+  permissions.jobs.edit = 'self';
+  permissions.jobs.delete = 'self';
+
+  // Recruitment
+  permissions.candidates.view = 'self';
+  permissions.candidates.create = 'self';
+  permissions.candidates.edit = 'self';
+  permissions.candidates.delete = 'self';
+  permissions.candidates.approve = 'self';
+
+  permissions.interviews.view = 'self';
+  permissions.interviews.create = 'self';
+  permissions.interviews.edit = 'self';
+  permissions.interviews.delete = 'self';
+  permissions.interviews.approve = 'self';
+
   // Lifecycle
   permissions.documentCollection.view = 'self';
   permissions.documentCollection.create = 'self';
@@ -308,12 +326,12 @@ export function createFinanceManagerPermissions(): RolePermissions {
 export function createAdminPermissions(): RolePermissions {
   const permissions: RolePermissions = {};
   
-  for (const module of HRMS_MODULES) {
-    const actions = getActionsForModule(module);
-    permissions[module] = {};
+  for (const moduleKey of HRMS_MODULES) {
+    const actions = getActionsForModule(moduleKey);
+    permissions[moduleKey] = {};
     
     for (const action of actions) {
-      permissions[module][action] = 'organization';
+      permissions[moduleKey][action] = 'organization';
     }
   }
   

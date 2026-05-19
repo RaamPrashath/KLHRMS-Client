@@ -7,15 +7,20 @@ import {
   closeJobRequisitionAction,
   createJobRequisitionAction,
   rejectJobRequisitionAction,
+  reopenJobRequisitionAction,
   submitJobRequisitionAction,
+  updateJobRequisitionAction,
 } from '@/modules/jobs/api/jobRequisitionServerActions';
 import type {
   CreateJobRequisitionInput,
   JobRequisitionDecisionInput,
+  UpdateJobRequisitionInput,
 } from '@/modules/jobs/schema/jobRequisitionSchemas';
 
 function invalidateJobs(queryClient: ReturnType<typeof useQueryClient>, orgSlug: string) {
   queryClient.invalidateQueries({ queryKey: ['job-requisitions', orgSlug] });
+  queryClient.invalidateQueries({ queryKey: ['job-requisition-detail', orgSlug] });
+  queryClient.invalidateQueries({ queryKey: ['job-requisition-activity', orgSlug] });
 }
 
 export function useCreateJobRequisition(orgSlug: string, memberId: string) {
@@ -32,6 +37,15 @@ export function useSubmitJobRequisition(orgSlug: string, memberId: string) {
   return useMutation({
     mutationFn: (requisitionId: string) =>
       submitJobRequisitionAction({ orgSlug, memberId, requisitionId }),
+    onSuccess: () => invalidateJobs(queryClient, orgSlug),
+  });
+}
+
+export function useUpdateJobRequisition(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { requisitionId: string; data: UpdateJobRequisitionInput }) =>
+      updateJobRequisitionAction({ orgSlug, memberId, ...params }),
     onSuccess: () => invalidateJobs(queryClient, orgSlug),
   });
 }
@@ -59,6 +73,15 @@ export function useCloseJobRequisition(orgSlug: string, memberId: string) {
   return useMutation({
     mutationFn: (requisitionId: string) =>
       closeJobRequisitionAction({ orgSlug, memberId, requisitionId }),
+    onSuccess: () => invalidateJobs(queryClient, orgSlug),
+  });
+}
+
+export function useReopenJobRequisition(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (requisitionId: string) =>
+      reopenJobRequisitionAction({ orgSlug, memberId, requisitionId }),
     onSuccess: () => invalidateJobs(queryClient, orgSlug),
   });
 }

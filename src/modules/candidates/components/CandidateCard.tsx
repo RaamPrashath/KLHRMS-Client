@@ -8,12 +8,21 @@ import { useState, type CSSProperties } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import type { PipelineApplication } from '@/modules/candidates/types/atsTypes';
+import type { PipelineApplication, StageEvaluationCategory } from '@/modules/candidates/types/atsTypes';
 
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat('en-IN', {
@@ -55,6 +64,7 @@ export function CandidateCard({
   onScheduleInterview,
   onStartInterview,
   onCompleteInterview,
+  evaluationCategories = [],
   isOverlay = false,
   compact = false,
   draggable = true,
@@ -64,27 +74,51 @@ export function CandidateCard({
   meetingEnabled?: boolean;
   onScheduleInterview?: (application: PipelineApplication) => void;
   onStartInterview?: (application: PipelineApplication) => void;
-  onCompleteInterview?: (application: PipelineApplication) => void;
+  onCompleteInterview?: (
+    application: PipelineApplication,
+    data?: {
+      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
+      notes?: string | null;
+    },
+  ) => void;
+  evaluationCategories?: StageEvaluationCategory[];
   isOverlay?: boolean;
   compact?: boolean;
   draggable?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: application.id,
-    disabled: isOverlay || !draggable,
+    disabled: isOverlay || !draggable || application.interviewMeeting?.status === 'ONGOING',
     data: { type: 'application', stageId: application.pipelineStageId },
   });
 
   const fullName = `${application.candidate.firstName} ${application.candidate.lastName}`;
   const meeting = application.interviewMeeting;
   const canSchedule = !meeting || meeting.status === 'COMPLETED';
-  const showComplete = meeting?.status === 'ONGOING';
+  const isOngoing = meeting?.status === 'ONGOING';
+  const canDrag = draggable && meeting?.status !== 'ONGOING';
   const style: CSSProperties | undefined =
     transform && !isOverlay ? { transform: CSS.Translate.toString(transform) } : undefined;
   const [ongoingOpen, setOngoingOpen] = useState(false);
+  const [scheduledOpen, setScheduledOpen] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(false);
+  const [completionOpen, setCompletionOpen] = useState(false);
+  const [completionValues, setCompletionValues] = useState<Record<string, string | boolean>>({});
+  const [completionNotes, setCompletionNotes] = useState('');
+
+  function submitCompletion() {
+    onCompleteInterview?.(application, {
+      values: evaluationCategories.map((category) => ({
+        categoryId: category.id,
+        value: completionValues[category.id] ?? (category.type === 'CHECKBOX' ? false : ''),
+      })),
+      notes: completionNotes.trim() || null,
+    });
+    setCompletionOpen(false);
+  }
 
   return (
+    <>
     <motion.div
       layout
       ref={setNodeRef}
@@ -103,14 +137,14 @@ export function CandidateCard({
         compact ? 'p-3.5' : 'p-3',
         isOverlay
           ? 'cursor-grabbing shadow-[0_12px_28px_rgba(0,0,0,0.12)]'
-          : draggable
+          : canDrag
             ? 'cursor-grab hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] active:cursor-grabbing'
             : 'cursor-default',
         isDragging && !isOverlay && 'opacity-0',
       )}
       transition={{ layout: { duration: 0.18, ease: [0.22, 1, 0.36, 1] } }}
-      {...(!isOverlay && draggable ? listeners : {})}
-      {...(!isOverlay && draggable ? attributes : {})}
+      {...(!isOverlay && canDrag ? listeners : {})}
+      {...(!isOverlay && canDrag ? attributes : {})}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -120,7 +154,27 @@ export function CandidateCard({
         {meetingEnabled && meeting ? (
           <div className="flex-shrink-0">
             {meeting.status === 'PENDING' ? (
-              <Clock className="size-4 text-warning-text" aria-label="Pending" />
+              <Popover open={scheduledOpen} onOpenChange={setScheduledOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Scheduled interview"
+                    onClick={(event) => event.stopPropagation()}
+                    onMouseEnter={() => setScheduledOpen(true)}
+                    onMouseLeave={() => setScheduledOpen(false)}
+                  >
+                    <Clock className="size-4 text-warning-text" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" className="w-60 p-3" onMouseEnter={() => setScheduledOpen(true)} onMouseLeave={() => setScheduledOpen(false)}>
+                  <p className="text-xs font-medium text-neutral-700">
+                    Scheduled with {meeting.interviewerName ?? 'unassigned interviewer'}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {formatDateTime(meeting.scheduledStartAt)}
+                  </p>
+                </PopoverContent>
+              </Popover>
             ) : meeting.status === 'ONGOING' ? (
               <Popover open={ongoingOpen} onOpenChange={setOngoingOpen}>
                 <PopoverTrigger asChild>
@@ -168,8 +222,8 @@ export function CandidateCard({
                       Completed by {meeting.interviewerName}
                     </p>
                   ) : null}
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {formatTimeOnly(meeting.scheduledStartAt)} – {formatTimeOnly(meeting.completedAt ?? meeting.scheduledEndAt)}
+                  <p className="text-xs text-neutral-500">
+                    {formatTimeOnly(meeting.scheduledStartAt)} - {formatTimeOnly(meeting.completedAt ?? meeting.scheduledEndAt)}
                     <span className="ml-1 text-neutral-400">
                       ({formatDuration(meeting.scheduledStartAt, meeting.completedAt ?? meeting.scheduledEndAt)})
                     </span>
@@ -212,7 +266,7 @@ export function CandidateCard({
             <div className="rounded-md border border-neutral-100 bg-neutral-50 p-2">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-neutral-500">
-                  Meeting scheduled at {formatDateTime(meeting.scheduledStartAt)}
+                  {meeting.interviewerName ?? 'Interview'} at {formatDateTime(meeting.scheduledStartAt)}
                 </p>
                 <Button
                   type="button"
@@ -240,7 +294,7 @@ export function CandidateCard({
             animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
             transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-            className={cn('grid gap-2 overflow-hidden', canSchedule || showComplete ? 'grid-cols-2' : 'grid-cols-1')}
+            className={cn('grid gap-2 overflow-hidden', canSchedule || isOngoing ? 'grid-cols-2' : 'grid-cols-1')}
           >
             {canSchedule ? (
               <Button
@@ -257,19 +311,36 @@ export function CandidateCard({
                 Schedule
               </Button>
             ) : null}
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={(event) => {
-                event.stopPropagation();
-                onStartInterview?.(application);
-              }}
-            >
-              <Play className="size-3.5" />
-              {meeting?.status === 'COMPLETED' ? 'Start again' : 'Start now'}
-            </Button>
-            {showComplete ? (
+            {isOngoing ? (
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (meeting?.meetingUrl) {
+                    window.open(meeting.meetingUrl, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+              >
+                <Play className="size-3.5" />
+                Join
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onStartInterview?.(application);
+                }}
+              >
+                <Play className="size-3.5" />
+                {meeting?.status === 'COMPLETED' ? 'Start again' : 'Start now'}
+              </Button>
+            )}
+            {isOngoing ? (
               <Button
                 type="button"
                 size="sm"
@@ -277,7 +348,11 @@ export function CandidateCard({
                 className="h-8 text-xs"
                 onClick={(event) => {
                   event.stopPropagation();
-                  onCompleteInterview?.(application);
+                  if (evaluationCategories.length > 0) {
+                    setCompletionOpen(true);
+                  } else {
+                    onCompleteInterview?.(application);
+                  }
                 }}
               >
                 <Check className="size-3.5" />
@@ -288,5 +363,55 @@ export function CandidateCard({
         ) : null}
       </AnimatePresence>
     </motion.div>
+    <Dialog open={completionOpen} onOpenChange={setCompletionOpen}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Complete interview</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          {evaluationCategories.map((category) => (
+            <label key={category.id} className="grid gap-1.5 text-sm font-medium text-neutral-700">
+              {category.name}
+              {category.type === 'CHECKBOX' ? (
+                <input
+                  type="checkbox"
+                  className="size-4"
+                  checked={Boolean(completionValues[category.id])}
+                  onChange={(event) =>
+                    setCompletionValues((current) => ({ ...current, [category.id]: event.target.checked }))
+                  }
+                />
+              ) : (
+                <Input
+                  type={category.type === 'NUMERIC' ? 'number' : 'text'}
+                  value={String(completionValues[category.id] ?? '')}
+                  onChange={(event) =>
+                    setCompletionValues((current) => ({ ...current, [category.id]: event.target.value }))
+                  }
+                />
+              )}
+            </label>
+          ))}
+          <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
+            Notes
+            <Textarea
+              value={completionNotes}
+              onChange={(event) => setCompletionNotes(event.target.value)}
+              placeholder="Optional completion notes"
+              className="min-h-24 resize-none"
+            />
+          </label>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setCompletionOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={submitCompletion}>
+            Mark complete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

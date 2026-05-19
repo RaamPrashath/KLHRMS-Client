@@ -66,6 +66,7 @@ interface PipelineTableRow {
   appliedDate: string;
   lastMovedAt: string | null;
   status: string;
+  isInterviewOngoing: boolean;
   application: PipelineApplication;
 }
 
@@ -112,6 +113,7 @@ function buildRows(stages: PipelineStage[]): PipelineTableRow[] {
         appliedDate: application.appliedDate,
         lastMovedAt: application.lastMovedAt,
         status: application.status,
+        isInterviewOngoing: application.interviewMeeting?.status === 'ONGOING',
         application,
       };
     }),
@@ -204,6 +206,7 @@ export function AtsPipelineTable({
           <Checkbox
             aria-label={`Select ${row.original.name}`}
             checked={row.getIsSelected()}
+            disabled={row.original.isInterviewOngoing}
             onClick={(event) => event.stopPropagation()}
             onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
           />

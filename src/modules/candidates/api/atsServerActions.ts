@@ -1,6 +1,7 @@
 'use server';
 
 import {
+  acceptInterviewSchema,
   createPipelineStageSchema,
   createInterviewMeetingSchema,
   extendPipelineStageSchema,
@@ -10,6 +11,7 @@ import {
   updatePipelineStageSchema,
   type CreatePipelineStageInput,
   type CreateInterviewMeetingInput,
+  type AcceptInterviewInput,
   type ExtendPipelineStageInput,
   type MoveApplicationStageInput,
   type StageInterviewAssignmentInput,
@@ -33,6 +35,8 @@ import type {
   StageInterviewWarningResponse,
   StageEvaluationWorkspace,
   StageWorkspace,
+  AcceptInterviewResponse,
+  RejectInterviewResponse,
 } from '@/modules/candidates/types/atsTypes';
 
 function getApiUrl(): string {
@@ -240,6 +244,35 @@ export async function updateCandidateApplicationDetailAction(params: {
   return handleResponse<CandidateApplicationDetail>(res);
 }
 
+export async function createCandidateApplicationNoteAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  body: string;
+}): Promise<CandidateApplicationDetail> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/notes`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ body: params.body }),
+  });
+  return handleResponse<CandidateApplicationDetail>(res);
+}
+
+export async function updateCandidateApplicationNoteAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  noteId: string;
+  body: string;
+}): Promise<CandidateApplicationDetail> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/notes/${params.noteId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ body: params.body }),
+  });
+  return handleResponse<CandidateApplicationDetail>(res);
+}
+
 export async function createInterviewMeetingAction(params: {
   orgSlug: string;
   memberId: string;
@@ -264,10 +297,15 @@ export async function completeInterviewMeetingAction(params: {
   memberId: string;
   applicationId: string;
   eventId: string;
+  data?: {
+    values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
+    notes?: string | null;
+  };
 }): Promise<InterviewMeeting> {
   const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/interview-meetings/${params.eventId}/complete`, {
     method: 'POST',
     headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data ?? { values: [] }),
   });
   return handleResponse<InterviewMeeting>(res);
 }
@@ -440,6 +478,37 @@ export async function fetchMyInterviewsAction(params: {
     cache: 'no-store',
   });
   return handleResponse<MyInterviewListResponse>(res);
+}
+
+export async function acceptInterviewAction(params: {
+  orgSlug: string;
+  memberId: string;
+  eventId: string;
+  data: AcceptInterviewInput;
+}): Promise<AcceptInterviewResponse> {
+  const parsed = acceptInterviewSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+
+  const res = await fetch(`${getApiUrl()}/candidates/interviews/${params.eventId}/accept`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(parsed.data),
+  });
+  return handleResponse<AcceptInterviewResponse>(res);
+}
+
+export async function rejectInterviewAction(params: {
+  orgSlug: string;
+  memberId: string;
+  eventId: string;
+}): Promise<RejectInterviewResponse> {
+  const res = await fetch(`${getApiUrl()}/candidates/interviews/${params.eventId}/reject`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<RejectInterviewResponse>(res);
 }
 
 export async function createReassignmentRequestAction(params: {

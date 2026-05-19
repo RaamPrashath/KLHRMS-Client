@@ -30,6 +30,7 @@ export const projectTaskSchema = z.object({
   name: z.string().trim().min(1, 'Task name is required').max(255),
 });
 
+export type ProjectFormInput = z.input<typeof projectSchema>;
 export type ProjectInput = z.infer<typeof projectSchema>;
 export type ProjectMemberInput = z.infer<typeof projectMemberSchema>;
 export type ProjectTaskInput = z.infer<typeof projectTaskSchema>;

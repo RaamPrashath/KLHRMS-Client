@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BriefcaseBusiness, MapPin } from 'lucide-react';
+import { BriefcaseBusiness, Building2, MapPin, Shield, Sparkles } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,20 @@ function formatSalaryRange(data: {
     return `${currency} ${data.salaryMin}+`;
   }
   return `${currency} up to ${data.salaryMax}`;
+}
+
+function formatExperienceLevel(value: string | null) {
+  if (!value) return null;
+  return value.charAt(0) + value.slice(1).toLowerCase();
+}
+
+function formatHiringReason(value: string | null) {
+  if (!value) return null;
+  return value
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 export function CareersPageShell() {
@@ -116,6 +130,8 @@ export function CareersPageShell() {
                 formatEmploymentType(posting.employmentType),
                 posting.isRemote ? 'Remote' : null,
                 formatSalaryRange(posting),
+                formatExperienceLevel(posting.experienceLevel),
+                formatHiringReason(posting.hiringReason),
               ].filter(Boolean);
 
               return (
@@ -123,6 +139,12 @@ export function CareersPageShell() {
                   <CardHeader className="gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{posting.organizationName}</Badge>
+                      {posting.departmentName ? (
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <Building2 className="size-3" />
+                          {posting.departmentName}
+                        </Badge>
+                      ) : null}
                       {metadata.map((item) => (
                         <Badge key={`${posting.id}-${item}`} variant="outline">
                           {item}
@@ -135,14 +157,31 @@ export function CareersPageShell() {
                         {posting.description}
                       </CardDescription>
                     </div>
+                    {posting.skills.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {posting.skills.slice(0, 4).map((skill) => (
+                          <Badge key={skill} variant="ghost" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                        {posting.skills.length > 4 ? (
+                          <Badge variant="ghost" className="text-xs">
+                            +{posting.skills.length - 4} more
+                          </Badge>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </CardHeader>
                   <CardContent className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {posting.location ? <MapPin className="size-4" /> : null}
+                      <MapPin className="size-4" />
                       <span>{posting.location ?? `Organization: ${posting.organizationSlug}`}</span>
                     </div>
                     <Button asChild>
-                      <Link href={`/careers/${posting.id}`}>View role</Link>
+                      <Link href={`/careers/${posting.id}`}>
+                        <Sparkles className="size-4" />
+                        View role
+                      </Link>
                     </Button>
                   </CardContent>
                 </Card>

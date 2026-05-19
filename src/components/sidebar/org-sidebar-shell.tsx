@@ -36,7 +36,6 @@ export function OrgSidebarShell({
 
     const isLeaveRoute = pathname.includes("/leaves");
     const isCandidatesRoute = pathname.includes("/candidates");
-    const isFullWidthRoute = isLeaveRoute || isCandidatesRoute || pathname.includes("/assets") || pathname.includes("/maintenance") || isDashboardRoute;
     const isTimesheetRoute = pathname.includes("/timesheet");
     const isAttendanceRoute = pathname.includes("/attendance");
     const isDepartmentsRoute = pathname.includes("/departments");
@@ -45,9 +44,23 @@ export function OrgSidebarShell({
     const isJobsRoute = pathname.includes("/jobs");
     const isInterviewsRoute = pathname.includes("/interviews");
     const isWeeklyPlanRoute = pathname.includes("/weekly-plan");
+    
+    const isFullWidthRoute = 
+        isLeaveRoute || 
+        isCandidatesRoute || 
+        isTimesheetRoute || 
+        isEmployeesRoute || 
+        isDepartmentsRoute || 
+        isAttendanceRoute || 
+        isProjectsRoute || 
+        isJobsRoute || 
+        isInterviewsRoute || 
+        isWeeklyPlanRoute ||
+        pathname.includes("/assets") || 
+        pathname.includes("/maintenance");
 
     return (
-        <div className="flex h-dvh overflow-hidden">
+        <div className="fixed inset-0 flex overflow-hidden bg-canvas">
             <AppSidebar
                 orgSlug={orgSlug}
                 orgName={orgName}
@@ -56,7 +69,7 @@ export function OrgSidebarShell({
                 organizations={organizations}
                 user={user}
             />
-            <main className="flex-1 min-h-0 overflow-y-auto">
+            <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                 <div
                     className={cn(
                         "w-full",

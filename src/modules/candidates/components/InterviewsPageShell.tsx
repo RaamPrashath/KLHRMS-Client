@@ -6,22 +6,35 @@ import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { useCreateReassignmentRequest, useFetchMyInterviews, useReshuffleInterviewAssignment } from '@/modules/candidates/hooks/useAtsPipeline';
+import { SchedulingModal } from '@/modules/candidates/components/SchedulingModal';
+import {
+  useAcceptInterview,
+  useCreateReassignmentRequest,
+  useFetchMyInterviews,
+  useRejectInterview,
+} from '@/modules/candidates/hooks/useAtsPipeline';
 import type { MyInterview } from '@/modules/candidates/types/atsTypes';
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Kolkata',
-  }).format(new Date(value));
-}
 
 function candidateName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
+}
+
+function statusLabel(status: string): string {
+  if (status === 'PENDING' || status === 'PENDING_ACCEPTANCE') return 'Awaiting response';
+  if (status === 'ACCEPTED') return 'Accepted';
+  if (status === 'SCHEDULED') return 'Scheduled';
+  if (status === 'ONGOING') return 'Ongoing';
+  if (status === 'COMPLETED') return 'Completed';
+  if (status === 'REJECTED') return 'Rejected';
+  return status;
+}
+
+function statusClassName(status: string): string {
+  if (status === 'PENDING' || status === 'PENDING_ACCEPTANCE') return 'bg-warning-bg text-warning-text';
+  if (status === 'ACCEPTED' || status === 'COMPLETED') return 'bg-success-bg text-success-text';
+  if (status === 'SCHEDULED' || status === 'ONGOING') return 'bg-info-bg text-info-text';
+  if (status === 'REJECTED') return 'bg-destructive-bg text-destructive-text';
+  return 'bg-neutral-100 text-neutral-600';
 }
 
 function ReassignmentDialog({
@@ -108,9 +121,10 @@ export function InterviewsPageShell({
   readonly memberId: string;
 }) {
   const [reassignmentInterview, setReassignmentInterview] = useState<MyInterview | null>(null);
-  const [acceptedEventIds, setAcceptedEventIds] = useState<string[]>([]);
+  const [schedulingInterview, setSchedulingInterview] = useState<MyInterview | null>(null);
   const interviewsQuery = useFetchMyInterviews(orgSlug, memberId);
-  const reshuffleInterview = useReshuffleInterviewAssignment(orgSlug, memberId);
+  const acceptInterview = useAcceptInterview(orgSlug, memberId);
+  const rejectInterview = useRejectInterview(orgSlug, memberId);
 
   if (interviewsQuery.isLoading) {
     return (
@@ -159,8 +173,6 @@ export function InterviewsPageShell({
                 <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Candidate</div>
                 <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Position</div>
                 <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Stage</div>
-                <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Scheduled</div>
-                <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Role</div>
                 <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</div>
                 <div className="w-[280px] shrink-0 text-right text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Action</div>
               </div>
@@ -200,33 +212,13 @@ export function InterviewsPageShell({
                     </div>
 
                     <div className="flex-1 flex justify-center">
-                      <div className="flex items-center gap-2 text-sm text-neutral-600">
-                        <Clock className="size-3.5 text-neutral-400" />
-                        {formatDateTime(interview.scheduledStartAt)}
-                      </div>
-                    </div>
-
-                    <div className="flex-1 flex justify-center">
-                      <div className="inline-flex items-center gap-1.5">
-                        <div className={`size-2 rounded-full ${interview.isBackup ? 'bg-warning-text' : 'bg-success-text'}`} />
-                        <span className="text-xs font-medium text-neutral-700">
-                          {interview.isBackup ? 'Backup' : 'Primary'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 flex justify-center">
                       {interview.isBackup ? (
                         <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
                           Standby backup
                         </span>
-                      ) : acceptedEventIds.includes(interview.eventId) ? (
-                        <span className="inline-flex items-center rounded-full bg-success-bg px-2.5 py-1 text-xs font-medium text-success-text">
-                          Accepted
-                        </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-warning-bg px-2.5 py-1 text-xs font-medium text-warning-text">
-                          Awaiting response
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClassName(interview.status)}`}>
+                          {statusLabel(interview.status)}
                         </span>
                       )}
                     </div>
@@ -243,40 +235,37 @@ export function InterviewsPageShell({
                           ) : null}
                           <Button
                             size="sm"
-                            variant={acceptedEventIds.includes(interview.eventId) ? 'outline' : 'default'}
-                            onClick={() => {
-                              setAcceptedEventIds((current) => (
-                                current.includes(interview.eventId) ? current : [...current, interview.eventId]
-                              ));
-                              toast.success('Interview accepted');
-                            }}
+                            variant={interview.status === 'SCHEDULED' || interview.status === 'COMPLETED' ? 'outline' : 'default'}
+                            disabled={interview.status === 'SCHEDULED' || interview.status === 'COMPLETED' || interview.status === 'REJECTED'}
+                            onClick={() => setSchedulingInterview(interview)}
                           >
-                            {acceptedEventIds.includes(interview.eventId) ? 'Accepted' : 'Accept'}
+                            {interview.status === 'SCHEDULED' ? 'Scheduled' : 'Accept'}
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={reshuffleInterview.isPending}
+                            disabled={rejectInterview.isPending || interview.status === 'SCHEDULED' || interview.status === 'COMPLETED' || interview.status === 'REJECTED'}
                             onClick={() => {
-                              reshuffleInterview.mutate(
+                              rejectInterview.mutate(
                                 {
-                                  applicationId: interview.applicationId,
                                   eventId: interview.eventId,
-                                  data: {},
                                 },
                                 {
-                                  onSuccess: () => {
-                                    setAcceptedEventIds((current) => current.filter((id) => id !== interview.eventId));
-                                    toast.success('Interview rejected. A backup interviewer has been notified.');
+                                  onSuccess: (result) => {
+                                    if (result.status === 'ESCALATED') {
+                                      toast.success('Interview rejected. A backup interviewer has been notified.');
+                                    } else {
+                                      toast.success('Interview rejected. The candidate is back in the unassigned pool.');
+                                    }
                                   },
                                   onError: () => {
-                                    toast.error('Could not reassign this interview automatically. Add a backup first.');
+                                    toast.error('Could not reject this interview');
                                   },
                                 },
                               );
                             }}
                           >
-                            {reshuffleInterview.isPending ? 'Reassigning...' : 'Reject'}
+                            {rejectInterview.isPending ? 'Rejecting...' : 'Reject'}
                           </Button>
                           <Button
                             size="sm"
@@ -304,6 +293,28 @@ export function InterviewsPageShell({
           orgSlug={orgSlug}
         />
       )}
+      <SchedulingModal
+        key={schedulingInterview?.eventId ?? 'closed-scheduling-modal'}
+        interview={schedulingInterview}
+        open={schedulingInterview !== null}
+        isSubmitting={acceptInterview.isPending}
+        onOpenChange={(open) => {
+          if (!open) setSchedulingInterview(null);
+        }}
+        onSubmit={async (payload) => {
+          if (!schedulingInterview) return;
+          try {
+            await acceptInterview.mutateAsync({
+              eventId: schedulingInterview.eventId,
+              data: payload,
+            });
+            toast.success('Interview scheduled');
+            setSchedulingInterview(null);
+          } catch {
+            toast.error('Could not schedule this interview');
+          }
+        }}
+      />
     </div>
   );
 }

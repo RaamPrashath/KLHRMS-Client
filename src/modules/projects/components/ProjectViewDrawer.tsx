@@ -25,7 +25,12 @@ import {
 
 import { cn } from '@/lib/utils';
 import { useProjectMutations } from '@/modules/projects/hooks/useProjectMutations';
-import { projectSchema, projectStatusOptions, type ProjectInput } from '@/modules/projects/schema/projectSchemas';
+import {
+  projectSchema,
+  projectStatusOptions,
+  type ProjectFormInput,
+  type ProjectInput,
+} from '@/modules/projects/schema/projectSchemas';
 import type {
   ProjectDetail,
   ProjectLookupOption,
@@ -94,7 +99,7 @@ export function ProjectViewDrawer({
   const deferredUnassignedSearch = useDeferredValue(unassignedSearch);
   const deferredAssignedSearch = useDeferredValue(assignedSearch);
 
-  const form = useForm<ProjectInput>({
+  const form = useForm<ProjectFormInput, unknown, ProjectInput>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
       name: '',

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CandidatesJobPageClient } from '@/app/(authenticated)/[orgSlug]/candidates/[jobSlug]/CandidatesJobPageClient';
 import { CandidatesJobContext } from '@/modules/candidates/components/CandidatesJobContext';
@@ -53,8 +54,10 @@ export function AtsPipelineSectionLayout({
           : 'overview',
     [pathname],
   );
-  const [pendingTab, setPendingTab] = useState<PipelineTabKey | null>(null);
-  const activeTab = pendingTab && pendingTab !== activeTabFromPath ? pendingTab : activeTabFromPath;
+  const [navigatingTab, setNavigatingTab] = useState<PipelineTabKey | null>(null);
+  const activeTab = activeTabFromPath;
+  const visibleTab = navigatingTab ?? activeTab;
+  const isTabNavigating = navigatingTab !== null && navigatingTab !== activeTabFromPath;
 
   const [searchQuery, setSearchQuery] = useState('');
   const addStageSignalRef = useRef(0);
@@ -65,20 +68,42 @@ export function AtsPipelineSectionLayout({
     setAddStageSignal(addStageSignalRef.current);
   }, []);
 
+  const consumeAddStageSignal = useCallback(() => {
+    addStageSignalRef.current = 0;
+    setAddStageSignal(0);
+  }, []);
+
   useEffect(() => {
     void router.prefetch(`/${orgSlug}/candidates/${jobSlug}/overview`);
     void router.prefetch(`/${orgSlug}/candidates/${jobSlug}/kanban`);
     void router.prefetch(`/${orgSlug}/candidates/${jobSlug}/table`);
   }, [jobSlug, orgSlug, router]);
 
+  useEffect(() => {
+    if (navigatingTab === activeTabFromPath) {
+      const id = window.setTimeout(() => setNavigatingTab(null), 0);
+      return () => window.clearTimeout(id);
+    }
+  }, [activeTabFromPath, navigatingTab]);
+
   function handleTabChange(nextTab: PipelineTabKey) {
-    if (nextTab === activeTab) return;
-    setPendingTab(nextTab);
+    if (nextTab === activeTabFromPath) return;
+    setAddStageSignal(0);
+    addStageSignalRef.current = 0;
+    setNavigatingTab(nextTab);
     router.push(`/${orgSlug}/candidates/${jobSlug}/${nextTab}`);
   }
 
-  const tabContent =
-    activeTab === 'overview' ? (
+  const tabContent = isTabNavigating ? (
+    <div className="space-y-5 pb-8">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: visibleTab === 'overview' ? 8 : 4 }, (_, index) => (
+          <Skeleton key={index} className="h-[120px] rounded-xl" />
+        ))}
+      </div>
+      <Skeleton className="h-[calc(100dvh-250px)] min-h-[420px] rounded-xl" />
+    </div>
+  ) : activeTab === 'overview' ? (
       children
     ) : (
       <CandidatesJobPageClient
@@ -90,8 +115,8 @@ export function AtsPipelineSectionLayout({
     );
 
   const ctxValue = useMemo(
-    () => ({ searchQuery, setSearchQuery, addStageSignal }),
-    [searchQuery, addStageSignal],
+    () => ({ searchQuery, setSearchQuery, addStageSignal, consumeAddStageSignal }),
+    [searchQuery, addStageSignal, consumeAddStageSignal],
   );
 
   return (
@@ -100,11 +125,17 @@ export function AtsPipelineSectionLayout({
         <div className="sticky top-0 z-20 bg-canvas/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 p-7 pb-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-4xl font-semibold tracking-tight text-neutral-900">ATS Pipeline</p>
+              {postingsQuery.isLoading ? (
+                <Skeleton className="h-10 w-64 rounded-lg" />
+              ) : (
+                <p className="text-4xl font-semibold tracking-tight text-neutral-900">
+                  {currentPosting?.title ?? 'Recruitment pipeline'}
+                </p>
+              )}
             </div>
             <Select
               value={currentPosting?.slug}
-              onValueChange={(value) => router.push(`/${orgSlug}/jobs/${value}/pipeline`)}
+              onValueChange={(value) => router.push(`/${orgSlug}/candidates/${value}/overview`)}
               disabled={postingsQuery.isLoading || postings.length === 0}
             >
               <SelectTrigger className="w-full bg-surface lg:w-[320px]">
@@ -123,7 +154,7 @@ export function AtsPipelineSectionLayout({
             <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
               {TABS.map((tab) => {
                 const Icon = tab.icon;
-                const isActive = tab.key === activeTab;
+                const isActive = tab.key === visibleTab;
                 return (
                   <button
                     key={tab.key}
@@ -155,7 +186,7 @@ export function AtsPipelineSectionLayout({
                 );
               })}
             </div>
-            {activeTab !== 'overview' ? (
+            {visibleTab !== 'overview' && !isTabNavigating ? (
               <>
                 <div className="relative flex-1">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
@@ -177,7 +208,7 @@ export function AtsPipelineSectionLayout({
         <div className="relative">
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeTab}
+              key={isTabNavigating ? `loading-${visibleTab}` : activeTab}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}

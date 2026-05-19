@@ -42,6 +42,8 @@ import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer
 import { AtsPipelineTable } from '@/modules/candidates/components/AtsPipelineTable';
 import { KanbanColumn } from '@/modules/candidates/components/KanbanColumn';
 import { StageConfigDrawer } from '@/modules/candidates/components/StageConfigDrawer';
+import { PipelineSetupCard } from '@/modules/jobs/components/PipelineSetupCard';
+import { PipelineSetupDialog } from '@/modules/jobs/components/PipelineSetupDialog';
 import { authClient } from '@/lib/auth-client';
 import {
   useCreatePipelineStage,
@@ -52,12 +54,17 @@ import {
   usePipelineBoard,
   useUpdatePipelineStage,
 } from '@/modules/candidates/hooks/useAtsPipeline';
+import {
+  useCreateDefaultPipeline as useCreateRequisitionDefaultPipeline,
+  useImportPipeline as useImportRequisitionPipeline,
+} from '@/modules/jobs/hooks/usePipelineMutations';
 import type {
   CreateInterviewMeetingInput,
   CreatePipelineStageInput,
   UpdatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
 import type { PipelineApplication, PipelineStage } from '@/modules/candidates/types/atsTypes';
+import type { CreatePipelineStageInput as SetupCreatePipelineStageInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 
 const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
@@ -113,6 +120,9 @@ function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineSt
     name: data.name,
     stageType: data.stageType,
     evaluationEnabled: data.evaluationEnabled,
+    evaluationType: data.evaluationType,
+    evaluationIncludeTotal: data.evaluationIncludeTotal,
+    evaluationIncludeAnalysis: data.evaluationIncludeAnalysis,
     dueDate: data.dueDate,
     dueDateEnabled: Boolean(data.dueDate),
     evaluationCategories: data.evaluationCategories,
@@ -181,34 +191,80 @@ function getStageReorderOrder(
 
 function BoardSkeleton() {
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-32 rounded-md" />
-          <Skeleton className="h-3 w-72 rounded-md" />
-        </div>
-        <Skeleton className="h-9 w-40 rounded-md" />
-      </div>
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {[1, 2, 3, 4].map((column) => (
-          <div key={column} className="h-[calc(100vh-220px)] min-h-[520px] w-[300px] shrink-0 rounded-xl border border-neutral-100 bg-surface-subtle">
-            <div className="border-b border-neutral-100 bg-surface p-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-32 rounded-md" />
-                  <Skeleton className="h-3 w-20 rounded-md" />
-                </div>
-                <Skeleton className="size-8 rounded-md" />
+    <div className="flex h-[calc(100dvh-140px)] items-stretch gap-4 overflow-x-auto pb-4">
+      {[1, 2, 3, 4].map((column) => (
+        <div key={column} className="flex w-[300px] shrink-0 flex-col rounded-xl border border-neutral-100 bg-surface-subtle">
+          <div className="border-b border-neutral-100 bg-surface p-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32 rounded-md" />
+                <Skeleton className="h-3 w-20 rounded-md" />
               </div>
-              <Skeleton className="mt-3 h-8 rounded-md" />
+              <Skeleton className="size-8 rounded-md" />
             </div>
-            <div className="space-y-3 p-3">
-              {[1, 2, 3].map((card) => (
-                <Skeleton key={card} className="h-[116px] rounded-lg" />
-              ))}
+            <Skeleton className="mt-3 h-8 rounded-md" />
+          </div>
+          <div className="flex-1 space-y-3 overflow-hidden p-3">
+            {[1, 2, 3].map((card) => (
+              <Skeleton key={card} className="h-[116px] shrink-0 rounded-lg" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <div className="rounded-xl border border-neutral-100 bg-surface shadow-[var(--shadow-1)]">
+      <div className="flex items-center justify-between border-b border-neutral-100 p-4">
+        <Skeleton className="h-9 w-[180px] rounded-md" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-[130px] rounded-md" />
+          <Skeleton className="h-9 w-[130px] rounded-md" />
+        </div>
+      </div>
+      <div className="divide-y divide-neutral-100">
+        <div className="flex gap-4 bg-canvas px-4 py-2.5">
+          <Skeleton className="h-4 w-4 rounded-sm" />
+          <Skeleton className="h-4 w-[200px] rounded-md" />
+          <Skeleton className="h-4 w-[120px] rounded-md" />
+          <Skeleton className="h-4 w-[100px] rounded-md" />
+          <Skeleton className="h-4 w-[100px] rounded-md" />
+          <Skeleton className="h-4 w-[60px] rounded-md" />
+          <Skeleton className="h-4 w-[80px] rounded-md" />
+        </div>
+        {Array.from({ length: 8 }, (_, index) => (
+          <div key={index} className="flex items-center gap-4 px-4 py-3">
+            <Skeleton className="h-4 w-4 rounded-sm" />
+            <div className="flex items-center gap-3 min-w-[240px]">
+              <Skeleton className="size-9 rounded-full" />
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-32 rounded-md" />
+                <Skeleton className="h-3 w-40 rounded-md" />
+              </div>
             </div>
+            <Skeleton className="h-5 w-24 rounded-full" />
+            <Skeleton className="h-3.5 w-24 rounded-md" />
+            <Skeleton className="h-3.5 w-24 rounded-md" />
+            <Skeleton className="h-3.5 w-12 rounded-md" />
+            <Skeleton className="h-5 w-16 rounded-full" />
           </div>
         ))}
+      </div>
+      <div className="flex items-center justify-between border-t border-neutral-100 p-4">
+        <Skeleton className="h-4 w-40 rounded-md" />
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-[140px] rounded-md" />
+          <Skeleton className="h-4 w-28 rounded-md" />
+          <div className="flex items-center gap-1">
+            <Skeleton className="size-8 rounded-md" />
+            <Skeleton className="size-8 rounded-md" />
+            <Skeleton className="size-8 rounded-md" />
+            <Skeleton className="size-8 rounded-md" />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -228,7 +284,7 @@ export function AtsKanbanBoard({
   readonly orgSlug: string;
   readonly memberId: string;
   readonly jobPostingId: string | null;
-  readonly jobPostings: Array<{ id: string; slug?: string; title: string; status?: string }>;
+  readonly jobPostings: Array<{ id: string; slug?: string; title: string; status?: string; requisitionId?: string | null }>;
   readonly onJobPostingChange: (id: string) => void;
   readonly isLoadingPostings: boolean;
   readonly showJobSelector?: boolean;
@@ -241,16 +297,20 @@ export function AtsKanbanBoard({
   const [hoverStageId, setHoverStageId] = useState<string | null>(null);
   const [addAfterStageId, setAddAfterStageId] = useState<string | null>(null);
   const [renamingStage, setRenamingStage] = useState<PipelineStage | null>(null);
+  const [setupDialogOpen, setSetupDialogOpen] = useState(false);
+  const [setupInitialSelection, setSetupInitialSelection] = useState<'new' | 'default' | 'import'>('new');
+  const [importingJobId, setImportingJobId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
     if (typeof window === 'undefined') return 'kanban';
     const stored = window.localStorage.getItem('pipeline-view-preference');
     return stored === 'table' ? 'table' : 'kanban';
   });
   const resolvedViewMode = defaultView ?? viewMode;
-  const { searchQuery, addStageSignal } = useCandidatesJobContext();
+  const { searchQuery, addStageSignal, consumeAddStageSignal } = useCandidatesJobContext();
   const deferredGlobalSearch = useDeferredValue(searchQuery);
 
   const addStageHandledRef = useRef(0);
+  const autoOpenedSetupRef = useRef(false);
 
   const boardQuery = usePipelineBoard(orgSlug, memberId, jobPostingId);
 
@@ -259,8 +319,9 @@ export function AtsKanbanBoard({
     if (addStageSignal > 0 && addStageSignal !== addStageHandledRef.current) {
       addStageHandledRef.current = addStageSignal;
       setAddAfterStageId(stages.at(-1)?.id ?? null);
+      consumeAddStageSignal();
     }
-  }, [addStageSignal, boardQuery.data?.stages]);
+  }, [addStageSignal, boardQuery.data?.stages, consumeAddStageSignal]);
   const moveApplication = useMoveApplicationStage(orgSlug, memberId, jobPostingId);
   const createStage = useCreatePipelineStage(orgSlug, memberId, jobPostingId);
   const updateStage = useUpdatePipelineStage(orgSlug, memberId, jobPostingId);
@@ -277,7 +338,6 @@ export function AtsKanbanBoard({
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const [schedulingApplication, setSchedulingApplication] = useState<PipelineApplication | null>(null);
   const [meetingStartLocal, setMeetingStartLocal] = useState('');
-  const [meetingDuration, setMeetingDuration] = useState(30);
   const pendingMeetingWindowRef = useRef<Window | null>(null);
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const dragPointerXRef = useRef<number | null>(null);
@@ -288,6 +348,9 @@ export function AtsKanbanBoard({
     () => jobPostings.find((posting) => posting.id === jobPostingId) ?? null,
     [jobPostingId, jobPostings],
   );
+  const setupRequisitionId = currentPosting?.requisitionId ?? '';
+  const createDefaultPipeline = useCreateRequisitionDefaultPipeline(orgSlug, memberId, setupRequisitionId);
+  const importPipeline = useImportRequisitionPipeline(orgSlug, memberId, setupRequisitionId);
 
   const hasGoogleAccess = useCallback(async (scope: string) => {
     const result = await authClient.listAccounts();
@@ -487,7 +550,17 @@ export function AtsKanbanBoard({
     const applicationId = String(event.active.id);
     const toStageId = String(event.over.id);
     const currentStageId = event.active.data.current?.stageId;
+    const currentApplication =
+      boardQuery.data?.stages
+        .flatMap((stage) => stage.applications)
+        .find((application) => application.id === applicationId) ?? null;
     if (toStageId === currentStageId) {
+      setActiveApplication(null);
+      setHoverStageId(null);
+      return;
+    }
+    if (currentApplication?.interviewMeeting?.status === 'ONGOING') {
+      toast.error('This candidate is in an ongoing interview');
       setActiveApplication(null);
       setHoverStageId(null);
       return;
@@ -501,6 +574,72 @@ export function AtsKanbanBoard({
 
   function handleCreateStage(data: CreatePipelineStageInput) {
     void runStageAction({ kind: 'create-stage', data });
+  }
+
+  function openSetupDialog(selection: 'new' | 'default' | 'import') {
+    if (!setupRequisitionId) {
+      toast.error('This posting is not linked to a requisition yet');
+      return;
+    }
+    setSetupInitialSelection(selection);
+    setSetupDialogOpen(true);
+  }
+
+  function handleSetupCreateStage(data: SetupCreatePipelineStageInput) {
+    if (!jobPostingId) return;
+    void runStageAction({
+      kind: 'create-stage',
+      data: {
+        jobPostingId,
+        name: data.name,
+        afterStageId: stages[0]?.id ?? null,
+        stageType: data.stageType ?? 'DEFAULT',
+        evaluationEnabled: data.evaluationEnabled ?? false,
+        evaluationType: data.evaluationType ?? null,
+        evaluationIncludeTotal: data.evaluationIncludeTotal ?? false,
+        evaluationIncludeAnalysis: data.evaluationIncludeAnalysis ?? false,
+        dueDate: data.dueDate ?? null,
+        evaluationCategories: (data.evaluationCategories ?? []).map((category, index) => ({
+          id: category.id ?? null,
+          name: category.name,
+          type: category.type ?? 'NUMERIC',
+          order: category.order ?? index + 1,
+        })),
+      },
+    });
+  }
+
+  async function createSetupDefaultPipeline() {
+    if (!setupRequisitionId) {
+      toast.error('This posting is not linked to a requisition yet');
+      return;
+    }
+    try {
+      await createDefaultPipeline.mutateAsync();
+      setSetupDialogOpen(false);
+      await boardQuery.refetch();
+      toast.success('Default pipeline created');
+    } catch (error) {
+      toast.error(readActionError(error, 'Failed to create default pipeline'));
+    }
+  }
+
+  async function importSetupPipeline(sourceJobPostingId: string) {
+    if (!setupRequisitionId) {
+      toast.error('This posting is not linked to a requisition yet');
+      return;
+    }
+    try {
+      setImportingJobId(sourceJobPostingId);
+      await importPipeline.mutateAsync(sourceJobPostingId);
+      setSetupDialogOpen(false);
+      await boardQuery.refetch();
+      toast.success('Pipeline imported');
+    } catch (error) {
+      toast.error(readActionError(error, 'Failed to import pipeline'));
+    } finally {
+      setImportingJobId(null);
+    }
   }
 
   function handleRenameStage(data: CreatePipelineStageInput) {
@@ -584,19 +723,7 @@ export function AtsKanbanBoard({
     const start = existingStart ? new Date(existingStart) : new Date(Date.now() + 60 * 60 * 1000);
     if (!existingStart) start.setMinutes(0, 0, 0);
     setMeetingStartLocal(toIstDateTimeInput(start));
-    setMeetingDuration(30);
     setSchedulingApplication(application);
-  }
-
-  function markInterviewCompleted(application: PipelineApplication) {
-    if (!application.interviewMeeting?.id) return;
-    completeInterviewMeeting.mutate(
-      { applicationId: application.id, eventId: application.interviewMeeting.id },
-      {
-        onSuccess: () => toast.success('Interview marked completed'),
-        onError: (error) => toast.error(readActionError(error, 'Failed to complete interview')),
-      },
-    );
   }
 
   function scheduleInterview() {
@@ -607,20 +734,38 @@ export function AtsKanbanBoard({
       data: {
         mode: 'SCHEDULE',
         scheduledStartAt: istDateTimeInputToIso(meetingStartLocal),
-        durationMinutes: meetingDuration,
+        durationMinutes: 30,
       },
     });
+  }
+
+  function markInterviewCompleted(
+    application: PipelineApplication,
+    data?: {
+      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
+      notes?: string | null;
+    },
+  ) {
+    if (!application.interviewMeeting?.id) return;
+    completeInterviewMeeting.mutate(
+      { applicationId: application.id, eventId: application.interviewMeeting.id, data },
+      {
+        onSuccess: () => toast.success('Interview marked completed'),
+        onError: (error) => toast.error(readActionError(error, 'Failed to complete interview')),
+      },
+    );
   }
 
   async function moveSelectedApplications(applicationIds: string[], toStageId: string) {
     const currentApplications = boardQuery.data?.stages.flatMap((stage) => stage.applications) ?? [];
     const applicationsToMove = applicationIds.filter((applicationId) => {
       const application = currentApplications.find((item) => item.id === applicationId);
-      return application && application.pipelineStageId !== toStageId;
+      return application && application.pipelineStageId !== toStageId && application.interviewMeeting?.status !== 'ONGOING';
     });
+    const blockedCount = applicationIds.length - applicationsToMove.length;
 
     if (applicationsToMove.length === 0) {
-      toast.info('Selected candidates are already in that stage');
+      toast.info(blockedCount > 0 ? 'Ongoing interview candidates cannot be moved' : 'Selected candidates are already in that stage');
       return;
     }
 
@@ -630,6 +775,9 @@ export function AtsKanbanBoard({
       ),
     );
     toast.success(`${applicationsToMove.length} candidate${applicationsToMove.length === 1 ? '' : 's'} moved`);
+    if (blockedCount > 0) {
+      toast.info(`${blockedCount} ongoing interview candidate${blockedCount === 1 ? '' : 's'} skipped`);
+    }
   }
 
   function openEvaluationWorkspace(stage: PipelineStage) {
@@ -644,9 +792,29 @@ export function AtsKanbanBoard({
   }
 
   function openStageWorkspace(stage: PipelineStage) {
-    const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/jobs/${currentPosting.slug}/pipeline` : `/${orgSlug}/candidates`);
-    router.push(`${basePath}/${stage.slug}`);
+    const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/candidates/${currentPosting.slug}` : `/${orgSlug}/candidates`);
+    const jobContext = basePath.endsWith('/stage') && currentPosting?.slug
+      ? `?jobSlug=${encodeURIComponent(currentPosting.slug)}`
+      : '';
+    router.push(`${basePath}/${stage.slug}${jobContext}`);
   }
+
+  const stages = boardQuery.data?.stages ?? [];
+  const onlyAppliedSetup =
+    resolvedViewMode === 'kanban' &&
+    stages.length === 1 &&
+    stages[0]?.name.trim().toLowerCase() === 'applied' &&
+    stages[0]?.order === 1;
+
+  useEffect(() => {
+    if (!boardQuery.isSuccess || !onlyAppliedSetup || autoOpenedSetupRef.current || !setupRequisitionId) return;
+    autoOpenedSetupRef.current = true;
+    const timeout = window.setTimeout(() => {
+      setSetupInitialSelection('new');
+      setSetupDialogOpen(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [boardQuery.isSuccess, onlyAppliedSetup, setupRequisitionId]);
 
   if (!jobPostingId) {
     return (
@@ -657,10 +825,18 @@ export function AtsKanbanBoard({
   }
 
   if (boardQuery.isLoading) {
-    return <BoardSkeleton />;
+    return resolvedViewMode === 'table' ? <TableSkeleton /> : <BoardSkeleton />;
   }
 
-  const stages = boardQuery.data?.stages ?? [];
+  const setupApplications = onlyAppliedSetup
+    ? [...(stages[0]?.applications ?? [])]
+        .sort((left, right) => {
+          const leftTime = new Date(left.lastMovedAt ?? left.appliedDate).getTime();
+          const rightTime = new Date(right.lastMovedAt ?? right.appliedDate).getTime();
+          return rightTime - leftTime;
+        })
+        .filter((application) => matchesApplicationSearch(application, stages[0].name, deferredGlobalSearch))
+    : [];
 
   return (
     <>
@@ -726,6 +902,39 @@ export function AtsKanbanBoard({
           onOpenCandidate={setSelectedApplicationId}
           onMoveSelected={moveSelectedApplications}
         />
+      ) : onlyAppliedSetup ? (
+        <DndContext sensors={sensors} collisionDetection={closestCorners}>
+          <div className="grid h-[calc(100dvh-140px)] min-w-0 grid-cols-[300px_minmax(0,1fr)] gap-5 overflow-hidden rounded-xl bg-canvas">
+            <KanbanColumn
+              stage={stages[0]}
+              isFirst
+              isLast
+              filteredApplications={setupApplications}
+              previewApplication={null}
+              isUpdating={false}
+              onOpenCandidate={setSelectedApplicationId}
+              onAddAfter={setAddAfterStageId}
+              onRename={setRenamingStage}
+              onDelete={(item) => deleteStage.mutate(item.id)}
+              onMoveLeft={(item) => moveStage(item, -1)}
+              onMoveRight={(item) => moveStage(item, 1)}
+              onOpenStageWorkspace={openStageWorkspace}
+              onOpenEvaluationWorkspace={openEvaluationWorkspace}
+              onScheduleInterview={openScheduleInterview}
+              onStartInterview={startInterviewNow}
+              onCompleteInterview={markInterviewCompleted}
+            />
+            <div className="flex min-h-0 items-center justify-center">
+              <PipelineSetupCard
+                creatingDefault={createDefaultPipeline.isPending}
+                importing={importPipeline.isPending}
+                onAddStage={() => openSetupDialog('new')}
+                onUseDefault={() => openSetupDialog('default')}
+                onImport={() => openSetupDialog('import')}
+              />
+            </div>
+          </div>
+        </DndContext>
       ) : (
         <DndContext
           autoScroll={false}
@@ -756,7 +965,12 @@ export function AtsKanbanBoard({
           >
             {stages.map((stage, index) => {
               const activeStageId = activeApplication?.pipelineStageId ?? null;
-              const filteredApplications = stage.applications.filter((application) => {
+              const sortedApplications = [...stage.applications].sort((left, right) => {
+                const leftTime = new Date(left.lastMovedAt ?? left.appliedDate).getTime();
+                const rightTime = new Date(right.lastMovedAt ?? right.appliedDate).getTime();
+                return rightTime - leftTime;
+              });
+              const filteredApplications = sortedApplications.filter((application) => {
                 if (activeApplication && stage.id === activeStageId && application.id === activeApplication.id) {
                   return false;
                 }
@@ -825,12 +1039,27 @@ export function AtsKanbanBoard({
       />
       <StageConfigDrawer
         open={renamingStage !== null}
-        title="Configure pipeline stage"
+        title={renamingStage ? `Configure ${renamingStage.name}` : 'Configure stage'}
         stage={renamingStage}
         jobPostingId={jobPostingId}
         submitting={updateStage.isPending}
         onOpenChange={(open) => setRenamingStage(open ? renamingStage : null)}
         onSubmit={handleRenameStage}
+      />
+      <PipelineSetupDialog
+        key={`${setupInitialSelection}-${setupDialogOpen ? 'open' : 'closed'}-${jobPostingId}`}
+        open={setupDialogOpen}
+        initialSelection={setupInitialSelection}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        requisitionId={setupRequisitionId}
+        creatingStage={createStage.isPending}
+        creatingDefault={createDefaultPipeline.isPending}
+        importingJobId={importingJobId}
+        onOpenChange={setSetupDialogOpen}
+        onCreateStage={handleSetupCreateStage}
+        onCreateDefault={createSetupDefaultPipeline}
+        onImport={importSetupPipeline}
       />
       <CandidateDrawer
         orgSlug={orgSlug}
@@ -887,20 +1116,6 @@ export function AtsKanbanBoard({
                 value={meetingStartLocal}
                 onChange={(event) => setMeetingStartLocal(event.target.value)}
               />
-            </label>
-            <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
-              Duration
-              <Select value={String(meetingDuration)} onValueChange={(value) => setMeetingDuration(Number(value))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 minutes</SelectItem>
-                  <SelectItem value="45">45 minutes</SelectItem>
-                  <SelectItem value="60">60 minutes</SelectItem>
-                  <SelectItem value="90">90 minutes</SelectItem>
-                </SelectContent>
-              </Select>
             </label>
           </div>
           <DialogFooter>

@@ -3,17 +3,19 @@ import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
-import { AtsInterviewWorkspacePage } from '@/modules/candidates/components/AtsInterviewWorkspacePage';
+import { StageWorkspacePageShell } from '@/modules/candidates/components/StageWorkspacePageShell';
 
-export default async function InterviewStageWorkspacePage({
+export default async function StageWorkspacePage({
   params,
+  searchParams,
 }: Readonly<{
-  params: Promise<{ orgSlug: string; jobSlug: string; stageSlug: string }>;
+  params: Promise<{ orgSlug: string; stageSlug: string }>;
+  searchParams?: Promise<{ jobSlug?: string }>;
 }>) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) redirect('/login');
 
-  const { orgSlug, jobSlug, stageSlug } = await params;
+  const { orgSlug, stageSlug } = await params;
   let member: Awaited<ReturnType<typeof requireOrgMembership>>['member'];
 
   try {
@@ -22,12 +24,14 @@ export default async function InterviewStageWorkspacePage({
     redirect('/organizations');
   }
 
+  const resolvedSearchParams = await searchParams;
+
   return (
-    <AtsInterviewWorkspacePage
+    <StageWorkspacePageShell
       orgSlug={orgSlug}
       memberId={member.id}
-      jobSlug={jobSlug}
       stageSlug={stageSlug}
+      jobSlug={resolvedSearchParams?.jobSlug ?? null}
     />
   );
 }

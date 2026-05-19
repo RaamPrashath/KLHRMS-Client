@@ -1,8 +1,20 @@
 'use client';
 
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCorners,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, Clock, Loader2, Search, Send, Shuffle, Users } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, Clock, Loader2, Search, Send, Shuffle, X } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -31,6 +43,7 @@ import {
   useInterviewersSearch,
   usePreviewStageInterviewWarnings,
   useStageWorkspace,
+  useStageWorkspaceByJobSlug,
 } from '@/modules/candidates/hooks/useAtsPipeline';
 import type {
   HiringTeam,
@@ -45,6 +58,7 @@ interface StageWorkspacePageShellProps {
   readonly orgSlug: string;
   readonly memberId: string;
   readonly stageSlug: string;
+  readonly jobSlug?: string | null;
 }
 
 interface AssignmentDraft {
@@ -55,6 +69,13 @@ interface AssignmentDraft {
 interface AvailabilityResult {
   messages: string[];
   hasWarnings: boolean;
+}
+
+interface AssignmentColumnModel {
+  id: string;
+  title: string;
+  interviewer: StageWorkspaceInterviewer | null;
+  candidates: StageWorkspaceCandidate[];
 }
 
 function initials(value: string): string {
@@ -105,6 +126,11 @@ function buildAvailabilityKey(interviewerMemberId: string, scheduledStartAt: str
   return `${interviewerMemberId}::${scheduledStartAt.slice(0, 10)}`;
 }
 
+function isLockedAssignment(candidate: StageWorkspaceCandidate): boolean {
+  const status = candidate.currentAssignment?.status;
+  return status === 'ACCEPTED' || status === 'SCHEDULED' || status === 'COMPLETED';
+}
+
 function teamMemberToInterviewer(team: HiringTeam): StageWorkspaceInterviewer[] {
   return team.members.map((member) => ({
     memberId: member.memberId,
@@ -112,6 +138,137 @@ function teamMemberToInterviewer(team: HiringTeam): StageWorkspaceInterviewer[] 
     email: member.email ?? '',
     department: member.role ?? null,
   }));
+}
+
+function allocationColumnId(memberId: string): string {
+  return `interviewer:${memberId}`;
+}
+
+function memberIdFromColumnId(columnId: string): string | null {
+  return columnId.startsWith('interviewer:') ? columnId.slice('interviewer:'.length) : null;
+}
+
+function assignmentStatusLabel(candidate: StageWorkspaceCandidate): string | null {
+  const status = candidate.currentAssignment?.status;
+  if (!status) return null;
+  if (status === 'PENDING_ACCEPTANCE' || status === 'PENDING') return 'Awaiting response';
+  if (status === 'ACCEPTED') return 'Accepted';
+  if (status === 'SCHEDULED') return 'Scheduled';
+  if (status === 'COMPLETED') return 'Completed';
+  return status;
+}
+
+function AllocationCard({
+  candidate,
+  disabled = false,
+}: {
+  readonly candidate: StageWorkspaceCandidate;
+  readonly disabled?: boolean;
+}) {
+  const locked = disabled || isLockedAssignment(candidate);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: candidate.applicationId,
+    disabled: locked,
+  });
+  const name = candidateName(candidate);
+  const status = assignmentStatusLabel(candidate);
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'rounded-xl border border-neutral-100 bg-surface p-3 shadow-[var(--shadow-1)] transition',
+        locked ? 'cursor-not-allowed opacity-70' : 'cursor-grab active:cursor-grabbing',
+        isDragging && 'opacity-40',
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <Avatar className="size-9 shrink-0">
+          <AvatarFallback className="bg-primary-ghost text-xs font-semibold text-primary">
+            {initials(name)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
+          <p className="truncate text-xs text-neutral-500">{candidate.candidate.email}</p>
+          <p className="mt-1 truncate text-xs text-neutral-400">{candidate.jobTitle}</p>
+          {status ? (
+            <span className={cn(
+              'mt-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+              locked ? 'bg-success-bg text-success-text' : 'bg-warning-bg text-warning-text',
+            )}>
+              {status}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssignmentColumn({
+  column,
+  onRemove,
+}: {
+  readonly column: AssignmentColumnModel;
+  readonly onRemove?: (memberId: string) => void;
+}) {
+  const { isOver, setNodeRef } = useDroppable({ id: column.id });
+
+  return (
+    <section
+      ref={setNodeRef}
+      className={cn(
+        'flex min-h-[360px] min-w-[280px] flex-col rounded-xl border border-neutral-100 bg-neutral-50/60 shadow-[var(--shadow-1)]',
+        isOver && 'border-primary bg-primary-ghost',
+      )}
+    >
+      <div className="border-b border-neutral-100 bg-surface px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold text-neutral-900">{column.title}</h3>
+            {column.interviewer ? (
+              <p className="truncate text-xs text-neutral-500">{column.interviewer.email}</p>
+            ) : (
+              <p className="text-xs text-neutral-500">Drag candidates here to unassign</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-xs text-neutral-600">
+              {column.candidates.length}
+            </span>
+            {column.interviewer && onRemove ? (
+              <button
+                type="button"
+                className="rounded-md p-1 text-neutral-400 hover:bg-neutral-50 hover:text-destructive-text"
+                onClick={() => onRemove(column.interviewer?.memberId ?? '')}
+                aria-label={`Remove ${column.interviewer.name}`}
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-3 p-3">
+        {column.candidates.length > 0 ? (
+          column.candidates.map((candidate) => (
+            <AllocationCard key={candidate.applicationId} candidate={candidate} />
+          ))
+        ) : (
+          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-neutral-200 p-4 text-center text-xs text-neutral-400">
+            Drop candidates here
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
 
 function InterviewerSelect({
@@ -197,8 +354,11 @@ export function StageWorkspacePageShell({
   orgSlug,
   memberId,
   stageSlug,
+  jobSlug = null,
 }: StageWorkspacePageShellProps) {
-  const workspaceQuery = useStageWorkspace(orgSlug, memberId, stageSlug);
+  const stageWorkspaceQuery = useStageWorkspace(orgSlug, memberId, stageSlug);
+  const jobStageWorkspaceQuery = useStageWorkspaceByJobSlug(orgSlug, memberId, jobSlug, stageSlug);
+  const workspaceQuery = jobSlug ? jobStageWorkspaceQuery : stageWorkspaceQuery;
   const previewWarnings = usePreviewStageInterviewWarnings(orgSlug, memberId, stageSlug);
   const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug);
   const distributeInterviews = useDistributeStageInterviews(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
@@ -222,6 +382,9 @@ export function StageWorkspacePageShell({
   const [teamDurationMinutes, setTeamDurationMinutes] = useState(30);
   const [teamWarnings, setTeamWarnings] = useState<StageInterviewWarning[]>([]);
   const [teamWarningsReviewed, setTeamWarningsReviewed] = useState(false);
+  const [boardAssignments, setBoardAssignments] = useState<Record<string, string | null>>({});
+  const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const workspace = workspaceQuery.data;
   const hiringTeams = useMemo(
@@ -233,7 +396,9 @@ export function StageWorkspacePageShell({
     [hiringTeams, selectedTeamId],
   );
   const selectedApplicationIds = useMemo(
-    () => workspace?.candidates.map((candidate) => candidate.applicationId) ?? [],
+    () => workspace?.candidates
+      .filter((candidate) => !isLockedAssignment(candidate))
+      .map((candidate) => candidate.applicationId) ?? [],
     [workspace],
   );
 
@@ -241,6 +406,50 @@ export function StageWorkspacePageShell({
     if (selectedTeam) return teamMemberToInterviewer(selectedTeam);
     return customTeamMembers;
   }, [customTeamMembers, selectedTeam]);
+
+  const activeCandidate = useMemo(
+    () => workspace?.candidates.find((candidate) => candidate.applicationId === activeApplicationId) ?? null,
+    [activeApplicationId, workspace],
+  );
+
+  const assignmentColumns = useMemo<AssignmentColumnModel[]>(() => {
+    if (!workspace) return [];
+    const memberMap = new Map(resolvedTeamMembers.map((member) => [member.memberId, member]));
+    for (const candidate of workspace.candidates) {
+      const assignmentMemberId = candidate.currentAssignment?.interviewer?.memberId;
+      const assignmentInterviewer = candidate.currentAssignment?.interviewer;
+      if (assignmentMemberId && assignmentInterviewer && !memberMap.has(assignmentMemberId)) {
+        memberMap.set(assignmentMemberId, assignmentInterviewer);
+      }
+    }
+
+    const columns: AssignmentColumnModel[] = [
+      {
+        id: 'unassigned',
+        title: 'Unassigned',
+        interviewer: null,
+        candidates: [],
+      },
+      ...Array.from(memberMap.values()).map((interviewer) => ({
+        id: allocationColumnId(interviewer.memberId),
+        title: interviewer.name,
+        interviewer,
+        candidates: [],
+      })),
+    ];
+    const columnsById = new Map(columns.map((column) => [column.id, column]));
+
+    for (const candidate of workspace.candidates) {
+      const memberId = boardAssignments[candidate.applicationId]
+        ?? candidate.currentAssignment?.interviewer?.memberId
+        ?? null;
+      const columnId = memberId ? allocationColumnId(memberId) : 'unassigned';
+      const column = columnsById.get(columnId) ?? columnsById.get('unassigned');
+      column?.candidates.push(candidate);
+    }
+
+    return columns;
+  }, [boardAssignments, resolvedTeamMembers, workspace]);
 
   const completedAssignments = useMemo<StageInterviewAssignment[]>(() => {
     if (!workspace || assignmentMode !== 'direct') return [];
@@ -259,6 +468,7 @@ export function StageWorkspacePageShell({
   const assignmentsByAvailabilityKey = useMemo(() => {
     const map = new Map<string, StageInterviewAssignment>();
     for (const assignment of completedAssignments) {
+      if (!assignment.scheduledStartAt) continue;
       const key = buildAvailabilityKey(assignment.interviewerMemberId, assignment.scheduledStartAt);
       if (!map.has(key)) {
         map.set(key, assignment);
@@ -308,6 +518,95 @@ export function StageWorkspacePageShell({
         ? current
         : [...current, interviewer]
     ));
+  }
+
+  function removeBackupMember(memberId: string) {
+    setTeamWarnings([]);
+    setTeamWarningsReviewed(false);
+    setBackupMembers((current) => current.filter((member) => member.memberId !== memberId));
+  }
+
+  function removeBoardInterviewer(memberId: string) {
+    if (!memberId) return;
+    setSelectedTeamId('');
+    setCustomTeamMembers((current) => current.filter((member) => member.memberId !== memberId));
+    setBoardAssignments((current) => {
+      const next = { ...current };
+      for (const [applicationId, assignedMemberId] of Object.entries(next)) {
+        if (assignedMemberId === memberId) next[applicationId] = null;
+      }
+      return next;
+    });
+  }
+
+  function handleBoardDragStart(event: DragStartEvent) {
+    setActiveApplicationId(String(event.active.id));
+  }
+
+  function handleBoardDragEnd(event: DragEndEvent) {
+    const applicationId = String(event.active.id);
+    const overId = event.over?.id ? String(event.over.id) : null;
+    setActiveApplicationId(null);
+    if (!overId) return;
+    const candidate = workspace?.candidates.find((item) => item.applicationId === applicationId);
+    if (!candidate || isLockedAssignment(candidate)) return;
+    setBoardAssignments((current) => ({
+      ...current,
+      [applicationId]: memberIdFromColumnId(overId),
+    }));
+  }
+
+  function handleAutoDistributeDraft() {
+    if (!workspace || resolvedTeamMembers.length === 0) {
+      toast.error('Add at least one interviewer first');
+      return;
+    }
+    setBoardAssignments((current) => {
+      const next = { ...current };
+      let index = 0;
+      for (const candidate of workspace.candidates) {
+        if (isLockedAssignment(candidate)) continue;
+        const assignedMemberId = next[candidate.applicationId]
+          ?? candidate.currentAssignment?.interviewer?.memberId
+          ?? null;
+        if (assignedMemberId) continue;
+        next[candidate.applicationId] = resolvedTeamMembers[index % resolvedTeamMembers.length]?.memberId ?? null;
+        index += 1;
+      }
+      return next;
+    });
+  }
+
+  async function handleSaveBoardAssignments() {
+    if (!workspace) {
+      return;
+    }
+    const assignments = workspace.candidates.flatMap((candidate) => {
+      if (isLockedAssignment(candidate)) return [];
+      const interviewerMemberId = boardAssignments[candidate.applicationId]
+        ?? candidate.currentAssignment?.interviewer?.memberId
+        ?? null;
+      if (!interviewerMemberId) return [];
+      return [{
+        applicationId: candidate.applicationId,
+        interviewerMemberId,
+        scheduledStartAt: null,
+        durationMinutes: teamDurationMinutes,
+        backupInterviewers: backupMembers.map((member) => member.memberId),
+      }];
+    });
+    if (assignments.length === 0) {
+      toast.error('Assign at least one candidate to an interviewer');
+      return;
+    }
+    try {
+      const result = await assignInterviews.mutateAsync(assignments);
+      toast.success(`${result.assignedCount} assignment${result.assignedCount === 1 ? '' : 's'} saved`);
+      setBackupMembers([]);
+      setBoardAssignments({});
+    } catch (error) {
+      toast.error(readActionError(error, 'Failed to save assignments'));
+    }
   }
 
   useEffect(() => {
@@ -454,28 +753,53 @@ export function StageWorkspacePageShell({
     <div className="min-h-full bg-canvas px-8 py-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-10">
-          <Button asChild variant="ghost" size="sm" className="-ml-2 mb-6 text-neutral-500 hover:text-neutral-900">
-            <Link href={`/${orgSlug}/candidates`}>
-              <ChevronLeft className="mr-1 size-4" />
-              Pipeline
-            </Link>
-          </Button>
-
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
-                {workspace.stage.name}
-              </h1>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
-                <span className="size-1 rounded-full bg-neutral-300" />
-                <span className="font-mono text-xs font-medium text-neutral-400 uppercase tracking-wider">
-                  {workspace.candidateCount} Candidates
-                </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button asChild variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900">
+                <Link href={`/${orgSlug}/candidates`}>
+                  <ChevronLeft className="size-5" />
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight text-neutral-900">
+                  {workspace.stage.name}
+                </h1>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
+                  <span className="size-1 rounded-full bg-neutral-300" />
+                  <span className="font-mono text-xs font-medium text-neutral-400 uppercase tracking-wider">
+                    {workspace.candidateCount} Candidates
+                  </span>
+                </div>
               </div>
             </div>
 
-{/* Direct / Automatic toggle removed for now */}
+            <div className="flex items-center gap-1 rounded-lg border border-neutral-200 bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setAssignmentMode('direct')}
+                className={cn(
+                  "rounded-md px-4 py-2 text-sm font-semibold transition-all",
+                  assignmentMode === 'direct'
+                    ? "bg-neutral-900 text-white shadow-sm"
+                    : "text-neutral-600 hover:text-neutral-900"
+                )}
+              >
+                Direct
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignmentMode('automatic')}
+                className={cn(
+                  "rounded-md px-4 py-2 text-sm font-semibold transition-all",
+                  assignmentMode === 'automatic'
+                    ? "bg-neutral-900 text-white shadow-sm"
+                    : "text-neutral-600 hover:text-neutral-900"
+                )}
+              >
+                Automatic
+              </button>
+            </div>
           </div>
         </div>
 
@@ -541,7 +865,7 @@ export function StageWorkspacePageShell({
                       <TableBody>
                         {workspace.candidates.map((candidate) => {
                           const draft = drafts[candidate.applicationId];
-                          const fallbackSchedule = candidate.currentAssignment
+                          const fallbackSchedule = candidate.currentAssignment?.scheduledStartAt
                             ? toLocalDateTimeInput(candidate.currentAssignment.scheduledStartAt)
                             : '';
                           const scheduledLocal = draft?.scheduledLocal ?? fallbackSchedule;
@@ -565,11 +889,13 @@ export function StageWorkspacePageShell({
                                   <div className="min-w-0">
                                     <p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
                                     <p className="truncate text-xs text-neutral-500">{candidate.candidate.email}</p>
-                                    {candidate.currentAssignment ? (
+                                    {candidate.currentAssignment?.scheduledStartAt ? (
                                       <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-primary">
                                         <Clock className="size-3" />
                                         <span>Scheduled: {formatDateTime(candidate.currentAssignment.scheduledStartAt)}</span>
                                       </div>
+                                    ) : candidate.currentAssignment ? (
+                                      <p className="mt-1 text-[11px] font-medium text-warning-text">Awaiting interviewer response</p>
                                     ) : (
                                       <p className="mt-1 text-[11px] font-medium text-neutral-400">Not scheduled</p>
                                     )}
@@ -635,7 +961,123 @@ export function StageWorkspacePageShell({
                 </div>
               </div>
             ) : (
-              <div className="mx-auto max-w-4xl">
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-neutral-100 bg-surface p-5 shadow-[var(--shadow-1)]">
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                    <div className="space-y-2">
+                      <label className="text-[13px] font-medium text-neutral-700">Add interviewer</label>
+                      <InterviewerSelect
+                        orgSlug={orgSlug}
+                        memberId={memberId}
+                        value={null}
+                        placeholder="Search employees..."
+                        onSelect={addCustomTeamMember}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleAutoDistributeDraft}
+                        disabled={resolvedTeamMembers.length === 0}
+                      >
+                        <Shuffle className="mr-2 size-4" />
+                        Auto distribute
+                      </Button>
+                      <Button
+                        type="button"
+                        className="bg-primary hover:bg-primary-hover"
+                        onClick={handleSaveBoardAssignments}
+                        disabled={assignInterviews.isPending}
+                      >
+                        {assignInterviews.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Send className="mr-2 size-4" />}
+                        Save Assignments
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-neutral-500">
+                    Automatic assignments are sent for interviewer approval. The interviewer schedules the interview only after accepting.
+                  </p>
+                  <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[13px] font-semibold text-neutral-700">Primary interviewers</p>
+                        <span className="font-mono text-xs text-neutral-400">{resolvedTeamMembers.length}</span>
+                      </div>
+                      <div className="flex min-h-9 flex-wrap gap-2">
+                        {resolvedTeamMembers.map((member) => (
+                          <span key={member.memberId} className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium text-neutral-700">
+                            {member.name}
+                            <button
+                              type="button"
+                              className="text-neutral-400 hover:text-destructive-text"
+                              onClick={() => removeBoardInterviewer(member.memberId)}
+                              aria-label={`Remove ${member.name}`}
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </span>
+                        ))}
+                        {resolvedTeamMembers.length === 0 ? (
+                          <span className="text-xs text-neutral-400">Search and add interviewers to create board columns.</span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[13px] font-semibold text-neutral-700">Backup interviewers</label>
+                      <InterviewerSelect
+                        orgSlug={orgSlug}
+                        memberId={memberId}
+                        value={null}
+                        placeholder="Search backup employees..."
+                        onSelect={addBackupMember}
+                      />
+                      <div className="flex min-h-9 flex-wrap gap-2">
+                        {backupMembers.map((member) => (
+                          <span key={member.memberId} className="inline-flex items-center gap-2 rounded-full border border-info-border bg-info-bg px-3 py-1 text-xs font-medium text-info-text">
+                            {member.name}
+                            <button
+                              type="button"
+                              className="text-info-text/70 hover:text-destructive-text"
+                              onClick={() => removeBackupMember(member.memberId)}
+                              aria-label={`Remove backup ${member.name}`}
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </span>
+                        ))}
+                        {backupMembers.length === 0 ? (
+                          <span className="text-xs text-neutral-400">Backups are promoted automatically if a primary rejects.</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCorners}
+                  onDragStart={handleBoardDragStart}
+                  onDragEnd={handleBoardDragEnd}
+                  onDragCancel={() => setActiveApplicationId(null)}
+                >
+                  <div className="flex gap-4 overflow-x-auto pb-3">
+                    {assignmentColumns.map((column) => (
+                      <AssignmentColumn
+                        key={column.id}
+                        column={column}
+                        onRemove={column.interviewer ? removeBoardInterviewer : undefined}
+                      />
+                    ))}
+                  </div>
+                  <DragOverlay zIndex={9999}>
+                    {activeCandidate ? <AllocationCard candidate={activeCandidate} disabled /> : null}
+                  </DragOverlay>
+                </DndContext>
+
+                {false ? (
+                <div className="mx-auto max-w-4xl">
                 <div className="mb-8 flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-bold text-neutral-900">Automatic Team Shuffle</h2>
@@ -892,6 +1334,8 @@ export function StageWorkspacePageShell({
                     </motion.div>
                   )}
                 </div>
+                </div>
+                ) : null}
               </div>
             )}
           </motion.div>

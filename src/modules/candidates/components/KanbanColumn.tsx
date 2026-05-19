@@ -66,7 +66,13 @@ export function KanbanColumn({
   readonly onOpenEvaluationWorkspace: (stage: PipelineStage) => void;
   readonly onScheduleInterview: (application: PipelineApplication) => void;
   readonly onStartInterview: (application: PipelineApplication) => void;
-  readonly onCompleteInterview: (application: PipelineApplication) => void;
+  readonly onCompleteInterview: (
+    application: PipelineApplication,
+    data?: {
+      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
+      notes?: string | null;
+    },
+  ) => void;
   readonly filteredApplications: PipelineApplication[];
   readonly previewApplication?: PipelineApplication | null;
   readonly isUpdating?: boolean;
@@ -80,7 +86,8 @@ export function KanbanColumn({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden border-r border-neutral-200/70 px-2 pt-2 last:border-r-0',
+        'flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden px-2 pt-2',
+        isLast && !isFirst ? 'border-r-0' : 'border-r border-neutral-200/70',
         isOver && ' bg-neutral-100/90',
       )}
     >
@@ -170,11 +177,24 @@ export function KanbanColumn({
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto no-scrollbar pb-6">
         <AnimatePresence initial={false}>
+          {filteredApplications.map((application) => (
+            <CandidateCard
+              key={application.id}
+              application={application}
+              onOpen={onOpenCandidate}
+              meetingEnabled={stage.meetingEnabled}
+              evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
+              onScheduleInterview={onScheduleInterview}
+              onStartInterview={onStartInterview}
+              onCompleteInterview={onCompleteInterview}
+            />
+          ))}
           {previewApplication ? (
             <CandidateCard
               key={`preview-${previewApplication.id}-${stage.id}`}
               application={previewApplication}
               meetingEnabled={stage.meetingEnabled}
+              evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
               onScheduleInterview={onScheduleInterview}
               onStartInterview={onStartInterview}
               onCompleteInterview={onCompleteInterview}
@@ -182,21 +202,14 @@ export function KanbanColumn({
               draggable={false}
             />
           ) : null}
-          {filteredApplications.map((application) => (
-            <CandidateCard
-              key={application.id}
-              application={application}
-              onOpen={onOpenCandidate}
-              meetingEnabled={stage.meetingEnabled}
-              onScheduleInterview={onScheduleInterview}
-              onStartInterview={onStartInterview}
-              onCompleteInterview={onCompleteInterview}
-            />
-          ))}
         </AnimatePresence>
         {filteredApplications.length === 0 && (
           <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 p-4 text-center text-xs text-neutral-500">
-            {stage.applications.length === 0 ? 'Drop candidates here' : 'No candidates match'}
+            {stage.applications.length === 0 && isFirst && isLast
+              ? 'No candidates yet'
+              : stage.applications.length === 0
+                ? 'Drop candidates here'
+                : 'No candidates match'}
           </div>
         )}
       </div>
