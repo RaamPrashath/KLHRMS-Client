@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  bulkCreateAssetsAction,
   createAssetAction,
   createAssetCategoryAction,
   createAssetCategoryFieldAction,
@@ -9,7 +10,7 @@ import {
   deleteAssetAction,
   deleteAssetCategoryAction,
   deleteAssetCategoryFieldAction,
-  provideAssetAction,
+  issueAssetsAction,
   returnAssetAction,
   updateAssetAction,
   updateAssetCategoryAction,
@@ -24,12 +25,23 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     await queryClient.invalidateQueries({ queryKey: ['assets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-meta', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['asset-categories', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['asset-available-groups', orgSlug] });
     if (assetId) {
       await queryClient.invalidateQueries({ queryKey: ['asset', orgSlug, assetId] });
     }
   };
 
   return {
+    bulkCreateAssets: useMutation({
+      mutationFn: (data: Parameters<typeof bulkCreateAssetsAction>[0]['data']) =>
+        bulkCreateAssetsAction({ orgSlug, memberId, data }),
+      onSuccess: async () => invalidateAll(),
+    }),
+    issueAssets: useMutation({
+      mutationFn: (data: Parameters<typeof issueAssetsAction>[0]['data']) =>
+        issueAssetsAction({ orgSlug, memberId, data }),
+      onSuccess: async () => invalidateAll(),
+    }),
     createAsset: useMutation({
       mutationFn: (data: Parameters<typeof createAssetAction>[0]['data']) =>
         createAssetAction({ orgSlug, memberId, data }),
@@ -43,11 +55,6 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     archiveAsset: useMutation({
       mutationFn: (assetId: string) => deleteAssetAction({ orgSlug, memberId, assetId }),
       onSuccess: async () => invalidateAll(),
-    }),
-    provideAsset: useMutation({
-      mutationFn: (data: Parameters<typeof provideAssetAction>[0]['data']) =>
-        provideAssetAction({ orgSlug, memberId, data }),
-      onSuccess: async (asset) => invalidateAll(asset.id),
     }),
     returnAsset: useMutation({
       mutationFn: (data: Parameters<typeof returnAssetAction>[0]['data']) =>
@@ -70,7 +77,7 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
       onSuccess: async (asset) => invalidateAll(asset.id),
     }),
     createCategory: useMutation({
-      mutationFn: (data: { name: string; description?: string }) =>
+      mutationFn: (data: { name: string; description?: string; assetCode?: string | null }) =>
         createAssetCategoryAction({ orgSlug, memberId, data }),
       onSuccess: async () => invalidateAll(),
     }),
@@ -80,7 +87,7 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
         data,
       }: {
         categoryId: string;
-        data: { name?: string; description?: string };
+        data: { name?: string; description?: string; assetCode?: string | null };
       }) => updateAssetCategoryAction({ orgSlug, memberId, categoryId, data }),
       onSuccess: async () => invalidateAll(),
     }),

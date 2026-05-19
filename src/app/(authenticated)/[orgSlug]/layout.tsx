@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireOrgMembership } from "@/lib/organizations";
+import organizations, { requireOrgMembership } from "@/lib/organizations";
 import { OrgSidebarShell } from "@/components/sidebar/org-sidebar-shell";
 import { type RolePermissions } from "@/lib/hrms-roles";
 import { requireServerSession } from "@/lib/server-session";
@@ -23,6 +23,12 @@ export default async function OrganizationLayout({
         redirect("/organizations");
     }
 
+    const organizationOptions = (await organizations.getOrganizationsForUser(session.user.id)).map((item) => ({
+        slug: item.slug,
+        name: item.name,
+        roleName: item.membership.role?.name ?? null,
+    }));
+
     const userImage = (session.user as { image?: string | null }).image ?? null;
 
     return (
@@ -31,6 +37,7 @@ export default async function OrganizationLayout({
             orgName={org.name}
             roleName={member.role?.name ?? null}
             permissions={(member.role?.permissions as RolePermissions) ?? null}
+            organizations={organizationOptions}
             user={{
                 name: session.user.name ?? null,
                 email: session.user.email ?? null,

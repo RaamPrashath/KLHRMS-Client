@@ -131,7 +131,7 @@ function MyTicketsTable({ tickets }: { tickets: MyTicket[] }) {
                 {hg.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#86868b]"
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400"
                   >
                     {header.isPlaceholder ? null : (
                       <button
@@ -181,7 +181,7 @@ function MyTicketsTable({ tickets }: { tickets: MyTicket[] }) {
 
       {table.getPageCount() > 1 && (
         <div className="mt-3 flex items-center justify-between border-t border-[#f0f0f2] px-0 pt-3">
-          <span className="text-[12px] text-[#86868b] tabular-nums">
+          <span className="text-[12px] text-neutral-400 tabular-nums">
             Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
           </span>
           <div className="flex items-center gap-1">

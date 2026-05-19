@@ -72,11 +72,21 @@ const assetUnitInputSchema = z.object({
   serialNumber: z.string().nullable().optional(),
 });
 
+export const bulkAssetCreateSchema = z.object({
+  assetCode: z.string().trim().min(1, 'Asset code is required').max(120),
+  name: z.string().trim().min(1, 'Asset name is required').max(255),
+  categoryDefinitionId: z.string().optional().nullable(),
+  condition: z.enum(assetConditionOptions),
+  location: optionalTrimmedString(160),
+  serialNumbers: z.array(z.string().trim().min(1, 'Serial number cannot be empty')).min(1, 'At least one serial number is required'),
+  customFields: z.array(customFieldValueSchema).optional().default([]),
+});
+
 export const assetSchema = z
   .object({
     assetCode: z.string().trim().min(1, 'Asset code / Tag ID is required').max(120),
     name: z.string().trim().min(1, 'Asset name is required').max(255),
-    category: z.enum(assetCategoryOptions),
+    category: z.string().trim().min(1, 'Category is required'),
     categoryDefinitionId: z.string().optional().nullable(),
     serialNumber: optionalTrimmedString(255),
     model: optionalTrimmedString(120),
@@ -100,11 +110,10 @@ export const assetSchema = z
     },
   );
 
-export const assetProvideSchema = z.object({
+export const assetIssueSchema = z.object({
   memberId: z.string().min(1, 'Employee is required'),
-  assetId: z.string().min(1, 'Asset is required'),
-  assetUnitId: z.string().optional().nullable(),
-  providedDate: z.string().optional().or(z.literal('')),
+  groupKey: z.string().min(1, 'Asset group is required'),
+  quantity: z.coerce.number().int().min(1, 'Quantity must be at least 1'),
   conditionWhileProviding: z.enum(assetConditionOptions),
   providedByMemberId: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
@@ -188,7 +197,8 @@ export const assetCategoryFieldUpdateSchema = z.object({
 });
 
 export type AssetInput = z.infer<typeof assetSchema>;
-export type AssetProvideInput = z.infer<typeof assetProvideSchema>;
+export type BulkAssetCreateInput = z.infer<typeof bulkAssetCreateSchema>;
+export type AssetIssueInput = z.infer<typeof assetIssueSchema>;
 export type AssetReturnInput = z.infer<typeof assetReturnSchema>;
 export type AssetMaintenanceCreateInput = z.infer<typeof assetMaintenanceCreateSchema>;
 export type AssetMaintenanceUpdateInput = z.infer<typeof assetMaintenanceUpdateSchema>;

@@ -58,7 +58,7 @@ export function CategoryTab({
   isLoading: boolean;
   canManageAssets: boolean;
   onAddField: (categoryId: string, data: AssetCategoryFieldCreateInput) => Promise<void>;
-  onEditCategory: (categoryId: string, name: string) => Promise<void>;
+  onEditCategory: (categoryId: string, name: string, assetCode?: string | null) => Promise<void>;
   onDeleteCategory: (categoryId: string) => Promise<void>;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -178,10 +178,15 @@ export function CategoryTab({
                         className={cn('size-4 transition-transform duration-150', isExpanded && 'rotate-90')}
                       />
                     </button>
-                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                    <div className="flex flex-1 items-center gap-2.5 min-w-0">
                       <span className="text-[14px] font-medium text-[#111827] truncate">{cat.name}</span>
+                      {cat.assetCode && (
+                        <span className="rounded-md bg-[#f3f5f7] px-2 py-0.5 text-[11px] font-mono font-medium text-[#6b7280] tracking-tight">
+                          {cat.assetCode}
+                        </span>
+                      )}
                       <Badge className="rounded-full bg-[#f0f4f8] px-2 py-0.5 text-[10px] font-medium text-[#6b7280] shrink-0">
-                        {(cat.fields || []).length} fields
+                        {(cat.fields || []).length} {cat.fields?.length === 1 ? 'field' : 'fields'}
                       </Badge>
                     </div>
                     {canManageAssets && (
@@ -224,7 +229,13 @@ export function CategoryTab({
                     )}
                   </div>
                   {isExpanded && (
-                    <div className="border-t border-[#eef0f3] bg-[#fbfcfb] px-4 py-3">
+                    <div className="border-t border-[#eef0f3] bg-[#fbfcfb] px-4 py-3 space-y-3">
+                      {cat.assetCode && (
+                        <div className="flex items-center gap-2 text-[12px] text-[#6b7280]">
+                          <span className="font-medium">Asset ID / Code:</span>
+                          <span className="font-mono bg-white rounded px-1.5 py-0.5 border border-[#e5e7eb]">{cat.assetCode}</span>
+                        </div>
+                      )}
                       {(cat.fields || []).length === 0 ? (
                         <p className="py-2 text-center text-[14px] text-[#9ca3af]">No fields defined for this category</p>
                       ) : (

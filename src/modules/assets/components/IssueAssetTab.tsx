@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { Info, LaptopMinimal, User, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { LaptopMinimal, PackagePlus, User, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,36 +17,31 @@ import {
   ComboboxTrigger,
 } from '@/components/ui/combobox';
 import { cn } from '@/lib/utils';
-import { humanize, readError } from '@/modules/assets/lib/assetUtils';
-import type { AssetProvideInput } from '@/modules/assets/schema/assetSchemas';
-import type { AssetLookupOption, AssetSummary } from '@/modules/assets/types/assetTypes';
+import { readError } from '@/modules/assets/lib/assetUtils';
+import type { AssetIssueInput } from '@/modules/assets/schema/assetSchemas';
+import type { AssetLookupOption, AvailableAssetGroup } from '@/modules/assets/types/assetTypes';
 
 export function IssueAssetTab({
   members,
-  availableAssets,
+  availableGroups,
   canManageAssets,
   memberId,
   onIssue,
+  isGroupsLoading,
 }: {
   members: AssetLookupOption[];
-  availableAssets: AssetSummary[];
+  availableGroups: AvailableAssetGroup[];
   canManageAssets: boolean;
   memberId: string;
-  onIssue: (data: AssetProvideInput) => Promise<void>;
+  onIssue: (data: AssetIssueInput) => Promise<void>;
+  isGroupsLoading?: boolean;
 }) {
   const [employeeQuery, setEmployeeQuery] = useState('');
-  const [assetQuery, setAssetQuery] = useState('');
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [groupQuery, setGroupQuery] = useState('');
+  const [selectedEmployeeLabel, setSelectedEmployeeLabel] = useState<string | null>(null);
+  const [selectedEmployeeMemberId, setSelectedEmployeeMemberId] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<AvailableAssetGroup | null>(null);
   const [isIssuing, setIsIssuing] = useState(false);
-  const [showAssetTooltip, setShowAssetTooltip] = useState(false);
-  const [tooltipHovered, setTooltipHovered] = useState(false);
-
-  const tooltipRef = useRef<HTMLDivElement>(null);
-
-  const selectedAsset = selectedAssetId
-    ? availableAssets.find((a) => a.id === selectedAssetId) ?? null
-    : null;
 
   const filteredEmployees = useMemo(
     () => {
@@ -61,49 +56,52 @@ export function IssueAssetTab({
     [members, employeeQuery],
   );
 
-  const filteredAssets = useMemo(
+  const filteredGroups = useMemo(
     () => {
-      const q = assetQuery.toLowerCase().trim();
-      if (!q) return availableAssets;
-      return availableAssets.filter(
-        (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.assetCode.toLowerCase().includes(q) ||
-          a.category.toLowerCase().includes(q),
+      const q = groupQuery.toLowerCase().trim();
+      if (!q) return availableGroups;
+      return availableGroups.filter(
+        (g) =>
+          g.assetName.toLowerCase().includes(q) ||
+          g.assetCode.toLowerCase().includes(q) ||
+          (g.categoryName ?? '').toLowerCase().includes(q) ||
+          (g.model ?? '').toLowerCase().includes(q),
       );
     },
-    [availableAssets, assetQuery],
+    [availableGroups, groupQuery],
   );
 
-  function handleEmployeeSelect(id: string) {
-    setSelectedEmployeeId(id);
-    const m = members.find((x) => x.id === id);
-    setEmployeeQuery(m?.label ?? '');
+  function handleEmployeeSelect(label: string) {
+    setSelectedEmployeeLabel(label);
+    const m = members.find((x) => x.label === label);
+    setSelectedEmployeeMemberId(m?.id ?? null);
+    setEmployeeQuery(label);
   }
 
-  function handleAssetSelect(id: string) {
-    setSelectedAssetId(id);
-    const a = availableAssets.find((x) => x.id === id);
-    setAssetQuery(a ? `${a.name} — ${a.assetCode}` : '');
+  function handleGroupSelect(label: string) {
+    const group = availableGroups.find((g) => groupDisplayLabel(g) === label);
+    setSelectedGroup(group ?? null);
+    if (group) {
+      setGroupQuery(label);
+    }
   }
 
   function handleReset() {
-    setSelectedEmployeeId(null);
-    setSelectedAssetId(null);
+    setSelectedEmployeeLabel(null);
+    setSelectedEmployeeMemberId(null);
+    setSelectedGroup(null);
     setEmployeeQuery('');
-    setAssetQuery('');
-    setShowAssetTooltip(false);
+    setGroupQuery('');
   }
 
   async function handleIssue() {
-    if (!selectedEmployeeId || !selectedAssetId) return;
+    if (!selectedEmployeeMemberId || !selectedGroup) return;
     setIsIssuing(true);
     try {
       await onIssue({
-        memberId: selectedEmployeeId,
-        assetId: selectedAssetId,
-        assetUnitId: null,
-        providedDate: new Date().toISOString().split('T')[0],
+        memberId: selectedEmployeeMemberId,
+        groupKey: selectedGroup.groupKey,
+        quantity: 1,
         conditionWhileProviding: 'GOOD',
         providedByMemberId: memberId,
         notes: '',
@@ -117,19 +115,27 @@ export function IssueAssetTab({
     }
   }
 
-  const isSelfAssigned = selectedEmployeeId === memberId;
+  const isSelfAssigned = selectedEmployeeMemberId === memberId;
+
+  function groupDisplayLabel(group: AvailableAssetGroup): string {
+    const parts = [group.assetName];
+    if (group.categoryName) parts.push(group.categoryName);
+    parts.push(group.assetCode);
+    return parts.join(' / ');
+  }
 
   return (
     <div className="w-full">
-      <h2 className="text-[18px] font-semibold text-[#111827]">Issue asset</h2>
+      <h2 className="text-[18px] font-semibold text-[#111827]">Issue Asset</h2>
+      <p className="mt-0.5 text-[13px] text-[#6b7280]">Assign physical assets to employees from available stock</p>
       <Separator className="my-4" />
 
-      <div className="flex items-start gap-10">
+      <div className="flex items-start gap-10 flex-wrap">
         {/* Employee Combobox */}
         <div className="w-64">
           <Label className="mb-1.5 block text-[12px] font-medium text-[#6b7280]">Employee</Label>
           <Combobox
-            value={selectedEmployeeId}
+            value={selectedEmployeeLabel}
             onValueChange={(val) => handleEmployeeSelect(val as string)}
           >
             <div className="flex items-center border-b-[1.5px] border-[#d1d5db] bg-transparent">
@@ -140,10 +146,10 @@ export function IssueAssetTab({
                 showClear={false}
                 className="w-full border-0 rounded-none shadow-none bg-transparent [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none [&>div]:bg-transparent [&>div]:h-auto"
               />
-              {selectedEmployeeId && (
+              {selectedEmployeeLabel && (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setSelectedEmployeeId(null); setEmployeeQuery(''); }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedEmployeeLabel(null); setSelectedEmployeeMemberId(null); setEmployeeQuery(''); }}
                   className="flex size-5 items-center justify-center rounded-full text-[#9ca3af] hover:text-[#6b7280]"
                 >
                   <X className="size-3.5" />
@@ -177,7 +183,14 @@ export function IssueAssetTab({
           </Combobox>
           <button
             type="button"
-            onClick={() => handleEmployeeSelect(memberId)}
+            onClick={() => {
+              const m = members.find((x) => x.id === memberId);
+              if (m) {
+                setSelectedEmployeeLabel(m.label);
+                setSelectedEmployeeMemberId(m.id);
+                setEmployeeQuery(m.label);
+              }
+            }}
             className={cn(
               'mt-1.5 text-[12px] font-medium transition-colors',
               isSelfAssigned ? 'text-[#156f3d]' : 'text-[#378ADD] hover:text-[#2563eb]',
@@ -187,37 +200,25 @@ export function IssueAssetTab({
           </button>
         </div>
 
-        {/* Asset Combobox */}
-        <div className="w-64">
+        {/* Asset Group Combobox */}
+        <div className="w-80">
           <Label className="mb-1.5 block text-[12px] font-medium text-[#6b7280]">Asset</Label>
-          <div className="relative">
           <Combobox
-            value={selectedAssetId}
-            onValueChange={(val) => handleAssetSelect(val as string)}
+            value={selectedGroup ? groupDisplayLabel(selectedGroup) : null}
+            onValueChange={(val) => handleGroupSelect(val as string)}
           >
             <div className="flex items-center border-b-[1.5px] border-[#d1d5db] bg-transparent">
               <LaptopMinimal className="mr-2 size-4 shrink-0 text-[#6b7280]" />
               <ComboboxInput
-                placeholder="Search by name or category..."
+                placeholder="Search asset name, code, or model..."
                 showTrigger={false}
                 showClear={false}
                 className="w-full border-0 rounded-none shadow-none bg-transparent [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none [&>div]:bg-transparent [&>div]:h-auto"
               />
-              {selectedAsset && (
+              {selectedGroup && (
                 <button
                   type="button"
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseEnter={() => setShowAssetTooltip(true)}
-                  onMouseLeave={() => setShowAssetTooltip(false)}
-                  className="flex size-5 shrink-0 items-center justify-center rounded-full border border-[#378ADD] text-[#378ADD] transition-colors hover:bg-[#eff6ff]"
-                >
-                  <Info className="size-3" />
-                </button>
-              )}
-              {selectedAssetId && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setSelectedAssetId(null); setAssetQuery(''); setShowAssetTooltip(false); }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedGroup(null); setGroupQuery(''); }}
                   className="ml-1 flex size-5 items-center justify-center rounded-full text-[#9ca3af] hover:text-[#6b7280]"
                 >
                   <X className="size-3.5" />
@@ -226,70 +227,38 @@ export function IssueAssetTab({
               <ComboboxTrigger className="ml-1 text-[#9ca3af]" />
             </div>
 
-            {/* Asset tooltip */}
-            {selectedAsset && (showAssetTooltip || tooltipHovered) && (
-              <div
-                ref={tooltipRef}
-                className="absolute right-0 top-full z-30 mt-2 w-64 rounded-lg border border-[#e2e5ea] bg-white"
-                onMouseEnter={() => setTooltipHovered(true)}
-                onMouseLeave={() => setTooltipHovered(false)}
-              >
-                <div className="border-b border-[#eef0f3] px-4 py-3">
-                  <p className="text-[14px] font-semibold text-[#111827]">{selectedAsset.name}</p>
-                  <p className="mt-0.5 text-[12px] text-[#6b7280]">{selectedAsset.assetCode}</p>
-                </div>
-                <div className="space-y-2 px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-[#6b7280]">Model</span>
-                    <span className="text-[13px] text-[#111827]">{selectedAsset.model || '\u2014'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-[#6b7280]">Quantity</span>
-                    <Badge className="rounded-full bg-[#eef9f1] px-2.5 py-0.5 text-[11px] font-medium text-[#156f3d] border-0">
-                      {selectedAsset.quantity ?? 1} available
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-[#6b7280]">Warranty</span>
-                    <span className="text-[13px] text-[#111827]">{selectedAsset.warrantyExpiryDate || '\u2014'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-[#6b7280]">Condition</span>
-                    <span className="text-[13px] text-[#111827]">{humanize(selectedAsset.condition)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-[#6b7280]">Category</span>
-                    <span className="text-[13px] text-[#111827]">{humanize(selectedAsset.category)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <ComboboxContent className="p-1 shadow-none border border-[#e2e5ea] rounded-lg">
               <ComboboxList>
-                {filteredAssets.length === 0 ? (
-                  <ComboboxEmpty>No results found</ComboboxEmpty>
+                {isGroupsLoading ? (
+                  <div className="px-3 py-4 text-center text-[13px] text-[#9ca3af]">Loading...</div>
+                ) : filteredGroups.length === 0 ? (
+                  <ComboboxEmpty>No available assets found</ComboboxEmpty>
                 ) : (
-                  filteredAssets.map((a) => (
+                  filteredGroups.map((g) => (
                     <ComboboxItem
-                      key={a.id}
-                      value={a.name}
+                      key={g.groupKey}
+                      value={groupDisplayLabel(g)}
                       className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] rounded-md data-selected:bg-[#f8f9fa]"
                     >
                       <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] text-[#6b7280]">
-                        <LaptopMinimal className="size-3.5" />
+                        <PackagePlus className="size-3.5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-[#111827] truncate">{a.name}</p>
-                        <p className="text-[11px] text-[#6b7280]">{humanize(a.category)}</p>
+                        <p className="font-medium text-[#111827] truncate">{groupDisplayLabel(g)}</p>
+                        <p className="text-[11px] text-[#6b7280]">
+                          {g.model ? `${g.model} \u00B7 ` : ''}
+                          Available: {g.availableQuantity}
+                        </p>
                       </div>
+                      <Badge className="rounded-full bg-[#eef9f1] px-2.5 py-0.5 text-[11px] font-medium text-[#156f3d] border-0 shrink-0">
+                        {g.availableQuantity}
+                      </Badge>
                     </ComboboxItem>
                   ))
                 )}
               </ComboboxList>
             </ComboboxContent>
           </Combobox>
-          </div>
         </div>
 
         {/* Buttons */}
@@ -306,7 +275,7 @@ export function IssueAssetTab({
           <Button
             type="button"
             onClick={() => void handleIssue()}
-            disabled={!selectedEmployeeId || !selectedAssetId || isIssuing || !canManageAssets}
+            disabled={!selectedEmployeeMemberId || !selectedGroup || isIssuing || !canManageAssets}
             className="rounded-lg bg-[#1a7a45] px-5 py-2 text-[13px] font-medium text-white hover:bg-[#156f3d] disabled:opacity-40"
           >
             {isIssuing ? (
@@ -315,7 +284,7 @@ export function IssueAssetTab({
                 Issuing...
               </span>
             ) : (
-              'Issue asset'
+              'Issue Asset'
             )}
           </Button>
         </div>

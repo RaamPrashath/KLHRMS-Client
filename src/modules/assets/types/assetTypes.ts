@@ -1,7 +1,4 @@
-export type AssetCategory =
-  | 'ELECTRONICS'
-  | 'ID_CARD'
-  | 'OTHER';
+export type AssetCategory = string;
 
 export type AssetStatus =
   | 'AVAILABLE'
@@ -55,9 +52,44 @@ export interface AssetIdDefinition {
 export interface AssetCategoryDefinition {
   id: string;
   name: string;
+  assetCode: string | null;
   description: string | null;
   isActive: boolean;
   fields: AssetCategoryFieldDefinition[];
+}
+
+export interface AvailableAssetGroup {
+  groupKey: string;
+  assetName: string;
+  categoryName: string | null;
+  categoryDefinitionId: string | null;
+  assetCode: string;
+  model: string | null;
+  availableQuantity: number;
+}
+
+export interface AssetIssueInput {
+  memberId: string;
+  groupKey: string;
+  quantity: number;
+  conditionWhileProviding: AssetCondition;
+  providedByMemberId: string;
+  notes: string;
+}
+
+export interface AssetIssueResponse {
+  issuedAssetIds: string[];
+  assignmentIds: string[];
+}
+
+export interface BulkAssetCreateInput {
+  assetCode: string;
+  name: string;
+  categoryDefinitionId: string | null;
+  condition: AssetCondition;
+  location: string;
+  serialNumbers: string[];
+  customFields: CustomFieldValueInput[];
 }
 
 export interface AssetCategoryFieldDefinition {

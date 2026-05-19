@@ -47,7 +47,8 @@ export function OnboardingForm() {
                 return;
             }
 
-            router.push("/organizations");
+            router.replace("/post-auth");
+            router.refresh();
         } catch {
             setFormError("An unexpected error occurred. Please try again.");
         }

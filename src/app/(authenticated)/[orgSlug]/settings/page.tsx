@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation';
 import {
+  addOrganizationMemberAction,
   deleteOrganizationAction,
   updateOrganizationAction,
+  updateOrganizationMemberRoleAction,
 } from '@/app/actions/organizationActions';
-import { requireOrgOwner } from '@/lib/organizations';
+import organizations, { requireOrgOwner } from '@/lib/organizations';
 import { requireServerSession } from '@/lib/server-session';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,15 +28,22 @@ export default async function OrganizationSettingsPage({
     redirect('/organizations');
   }
 
+  const organization = await organizations.getOrganizationWithMembers(org.slug);
+  if (!organization) {
+    redirect('/organizations');
+  }
+
   const updateAction = updateOrganizationAction.bind(null, org.slug);
   const deleteAction = deleteOrganizationAction.bind(null, org.slug);
+  const addMemberAction = addOrganizationMemberAction.bind(null, org.slug);
+  const updateMemberRoleAction = updateOrganizationMemberRoleAction.bind(null, org.slug);
 
   return (
     <section className="grid gap-6">
       <div>
         <h2 className="text-3xl font-semibold tracking-tight">Settings</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Owner-only controls for {org.name}.
+          Admin-only controls for {org.name}.
         </p>
       </div>
 
@@ -56,6 +65,100 @@ export default async function OrganizationSettingsPage({
               Save changes
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Members</CardTitle>
+          <CardDescription>
+            Invite people by email and assign their org role up front.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form action={addMemberAction} className="grid gap-4 md:grid-cols-[1.4fr_1fr_auto] md:items-end">
+            <Field>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <Input id="email" name="email" type="email" placeholder="name@company.com" required />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="roleId">Role</FieldLabel>
+              <select
+                id="roleId"
+                name="roleId"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                required
+                defaultValue=""
+              >
+                <option value="" disabled>Select a role</option>
+                {organization.roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Button type="submit" className="md:self-end">
+              Add member
+            </Button>
+          </form>
+
+          <div className="space-y-3">
+            {organization.members.map((member) => (
+              <form
+                key={member.id}
+                action={updateMemberRoleAction}
+                className="grid gap-3 rounded-lg border border-border bg-background px-4 py-4 md:grid-cols-[1.5fr_1fr_auto] md:items-center"
+              >
+                <input type="hidden" name="memberId" value={member.id} />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {member.user.name ?? member.user.email}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {member.user.email}
+                  </p>
+                </div>
+                <select
+                  name="roleId"
+                  defaultValue={member.roleId ?? ''}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  required
+                >
+                  {organization.roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit" variant="outline">
+                  Update role
+                </Button>
+              </form>
+            ))}
+          </div>
+
+          {organization.invites.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Pending invites</h3>
+                <p className="text-xs text-muted-foreground">
+                  These users will receive access after they sign up.
+                </p>
+              </div>
+              {organization.invites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-3"
+                >
+                  <p className="text-sm font-medium text-foreground">{invite.email}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {invite.role.name} • {invite.status}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import {
   Check,
   PackagePlus,
+  Plus,
   X,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -20,7 +21,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { ACTION_GREEN } from '@/modules/assets/lib/assetConfig';
 import {
-  DateField,
   FieldSelect,
   InputField,
   NumberField,
@@ -28,15 +28,12 @@ import {
 import { humanize } from '@/modules/assets/lib/assetUtils';
 import {
   assetConditionOptions,
-  assetStatusOptions,
-  type AssetInput,
+  type BulkAssetCreateInput,
 } from '@/modules/assets/schema/assetSchemas';
 import type {
   AssetCategoryDefinition,
   AssetCategoryFieldDefinition,
   AssetCondition,
-  AssetIdDefinition,
-  AssetStatus,
 } from '@/modules/assets/types/assetTypes';
 
 function DynamicFieldRenderer({
@@ -58,7 +55,7 @@ function DynamicFieldRenderer({
         <NumberField label={fieldDef.fieldName} value={value ? Number(value) : null} onChange={(v) => onChange(v !== null ? String(v) : null)} />
       );
     case 'DATE':
-      return <DateField label={fieldDef.fieldName} value={value || ''} onChange={(v) => onChange(v || null)} />;
+      return <InputField label={fieldDef.fieldName} value={value || ''} onChange={(v) => onChange(v || null)} />;
     case 'BOOLEAN':
       return (
         <div className="flex items-center gap-2">
@@ -90,124 +87,113 @@ function DynamicFieldRenderer({
 export function AssetFormDialog({
   open,
   onOpenChange,
-  assetForm,
-  setAssetForm,
   isSaving,
-  editingAssetId,
-  onSave,
+  onSaveBulk,
   categories,
-  assetIds,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  assetForm: AssetInput;
-  setAssetForm: (value: AssetInput) => void;
   isSaving: boolean;
-  editingAssetId: string | null;
-  onSave: () => void;
+  onSaveBulk: (data: BulkAssetCreateInput) => Promise<void>;
   categories?: AssetCategoryDefinition[];
-  assetIds?: AssetIdDefinition[];
 }) {
-  const [useCustomCode, setUseCustomCode] = useState(false);
-  const selectedCategoryDef = categories?.find((c) => c.id === assetForm.categoryDefinitionId);
-  const dynamicFields = selectedCategoryDef?.fields || [];
-  const quantity = assetForm.quantity || 1;
-  const currentUnits = assetForm.units || [];
+  const [assetName, setAssetName] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [assetCode, setAssetCode] = useState('');
+  const [condition, setCondition] = useState<AssetCondition>('GOOD');
+  const [location, setLocation] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [serials, setSerials] = useState<string[]>(['']);
+  const [customFields, setCustomFields] = useState<Record<string, string | null>>({});
+  const [useCustomAssetCode, setUseCustomAssetCode] = useState(false);
 
-  const matchedAssetId = useMemo(
-    () => assetIds?.find((aid) => aid.assetIdName === assetForm.assetCode),
-    [assetIds, assetForm.assetCode],
-  );
+  const selectedCategory = categories?.find((c) => c.id === selectedCategoryId);
+  const dynamicFields = selectedCategory?.fields || [];
+
+  const uniqueAssetCodes = useMemo(() => {
+    const codes = new Set<string>();
+    (categories || []).forEach((c) => {
+      if (c.assetCode) codes.add(c.assetCode);
+    });
+    return Array.from(codes).sort();
+  }, [categories]);
+
+  function handleCategorySelect(catId: string) {
+    setSelectedCategoryId(catId);
+    const cat = categories?.find((c) => c.id === catId);
+    if (cat?.assetCode) {
+      setAssetCode(cat.assetCode);
+      setUseCustomAssetCode(false);
+    }
+    setCustomFields({});
+  }
+
+  function handleAssetCodeSelect(code: string) {
+    if (code === '__custom__') {
+      setUseCustomAssetCode(true);
+      setAssetCode('');
+      return;
+    }
+    setAssetCode(code);
+    const cat = categories?.find((c) => c.assetCode === code);
+    if (cat) {
+      setSelectedCategoryId(cat.id);
+      setUseCustomAssetCode(false);
+    }
+  }
+
+  function handleQuantityChange(n: number) {
+    const val = Math.max(1, n);
+    setQuantity(val);
+    if (val > serials.length) {
+      setSerials([...serials, ...Array(val - serials.length).fill('')]);
+    } else {
+      setSerials(serials.slice(0, val));
+    }
+  }
+
+  function updateSerial(index: number, value: string) {
+    const next = [...serials];
+    next[index] = value;
+    setSerials(next);
+  }
 
   function handleFieldChange(fieldDefId: string, value: string | null) {
-    const existing = (assetForm.customFields || []).find((cf) => cf.fieldDefinitionId === fieldDefId);
-    setAssetForm({
-      ...assetForm,
-      customFields: existing
-        ? (assetForm.customFields || []).map((cf) =>
-            cf.fieldDefinitionId === fieldDefId ? { ...cf, value } : cf
-          )
-        : [...(assetForm.customFields || []), { fieldDefinitionId: fieldDefId, value }],
-    });
+    setCustomFields((prev) => ({ ...prev, [fieldDefId]: value }));
   }
 
   function getFieldValue(fieldDefId: string): string | null {
-    return (assetForm.customFields || []).find((cf) => cf.fieldDefinitionId === fieldDefId)?.value ?? null;
+    return customFields[fieldDefId] ?? null;
   }
 
-  function handleAssetIdSelect(idValue: string) {
-    if (idValue === '__custom__') {
-      setUseCustomCode(true);
-      return;
-    }
-    setUseCustomCode(false);
-    setAssetForm({ ...assetForm, assetCode: idValue });
+  async function handleSave() {
+    const payload: BulkAssetCreateInput = {
+      assetCode: assetCode.trim(),
+      name: assetName.trim(),
+      categoryDefinitionId: selectedCategoryId,
+      condition,
+      location,
+      serialNumbers: serials.filter((s) => s.trim()),
+      customFields: Object.entries(customFields)
+        .filter(([, v]) => v !== null && v !== undefined)
+        .map(([fieldDefinitionId, value]) => ({ fieldDefinitionId, value })),
+    };
+    await onSaveBulk(payload);
   }
 
-  function updateUnitSerial(index: number, serial: string) {
-    const units = [...currentUnits];
-    while (units.length <= index) units.push({ serialNumber: '' });
-    units[index] = { ...units[index], serialNumber: serial || null };
-    setAssetForm({ ...assetForm, units });
+  function handleReset() {
+    setAssetName('');
+    setSelectedCategoryId(null);
+    setAssetCode('');
+    setCondition('GOOD');
+    setLocation('');
+    setQuantity(1);
+    setSerials(['']);
+    setCustomFields({});
+    setUseCustomAssetCode(false);
   }
 
-  function addSerialInput() {
-    setAssetForm({ ...assetForm, units: [...currentUnits, { serialNumber: '' }], quantity: quantity + 1 });
-  }
-
-  function removeLastSerial() {
-    const units = currentUnits.slice(0, -1);
-    setAssetForm({ ...assetForm, units, quantity: Math.max(1, quantity - 1) });
-  }
-
-  const showAssetIdSelect = !editingAssetId && assetIds && assetIds.length > 0 && !useCustomCode;
-
-  function renderAssetCodeField() {
-    if (showAssetIdSelect) {
-      return (
-        <div className="grid gap-2">
-          <Label className="text-[13px] text-[#6b7280]">Asset Code</Label>
-          <Select value={assetForm.assetCode || undefined} onValueChange={handleAssetIdSelect}>
-            <SelectTrigger className="h-11 rounded-2xl border-[#e5e7eb] shadow-none">
-              <SelectValue placeholder="Choose an asset ID" />
-            </SelectTrigger>
-            <SelectContent>
-              {assetIds.map((aid) => (
-                <SelectItem key={aid.id} value={aid.assetIdName}>
-                  {aid.assetIdName}
-                </SelectItem>
-              ))}
-              <div className="mx-2 my-1 border-t border-[#eef0f3]" />
-              <SelectItem value="__custom__">
-                <span className="text-[#6b7280]">+ Custom entry</span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid gap-2">
-        <Label className="text-[13px] text-[#6b7280]">Asset Code</Label>
-        <Input
-          value={assetForm.assetCode}
-          onChange={(e) => setAssetForm({ ...assetForm, assetCode: e.target.value })}
-          placeholder="e.g. LAP-001"
-          className="h-11 rounded-2xl border-[#e5e7eb] text-[15px]"
-        />
-        {useCustomCode && assetIds && assetIds.length > 0 && (
-          <button
-            type="button"
-            onClick={() => { setUseCustomCode(false); setAssetForm({ ...assetForm, assetCode: '' }); }}
-            className="text-left text-[12px] text-[#00874a] hover:underline"
-          >
-            Back to asset IDs
-          </button>
-        )}
-      </div>
-    );
-  }
+  const sectionNumber = { base: 1, dynamic: 2, config: 3, serials: 4 };
 
   return (
     <>
@@ -236,10 +222,10 @@ export function AssetFormDialog({
                   </div>
                   <div>
                     <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[#111827]">
-                      {editingAssetId ? 'Edit Asset' : 'Add Asset'}
+                      Add Asset
                     </h2>
                     <p className="mt-0.5 text-[13px] text-[#6b7280]">
-                      {editingAssetId ? 'Update asset register details' : 'Register a new asset in the system'}
+                      Register new physical assets in the system
                     </p>
                   </div>
                 </div>
@@ -251,36 +237,80 @@ export function AssetFormDialog({
 
               <div className="flex-1 overflow-y-auto px-6 py-5">
                 <div className="space-y-6">
+                  {/* Section 1: Basic Details */}
                   <div>
                     <div className="mb-4 flex items-center gap-2">
-                      <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">1</span>
+                      <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{sectionNumber.base}</span>
                       <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">Basic Details</span>
                     </div>
                     <div className="grid gap-5 md:grid-cols-2">
-                      <InputField label="Asset Name" value={assetForm.name} onChange={(v) => setAssetForm({ ...assetForm, name: v })} />
-                      {renderAssetCodeField()}
+                      <InputField label="Asset Name" value={assetName} onChange={(v) => setAssetName(v)} />
+
+                      {/* Category select */}
                       <div className="grid gap-2">
                         <Label className="text-[13px] text-[#6b7280]">Category</Label>
-                        <Select value={assetForm.categoryDefinitionId || undefined}
-                          onValueChange={(v) => setAssetForm({ ...assetForm, categoryDefinitionId: v, customFields: [], units: [] })}>
+                        <Select value={selectedCategoryId || undefined} onValueChange={handleCategorySelect}>
                           <SelectTrigger className="h-11 rounded-2xl border-[#e5e7eb] shadow-none">
                             <SelectValue placeholder="Select a category" />
                           </SelectTrigger>
                           <SelectContent>
                             {(categories || []).map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                              <SelectItem key={cat.id} value={cat.id}>
+                                {cat.name}{cat.assetCode ? ` (${cat.assetCode})` : ''}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
+
+                      {/* Asset Code */}
+                      {uniqueAssetCodes.length > 0 && !useCustomAssetCode ? (
+                        <div className="grid gap-2">
+                          <Label className="text-[13px] text-[#6b7280]">Asset ID / Code</Label>
+                          <Select value={assetCode || undefined} onValueChange={handleAssetCodeSelect}>
+                            <SelectTrigger className="h-11 rounded-2xl border-[#e5e7eb] shadow-none">
+                              <SelectValue placeholder="Auto-filled from category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {uniqueAssetCodes.map((code) => (
+                                <SelectItem key={code} value={code}>{code}</SelectItem>
+                              ))}
+                              <div className="mx-2 my-1 border-t border-[#eef0f3]" />
+                              <SelectItem value="__custom__">
+                                <span className="text-[#6b7280]">+ Custom code</span>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        <div className="grid gap-2">
+                          <Label className="text-[13px] text-[#6b7280]">Asset ID / Code</Label>
+                          <Input
+                            value={assetCode}
+                            onChange={(e) => setAssetCode(e.target.value)}
+                            placeholder="e.g. AST-LAP"
+                            className="h-11 rounded-2xl border-[#e5e7eb] text-[15px]"
+                          />
+                          {useCustomAssetCode && uniqueAssetCodes.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => { setUseCustomAssetCode(false); setAssetCode(''); }}
+                              className="text-left text-[12px] text-[#00874a] hover:underline"
+                            >
+                              Back to predefined codes
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
+                  {/* Section 2: Dynamic Fields */}
                   {dynamicFields.length > 0 && (
                     <div>
                       <div className="mb-4 flex items-center gap-2">
-                        <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">2</span>
-                        <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">{selectedCategoryDef?.name} Fields</span>
+                        <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{sectionNumber.dynamic}</span>
+                        <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">{selectedCategory?.name} Fields</span>
                       </div>
                       <div className="rounded-2xl border border-[#eef0f3] bg-[#fbfcfb] p-4">
                         <div className="grid gap-4 md:grid-cols-2">
@@ -292,57 +322,56 @@ export function AssetFormDialog({
                     </div>
                   )}
 
+                  {/* Section 3: Configuration */}
                   <div>
                     <div className="mb-4 flex items-center gap-2">
-                      <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{dynamicFields.length > 0 ? '3' : '2'}</span>
+                      <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{dynamicFields.length > 0 ? sectionNumber.dynamic + 1 : sectionNumber.config}</span>
                       <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">Configuration</span>
                     </div>
                     <div className="rounded-2xl border border-[#eef0f3] bg-[#fbfcfb] p-4">
                       <div className="grid gap-4 md:grid-cols-2">
-                        <Select value={assetForm.condition} onValueChange={(v) => setAssetForm({ ...assetForm, condition: v as AssetCondition })}>
+                        <Select value={condition} onValueChange={(v) => setCondition(v as AssetCondition)}>
                           <FieldSelect label="Current Condition"><SelectValue /></FieldSelect>
                           <SelectContent>{assetConditionOptions.map((o) => <SelectItem key={o} value={o}>{humanize(o)}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Select value={assetForm.status} onValueChange={(v) => setAssetForm({ ...assetForm, status: v as AssetStatus })}>
-                          <FieldSelect label="Current Status"><SelectValue /></FieldSelect>
-                          <SelectContent>{assetStatusOptions.map((o) => <SelectItem key={o} value={o}>{humanize(o)}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <InputField label="Location" value={assetForm.location || ''} onChange={(v) => setAssetForm({ ...assetForm, location: v })} />
+                        <InputField label="Location" value={location} onChange={(v) => setLocation(v)} />
                       </div>
                     </div>
                   </div>
 
+                  {/* Section 4: Quantity & Serial Numbers */}
                   <div>
                     <div className="mb-4 flex items-center gap-2">
-                      <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{dynamicFields.length > 0 ? '4' : '3'}</span>
+                      <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{dynamicFields.length > 0 ? sectionNumber.dynamic + 2 : sectionNumber.serials}</span>
                       <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">Quantity & Serial Numbers</span>
                     </div>
                     <div className="rounded-2xl border border-[#eef0f3] bg-[#fbfcfb] p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-32">
-                          <NumberField label="Quantity" value={quantity} onChange={(v) => {
-                            const n = v ?? 1; const u = [...currentUnits];
-                            while (u.length < n) u.push({ serialNumber: '' });
-                            setAssetForm({ ...assetForm, quantity: n, units: u.slice(0, n) });
-                          }} />
+                          <NumberField label="Quantity" value={quantity} onChange={(v) => handleQuantityChange(v ?? 1)} />
                         </div>
                         <div className="flex gap-1.5 pt-5">
-                          <button type="button" onClick={addSerialInput}
+                          <button type="button" onClick={() => { setSerials([...serials, '']); setQuantity(quantity + 1); }}
                             className="flex size-8 items-center justify-center rounded-full border border-[#d8dde5] text-[#6b7280] transition-colors hover:border-[#cdd5df] hover:text-[#1d1d1f]">
-                            <PackagePlus className="size-3.5" />
-                          </button>
-                          <button type="button" onClick={removeLastSerial} disabled={currentUnits.length <= 1}
-                            className="flex size-8 items-center justify-center rounded-full border border-[#d8dde5] text-[#6b7280] transition-colors hover:border-[#cdd5df] hover:text-[#1d1d1f] disabled:opacity-40">
-                            <X className="size-3.5" />
+                            <Plus className="size-3.5" />
                           </button>
                         </div>
                       </div>
+                      <p className="mt-1 text-[11px] text-[#9ca3af]">Each quantity creates a separate physical asset row with its own serial number.</p>
                       <div className="grid gap-2 mt-3 md:grid-cols-2">
-                        {Array.from({ length: quantity }).map((_, i) => (
+                        {serials.map((serial, i) => (
                           <div key={i} className="grid gap-1.5">
                             <Label className="text-[12px] text-[#6b7280]">Serial #{i + 1}</Label>
-                            <Input value={currentUnits[i]?.serialNumber || ''} onChange={(e) => updateUnitSerial(i, e.target.value)}
-                              placeholder={`Serial for unit ${i + 1}`} className="h-10 rounded-xl border-[#e5e7eb] text-[13px]" />
+                            <div className="flex items-center gap-1.5">
+                              <Input value={serial} onChange={(e) => updateSerial(i, e.target.value)}
+                                placeholder={`Serial for unit ${i + 1}`} className="h-10 rounded-xl border-[#e5e7eb] text-[13px]" />
+                              {serials.length > 1 && (
+                                <button type="button" onClick={() => { setSerials(serials.filter((_, j) => j !== i)); setQuantity(quantity - 1); }}
+                                  className="flex size-8 shrink-0 items-center justify-center rounded-full text-[#9ca3af] hover:text-[#b3261e]">
+                                  <X className="size-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -352,15 +381,21 @@ export function AssetFormDialog({
               </div>
 
               <div className="flex items-center justify-between border-t border-[#eef0f3] px-6 py-4 shrink-0">
-                <Button variant="ghost" onClick={() => onOpenChange(false)}
-                  className="rounded-full px-5 text-[13px]">
-                  Cancel
-                </Button>
-                <Button onClick={onSave} disabled={isSaving}
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={() => onOpenChange(false)}
+                    className="rounded-full px-5 text-[13px]">
+                    Cancel
+                  </Button>
+                  <Button variant="ghost" onClick={handleReset}
+                    className="rounded-full px-5 text-[13px] text-[#6b7280]">
+                    Reset
+                  </Button>
+                </div>
+                <Button onClick={() => void handleSave()} disabled={isSaving || !assetName.trim() || !assetCode.trim() || serials.filter(s => s.trim()).length === 0}
                   className="h-10 rounded-full px-6 text-[14px] font-medium text-white"
                   style={{ backgroundColor: ACTION_GREEN }}>
                   <Check className="mr-1.5 size-4" />
-                  {isSaving ? 'Saving...' : editingAssetId ? 'Save Changes' : 'Create Asset'}
+                  {isSaving ? 'Creating...' : `Create ${serials.filter(s => s.trim()).length} Asset${serials.filter(s => s.trim()).length !== 1 ? 's' : ''}`}
                 </Button>
               </div>
             </motion.div>

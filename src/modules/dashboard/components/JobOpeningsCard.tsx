@@ -44,16 +44,16 @@ export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardP
 
   return (
     <>
-      <section className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
-        <div className="px-6 py-5 border-b border-black/[0.04] flex items-center justify-between">
-          <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight">Open Positions</h2>
-          {!isLoading && <span className="text-sm text-neutral-500">{openings.length} open</span>}
+      <section className="bg-transparent border-none p-0 flex flex-col h-full w-full">
+        <div className="py-4 border-b border-black/[0.04] dark:border-white/[0.04] flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">Open Positions</h2>
+          {!isLoading && <span className="text-xs text-neutral-500">{openings.length} open</span>}
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col divide-y divide-black/4 px-4 py-4">
+          <div className="flex flex-col divide-y divide-black/4 py-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="border-b border-black/4 p-4">
+              <div key={i} className="border-b border-black/4 py-4">
                 <div className="h-5 w-3/4 animate-pulse rounded-lg bg-neutral-100" />
                 <div className="mt-2 h-4 w-1/2 animate-pulse rounded-lg bg-neutral-100" />
               </div>
@@ -68,7 +68,7 @@ export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardP
                 key={req.id}
                 type="button"
                 onClick={() => setSelectedReq(req)}
-                className="flex items-center gap-4 border-b border-black/4 px-6 py-4 text-left transition-colors hover:bg-black/[0.02] last:border-0 w-full"
+                className="flex items-center gap-4 border-b border-black/4 dark:border-white/4 py-3.5 text-left transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.02] last:border-0 w-full"
               >
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-subtle">
                   <Briefcase className="size-5 text-primary" />

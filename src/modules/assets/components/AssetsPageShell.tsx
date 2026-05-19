@@ -14,16 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { AssetRegisterTab } from '@/modules/assets/components/AssetRegisterTab';
-import { AssetIdManager } from '@/modules/assets/components/AssetIdManager';
 import { CategoryTab } from '@/modules/assets/components/CategoryTab';
 import { DashboardTab } from '@/modules/assets/components/dashboard/DashboardTab';
 import { IssueAssetTab } from '@/modules/assets/components/IssueAssetTab';
@@ -40,19 +33,17 @@ import {
 } from '@/modules/assets/lib/assetConfig';
 import { humanize, readError } from '@/modules/assets/lib/assetUtils';
 import { useAssetMutations } from '@/modules/assets/hooks/useAssetMutations';
-import { useAssetIdsQuery, useAssetIdMutations } from '@/modules/assets/hooks/useAssetIdQueries';
 import {
   useAssetCategoriesQuery,
   useAssetDetailQuery,
   useAssetMetaQuery,
   useAssetsQuery,
+  useAvailableAssetGroupsQuery,
 } from '@/modules/assets/hooks/useAssetsQuery';
 import {
-  assetCategoryOptions,
   assetStatusOptions,
   type AssetCategoryFieldCreateInput,
-  type AssetInput,
-  type AssetProvideInput,
+  type BulkAssetCreateInput,
 } from '@/modules/assets/schema/assetSchemas';
 import type {
   AssetCategory,
@@ -78,8 +69,6 @@ export function AssetsPageShell({
   const [detailAssetId, setDetailAssetId] = useState<string | null>(null);
   const [detailSnapshot, setDetailSnapshot] = useState<AssetDetail | null>(null);
   const [assetFormOpen, setAssetFormOpen] = useState(false);
-  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
-  const [assetForm, setAssetForm] = useState<AssetInput>(defaultAssetForm);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'create' | 'manage'>('manage');
   const [employeeTab, setEmployeeTab] = useState<'assets' | 'tickets'>('assets');
@@ -89,14 +78,11 @@ export function AssetsPageShell({
   const tabOptions = useMemo(() => getAssetTabOptions(canManageAssets), [canManageAssets]);
 
   const registerQuery = useAssetsQuery(orgSlug, memberId, { page: 1, pageSize: 100 });
-  const allAssetsQuery = useAssetsQuery(orgSlug, memberId, { page: 1, pageSize: 100 });
-  const availableAssetsQuery = useAssetsQuery(orgSlug, memberId, { status: 'AVAILABLE', page: 1, pageSize: 100 });
   const metaQuery = useAssetMetaQuery(orgSlug, memberId);
   const categoriesQuery = useAssetCategoriesQuery(orgSlug, memberId);
-  const assetIdsQuery = useAssetIdsQuery(orgSlug, memberId);
+  const availableGroupsQuery = useAvailableAssetGroupsQuery(orgSlug, memberId);
   const detailQuery = useAssetDetailQuery(orgSlug, memberId, detailAssetId);
   const mutations = useAssetMutations(orgSlug, memberId);
-  const assetIdMutations = useAssetIdMutations(orgSlug, memberId);
 
   const allFetchedAssets = useMemo(() => registerQuery.data?.items ?? [], [registerQuery.data?.items]);
 
@@ -122,43 +108,18 @@ export function AssetsPageShell({
     return result;
   }, [allFetchedAssets, search, categoryFilter, statusFilter]);
 
-  const allAssets = useMemo(() => allAssetsQuery.data?.items ?? [], [allAssetsQuery.data?.items]);
-  const availableAssets = useMemo(() => availableAssetsQuery.data?.items ?? [], [availableAssetsQuery.data?.items]);
   const members = useMemo(() => metaQuery.data?.members ?? [], [metaQuery.data?.members]);
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
-  const assetIds = useMemo(() => assetIdsQuery.data ?? [], [assetIdsQuery.data]);
+  const availableGroups = useMemo(() => availableGroupsQuery.data ?? [], [availableGroupsQuery.data]);
   const selectedAsset = detailQuery.data ?? detailSnapshot;
+  const categoryOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const asset of allFetchedAssets) values.add(asset.category);
+    for (const category of categories) values.add(category.name.toUpperCase().replaceAll(' ', '_'));
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [allFetchedAssets, categories]);
 
   function openCreateAssetDialog() {
-    setEditingAssetId(null);
-    setAssetForm(defaultAssetForm);
-    setAssetFormOpen(true);
-  }
-
-  function openEditAssetDialog(asset: AssetSummary | AssetDetail) {
-    setEditingAssetId(asset.id);
-    setAssetForm({
-      assetCode: asset.assetCode,
-      name: asset.name,
-      category: asset.category,
-      categoryDefinitionId: asset.categoryDefinitionId,
-      serialNumber: asset.serialNumber ?? '',
-      model: asset.model ?? '',
-      purchaseDate: asset.purchaseDate ?? '',
-      purchasePrice: asset.purchasePrice,
-      warrantyExpiryDate: asset.warrantyExpiryDate ?? '',
-      condition: asset.condition,
-      status: asset.status,
-      location: asset.location ?? '',
-      quantity: asset.quantity ?? 1,
-      customFields: (asset as AssetDetail).customFields?.map((cf) => ({
-        fieldDefinitionId: cf.fieldDefinitionId,
-        value: cf.value,
-      })) ?? [],
-      units: (asset as AssetDetail).units?.map((u) => ({
-        serialNumber: u.serialNumber,
-      })) ?? [],
-    });
     setAssetFormOpen(true);
   }
 
@@ -168,6 +129,7 @@ export function AssetsPageShell({
   }
 
   function seedProvideForm(_asset: AssetSummary) {
+    setActiveTab('provide');
     setSearch('');
   }
 
@@ -175,24 +137,14 @@ export function AssetsPageShell({
     router.push(`/${orgSlug}/maintenance`);
   }
 
-  async function handleSaveAsset() {
+  async function handleSaveBulkAsset(data: BulkAssetCreateInput) {
     try {
-      if (editingAssetId) {
-        const updated = await mutations.updateAsset.mutateAsync({ assetId: editingAssetId, data: assetForm });
-        setDetailAssetId(updated.id);
-        setDetailSnapshot(updated);
-        setAssetFormOpen(false);
-        toast.success('Asset register updated');
-        return;
-      }
-      const created = await mutations.createAsset.mutateAsync(assetForm);
-      setDetailAssetId(created.id);
-      setDetailSnapshot(created);
+      await mutations.bulkCreateAssets.mutateAsync(data);
       setAssetFormOpen(false);
-      setAssetForm(defaultAssetForm);
-      toast.success('Asset added to register');
+      toast.success('Assets created successfully');
     } catch (error) {
-      toast.error(readError(error, 'Failed to save asset'));
+      toast.error(readError(error, 'Failed to create assets'));
+      throw error;
     }
   }
 
@@ -209,9 +161,9 @@ export function AssetsPageShell({
     }
   }
 
-  async function handleIssueAsset(data: AssetProvideInput) {
+  async function handleIssueGroupAsset(data: import('@/modules/assets/types/assetTypes').AssetIssueInput) {
     try {
-      await mutations.provideAsset.mutateAsync(data);
+      await mutations.issueAssets.mutateAsync(data);
     } catch (error) {
       throw error;
     }
@@ -221,8 +173,8 @@ export function AssetsPageShell({
     await mutations.createCategoryField.mutateAsync({ categoryId, data });
   }
 
-  async function handleEditCategory(categoryId: string, name: string) {
-    await mutations.updateCategory.mutateAsync({ categoryId, data: { name } });
+  async function handleEditCategory(categoryId: string, data: { name?: string; assetCode?: string | null }) {
+    await mutations.updateCategory.mutateAsync({ categoryId, data });
   }
 
   async function handleDeleteCategory(categoryId: string) {
@@ -342,7 +294,7 @@ export function AssetsPageShell({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">All categories</SelectItem>
-                    {assetCategoryOptions.map((option) => (
+                    {categoryOptions.map((option) => (
                       <SelectItem key={option} value={option}>
                         {humanize(option)}
                       </SelectItem>
@@ -448,27 +400,14 @@ export function AssetsPageShell({
               })}
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                className="h-9 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm"
-                style={{ backgroundColor: ACTION_GREEN }}
-              >
-                <PackagePlus className="mr-1.5 size-4" />
-                Add Asset
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-lg border border-[#e5e7eb] p-1 shadow-lg">
-              <DropdownMenuItem onClick={openCreateAssetDialog} className="rounded-md py-2 text-[13px] cursor-pointer">
-                <PackagePlus className="mr-2 size-4 text-[#6b7280]" />
-                Add Asset
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setSettingsTab('create'); setSettingsOpen(true); }} className="rounded-md py-2 text-[13px] cursor-pointer">
-                <Plus className="mr-2 size-4 text-[#6b7280]" />
-                Create Category
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            onClick={openCreateAssetDialog}
+            className="h-9 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm"
+            style={{ backgroundColor: ACTION_GREEN }}
+          >
+            <PackagePlus className="mr-1.5 size-4" />
+            Add Asset
+          </Button>
         </div>
 
         <TabsContent value="dashboard" className="mt-0">
@@ -496,7 +435,7 @@ export function AssetsPageShell({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">All categories</SelectItem>
-                  {assetCategoryOptions.map((option) => (
+                  {categoryOptions.map((option) => (
                     <SelectItem key={option} value={option}>
                       {humanize(option)}
                     </SelectItem>
@@ -525,7 +464,7 @@ export function AssetsPageShell({
             assets={filteredAssets}
             isLoading={registerQuery.isLoading}
             onOpenDetail={openDetail}
-            onEdit={openEditAssetDialog}
+            onEdit={() => {}}
             onProvide={seedProvideForm}
             onMaintenance={seedMaintenanceForm}
             onDecommission={handleDecommissionAsset}
@@ -533,7 +472,7 @@ export function AssetsPageShell({
         </TabsContent>
 
         <TabsContent value="categories" className="mt-0">
-          <div className="mb-4 flex items-center gap-3">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div className="w-full sm:max-w-xs flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2">
               <Search className="size-4 shrink-0 text-[#9ca3af]" />
               <Input
@@ -543,41 +482,36 @@ export function AssetsPageShell({
                 className="h-auto border-0 bg-transparent px-0 py-0 text-[13px] shadow-none focus-visible:ring-0 placeholder:text-[#9ca3af]"
               />
             </div>
+            {canManageAssets && (
+              <Button
+                onClick={() => { setSettingsTab('create'); setSettingsOpen(true); }}
+                className="h-9 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm"
+                style={{ backgroundColor: ACTION_GREEN }}
+              >
+                <Plus className="mr-1.5 size-4" />
+                Create Category
+              </Button>
+            )}
           </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              <CategoryTab
-                categories={categories}
-                categorySearch={categorySearch}
-                isLoading={categoriesQuery.isLoading}
-                canManageAssets={canManageAssets}
-                onAddField={handleAddField}
-                onEditCategory={handleEditCategory}
-                onDeleteCategory={handleDeleteCategory}
-              />
-            </div>
-            <div className="lg:col-span-2">
-              <div className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
-                <AssetIdManager
-                  assetIds={assetIds}
-                  isLoading={assetIdsQuery.isLoading}
-                  canManageAssets={canManageAssets}
-                  onCreate={(data) => assetIdMutations.createAssetId.mutateAsync(data)}
-                  onUpdate={(id, data) => assetIdMutations.updateAssetId.mutateAsync({ assetIdId: id, data })}
-                  onDelete={(id) => assetIdMutations.deleteAssetId.mutateAsync(id)}
-                />
-              </div>
-            </div>
-          </div>
+          <CategoryTab
+            categories={categories}
+            categorySearch={categorySearch}
+            isLoading={categoriesQuery.isLoading}
+            canManageAssets={canManageAssets}
+            onAddField={handleAddField}
+            onEditCategory={(id, name) => handleEditCategory(id, { name })}
+            onDeleteCategory={handleDeleteCategory}
+          />
         </TabsContent>
 
         <TabsContent value="provide" className="mt-0">
           <IssueAssetTab
             members={members}
-            availableAssets={availableAssets}
+            availableGroups={availableGroups}
             canManageAssets={canManageAssets}
             memberId={memberId}
-            onIssue={handleIssueAsset}
+            onIssue={handleIssueGroupAsset}
+            isGroupsLoading={availableGroupsQuery.isLoading}
           />
         </TabsContent>
 
@@ -593,13 +527,9 @@ export function AssetsPageShell({
       <AssetFormDialog
         open={assetFormOpen}
         onOpenChange={setAssetFormOpen}
-        assetForm={assetForm}
-        setAssetForm={setAssetForm}
-        isSaving={mutations.createAsset.isPending || mutations.updateAsset.isPending}
-        editingAssetId={editingAssetId}
-        onSave={() => void handleSaveAsset()}
+        isSaving={mutations.bulkCreateAssets.isPending}
+        onSaveBulk={handleSaveBulkAsset}
         categories={categories}
-        assetIds={assetIds}
       />
 
       <AssetDetailDialog
@@ -608,7 +538,7 @@ export function AssetsPageShell({
         isLoading={detailQuery.isLoading}
         asset={selectedAsset ?? undefined}
         canManageAssets={canManageAssets}
-        onEdit={openEditAssetDialog}
+        onEdit={() => {}}
         onArchive={(assetId) => void handleArchiveAsset(assetId)}
         onProvide={seedProvideForm}
         onReturn={() => router.push(`/${orgSlug}/assets`)}
@@ -620,7 +550,7 @@ export function AssetsPageShell({
         onOpenChange={setSettingsOpen}
         defaultTab={settingsTab}
         categories={categories}
-        onCreateCategory={(data) => mutations.createCategory.mutateAsync(data as any)}
+        onCreateCategory={(data) => mutations.createCategory.mutateAsync(data)}
         onCreateField={(categoryId, data) =>
           mutations.createCategoryField.mutateAsync({ categoryId, data: data as any })
         }

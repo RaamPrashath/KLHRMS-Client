@@ -133,7 +133,7 @@ export function AssetDetailDialog({
                           {asset.unitSummary && (
                             <DetailField
                               label="Units"
-                              value={`${asset.unitSummary.available} available / ${asset.unitSummary.provided} provided / ${asset.unitSummary.total} total`}
+                              value={`${asset.unitSummary.available} available / ${asset.unitSummary.provided} issued / ${asset.unitSummary.total} total`}
                             />
                           )}
                         </div>
@@ -192,7 +192,7 @@ export function AssetDetailDialog({
                                 label={action}
                                 onClick={() => {
                                   if (action === 'Edit') onEdit(asset);
-                                  if (action === 'Provide Asset') onProvide(asset);
+                                  if (action === 'Issue Asset') onProvide(asset);
                                   if (action === 'Return Asset') onReturn(asset);
                                   if (action === 'Log Maintenance') onMaintenance(asset);
                                 }}
@@ -225,14 +225,14 @@ export function AssetDetailDialog({
                             <TimelineCard
                               key={record.id}
                               title={record.memberName || record.memberEmail || 'Employee'}
-                              subtitle={`Provided ${formatDate(record.providedDate)}`}
+                              subtitle={`Issued ${formatDate(record.providedDate)}`}
                               body={`${humanize(record.conditionWhileProviding)} while providing`}
                               footer={
                                 record.returnDate
                                   ? `Returned ${formatDate(record.returnDate)}${
                                       record.returnedCondition ? ` \u00B7 ${humanize(record.returnedCondition)}` : ''
                                     }`
-                                  : 'Currently provided'
+                                  : 'Currently issued'
                               }
                             />
                           ))
