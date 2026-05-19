@@ -793,7 +793,10 @@ export function AtsKanbanBoard({
 
   function openStageWorkspace(stage: PipelineStage) {
     const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/candidates/${currentPosting.slug}` : `/${orgSlug}/candidates`);
-    router.push(`${basePath}/${stage.slug}`);
+    const jobContext = basePath.endsWith('/stage') && currentPosting?.slug
+      ? `?jobSlug=${encodeURIComponent(currentPosting.slug)}`
+      : '';
+    router.push(`${basePath}/${stage.slug}${jobContext}`);
   }
 
   const stages = boardQuery.data?.stages ?? [];

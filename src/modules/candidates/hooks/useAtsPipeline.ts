@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  acceptInterviewAction,
   assignStageInterviewsAction,
   completeInterviewMeetingAction,
   createCandidateApplicationNoteAction,
@@ -25,6 +26,7 @@ import {
   generateEvaluationWorkspaceAction,
   moveApplicationStageAction,
   previewStageInterviewWarningsAction,
+  rejectInterviewAction,
   reshuffleInterviewAssignmentAction,
   searchInterviewersAction,
   updateCandidateApplicationDetailAction,
@@ -33,6 +35,7 @@ import {
 } from '@/modules/candidates/api/atsServerActions';
 import type {
   CandidateApplicationDetail,
+  AcceptInterviewResponse,
   MyInterviewListResponse,
   PipelineApplication,
   PipelineBoard,
@@ -42,6 +45,7 @@ import type {
   InterviewerSearchResponse,
   ReshuffleRequest,
   ReshuffleResponse,
+  RejectInterviewResponse,
   StageInterviewAssignment,
   StageInterviewAssignmentResponse,
   StageInterviewWarningResponse,
@@ -51,6 +55,7 @@ import type {
 } from '@/modules/candidates/types/atsTypes';
 import type {
   CreateInterviewMeetingInput,
+  AcceptInterviewInput,
   CreatePipelineStageInput,
   UpdatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
@@ -272,6 +277,7 @@ export function useAssignStageInterviews(
       assignStageInterviewsAction({ orgSlug, memberId, stageSlug, assignments }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: stageWorkspaceKey(orgSlug, stageSlug) });
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug] });
     },
   });
 }
@@ -521,7 +527,37 @@ export function useDistributeStageInterviews(orgSlug: string, memberId: string, 
       if (jobPostingId) {
         queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
       }
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug'] });
       queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
+    },
+  });
+}
+
+export function useAcceptInterview(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<AcceptInterviewResponse, Error, { eventId: string; data: AcceptInterviewInput }>({
+    mutationFn: (args) => acceptInterviewAction({ orgSlug, memberId, ...args }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
+    },
+  });
+}
+
+export function useRejectInterview(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<RejectInterviewResponse, Error, { eventId: string }>({
+    mutationFn: (args) => rejectInterviewAction({ orgSlug, memberId, ...args }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
     },
   });
 }

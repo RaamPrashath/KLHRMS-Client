@@ -58,7 +58,20 @@ export function createEmployeePermissions(): RolePermissions {
   permissions.jobs.create = 'self';
   permissions.jobs.edit = 'self';
   permissions.jobs.delete = 'self';
-  
+
+  // Recruitment
+  permissions.candidates.view = 'self';
+  permissions.candidates.create = 'self';
+  permissions.candidates.edit = 'self';
+  permissions.candidates.delete = 'self';
+  permissions.candidates.approve = 'self';
+
+  permissions.interviews.view = 'self';
+  permissions.interviews.create = 'self';
+  permissions.interviews.edit = 'self';
+  permissions.interviews.delete = 'self';
+  permissions.interviews.approve = 'self';
+
   // Lifecycle
   permissions.documentCollection.view = 'self';
   permissions.documentCollection.create = 'self';

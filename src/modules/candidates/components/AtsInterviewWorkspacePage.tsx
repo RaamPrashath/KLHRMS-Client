@@ -301,7 +301,9 @@ export function AtsInterviewWorkspacePage({
                 </TableCell>
                 <TableCell className="font-mono text-[13px] text-neutral-700">{formatDateTime(candidate.appliedAt)}</TableCell>
                 <TableCell className="text-sm text-neutral-700">{candidate.currentAssignment?.interviewer?.name ?? '—'}</TableCell>
-                <TableCell className="text-sm text-neutral-700">{candidate.currentAssignment ? formatDateTime(candidate.currentAssignment.scheduledStartAt) : '—'}</TableCell>
+                <TableCell className="text-sm text-neutral-700">
+                  {candidate.currentAssignment?.scheduledStartAt ? formatDateTime(candidate.currentAssignment.scheduledStartAt) : '—'}
+                </TableCell>
                 <TableCell className="text-sm text-neutral-700">{deriveStatus(candidate)}</TableCell>
                 <TableCell className="text-right">
                   <Button
@@ -311,7 +313,7 @@ export function AtsInterviewWorkspacePage({
                     onClick={() => {
                       setSelectedCandidate(candidate);
                       setSelectedInterviewer(candidate.currentAssignment?.interviewer ?? null);
-                      setScheduledLocal(candidate.currentAssignment ? toLocalDateTimeInput(candidate.currentAssignment.scheduledStartAt) : '');
+                      setScheduledLocal(candidate.currentAssignment?.scheduledStartAt ? toLocalDateTimeInput(candidate.currentAssignment.scheduledStartAt) : '');
                       setWarningMessage(null);
                     }}
                   >

@@ -42,7 +42,7 @@ export function CandidatesJobPageClient({
       }}
       isLoadingPostings={postingsQuery.isLoading}
       showJobSelector={false}
-      pipelineBasePath={`/${orgSlug}/candidates/stage`}
+      pipelineBasePath={`/${orgSlug}/stage`}
       defaultView={defaultView}
     />
   );

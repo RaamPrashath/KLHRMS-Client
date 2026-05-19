@@ -72,9 +72,10 @@ export const createInterviewMeetingSchema = z.object({
 export const stageInterviewAssignmentSchema = z.object({
   applicationId: z.string().min(1),
   interviewerMemberId: z.string().min(1),
-  scheduledStartAt: z.string().datetime(),
+  scheduledStartAt: z.string().datetime().optional().nullable(),
   durationMinutes: z.number().int().min(15).max(240).default(30),
   meetLink: z.string().url().max(2048).optional().nullable(),
+  backupInterviewers: z.array(z.string().min(1)).default([]),
 });
 
 export const stageInterviewAssignmentRequestSchema = z.object({
@@ -83,6 +84,19 @@ export const stageInterviewAssignmentRequestSchema = z.object({
 
 export const stageInterviewWarningRequestSchema = z.object({
   assignments: z.array(stageInterviewAssignmentSchema).default([]),
+});
+
+export const acceptInterviewSchema = z.object({
+  scheduledStartAt: z.string().datetime().optional().nullable(),
+  durationMinutes: z.number().int().min(15).max(240).default(30),
+}).superRefine((value, ctx) => {
+  if (value.scheduledStartAt && new Date(value.scheduledStartAt).getTime() < Date.now()) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['scheduledStartAt'],
+      message: 'Interview cannot be scheduled in the past',
+    });
+  }
 });
 
 export interface MoveApplicationStageInput {
@@ -138,7 +152,13 @@ export interface CreateInterviewMeetingInput {
 export interface StageInterviewAssignmentInput {
   applicationId: string;
   interviewerMemberId: string;
-  scheduledStartAt: string;
+  scheduledStartAt?: string | null;
   durationMinutes: number;
   meetLink?: string | null;
+  backupInterviewers?: string[];
+}
+
+export interface AcceptInterviewInput {
+  scheduledStartAt?: string | null;
+  durationMinutes: number;
 }

@@ -208,10 +208,10 @@ export interface StageWorkspaceInterviewer {
 export interface StageWorkspaceAssignment {
   eventId: string;
   interviewer: StageWorkspaceInterviewer | null;
-  scheduledStartAt: string;
-  scheduledEndAt: string;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
   meetLink: string | null;
-  status: string;
+  status: 'PENDING' | 'PENDING_ACCEPTANCE' | 'ACCEPTED' | 'SCHEDULED' | 'REJECTED' | 'COMPLETED' | 'UNASSIGNED' | string;
   emailSentAt: string | null;
 }
 
@@ -240,9 +240,10 @@ export interface InterviewerSearchResponse {
 export interface StageInterviewAssignment {
   applicationId: string;
   interviewerMemberId: string;
-  scheduledStartAt: string;
+  scheduledStartAt?: string | null;
   durationMinutes: number;
   meetLink?: string | null;
+  backupInterviewers?: string[];
 }
 
 export interface StageInterviewWarning {
@@ -284,7 +285,7 @@ export interface TeamDistributionRequest {
   hiringTeamId: string;
   strategy: 'ROUND_ROBIN';
   applicationIds: string[];
-  scheduledStartAt: string;
+  scheduledStartAt?: string | null;
   durationMinutes: number;
   backupInterviewers?: string[];
   ignoreWarnings?: boolean;
@@ -305,6 +306,19 @@ export interface ReshuffleResponse {
   warnings: StageInterviewWarning[];
 }
 
+export interface AcceptInterviewResponse {
+  eventId: string;
+  status: string;
+  meeting: InterviewMeeting | null;
+}
+
+export interface RejectInterviewResponse {
+  eventId: string;
+  newInterviewerMemberId: string | null;
+  status: 'ESCALATED' | 'UNASSIGNED';
+  warnings: StageInterviewWarning[];
+}
+
 export interface MyInterview {
   eventId: string;
   applicationId: string;
@@ -312,8 +326,8 @@ export interface MyInterview {
   stageName: string;
   candidate: CandidateSummary;
   jobTitle: string;
-  scheduledStartAt: string;
-  scheduledEndAt: string;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
   status: string;
   role: 'INTERVIEWER' | 'BACKUP';
   isBackup: boolean;
