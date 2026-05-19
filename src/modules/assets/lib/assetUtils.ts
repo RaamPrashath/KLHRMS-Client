@@ -11,6 +11,12 @@ export function readError(error: unknown, fallback: string) {
 }
 
 export function humanize(value: string) {
+  const aliases: Record<string, string> = {
+    PROVIDED: 'Issued',
+    PROVIDED_ASSETS: 'Issued Assets',
+  };
+  if (aliases[value]) return aliases[value];
+
   return value
     .toLowerCase()
     .replaceAll('_', ' ')
@@ -58,8 +64,8 @@ export function conditionBadge(condition: AssetCondition) {
 export function reportDescriptions(type: AssetReportType) {
   const map: Record<AssetReportType, string> = {
     ALL_ASSETS: 'Full company asset register with current holder and location.',
-    AVAILABLE_ASSETS: 'Assets ready to be provided to employees.',
-    PROVIDED_ASSETS: 'Assets currently with employees.',
+    AVAILABLE_ASSETS: 'Assets ready to be issued to employees.',
+    PROVIDED_ASSETS: 'Assets currently issued to employees.',
     RETURNED_ASSETS: 'Completed return history for audit review.',
     DAMAGED_ASSETS: 'Assets flagged as damaged and pending action.',
     MAINTENANCE_HISTORY: 'Maintenance timeline with cost and service details.',
@@ -85,7 +91,7 @@ export function deriveReturnNextStatus(condition: AssetCondition) {
 }
 
 export function getRowActions(status: AssetStatus) {
-  if (status === 'AVAILABLE') return ['View', 'Edit', 'Provide Asset', 'Log Maintenance', 'Decommission'];
+  if (status === 'AVAILABLE') return ['View', 'Issue Asset', 'Log Maintenance', 'Decommission'];
   if (status === 'PROVIDED') return ['View', 'Return Asset', 'Log Maintenance'];
   if (status === 'UNDER_MAINTENANCE') return ['View'];
   if (status === 'DAMAGED') return ['View', 'Log Maintenance', 'Decommission'];

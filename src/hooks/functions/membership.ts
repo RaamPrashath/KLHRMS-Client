@@ -14,7 +14,13 @@ export interface OrgMembershipResponse {
     logo: string | null;
     createdAt: string;
   };
-  membership: { role: "OWNER" | "EMPLOYEE" } | null;
+  membership: {
+    role: {
+      id?: string;
+      name: string | null;
+      permissions?: Record<string, Record<string, string>> | null;
+    } | null;
+  } | null;
 }
 
 export async function fetchOrgMembership(

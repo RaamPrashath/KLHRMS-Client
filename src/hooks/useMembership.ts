@@ -23,7 +23,7 @@ export function useMembership(passedSlug?: string) {
     org,
     membership,
     isMember: !!membership,
-    isOwner: membership?.role === "OWNER",
+    isOwner: membership?.role?.name === "Admin",
     ...query,
   };
 }

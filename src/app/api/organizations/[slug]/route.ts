@@ -19,7 +19,13 @@ export async function GET(
     return NextResponse.json({
       organization: org,
       membership: {
-        role: member.role?.name ?? null,
+        role: member.role
+          ? {
+              id: member.role.id,
+              name: member.role.name,
+              permissions: member.role.permissions,
+            }
+          : null,
       },
     });
   } catch (error) {

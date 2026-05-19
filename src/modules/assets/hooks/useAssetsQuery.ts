@@ -6,6 +6,7 @@ import {
   fetchAssetMetaAction,
   fetchAssetsAction,
   fetchAssetCategoriesAction,
+  fetchAvailableAssetGroupsAction,
 } from '@/modules/assets/api/assetServerActions';
 import type {
   AssetCategoryDefinition,
@@ -13,6 +14,7 @@ import type {
   AssetFiltersState,
   AssetListResponse,
   AssetMetaResponse,
+  AvailableAssetGroup,
 } from '@/modules/assets/types/assetTypes';
 
 export function useAssetsQuery(orgSlug: string, memberId: string, filters: AssetFiltersState) {
@@ -44,6 +46,14 @@ export function useAssetCategoriesQuery(orgSlug: string, memberId: string) {
   return useQuery<AssetCategoryDefinition[], Error>({
     queryKey: ['asset-categories', orgSlug],
     queryFn: () => fetchAssetCategoriesAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
+  });
+}
+
+export function useAvailableAssetGroupsQuery(orgSlug: string, memberId: string) {
+  return useQuery<AvailableAssetGroup[], Error>({
+    queryKey: ['asset-available-groups', orgSlug],
+    queryFn: () => fetchAvailableAssetGroupsAction({ orgSlug, memberId }),
     enabled: !!orgSlug && !!memberId,
   });
 }

@@ -242,21 +242,21 @@ export function TodayWorkLogsCard({
     );
 
     const cardClasses =
-        "bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col";
+        "relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/80 dark:border-zinc-800/60 dark:bg-[#0A0A0C] shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.015)] flex flex-col";
 
     if (isLoading || isLoadingProjects) {
         return (
             <div className={cardClasses}>
-                <div className="px-6 py-5 border-b border-black/[0.04]">
-                    <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight">
+                <div className="px-6 py-4 border-b border-zinc-200/80 dark:border-zinc-800/60">
+                    <h2 className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">
                         Today&apos;s Work Logs
                     </h2>
                 </div>
-                <div className="flex flex-col divide-y divide-black/4 p-6 space-y-4">
+                <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-850 p-6 space-y-4">
                     {[1, 2].map((i) => (
                         <div
                             key={i}
-                            className="h-16 w-full animate-pulse rounded-xl bg-neutral-100"
+                            className="h-16 w-full animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-900"
                         />
                     ))}
                 </div>
@@ -267,14 +267,14 @@ export function TodayWorkLogsCard({
     return (
         <>
             <div className={cardClasses}>
-                <div className="px-5 pt-3 flex items-center justify-between">
-                    <h2 className="text-[15px] font-semibold text-neutral-900 tracking-tight">
+                <div className="px-6 py-4 flex items-center justify-between border-b border-zinc-200/80 dark:border-zinc-800/60">
+                    <h2 className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">
                         Today&apos;s Work Logs
                     </h2>
                     <button
                         type="button"
                         onClick={handleOpenCreate}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
                     >
                         <Plus className="size-4" />
                         Add Log
@@ -286,16 +286,16 @@ export function TodayWorkLogsCard({
                         <button
                             type="button"
                             onClick={handleOpenCreate}
-                            className="flex min-h-[256px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-200 bg-canvas/70 px-6 py-12 text-center transition-colors hover:bg-neutral-50"
+                            className="flex min-h-[256px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-neutral-50/50 px-6 py-12 text-center transition-colors hover:bg-neutral-100/50 dark:border-zinc-800 dark:bg-zinc-950/30 dark:hover:bg-zinc-900/30"
                         >
                             <div className="flex max-w-xs flex-col items-center">
-                                <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
+                                <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-neutral-100 dark:bg-zinc-900 text-neutral-400">
                                     <Clock className="size-5 text-neutral-400" />
                                 </div>
-                                <p className="text-sm font-semibold text-neutral-900">
+                                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                                     No work logs yet
                                 </p>
-                                <p className="mt-2 text-sm leading-6 text-neutral-500">
+                                <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                                     Add your first log to track today&apos;s work.
                                 </p>
                             </div>

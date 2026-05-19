@@ -3,6 +3,7 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import type { SidebarOrganizationOption } from "@/components/sidebar/organization-switcher";
 import { type RolePermissions } from "@/lib/hrms-roles";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ export interface OrgSidebarShellProps {
     readonly orgName: string;
     readonly roleName: string | null;
     readonly permissions: RolePermissions | null;
+    readonly organizations: SidebarOrganizationOption[];
     readonly user: {
         name?: string | null;
         email?: string | null;
@@ -25,12 +27,16 @@ export function OrgSidebarShell({
     orgName,
     roleName,
     permissions,
+    organizations,
     user,
 }: OrgSidebarShellProps) {
     const pathname = usePathname();
+    const cleanPath = pathname.replace(/\/$/, "");
+    const isDashboardRoute = cleanPath === `/${orgSlug}` || cleanPath.endsWith(`/${orgSlug}`);
+
     const isLeaveRoute = pathname.includes("/leaves");
     const isCandidatesRoute = pathname.includes("/candidates");
-    const isFullWidthRoute = isLeaveRoute || isCandidatesRoute || pathname.includes("/assets") || pathname.includes("/maintenance")
+    const isFullWidthRoute = isLeaveRoute || isCandidatesRoute || pathname.includes("/assets") || pathname.includes("/maintenance") || isDashboardRoute;
     const isTimesheetRoute = pathname.includes("/timesheet");
     const isAttendanceRoute = pathname.includes("/attendance");
     const isDepartmentsRoute = pathname.includes("/departments");
@@ -47,6 +53,7 @@ export function OrgSidebarShell({
                 orgName={orgName}
                 roleName={roleName}
                 permissions={permissions}
+                organizations={organizations}
                 user={user}
             />
             <main className="flex-1 min-h-0 overflow-y-auto">
@@ -54,7 +61,7 @@ export function OrgSidebarShell({
                     className={cn(
                         "w-full",
                         isFullWidthRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
-                        isLeaveRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isLeaveRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
                     )}
                 >
                     {children}

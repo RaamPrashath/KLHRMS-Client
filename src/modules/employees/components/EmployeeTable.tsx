@@ -7,6 +7,8 @@ import {
   type ColumnDef,
   type Row,
 } from '@tanstack/react-table';
+import { useMemo } from 'react';
+import { Pencil } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AttendanceBadge } from './AttendanceBadge';
 import { EmployeeFilters } from './EmployeeFilters';
@@ -39,6 +41,9 @@ interface EmployeeTableProps {
   onRoleChange: (value: string | undefined) => void;
   onAttendanceStatusChange: (value: AttendanceTodayStatus | undefined) => void;
   onClearAll: () => void;
+  // role editing
+  canEditRole?: boolean;
+  onEditRole?: (memberId: string, currentRoleName: string | null) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -53,84 +58,93 @@ function getInitials(name: string): string {
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
-// Column width distribution (must sum to 100%)
-// Employee 35% | Email 20% | Role 20% | Attendance 25%
-const COL_WIDTHS = ['25%', '25%', '25%', '25%'];
-
 const SKELETON_COUNT = 20;
 const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-row-${i}`);
 
-const columns: ColumnDef<EmployeeListItem>[] = [
-  {
-    id: 'employee',
-    header: 'Name',
-    cell: ({ row }) => {
-      const { name, email, image } = row.original;
-      return (
-        <div className="flex min-w-0 items-center gap-3">
-          <Avatar className="size-8 shrink-0">
-            <AvatarImage src={image ?? undefined} alt={name} />
-            <AvatarFallback className="bg-primary-subtle text-xs font-medium text-primary">
-              {getInitials(name)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex flex-col items-start">
-            <p className="truncate text-sm font-medium text-neutral-900" title={name}>
-              {name}
-            </p>
-            <p className="truncate text-[11px] text-neutral-500" title={email}>
-              {email}
-            </p>
+function buildColumns(
+  canEditRole: boolean,
+  onEditRole?: (memberId: string, currentRoleName: string | null) => void,
+): ColumnDef<EmployeeListItem>[] {
+  const cols: ColumnDef<EmployeeListItem>[] = [
+    {
+      id: 'employee',
+      header: 'Name',
+      cell: ({ row }) => {
+        const { name, email, image } = row.original;
+        return (
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar className="size-8 shrink-0">
+              <AvatarImage src={image ?? undefined} alt={name} />
+              <AvatarFallback className="bg-primary-subtle text-xs font-medium text-primary">
+                {getInitials(name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex flex-col items-start">
+              <p className="truncate text-sm font-medium text-neutral-900" title={name}>
+                {name}
+              </p>
+              <p className="truncate text-[11px] text-neutral-500" title={email}>
+                {email}
+              </p>
+            </div>
           </div>
-        </div>
-      );
+        );
+      },
     },
-  },
-  {
-    id: 'email',
-    header: 'Email',
-    cell: ({ row }) => (
-      <span
-        className="block truncate text-sm text-neutral-700"
-        title={row.original.email}
-      >
-        {row.original.email}
-      </span>
-    ),
-  },
-  {
-    id: 'role',
-    header: 'Role',
-    cell: ({ row }) =>
-      row.original.role ? (
-        <span
-          className="block truncate text-sm text-neutral-700"
-          title={row.original.role.name}
-        >
-          {row.original.role.name}
+    {
+      id: 'email',
+      header: 'Email',
+      cell: ({ row }) => (
+        <span className="block truncate text-sm text-neutral-700" title={row.original.email}>
+          {row.original.email}
         </span>
-      ) : (
-        <span className="text-neutral-400">—</span>
       ),
-  },
-  {
-    id: 'attendance',
-    header: "Today's Attendance",
-    cell: ({ row }) => (
-      <AttendanceBadge status={row.original.attendance_today.status} />
-    ),
-  },
-];
+    },
+    {
+      id: 'role',
+      header: 'Role',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          {row.original.role ? (
+            <span className="truncate text-sm text-neutral-700" title={row.original.role.name}>
+              {row.original.role.name}
+            </span>
+          ) : (
+            <span className="text-neutral-400">—</span>
+          )}
+          {canEditRole && onEditRole && (
+            <button
+              type="button"
+              onClick={() => onEditRole(row.original.member_id, row.original.role?.name ?? null)}
+              className="shrink-0 rounded p-0.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+              title="Change role"
+            >
+              <Pencil className="size-3.5" />
+            </button>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'attendance',
+      header: "Today's Attendance",
+      cell: ({ row }) => (
+        <AttendanceBadge status={row.original.attendance_today.status} />
+      ),
+    },
+  ];
 
-// No longer using ColGroup or table-specific columns for widths.
+  return cols;
+}
 
 interface TableBodyProps {
   isLoading: boolean;
   rows: Row<EmployeeListItem>[];
   pageSize: number;
+  canEditRole: boolean;
 }
 
-function TableBody({ isLoading, rows, pageSize }: Readonly<TableBodyProps>) {
+function TableBody({ isLoading, rows, pageSize, canEditRole }: Readonly<TableBodyProps>) {
   if (isLoading) {
     return (
       <div className="flex flex-col divide-y divide-black/4 bg-surface">
@@ -158,23 +172,16 @@ function TableBody({ isLoading, rows, pageSize }: Readonly<TableBodyProps>) {
           key={row.id}
           className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4"
         >
-          {/* Column 1: Name (fixed width for vertical alignment) */}
-          <div className="w-[260px] shrink-0 flex justify-start">
+          <div className="w-[240px] shrink-0 flex justify-start">
             {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
           </div>
-          
-          {/* Column 2: Email */}
-          <div className="w-[240px] shrink-0 flex justify-start">
+          <div className="w-[200px] shrink-0 flex justify-start">
             {flexRender(row.getVisibleCells()[1].column.columnDef.cell, row.getVisibleCells()[1].getContext())}
           </div>
-          
-          {/* Column 3: Role */}
-          <div className="w-[140px] shrink-0 flex justify-start">
+          <div className="w-[170px] shrink-0 flex justify-start">
             {flexRender(row.getVisibleCells()[2].column.columnDef.cell, row.getVisibleCells()[2].getContext())}
           </div>
-          
-          {/* Column 4: Attendance (right aligned) */}
-          <div className="w-[160px] shrink-0 flex justify-end">
+          <div className="w-[150px] shrink-0 flex justify-end">
             {flexRender(row.getVisibleCells()[3].column.columnDef.cell, row.getVisibleCells()[3].getContext())}
           </div>
         </div>
@@ -202,7 +209,11 @@ export function EmployeeTable({
   onRoleChange,
   onAttendanceStatusChange,
   onClearAll,
+  canEditRole = false,
+  onEditRole,
 }: Readonly<EmployeeTableProps>) {
+  const columns = useMemo(() => buildColumns(canEditRole, onEditRole), [canEditRole, onEditRole]);
+
   const table = useReactTable({
     data,
     columns,
@@ -232,10 +243,10 @@ export function EmployeeTable({
         <div className="w-full">
           {/* Header Row */}
           <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
-            <div className="w-[260px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Name</div>
-            <div className="w-[240px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Email</div>
-            <div className="w-[140px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Role</div>
-            <div className="w-[160px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-right">Today's Attendance</div>
+            <div className="w-[240px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Name</div>
+            <div className="w-[200px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Email</div>
+            <div className="w-[170px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Role</div>
+            <div className="w-[150px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-right">Today's Attendance</div>
           </div>
 
           <div className="px-4">
@@ -243,6 +254,7 @@ export function EmployeeTable({
               isLoading={isLoading}
               rows={table.getRowModel().rows}
               pageSize={pageSize}
+              canEditRole={canEditRole}
             />
           </div>
         </div>

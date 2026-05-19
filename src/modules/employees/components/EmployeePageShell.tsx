@@ -1,16 +1,19 @@
 'use client';
 
 import { useState, useCallback, useTransition } from 'react';
+import { getScope, type RolePermissions } from '@/lib/hrms-roles';
 import { useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
+import { ChangeEmployeeRoleDialog } from './ChangeEmployeeRoleDialog';
 import { EmployeeTable } from './EmployeeTable';
 import type { AttendanceTodayStatus } from '@/modules/employees/types/employeeTypes';
 
 interface EmployeePageShellProps {
   orgSlug: string;
   memberId: string;
+  permissions: RolePermissions | null;
 }
 
-export function EmployeePageShell({ orgSlug, memberId }: Readonly<EmployeePageShellProps>) {
+export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<EmployeePageShellProps>) {
   const [, startTransition] = useTransition();
 
   // ── Filter state ────────────────────────────────────────────────────────────
@@ -19,6 +22,15 @@ export function EmployeePageShell({ orgSlug, memberId }: Readonly<EmployeePageSh
   const [attendanceStatus, setAttendanceStatus] = useState<AttendanceTodayStatus | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+
+  // ── Role editing state ──────────────────────────────────────────────────────
+  const [editTarget, setEditTarget] = useState<{ memberId: string; currentRoleName: string | null } | null>(null);
+
+  const canEditRole = permissions ? getScope(permissions, 'employees', 'edit') !== 'none' : false;
+
+  const handleEditRole = useCallback((targetMemberId: string, currentRoleName: string | null) => {
+    setEditTarget({ memberId: targetMemberId, currentRoleName });
+  }, []);
 
   // ── Data queries ────────────────────────────────────────────────────────────
   const { data, isLoading, isError, error } = useEmployeesQuery(orgSlug, memberId, {
@@ -96,23 +108,34 @@ export function EmployeePageShell({ orgSlug, memberId }: Readonly<EmployeePageSh
     <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">
       <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight ml-7 mt-7">Employees</h1>
       <EmployeeTable
-      data={items}
-      isLoading={isLoading}
-      total={total}
-      page={page}
-      pageSize={pageSize}
-      totalPages={totalPages}
-      onPageChange={handlePageChange}
-      onPageSizeChange={handlePageSizeChange}
-      search={search}
-      roleId={roleId}
-      attendanceStatus={attendanceStatus}
-      roles={roles}
-      onSearchChange={handleSearchChange}
-      onRoleChange={handleRoleChange}
-      onAttendanceStatusChange={handleAttendanceStatusChange}
-      onClearAll={handleClearAll}
-    />
+        data={items}
+        isLoading={isLoading}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        search={search}
+        roleId={roleId}
+        attendanceStatus={attendanceStatus}
+        roles={roles}
+        onSearchChange={handleSearchChange}
+        onRoleChange={handleRoleChange}
+        onAttendanceStatusChange={handleAttendanceStatusChange}
+        onClearAll={handleClearAll}
+        canEditRole={canEditRole}
+        onEditRole={handleEditRole}
+      />
+
+      <ChangeEmployeeRoleDialog
+        open={editTarget !== null}
+        onOpenChange={(open) => { if (!open) setEditTarget(null); }}
+        orgSlug={orgSlug}
+        memberId={editTarget?.memberId ?? ''}
+        currentRoleName={editTarget?.currentRoleName ?? null}
+        roles={roles}
+      />
     </div>
   );
 }

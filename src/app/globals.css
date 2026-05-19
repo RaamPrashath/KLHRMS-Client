@@ -1,12 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
- 
+
 /* ============================================================
    KOVAN LABS — DESIGN TOKENS (Tailwind v4 + shadcn compatible)
    ============================================================ */
- 
+
 @custom-variant dark (&:where(.dark, .dark *));
- 
+
 @theme inline {
     /* ----------------------------------------------------------
        FONTS
@@ -16,7 +16,7 @@
         "Helvetica Neue", Arial, sans-serif;
     --font-mono:
         "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
- 
+
     /* ----------------------------------------------------------
        BRAND — PRIMARY GREEN SCALE
        Mapped to shadcn's --primary / --color-primary
@@ -27,7 +27,7 @@
     --color-primary-light: #34c47a;
     --color-primary-subtle: #d4f5e4;
     --color-primary-ghost: #edfaf4;
- 
+
     /* ----------------------------------------------------------
        SEMANTIC STATUS COLORS (Logo Colors)
        Use ONLY as status signals — never decorative fills.
@@ -36,22 +36,22 @@
     --color-destructive-bg: #fce8e6;
     --color-destructive-text: #b31412;
     --color-destructive-border: #f5b7b1;
- 
+
     --color-warning: #fbbc05;
     --color-warning-bg: #fef7e0;
     --color-warning-text: #a07000;
     --color-warning-border: #fde68a;
- 
+
     --color-info: #4285f4;
     --color-info-bg: #e8f0fe;
     --color-info-text: #1a56c4;
     --color-info-border: #bfcffe;
- 
+
     --color-success: #34a853;
     --color-success-bg: #e6f4ea;
     --color-success-text: #1e7e34;
     --color-success-border: #a8d5b5;
- 
+
     /* ----------------------------------------------------------
        BACKGROUNDS & SURFACES — LIGHT MODE
        Apple-inspired: off-white canvas, pure white surfaces
@@ -60,7 +60,7 @@
     --color-surface: #ffffff;
     --color-surface-subtle: #f0f0f2;
     --color-surface-muted: #e8e8eb;
- 
+
     /* ----------------------------------------------------------
        BACKGROUNDS & SURFACES — DARK MODE
        Apple graphite surfaces
@@ -68,7 +68,7 @@
     --color-dark-canvas: #272729;
     --color-dark-surface: #1c1c1e;
     --color-dark-elevated: #3a3a3c;
- 
+
     /* ----------------------------------------------------------
        NEUTRALS
     ---------------------------------------------------------- */
@@ -80,7 +80,7 @@
     --color-neutral-200: #d1d1d6;
     --color-neutral-100: #e5e5ea;
     --color-neutral-50: #f2f2f7;
- 
+
     /* ----------------------------------------------------------
        SIDEBAR TOKENS
        Dark column, single green accent for active state
@@ -93,7 +93,7 @@
     --color-sidebar-active-border: #00874a;
     --color-sidebar-divider: rgba(255, 255, 255, 0.06);
     --color-sidebar-label: #6e6e73;
- 
+
     /* ----------------------------------------------------------
        SPACING
     ---------------------------------------------------------- */
@@ -106,7 +106,7 @@
     --spacing-8: 32px;
     --spacing-10: 40px;
     --spacing-12: 48px;
- 
+
     /* ----------------------------------------------------------
        BORDER RADIUS
        Kovan: md on inputs/buttons, xl on cards, 2xl on modals
@@ -118,7 +118,7 @@
     --radius-xl: 12px;
     --radius-2xl: 14px;
     --radius-full: 9999px;
- 
+
     /* ----------------------------------------------------------
        SHADOWS / ELEVATION
        Soft, layered — never hard or dramatic
@@ -129,13 +129,13 @@
     --shadow-4: 0 20px 60px rgba(0, 0, 0, 0.18), 0 8px 20px rgba(0, 0, 0, 0.1);
     --shadow-focus: 0 0 0 3px rgba(0, 135, 74, 0.12);
     --shadow-focus-error: 0 0 0 3px rgba(234, 67, 53, 0.12);
- 
+
     /* ----------------------------------------------------------
        SIDEBAR DIMENSIONS
     ---------------------------------------------------------- */
     --sidebar-width: 240px;
     --sidebar-width-collapsed: 60px;
- 
+
     /* ----------------------------------------------------------
        SEMANTIC BUCKETS — Operational Utility mode
        From DESIGN.md
@@ -144,66 +144,66 @@
     --color-sky-text: #0369a1;
     --color-sky-border: #bae6fd;
     --color-sky-dot: #0ea5e9;
- 
+
     --color-violet-bg: #f5f3ff;
     --color-violet-text: #6d28d9;
     --color-violet-border: #ddd6fe;
     --color-violet-dot: #8b5cf6;
- 
+
     --color-emerald-bg: #ecfdf5;
     --color-emerald-text: #047857;
     --color-emerald-border: #a7f3d0;
     --color-emerald-dot: #10b981;
- 
+
     --color-amber-bg: #fffbeb;
     --color-amber-text: #b45309;
     --color-amber-border: #fde68a;
     --color-amber-dot: #f59e0b;
- 
+
     --color-rose-bg: #fff1f2;
     --color-rose-text: #be123c;
     --color-rose-border: #fecdd3;
     --color-rose-dot: #f43f5e;
- 
+
     /* ----------------------------------------------------------
        SHADCN THEME MAPPING — Light Mode
        These are what shadcn components read at runtime.
        Mapped directly from Kovan design tokens above.
        ---------------------------------------------------------- */
- 
+
     /* Backgrounds */
     --color-background: var(--color-canvas);
     --color-foreground: var(--color-neutral-900); /* #1d1d1f */
- 
+
     /* Cards & Popovers → white surface */
     --color-card: var(--color-surface);
     --color-card-foreground: var(--color-neutral-900);
     --color-popover: var(--color-surface);
     --color-popover-foreground: var(--color-neutral-900);
- 
+
     /* Primary → Kovan green */
     --color-primary-foreground: #ffffff;
- 
+
     /* Secondary → subtle grey surface */
     --color-secondary: var(--color-surface-subtle);
     --color-secondary-foreground: var(--color-neutral-700);
- 
+
     /* Muted → grey surface */
     --color-muted: var(--color-surface-subtle);
     --color-muted-foreground: var(--color-neutral-500);
- 
+
     /* Accent → neutral grey hover (green ghost only on explicit active states) */
     --color-accent: var(--color-surface-subtle);
     --color-accent-foreground: var(--color-neutral-900);
- 
+
     /* Destructive → Kovan red */
     --color-destructive-foreground: #ffffff;
- 
+
     /* Borders & Inputs */
     --color-border: var(--color-neutral-100); /* #e5e5ea */
     --color-input: var(--color-neutral-200); /* #d1d1d6 */
     --color-ring: var(--color-primary); /* #00874a */
- 
+
     /* Sidebar (shadcn sidebar primitives) */
     --color-sidebar: var(--color-sidebar-bg);
     --color-sidebar-foreground: var(--color-sidebar-text);
@@ -213,56 +213,75 @@
     --color-sidebar-accent-foreground: var(--color-sidebar-text-hover);
     --color-sidebar-border: var(--color-sidebar-divider);
     --color-sidebar-ring: var(--color-sidebar-active-border);
- 
+
     /* Charts */
     --color-chart-1: var(--color-primary);
     --color-chart-2: var(--color-info);
     --color-chart-3: var(--color-warning);
     --color-chart-4: var(--color-success);
     --color-chart-5: var(--color-destructive);
- 
+
     /* shadcn radius token — drives all component rounding */
-    --radius: 0.5rem; /* 8px = rounded-md — matches Kovan input/button spec */
+    --radius: 0.5rem; /* 8px = rounded-md — matches Kovan input/button spec */ --animate-meteor:
+        meteor 5s linear infinite;
+  @keyframes meteor {
+  0% {
+    transform:
+        rotate(var(--angle)) translateX(0);
+    opacity:
+        1;
+        }
+  70% {
+    opacity:
+        1;
+        }
+  100% {
+    transform:
+        rotate(var(--angle)) translateX(-500px);
+    opacity:
+        0;
+        }
+    }
 }
- 
+
 /* ============================================================
    LIGHT MODE CSS VARIABLES
    shadcn reads these at runtime via var(--background), etc.
    ============================================================ */
- 
+
 :root {
     color-scheme: light;
- 
+
     --background: #f5f5f7; /* Apple-grey canvas */
     --foreground: #1d1d1f;
- 
+
     --card: #ffffff;
     --card-foreground: #1d1d1f;
- 
+
     --popover: #ffffff;
     --popover-foreground: #1d1d1f;
- 
+
     --primary: #00874a; /* Kovan green */
     --primary-foreground: #ffffff;
- 
+
     --secondary: #f0f0f2;
     --secondary-foreground: #3a3a3c;
- 
+
     --muted: #f0f0f2;
     --muted-foreground: #6e6e73;
- 
+
     --accent: #f0f0f2; /* Neutral grey hover — green only on active/selected */
     --accent-foreground: #1d1d1f;
- 
+
     --destructive: #ea4335;
     --destructive-foreground: #ffffff;
- 
+
     --border: #e5e5ea;
     --input: #d1d1d6;
     --ring: #00874a;
- 
+
     --radius: 0.5rem; /* 8px — inputs & buttons */
- 
+
     /* Sidebar */
     --sidebar: #1d1d1f;
     --sidebar-foreground: #aeaeb2;
@@ -278,43 +297,43 @@
     --sidebar-border: rgba(255, 255, 255, 0.06);
     --sidebar-ring: #00874a;
 }
- 
+
 /* ============================================================
    DARK MODE CSS VARIABLES
    Apple graphite surfaces + lighter green primary
    ============================================================ */
- 
+
 .dark {
     color-scheme: dark;
- 
+
     --background: #272729; /* Apple graphite canvas */
     --foreground: #f5f5f7;
- 
+
     --card: #1c1c1e;
     --card-foreground: #f5f5f7;
- 
+
     --popover: #1c1c1e;
     --popover-foreground: #f5f5f7;
- 
+
     --primary: #34c47a; /* Lighter green for dark contrast */
     --primary-foreground: #1d1d1f;
- 
+
     --secondary: #3a3a3c;
     --secondary-foreground: #f5f5f7;
- 
+
     --muted: #3a3a3c;
     --muted-foreground: #aeaeb2;
- 
+
     --accent: rgba(0, 135, 74, 0.2);
     --accent-foreground: #34c47a;
- 
+
     --destructive: #ff6b5b;
     --destructive-foreground: #1d1d1f;
- 
+
     --border: rgba(255, 255, 255, 0.1);
     --input: rgba(255, 255, 255, 0.15);
     --ring: #34c47a;
- 
+
     /* Sidebar stays dark in dark mode too — already dark themed */
     --sidebar: #1d1d1f;
     --sidebar-foreground: #aeaeb2;
@@ -325,11 +344,11 @@
     --sidebar-border: rgba(255, 255, 255, 0.06);
     --sidebar-ring: #34c47a;
 }
- 
+
 /* ============================================================
    BASE STYLES
    ============================================================ */
- 
+
 @layer base {
     *,
     ::after,
@@ -338,7 +357,7 @@
     ::file-selector-button {
         border-color: var(--border);
     }
- 
+
     html {
         font-family: var(--font-sans);
         color: var(--foreground);
@@ -346,11 +365,11 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
- 
+
     body {
         @apply bg-background text-foreground;
     }
- 
+
     /* Numeric and tabular data */
     .font-mono,
     [data-tabular],
@@ -358,23 +377,23 @@
         font-family: var(--font-mono);
         font-variant-numeric: tabular-nums;
     }
- 
+
     svg.lucide {
         stroke-width: 1.5;
     }
 }
- 
+
 /* ============================================================
    UTILITIES
    ============================================================ */
- 
+
 @utility container {
     margin-inline: auto;
     padding-inline: 1.5rem;
     width: 100%;
     max-width: var(--container-7xl);
 }
- 
+
 @utility no-scrollbar {
     &::-webkit-scrollbar {
         display: none;
@@ -382,7 +401,7 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
- 
+
 @keyframes collapsible-down {
     from {
         height: 0;
@@ -393,7 +412,7 @@
         opacity: 1;
     }
 }
- 
+
 @keyframes collapsible-up {
     from {
         height: var(--radix-collapsible-content-height);
@@ -404,7 +423,7 @@
         opacity: 0;
     }
 }
- 
+
 @keyframes shimmer {
     100% {
         transform: translateX(100%);

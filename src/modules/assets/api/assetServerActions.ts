@@ -1,15 +1,15 @@
 'use server';
 
 import {
+  assetIssueSchema,
   assetMaintenanceCreateSchema,
   assetMaintenanceUpdateSchema,
-  assetProvideSchema,
   assetReturnSchema,
   assetSchema,
   type AssetInput,
+  type AssetIssueInput,
   type AssetMaintenanceCreateInput,
   type AssetMaintenanceUpdateInput,
-  type AssetProvideInput,
   type AssetReturnInput,
 } from '@/modules/assets/schema/assetSchemas';
 import type {
@@ -18,9 +18,12 @@ import type {
   AssetDetail,
   AssetFiltersState,
   AssetIdDefinition,
+  AssetIssueResponse,
   AssetListResponse,
   AssetMetaResponse,
   AssetReportType,
+  AvailableAssetGroup,
+  BulkAssetCreateInput,
 } from '@/modules/assets/types/assetTypes';
 
 function getApiUrl(): string {
@@ -155,10 +158,14 @@ export async function createAssetAction(params: {
   memberId: string;
   data: AssetInput;
 }): Promise<AssetDetail> {
+  const payload = normalizeAssetPayload(params.data);
   const res = await fetch(`${getApiUrl()}/assets`, {
     method: 'POST',
     headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify(normalizeAssetPayload(params.data)),
+    body: JSON.stringify({
+      ...payload,
+      status: 'AVAILABLE',
+    }),
   });
   return handleResponse<AssetDetail>(res);
 }
@@ -187,37 +194,6 @@ export async function deleteAssetAction(params: {
     headers: buildHeaders(params.orgSlug, params.memberId),
   });
   return handleResponse<void>(res);
-}
-
-export async function provideAssetAction(params: {
-  orgSlug: string;
-  memberId: string;
-  data: AssetProvideInput;
-}): Promise<AssetDetail> {
-  const parsed = assetProvideSchema.safeParse(params.data);
-  if (!parsed.success) {
-    throw new Error(
-      JSON.stringify({
-        status: 400,
-        message: parsed.error.issues[0]?.message ?? 'Validation failed',
-      }),
-    );
-  }
-
-  const { assetId, ...payload } = parsed.data;
-  const res = await fetch(`${getApiUrl()}/assets/${assetId}/provide`, {
-    method: 'POST',
-    headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify({
-      memberId: payload.memberId,
-      assetUnitId: payload.assetUnitId || null,
-      providedDate: payload.providedDate || null,
-      conditionWhileProviding: payload.conditionWhileProviding,
-      providedByMemberId: payload.providedByMemberId || null,
-      notes: payload.notes || null,
-    }),
-  });
-  return handleResponse<AssetDetail>(res);
 }
 
 export async function returnAssetAction(params: {
@@ -381,7 +357,7 @@ export async function fetchAssetCategoriesAction(params: {
 export async function createAssetCategoryAction(params: {
   orgSlug: string;
   memberId: string;
-  data: { name: string; description?: string };
+  data: { name: string; description?: string; assetCode?: string | null };
 }): Promise<AssetCategoryDefinition> {
   const res = await fetch(`${getApiUrl()}/assets/categories`, {
     method: 'POST',
@@ -395,7 +371,7 @@ export async function updateAssetCategoryAction(params: {
   orgSlug: string;
   memberId: string;
   categoryId: string;
-  data: { name?: string; description?: string };
+  data: { name?: string; description?: string; assetCode?: string | null };
 }): Promise<AssetCategoryDefinition> {
   const res = await fetch(`${getApiUrl()}/assets/categories/${params.categoryId}`, {
     method: 'PATCH',
@@ -587,4 +563,58 @@ export async function deleteAssetIdAction(params: {
     headers: buildHeaders(params.orgSlug, params.memberId),
   });
   return handleResponse<void>(res);
+}
+
+// ── Bulk Asset Creation Action ──────────────────────────────────────────────
+
+export async function bulkCreateAssetsAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: BulkAssetCreateInput;
+}): Promise<AssetDetail[]> {
+  const res = await fetch(`${getApiUrl()}/assets/bulk-create`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<AssetDetail[]>(res);
+}
+
+// ── Available Groups Action ────────────────────────────────────────────────
+
+export async function fetchAvailableAssetGroupsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<AvailableAssetGroup[]> {
+  const res = await fetch(`${getApiUrl()}/assets/available-groups`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<AvailableAssetGroup[]>(res);
+}
+
+// ── Issue Assets Action ────────────────────────────────────────────────────
+
+export async function issueAssetsAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: AssetIssueInput;
+}): Promise<AssetIssueResponse> {
+  const parsed = assetIssueSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(
+      JSON.stringify({
+        status: 400,
+        message: parsed.error.issues[0]?.message ?? 'Validation failed',
+      }),
+    );
+  }
+
+  const res = await fetch(`${getApiUrl()}/assets/issue`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(parsed.data),
+  });
+  return handleResponse<AssetIssueResponse>(res);
 }

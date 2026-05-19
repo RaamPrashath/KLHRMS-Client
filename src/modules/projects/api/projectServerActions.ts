@@ -13,6 +13,23 @@ import type {
   ProjectTaskInput,
 } from '@/modules/projects/schema/projectSchemas';
 
+function normalizeOptionalString(value?: string): string | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeProjectPayload(data: ProjectInput): Record<string, unknown> {
+  return {
+    ...data,
+    teamId: normalizeOptionalString(data.teamId),
+    clientName: normalizeOptionalString(data.clientName),
+    startDate: normalizeOptionalString(data.startDate),
+    endDate: normalizeOptionalString(data.endDate),
+    description: normalizeOptionalString(data.description),
+  };
+}
+
 function buildHeaders(orgSlug: string, memberId: string): HeadersInit {
   return {
     'Content-Type': 'application/json',
@@ -121,7 +138,7 @@ export async function createProjectAction(params: {
   const res = await fetch(`${url}/projects`, {
     method: 'POST',
     headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify(params.data),
+    body: JSON.stringify(normalizeProjectPayload(params.data)),
   });
 
   if (!res.ok) {
@@ -144,7 +161,7 @@ export async function updateProjectAction(params: {
   const res = await fetch(`${url}/projects/${params.projectId}`, {
     method: 'PATCH',
     headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify(params.data),
+    body: JSON.stringify(normalizeProjectPayload(params.data)),
   });
 
   if (!res.ok) {
