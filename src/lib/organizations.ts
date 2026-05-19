@@ -45,6 +45,76 @@ function getSeedTemplates() {
   return ROLE_TEMPLATES.filter((template) => template.name !== "Custom");
 }
 
+function mergeMissingPermissions(
+  current: RolePermissions | null | undefined,
+  template: RolePermissions,
+) {
+  const merged: RolePermissions = {
+    ...(current ?? {}),
+  };
+  let changed = false;
+
+  for (const [moduleKey, templateActions] of Object.entries(template)) {
+    const currentActions = merged[moduleKey];
+
+    if (!currentActions || typeof currentActions !== "object") {
+      merged[moduleKey] = { ...templateActions };
+      changed = true;
+      continue;
+    }
+
+    const nextActions = { ...currentActions };
+    for (const [action, scope] of Object.entries(templateActions)) {
+      if (!(action in nextActions)) {
+        nextActions[action] = scope;
+        changed = true;
+      }
+    }
+    merged[moduleKey] = nextActions;
+  }
+
+  return { merged, changed };
+}
+
+async function syncLegacyTemplateRolesForOrganization(organizationId: string) {
+  const templatesByName = new Map(
+    getSeedTemplates().map((template) => [template.name, template.permissions] as const),
+  );
+
+  const roles = await prisma.role.findMany({
+    where: {
+      organizationId,
+      name: { in: [...templatesByName.keys()] },
+    },
+    select: {
+      id: true,
+      name: true,
+      permissions: true,
+    },
+  });
+
+  await Promise.all(
+    roles.map(async (role) => {
+      const templatePermissions = templatesByName.get(role.name);
+      if (!templatePermissions) return;
+
+      const { merged, changed } = mergeMissingPermissions(
+        role.permissions as RolePermissions | null | undefined,
+        templatePermissions,
+      );
+
+      if (!changed) return;
+
+      await prisma.role.update({
+        where: { id: role.id },
+        data: {
+          permissions: merged as Prisma.InputJsonValue,
+        },
+      });
+    }),
+  );
+}
+
 function isMissingOrganizationInviteTableError(error: unknown) {
   if (
     typeof error === "object" &&
@@ -567,6 +637,8 @@ export async function deleteOrganizationBySlug(slug: string) {
 export async function requireOrgMembership(userId: string, slug: string) {
   const org = await getOrganizationBySlug(slug);
   if (!org) throw new Error("Organization not found");
+
+  await syncLegacyTemplateRolesForOrganization(org.id);
 
   const member = await prisma.member.findFirst({
     where: { organizationId: org.id, userId },
