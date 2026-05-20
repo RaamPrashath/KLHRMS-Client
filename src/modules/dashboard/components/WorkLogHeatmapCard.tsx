@@ -253,26 +253,26 @@ export function WorkLogHeatmapCard({
         className={cn(
           isEmployeeVariant
             ? "flex items-start justify-between gap-4"
-            : "flex items-center justify-between gap-4",
+            : "flex items-start justify-between gap-4",
         )}
       >
-        <div className={cn(isEmployeeVariant ? "space-y-1" : "")}>
+        <div className={cn(isEmployeeVariant ? "space-y-1" : "space-y-1")}>
           <h2
             className={cn(
               "font-semibold tracking-tight text-neutral-900",
               isEmployeeVariant ? "text-[17px]" : "text-[15px]",
             )}
           >
-            {isEmployeeVariant ? "Attendance Heatmap" : "Heatmap"}
+            Heatmap
           </h2>
-          {isEmployeeVariant ? (
-            <p className="text-[14px] font-medium text-[#8a96aa]">{format(month, "MMMM yyyy")}</p>
-          ) : null}
+          <p className={cn(isEmployeeVariant ? "text-[14px] font-medium text-[#8a96aa]" : "text-[13px] text-[#7e8faa]")}>
+            Your recent metrics summary
+          </p>
         </div>
         <div
           className={cn(
             "flex items-center",
-            isEmployeeVariant ? "gap-2" : "gap-1.5",
+            isEmployeeVariant ? "gap-2" : "gap-3",
           )}
         >
           <button
@@ -282,12 +282,17 @@ export function WorkLogHeatmapCard({
               "inline-flex items-center justify-center rounded-full text-neutral-700 transition-colors hover:bg-black/[0.04]",
               isEmployeeVariant
                 ? "size-10 rounded-[14px] border border-[#d9e3f0] bg-white text-[#64748b] shadow-[0_6px_16px_rgba(15,23,42,0.04)] hover:bg-[#f7f9fc]"
-                : "size-7 border border-neutral-200 bg-surface",
+                : "size-8 rounded-xl border border-[#dce5f0] bg-white text-[#7b8ca7] shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:bg-[#f8fafc]",
             )}
             aria-label="Previous month"
           >
             <ArrowLeft className={cn(isEmployeeVariant ? "size-3.5" : "size-3.5")} />
           </button>
+          {!isEmployeeVariant ? (
+            <span className="min-w-[4.75rem] text-center text-[14px] font-semibold text-[#365887]">
+              {format(month, "MMM ''yy")}
+            </span>
+          ) : null}
           <button
             type="button"
             onClick={() => setMonth((currentMonth) => addMonths(currentMonth, 1))}
@@ -295,7 +300,7 @@ export function WorkLogHeatmapCard({
               "inline-flex items-center justify-center rounded-full text-neutral-700 transition-colors hover:bg-black/[0.04]",
               isEmployeeVariant
                 ? "size-10 rounded-[14px] border border-[#d9e3f0] bg-white text-[#64748b] shadow-[0_6px_16px_rgba(15,23,42,0.04)] hover:bg-[#f7f9fc]"
-                : "size-7 border border-neutral-200 bg-surface",
+                : "size-8 rounded-xl border border-[#dce5f0] bg-white text-[#7b8ca7] shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:bg-[#f8fafc]",
             )}
             aria-label="Next month"
           >
@@ -307,7 +312,7 @@ export function WorkLogHeatmapCard({
       <div
         className={cn(
           "flex flex-1 flex-col",
-          isEmployeeVariant ? "mt-5 w-full min-h-0" : "mt-6",
+          isEmployeeVariant ? "mt-5 w-full min-h-0" : "mt-6 w-full min-h-0",
         )}
       >
         <div
@@ -315,27 +320,27 @@ export function WorkLogHeatmapCard({
             "grid grid-cols-7",
             isEmployeeVariant
               ? "px-2 text-[13px] text-[#94a3b8] gap-2"
-              : "gap-2.5 text-[11px] text-neutral-500",
+              : "mb-2 gap-2 text-[12px] text-[#8fa1bb]",
           )}
         >
           {WEEKDAY_LABELS.map((label) => (
             <div
               key={label}
-              className={cn("text-center font-medium", isEmployeeVariant ? "py-1 tracking-[0.01em]" : "")}
+              className={cn("text-center font-medium", isEmployeeVariant ? "py-1 tracking-[0.01em]" : "py-1")}
             >
-              {label}
+              {isEmployeeVariant ? label : label.slice(0, 1)}
             </div>
           ))}
         </div>
 
         <div
-          className={cn("grid", isEmployeeVariant ? "mt-3 gap-2" : "mt-2.5 flex-1 gap-2.5")}
+          className={cn("grid", isEmployeeVariant ? "mt-3 gap-2" : "mt-1 gap-2")}
           style={{ gridTemplateRows: `repeat(${calendarWeeks.length}, minmax(0, 1fr))` }}
         >
           {calendarWeeks.map((week) => (
             <div
               key={format(week[0], "yyyy-MM-dd")}
-              className={cn("grid grid-cols-7", isEmployeeVariant ? "gap-2" : "gap-2.5")}
+              className={cn("grid grid-cols-7", isEmployeeVariant ? "gap-2" : "gap-2")}
             >
               {week.map((day) => {
                 const dateStr = format(day, "yyyy-MM-dd");
@@ -343,7 +348,7 @@ export function WorkLogHeatmapCard({
                   return (
                     <div
                       key={dateStr}
-                      className={cn(isEmployeeVariant ? "aspect-square min-h-[3.8rem]" : "aspect-square")}
+                      className={cn(isEmployeeVariant ? "aspect-square min-h-[3.8rem]" : "aspect-square min-h-[2.65rem]")}
                       aria-hidden="true"
                     />
                   );
@@ -364,9 +369,10 @@ export function WorkLogHeatmapCard({
                       "relative flex aspect-square w-full items-center justify-center rounded-[16px] border border-transparent text-sm font-medium transition-transform duration-150 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       isEmployeeVariant
                         ? "min-h-[3.8rem] rounded-[18px] border border-[#dfe7f2] text-[21px] font-semibold shadow-[0_10px_24px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.5)]"
-                        : "min-h-[2.9rem]",
+                        : "min-h-[2.65rem] rounded-[9px] border border-[#e5ebf3] text-[12px] font-medium shadow-none",
                       tone.backgroundClassName,
-                      isCurrentDay && !isSelected ? "shadow-[inset_0_0_0_1.5px_rgba(76,132,255,0.65)]" : "",
+                      !isEmployeeVariant && isCurrentDay && !isSelected ? "border-[#5b57ff] bg-white text-[#0f172a] shadow-[inset_0_0_0_2px_#5b57ff]" : "",
+                      isCurrentDay && isEmployeeVariant && !isSelected ? "shadow-[inset_0_0_0_1.5px_rgba(76,132,255,0.65)]" : "",
                       isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-[#fbfcfe]" : "",
                     )}
                   >
@@ -383,54 +389,37 @@ export function WorkLogHeatmapCard({
             "flex flex-wrap items-center text-neutral-500",
             isEmployeeVariant
               ? "mt-5 justify-start gap-x-4 gap-y-2 text-[12px]"
-              : "mt-5 justify-center gap-x-5 gap-y-2 text-[10px]",
+              : "mt-6 grid grid-cols-2 gap-x-10 gap-y-2 border-t border-[#edf1f6] pt-4 text-[11px]",
           )}
         >
           <span className="flex items-center gap-1.5">
             <span
-              className={cn("bg-[#77e2b7]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
+              className={cn("bg-[#10b26c]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
             />
-            Logged
+            Logged (8h+)
           </span>
           <span className="flex items-center gap-1.5">
             <span
               className={cn("bg-[#fde68a]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
             />
-            Partial
+            Partial (&lt;8h)
           </span>
           <span className="flex items-center gap-1.5">
             <span
-              className={cn("bg-[#eff2f6]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
+              className={cn("bg-[#fb7185]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
             />
             Absent
           </span>
           {isEmployeeVariant ? (
             <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-[#ffe9ec]" />
-              Time off
+              <span className="size-3 rounded-full bg-[#d1d5db]" />
+              Off Day
             </span>
-          ) : null}
-          {isEmployeeVariant ? null : (
-            <>
-              <span className="flex items-center gap-1.5">
-                <span
-                  className={cn("bg-[#d9f7e7]", isEmployeeVariant ? "size-2.5 rounded-[999px]" : "size-3 rounded-[6px]")}
-                />
-                &lt; 4h
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span
-                  className={cn("bg-[#77e2b7]", isEmployeeVariant ? "size-2.5 rounded-[999px]" : "size-3 rounded-[6px]")}
-                />
-                4-8h
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span
-                  className={cn("bg-[#10b26c]", isEmployeeVariant ? "size-2.5 rounded-[999px]" : "size-3 rounded-[6px]")}
-                />
-                8h+
-              </span>
-            </>
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-[6px] border border-[#e3e9f2] bg-[#f5f7fb]" />
+              Off Day
+            </span>
           )}
         </div>
       </div>

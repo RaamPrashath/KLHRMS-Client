@@ -20,7 +20,7 @@ export function MaintenancePageShell({
   return (
     <div className="flex h-full flex-col">
       <div className="mb-4">
-        <h1 className="text-[22px] font-semibold tracking-tight text-foreground">Maintenance</h1>
+        <h1 className="text-4xl font-semibold tracking-tight text-foreground">Maintenance</h1>
         <p className="mt-1 text-[14px] text-muted-foreground">Track and manage asset repairs and service requests</p>
       </div>
 

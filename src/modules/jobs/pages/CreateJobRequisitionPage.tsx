@@ -243,7 +243,7 @@ export function CreateJobRequisitionPage({
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">
             {isReview ? 'Review Requisition' : isReadOnly ? 'View Requisition' : isEdit ? 'Edit Requisition' : 'Create Requisition'}
           </h1>
         </div>

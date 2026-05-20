@@ -625,20 +625,19 @@ export function AttendanceClockCard({
       >
         <div
           className={[
-            "relative flex min-h-[100px] justify-between gap-6",
+            "relative flex min-h-25 justify-between gap-6",
             isDashboard
-              ? "flex-1 flex-col items-center justify-start gap-3 text-center p-0 md:p-0"
+              ? "flex-1 flex-col gap-4 p-0 text-left md:flex-row md:items-center md:justify-between"
               : "p-6 md:p-8 flex-col md:flex-row md:items-center md:gap-0",
           ].join(" ")}
         >
-          <div className={isDashboard ? "flex w-full min-w-0 flex-col items-center justify-start text-center" : "flex min-w-0 flex-col text-left"}>
+          <div className={isDashboard ? "flex min-w-0 flex-1 flex-col text-left" : "flex min-w-0 flex-col text-left"}>
             {widgetState === "LOADING" ? (
               <>
                 {isDashboard ? (
                   <>
-                    <div className="h-7 w-40 animate-pulse rounded-lg bg-neutral-100" />
-                    <div className="mt-2 h-4 w-28 animate-pulse rounded-lg bg-neutral-100" />
-                    <div className="mt-5 h-12 w-36 animate-pulse rounded-xl bg-neutral-100" />
+                    <div className="h-8 w-48 animate-pulse rounded-lg bg-white/10" />
+                    <div className="mt-2 h-4 w-72 animate-pulse rounded-lg bg-white/10" />
                   </>
                 ) : (
                   <>
@@ -652,13 +651,10 @@ export function AttendanceClockCard({
                 {isDashboard ? (
                   <>
                     <div className="min-w-0">
-                      <h2 className="max-w-[24rem] text-balance font-sans text-xl font-medium leading-tight text-neutral-900" title={greeting}>
+                      <h2 className="max-w-136 text-balance font-sans text-[1.5rem] font-semibold leading-[1.15] tracking-[-0.03em] text-white" title={greeting}>
                         {greeting}
                       </h2>
-                      <p className="mt-0.5 text-sm text-neutral-500">{subtitle}</p>
-                      <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-neutral-400">
-                        {todayLabel}
-                      </p>
+                      <p className="mt-2 text-[1.02rem] text-white/72">{subtitle}</p>
                     </div>
                   </>
                 ) : (
@@ -678,7 +674,7 @@ export function AttendanceClockCard({
             )}
           </div>
 
-          <div className={isDashboard ? "flex w-full flex-1 flex-col items-center justify-center gap-4" : "flex items-center shrink-0 min-h-[48px]"}>
+          <div className={isDashboard ? "flex shrink-0 items-center justify-end" : "flex items-center shrink-0 min-h-[48px]"}>
             <AnimatePresence mode="wait">
               {widgetState === "LOADING" && (
                 <motion.div
@@ -687,7 +683,7 @@ export function AttendanceClockCard({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.96 }}
                   transition={{ duration: 0.2 }}
-                  className="h-12 w-32 animate-pulse rounded-xl bg-neutral-100"
+                  className={isDashboard ? "h-12 w-40 animate-pulse rounded-xl bg-white/10" : "h-12 w-32 animate-pulse rounded-xl bg-neutral-100"}
                 />
               )}
 
@@ -699,7 +695,7 @@ export function AttendanceClockCard({
                   exit={{ opacity: 0, filter: "blur(4px)" }}
                   transition={{ duration: 0.25 }}
                 >
-                  <div className={isDashboard ? "scale-[0.98]" : ""}>
+                  <div className={isDashboard ? "" : ""}>
                     <ClockInButton
                       onClockIn={handleOpenClockInDialog}
                       isPending={clockInMutation.isPending || isClockContextLoading}
@@ -715,12 +711,12 @@ export function AttendanceClockCard({
                   animate={{ opacity: 1, filter: "blur(0px)" }}
                   exit={{ opacity: 0, filter: "blur(4px)" }}
                   transition={{ duration: 0.25 }}
-                  className={isDashboard ? "flex flex-col items-center gap-4" : "flex items-center gap-6"}
+                  className={isDashboard ? "flex items-center gap-4" : "flex items-center gap-6"}
                 >
                   {isDashboard ? (
                     <div className="flex items-center gap-3">
                       <p
-                        className="text-[2.25rem] font-light tracking-tight text-ink tabular-nums"
+                        className="text-[2.25rem] font-light tracking-tight text-white tabular-nums"
                         aria-live="polite"
                       >
                         {elapsedDisplay}
@@ -760,7 +756,7 @@ export function AttendanceClockCard({
                   transition={{ duration: 0.25 }}
                   className="flex items-center gap-4"
                 >
-                  <div className="rounded-xl bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-500">
+                  <div className={isDashboard ? "rounded-xl bg-white/10 px-6 py-3 text-sm font-medium text-white/70" : "rounded-xl bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-500"}>
                     Day complete - {formatWorkedDuration(completedRecord.totalHours)} logged
                   </div>
                 </motion.div>
@@ -772,7 +768,7 @@ export function AttendanceClockCard({
             <motion.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute bottom-[-40px] rounded-lg bg-destructive-bg px-4 py-2 text-sm font-medium text-destructive-text"
+              className="absolute -bottom-10 rounded-lg bg-destructive-bg px-4 py-2 text-sm font-medium text-destructive-text"
               role="alert"
             >
               {inlineError}

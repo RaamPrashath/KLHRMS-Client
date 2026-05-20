@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ChevronLeft, Plus, Check, ChevronsUpDown } from "lucide-react";
+import { useState } from "react";
+import { Plus, Check, ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { motion } from "motion/react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
     Command,
@@ -57,7 +56,7 @@ export function OrganizationSwitcher({
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl border border-white/8 bg-white/6 text-xs font-semibold text-white transition-colors hover:bg-white/10"
+                className="mx-auto mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,rgba(98,86,255,0.96),rgba(88,74,243,0.9))] text-xs font-semibold text-white shadow-[0_10px_22px_rgba(73,61,214,0.34)] transition-transform hover:scale-[1.02]"
                 aria-label="Open organization switcher"
             >
                 {getInitials(currentOrg.name)}
@@ -66,66 +65,52 @@ export function OrganizationSwitcher({
     }
 
     return (
-        <div className="flex flex-col gap-3 px-1 py-2">
-            <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/40">
-                    Organization
-                </p>
-                <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setOpen(false)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-                    aria-label="Collapse sidebar"
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                </motion.button>
-            </div>
-
+        <div className="py-2">
             <Popover open={isOpen} onOpenChange={setIsOpen}>
-                <PopoverTrigger asChild>
-                    <button
-                        type="button"
-                        className={cn(
-                            "flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/5 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/10 active:scale-[0.98] outline-none",
-                            isOpen && "bg-white/10 shadow-inner"
-                        )}
-                        aria-expanded={isOpen}
-                        aria-label="Organization switcher"
-                    >
-                        <div className="flex items-center min-w-0">
-                            {/* Left: Avatar */}
-                            <div className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[11px] font-semibold text-white border border-white/5">
-                                {getInitials(currentOrg.name)}
-                            </div>
-                            
-                            {/* Center: Text Details */}
-                            <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-white">
-                                    {currentOrg.name}
-                                </p>
-                                <p className="truncate pt-0.5 text-[11px] text-white/45 font-medium">
-                                    {currentOrg.roleName ?? "Member"}
-                                </p>
-                            </div>
+                <div
+                    className={cn(
+                        "flex w-full items-center justify-between rounded-[18px] px-3.5 py-3.5 text-left transition-all duration-200",
+                        isOpen && "bg-white/5",
+                    )}
+                >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[17px] font-bold text-white shadow-[0_10px_22px_rgba(73,61,214,0.34)]">
+                            {getInitials(currentOrg.name)}
                         </div>
-                        
-                        {/* Right: ChevronsUpDown pill button */}
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-white/10 bg-[#3E3E3F] text-white/80 transition-colors hover:bg-white/15">
-                            <ChevronsUpDown className="h-3.5 w-3.5" />
+
+                        <div className="min-w-0 flex-1 pr-2">
+                            <p className="text-[1.02rem] font-semibold leading-tight tracking-[-0.02em] text-white break-words">
+                                {currentOrg.name}
+                            </p>
+                            <p className="pt-1 text-[0.84rem] font-medium leading-tight text-white/52 break-words">
+                                {currentOrg.roleName ?? "Employee Workspace"}
+                            </p>
                         </div>
-                    </button>
-                </PopoverTrigger>
+                    </div>
+
+                    <PopoverTrigger asChild>
+                        <button
+                            type="button"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                            aria-expanded={isOpen}
+                            aria-label="Open organization switcher"
+                        >
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl">
+                                <ChevronsUpDown className="h-4 w-4" />
+                            </div>
+                        </button>
+                    </PopoverTrigger>
+                </div>
 
                 <PopoverContent 
-                    className="w-[var(--radix-popover-trigger-width)] min-w-[240px] rounded-2xl border border-white/10 bg-[#1C1C1E] p-1.5 text-white shadow-[0_24px_64px_rgba(0,0,0,0.65)] backdrop-blur-md" 
+                    className="w-(--radix-popover-trigger-width) min-w-60 rounded-2xl border border-white/10 bg-[#1C1C1E] p-1.5 text-white shadow-[0_24px_64px_rgba(0,0,0,0.65)] backdrop-blur-md" 
                     align="start"
                     sideOffset={6}
                 >
                     <Command className="bg-transparent text-white border-none shadow-none">
                         <CommandInput
                             placeholder="Search..."
-                            className="text-white placeholder:text-white/35 border-0 focus:ring-0 outline-none"
+                            className="border-0 text-white placeholder:text-white/35 focus:ring-0 focus-visible:outline-none"
                         />
                         <CommandList className="max-h-60 mt-2 no-scrollbar">
                             <CommandEmpty className="py-4 text-xs text-white/45 text-center">
@@ -155,7 +140,7 @@ export function OrganizationSwitcher({
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="truncate text-sm font-semibold">{org.name}</p>
-                                                    <p className="truncate text-[11px] text-white/45">/{org.slug}</p>
+                                                    <p className="truncate text-[11px] text-white/45">{org.roleName ?? "Employee Workspace"}</p>
                                                 </div>
                                             </div>
                                             {isSelected && (

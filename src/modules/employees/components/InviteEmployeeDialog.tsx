@@ -20,9 +20,16 @@ import { useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQue
 interface InviteEmployeeDialogProps {
   orgSlug: string;
   memberId: string;
+  triggerClassName?: string;
+  triggerLabel?: string;
 }
 
-export function InviteEmployeeDialog({ orgSlug, memberId }: Readonly<InviteEmployeeDialogProps>) {
+export function InviteEmployeeDialog({
+  orgSlug,
+  memberId,
+  triggerClassName,
+  triggerLabel = 'Invite Employee',
+}: Readonly<InviteEmployeeDialogProps>) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -55,7 +62,7 @@ export function InviteEmployeeDialog({ orgSlug, memberId }: Readonly<InviteEmplo
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Invite Employee</Button>
+        <Button className={triggerClassName}>{triggerLabel}</Button>
       </DialogTrigger>
       <DialogContent>
         <form ref={formRef} action={handleSubmit}>

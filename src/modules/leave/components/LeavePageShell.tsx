@@ -174,8 +174,8 @@ export function LeavePageShell({ orgSlug, memberId }: Readonly<LeavePageShellPro
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-6">
           <section className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Leave Management</h1>
-              <p className="mt-1 text-sm text-neutral-500">Requests, balances, holidays, and policy controls in one place.</p>
+              <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">Leave Management</h1>
+              <p className="mt-1 text-[14px] text-neutral-500">Requests, balances, holidays, and policy controls in one place.</p>
             </div>
             {canCreate ? (
               <Button className="bg-primary text-white hover:bg-primary-hover" onClick={() => setApplyOpen(true)}>

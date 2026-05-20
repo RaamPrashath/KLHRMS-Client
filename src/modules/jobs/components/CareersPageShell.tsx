@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BriefcaseBusiness, Building2, MapPin, Shield, Sparkles } from 'lucide-react';
+import { BriefcaseBusiness, Building2, MapPin, Sparkles } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -71,8 +71,8 @@ export function CareersPageShell() {
         <div className="flex flex-col gap-3 rounded-xl border bg-card p-6">
           <Badge variant="outline" className="w-fit">Public Careers</Badge>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Open roles</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            <h1 className="text-4xl font-semibold tracking-tight text-foreground">Open roles</h1>
+            <p className="mt-2 max-w-2xl text-[14px] text-muted-foreground">
               Browse currently published roles across organizations and open any role for full details and application.
             </p>
           </div>

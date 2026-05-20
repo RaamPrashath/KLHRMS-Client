@@ -1,5 +1,6 @@
 'use client';
 
+import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { SaveState } from '@/modules/attendance/types/bulkAttendanceTypes';
 
@@ -20,6 +21,7 @@ export function BulkAttendanceToolbar({
   saveState,
   saveError,
 }: Readonly<BulkAttendanceToolbarProps>) {
+  const visibleMonthLabel = format(weekStart, 'MMMM');
   const isCurrentWeek = (() => {
     const now = new Date();
     const currentWeekStart = new Date(now);
@@ -45,6 +47,7 @@ export function BulkAttendanceToolbar({
           type="button"
           onClick={onToday}
           disabled={isCurrentWeek}
+          aria-label={`Jump to current week from ${visibleMonthLabel}`}
           className={[
             'h-8 px-4 text-xs font-medium rounded-md transition-all duration-150 flex items-center gap-1.5',
             isCurrentWeek
@@ -54,7 +57,7 @@ export function BulkAttendanceToolbar({
             .filter(Boolean)
             .join(' ')}
         >
-          Today
+          {visibleMonthLabel}
         </button>
 
         <button

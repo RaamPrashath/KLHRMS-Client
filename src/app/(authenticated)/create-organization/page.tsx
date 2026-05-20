@@ -19,8 +19,8 @@ export default async function CreateOrganizationPage() {
         <main className="min-h-screen bg-[#f6f1e8] px-6 py-10 sm:px-8 lg:px-12">
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Create organization</h1>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                    <h1 className="text-4xl font-semibold tracking-tight text-slate-950">Create organization</h1>
+                    <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-600">
                         Start your HRMS workspace. We&apos;ll seed the default roles and assign your membership to the
                         organization&apos;s <span className="font-medium text-slate-900">Admin</span> role automatically.
                     </p>

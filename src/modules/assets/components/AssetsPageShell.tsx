@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'motion/react';
 import { Hammer, PackagePlus, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -41,15 +40,17 @@ import {
   useAvailableAssetGroupsQuery,
 } from '@/modules/assets/hooks/useAssetsQuery';
 import {
+  assetMaintenanceTypeOptions,
   assetStatusOptions,
   type AssetCategoryFieldCreateInput,
-  type BulkAssetCreateInput,
+  type AssetIssueInput,
+  type BulkAssetCreateInput as BulkAssetCreateSchemaInput,
 } from '@/modules/assets/schema/assetSchemas';
 import type {
   AssetCategory,
   AssetDetail,
+  BulkAssetCreateInput as BulkAssetCreateMutationInput,
   AssetStatus,
-  AssetSummary,
 } from '@/modules/assets/types/assetTypes';
 
 export function AssetsPageShell({
@@ -128,18 +129,30 @@ export function AssetsPageShell({
     setDetailSnapshot(null);
   }
 
-  function seedProvideForm(_asset: AssetSummary) {
+  function seedProvideForm() {
     setActiveTab('provide');
     setSearch('');
   }
 
-  function seedMaintenanceForm(_asset: AssetSummary) {
+  function seedMaintenanceForm() {
     router.push(`/${orgSlug}/maintenance`);
   }
 
-  async function handleSaveBulkAsset(data: BulkAssetCreateInput) {
+  async function handleSaveBulkAsset(data: BulkAssetCreateSchemaInput) {
     try {
-      await mutations.bulkCreateAssets.mutateAsync(data);
+      const payload: BulkAssetCreateMutationInput = {
+        assetCode: data.assetCode,
+        name: data.name,
+        categoryDefinitionId: data.categoryDefinitionId ?? null,
+        condition: data.condition,
+        location: data.location ?? '',
+        serialNumbers: data.serialNumbers,
+        customFields: data.customFields.map((field) => ({
+          fieldDefinitionId: field.fieldDefinitionId,
+          value: field.value ?? null,
+        })),
+      };
+      await mutations.bulkCreateAssets.mutateAsync(payload);
       setAssetFormOpen(false);
       toast.success('Assets created successfully');
     } catch (error) {
@@ -161,7 +174,7 @@ export function AssetsPageShell({
     }
   }
 
-  async function handleIssueGroupAsset(data: import('@/modules/assets/types/assetTypes').AssetIssueInput) {
+  async function handleIssueGroupAsset(data: AssetIssueInput) {
     try {
       await mutations.issueAssets.mutateAsync(data);
     } catch (error) {
@@ -182,9 +195,14 @@ export function AssetsPageShell({
   }
 
   async function handleRaiseTicket(data: { assetId: string; maintenanceType: string; issueDescription: string }) {
+    const maintenanceType = assetMaintenanceTypeOptions.find((option) => option === data.maintenanceType);
+    if (!maintenanceType) {
+      throw new Error(`Unsupported maintenance type: ${data.maintenanceType}`);
+    }
+
     await mutations.createMaintenance.mutateAsync({
       assetId: data.assetId,
-      maintenanceType: data.maintenanceType as any,
+      maintenanceType,
       issueDescription: data.issueDescription,
       serviceDate: new Date().toISOString().split('T')[0],
       status: 'OPEN',
@@ -220,55 +238,50 @@ export function AssetsPageShell({
   if (!canManageAssets) {
     return (
       <div className="w-full">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-2 border-b border-[#e5e7eb] pb-6">
           <div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-[#111827]">Assets</h1>
+            <h1 className="text-4xl font-semibold tracking-tight text-[#111827]">Assets</h1>
             <p className="mt-1 text-[14px] text-[#6b7280]">View equipment and devices assigned to you</p>
           </div>
-          <Button
-            onClick={() => setRaiseTicketOpen(true)}
-            className="h-9 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm"
-            style={{ backgroundColor: '#b3261e' }}
-          >
-            <Hammer className="mr-1.5 size-4" />
-            Report Issue
-          </Button>
-        </div>
 
-        <div className="mb-5">
-          <div className="inline-flex rounded-lg bg-[#f4f5f7] p-0.5">
-            <button
-              type="button"
-              onClick={() => setEmployeeTab('assets')}
-              className={`relative rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-200 ${
-                employeeTab === 'assets' ? 'text-white' : 'text-[#6b7280] hover:text-[#111827]'
-              }`}
+          <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="overflow-x-auto">
+              <div className="inline-flex min-w-fit items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setEmployeeTab('assets')}
+                  className={cn(
+                    'inline-flex h-8 items-center rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+                    employeeTab === 'assets'
+                      ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                      : 'text-neutral-500 hover:text-neutral-900',
+                  )}
+                >
+                  My Assets
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmployeeTab('tickets')}
+                  className={cn(
+                    'inline-flex h-8 items-center rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+                    employeeTab === 'tickets'
+                      ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                      : 'text-neutral-500 hover:text-neutral-900',
+                  )}
+                >
+                  My Tickets
+                </button>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => setRaiseTicketOpen(true)}
+              className="h-8 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm"
+              style={{ backgroundColor: '#b3261e' }}
             >
-              {employeeTab === 'assets' && (
-                <motion.span
-                  layoutId="employee-tab-pill"
-                  className="absolute inset-0 rounded-md bg-[#1d1d1f]"
-                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                />
-              )}
-              <span className="relative z-10">My Assets</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setEmployeeTab('tickets')}
-              className={`relative rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-200 ${
-                employeeTab === 'tickets' ? 'text-white' : 'text-[#6b7280] hover:text-[#111827]'
-              }`}
-            >
-              {employeeTab === 'tickets' && (
-                <motion.span
-                  layoutId="employee-tab-pill"
-                  className="absolute inset-0 rounded-md bg-[#1d1d1f]"
-                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                />
-              )}
-              <span className="relative z-10">My Tickets</span>
-            </button>
+              <Hammer className="mr-1.5 size-4" />
+              Report Issue
+            </Button>
           </div>
         </div>
 
@@ -360,54 +373,51 @@ export function AssetsPageShell({
 
   return (
     <div className="w-full">
-      <div className="mb-6">
-        <h1 className="text-[22px] font-semibold tracking-tight text-[#111827]">Asset Management</h1>
-        <p className="mt-1 text-[14px] text-[#6b7280]">Manage your company equipment, track assignments, and log maintenance</p>
-      </div>
-
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 overflow-x-auto">
-            <div className="inline-flex min-w-fit rounded-lg bg-[#f4f5f7] p-0.5">
-              {tabOptions.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.value;
-                return (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    onClick={() => setActiveTab(tab.value)}
-                    className={cn(
-                      'relative flex items-center gap-2 rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-200',
-                      isActive
-                        ? 'text-white'
-                        : 'text-[#6b7280] hover:text-[#111827]',
-                    )}
-                  >
-                    {isActive && (
-                      <motion.span
-                        layoutId="asset-tab-pill"
-                        className="absolute inset-0 rounded-md bg-[#1d1d1f]"
-                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                      />
-                    )}
-                    <span className="relative z-10 flex items-center gap-2">
-                      <Icon className="size-3.5" />
-                      {tab.label}
-                    </span>
-                  </button>
-                );
-              })}
+        <div className="mb-2 border-b border-[#e5e7eb] pb-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-4xl font-semibold tracking-tight text-[#111827]">Asset Management</h1>
+              <p className="mt-1 text-[14px] text-[#6b7280]">
+                Manage your company equipment, track assignments, and log maintenance
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 xl:min-w-0 xl:items-end">
+              <div className="overflow-x-auto">
+                <div className="inline-flex min-w-fit items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1 xl:self-auto">
+                  {tabOptions.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.value;
+                    return (
+                      <button
+                        key={tab.value}
+                        type="button"
+                        onClick={() => setActiveTab(tab.value)}
+                        className={cn(
+                          'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+                          isActive
+                            ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                            : 'text-neutral-500 hover:text-neutral-900',
+                        )}
+                      >
+                        <Icon className="size-3.5 shrink-0" />
+                        <span className="whitespace-nowrap">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Button
+                onClick={openCreateAssetDialog}
+                className="h-8 shrink-0 self-start bg-primary px-4 text-[13px] font-medium text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover xl:self-end"
+              >
+                <PackagePlus className="mr-1.5 size-3.5" />
+                Add New Asset
+              </Button>
             </div>
           </div>
-          <Button
-            onClick={openCreateAssetDialog}
-            className="h-9 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm"
-            style={{ backgroundColor: ACTION_GREEN }}
-          >
-            <PackagePlus className="mr-1.5 size-4" />
-            Add Asset
-          </Button>
         </div>
 
         <TabsContent value="dashboard" className="mt-0">
@@ -552,7 +562,7 @@ export function AssetsPageShell({
         categories={categories}
         onCreateCategory={(data) => mutations.createCategory.mutateAsync(data)}
         onCreateField={(categoryId, data) =>
-          mutations.createCategoryField.mutateAsync({ categoryId, data: data as any })
+          mutations.createCategoryField.mutateAsync({ categoryId, data })
         }
         onUpdateCategory={(categoryId, data) =>
           mutations.updateCategory.mutateAsync({ categoryId, data })

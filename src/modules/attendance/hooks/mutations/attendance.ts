@@ -18,7 +18,7 @@ import type {
   DeleteDayEntryInput,
   ManualEntryInput,
 } from '@/modules/attendance/schema/attendanceSchemas';
-import type { ApiError, AttendanceRecord } from '@/modules/attendance/types/attendanceTypes';
+import type { AttendanceRecord } from '@/modules/attendance/types/attendanceTypes';
 import type {
   DeleteBulkAttendanceDayResponse,
   UpsertBulkAttendanceRequest,
@@ -132,7 +132,7 @@ export function useUpsertBulkAttendanceMutation(
 ) {
   const queryClient = useQueryClient();
 
-  return useMutation<UpsertBulkAttendanceResponse, ApiError, UpsertBulkAttendanceRequest>({
+  return useMutation<UpsertBulkAttendanceResponse, Error, UpsertBulkAttendanceRequest>({
     mutationFn: (data) => upsertBulkAttendanceAction({ orgSlug, memberId, data }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
@@ -147,7 +147,7 @@ export function useDeleteBulkAttendanceDayMutation(
 ) {
   const queryClient = useQueryClient();
 
-  return useMutation<DeleteBulkAttendanceDayResponse, ApiError, string>({
+  return useMutation<DeleteBulkAttendanceDayResponse, Error, string>({
     mutationFn: (day) => deleteBulkAttendanceDayAction({ orgSlug, memberId, day }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });

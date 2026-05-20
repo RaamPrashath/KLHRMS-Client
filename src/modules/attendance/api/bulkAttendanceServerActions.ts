@@ -7,7 +7,6 @@ import type {
   UpsertBulkAttendanceResponse,
   DeleteBulkAttendanceDayResponse,
 } from '@/modules/attendance/types/bulkAttendanceTypes';
-import type { ApiError } from '@/modules/attendance/types/attendanceTypes';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -46,8 +45,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
   } catch {
     // ignore parse errors
   }
-  const error: ApiError = { status: res.status, message };
-  throw error;
+  throw new Error(JSON.stringify({ status: res.status, message }));
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────

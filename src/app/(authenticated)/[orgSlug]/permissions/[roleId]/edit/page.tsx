@@ -50,10 +50,10 @@ export default async function EditRolePage({
 
         {/* Page header */}
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">
+          <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
             Edit role
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="mt-1 text-[14px] text-neutral-500">
             Update the name or permissions for{' '}
             <span className="font-medium text-neutral-700">{role.name}</span>.
           </p>

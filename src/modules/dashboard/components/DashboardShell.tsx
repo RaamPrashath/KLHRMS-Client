@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   CalendarDays,
-  Clock,
+  FileText,
   Inbox,
   Search,
   Umbrella,
@@ -27,9 +27,8 @@ import { useRejectLeaveRequest } from "@/modules/leave/hooks/useRejectLeaveReque
 import type { LeaveRequestRecord } from "@/modules/leave/types/leaveTypes";
 import { canApproveLeaves, resolveLeavePermissions } from "@/modules/leave/utils/leavePermissions";
 import { InviteEmployeeDialog } from "@/modules/employees/components/InviteEmployeeDialog";
-import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import { DashboardClockWidget } from "./DashboardClockWidget";
-import { TodayWorkLogsCard } from "./TodayWorkLogsCard";
+import { DashboardTopBar } from "./DashboardTopBar";
 import { WorkLogHeatmapCard } from "./WorkLogHeatmapCard";
 import { JobOpeningsCard } from "./JobOpeningsCard";
 
@@ -81,8 +80,6 @@ function MemberChip({
   );
 }
 
-// ─── Tier 2 (Admin): Today's Attendance ─────────────────────────────────────
-
 function AttendanceOverviewSection({
   orgSlug,
   memberId,
@@ -108,9 +105,7 @@ function AttendanceOverviewSection({
     const activeIds = new Set(
       attendanceItems.filter((r) => r.clockIn && !r.clockOut).map((r) => r.employeeId),
     );
-    const onLeaveMemberIds = new Set(
-      (leaveData?.items ?? []).map((l) => l.memberId),
-    );
+    const onLeaveMemberIds = new Set((leaveData?.items ?? []).map((l) => l.memberId));
     return {
       clockedInMembers: members.filter((m) => activeIds.has(m.memberId)),
       onLeaveMembers: members.filter((m) => !activeIds.has(m.memberId) && onLeaveMemberIds.has(m.memberId)),
@@ -125,7 +120,6 @@ function AttendanceOverviewSection({
   };
 
   const isLoading = attendanceQuery.isLoading || contextQuery.isLoading;
-
   const sections = [
     { label: "Clocked In", members: clockedInMembers, tone: "default" as const },
     { label: "Not Clocked In", members: notClockedInMembers, tone: "muted" as const },
@@ -134,15 +128,15 @@ function AttendanceOverviewSection({
 
   return (
     <section>
-      <div className="flex items-center justify-between gap-4 mb-4">
+      <div className="mb-4 flex items-center justify-between gap-4">
         <h2 className="text-base font-semibold text-neutral-900">Today&apos;s Attendance</h2>
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+        <div className="relative max-w-xs flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
           <Input
-            placeholder="Search members…"
+            placeholder="Search members..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm h-9"
+            className="h-9 border-0 bg-canvas pl-9 text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10"
           />
         </div>
       </div>
@@ -150,8 +144,8 @@ function AttendanceOverviewSection({
         {sections.map((s) => {
           const filtered = s.members.filter(filterFn);
           return (
-            <div key={s.label} className="rounded-[8px] border border-zinc-200/80 bg-white/80 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-[#0A0A0C] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.015)]">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+            <div key={s.label} className="rounded-[8px] border border-zinc-200/80 bg-white/80 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
                 {s.label} <span className="ml-1.5 text-neutral-900">{filtered.length}</span>
               </p>
               {isLoading ? (
@@ -175,8 +169,6 @@ function AttendanceOverviewSection({
   );
 }
 
-// ─── Tier 2 (Admin): Leave Requests ─────────────────────────────────────────
-
 function PendingLeaveRequestsSection({
   orgSlug,
   memberId,
@@ -192,6 +184,7 @@ function PendingLeaveRequestsSection({
       .then(() => toast.success("Leave request approved"))
       .catch((error: unknown) => toast.error(getErrorMessage(error, "Failed to approve")));
   }
+
   function handleReject(requestId: string) {
     rejectMutation.mutateAsync({ leaveRequestId: requestId, data: { approverComment: "" } })
       .then(() => toast.success("Leave request rejected"))
@@ -199,46 +192,69 @@ function PendingLeaveRequestsSection({
   }
 
   return (
-    <section>
-      <h2 className="text-base font-semibold text-neutral-900 mb-4">Leave Requests</h2>
-      {leaveRequestsQuery.isLoading ? (
-        <div className="flex gap-3">
-          {[1, 2, 3].map((i) => <div key={i} className="h-14 flex-1 animate-pulse rounded-2xl bg-neutral-100" />)}
+    <section className="rounded-[28px] border border-[#dbe4ef] bg-white px-7 py-7 shadow-[0_14px_40px_rgba(15,23,42,0.04)]">
+      <div className="flex items-start gap-4">
+        <div className="min-w-0">
+          <h2 className="text-[1.05rem] font-semibold text-[#0f172a]">Leave Requests</h2>
+          <p className="mt-1 text-[15px] leading-6 text-[#64748b]">
+            Incoming employee time-off approval requests pipeline.
+          </p>
         </div>
-      ) : (leaveRequestsQuery.data?.items?.length ?? 0) > 0 ? (
-        <div className="rounded-[8px] border border-zinc-200/80 bg-white/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-[#0A0A0C] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.015)] overflow-hidden">
-          {(leaveRequestsQuery.data?.items ?? []).map((request) => (
-            <LeaveRequestRow key={request.id} request={request} isApproving={approveMutation.isPending} isRejecting={rejectMutation.isPending} onApprove={handleApprove} onReject={handleReject} />
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-[8px] border border-dashed border-zinc-200 bg-white/80 px-5 py-8 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-[#0A0A0C]">
-          <div className="mx-auto flex max-w-sm flex-col items-center text-center">
-            <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-neutral-50 text-neutral-400">
-              <Inbox className="size-5" />
-            </div>
-            <p className="text-sm font-semibold text-neutral-900">No leave requests pending</p>
-            <p className="mt-1 text-[13px] text-neutral-500">
-              New approvals will appear here when someone submits a leave request.
-            </p>
+      </div>
+
+      <div className="mt-8">
+        {leaveRequestsQuery.isLoading ? (
+          <div className="flex min-h-[300px] gap-3 rounded-[28px] border border-dashed border-[#dbe4ef] bg-[#fcfdff] p-6">
+            {[1, 2, 3].map((i) => <div key={i} className="h-14 flex-1 animate-pulse rounded-2xl bg-neutral-100" />)}
           </div>
-        </div>
-      )}
+        ) : (leaveRequestsQuery.data?.items?.length ?? 0) > 0 ? (
+          <div className="overflow-hidden rounded-[28px] border border-[#dbe4ef] bg-[#fcfdff] shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            {(leaveRequestsQuery.data?.items ?? []).map((request) => (
+              <LeaveRequestRow
+                key={request.id}
+                request={request}
+                isApproving={approveMutation.isPending}
+                isRejecting={rejectMutation.isPending}
+                onApprove={handleApprove}
+                onReject={handleReject}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-[28px] border border-dashed border-[#dbe4ef] bg-[#fcfdff] px-6 py-14 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="mx-auto flex min-h-[272px] max-w-md flex-col items-center justify-center text-center">
+              <div className="mb-5 flex size-14 items-center justify-center rounded-full bg-[#eef4fb] text-[#94a3b8]">
+                <Inbox className="size-6" />
+              </div>
+              <p className="text-[18px] font-semibold leading-7 text-[#0f172a]">No leave requests pending</p>
+              <p className="mt-2 max-w-[420px] text-[15px] leading-7 text-[#94a3b8]">
+                New approvals will appear here automatically when someone submits a leave form request.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
 
 function LeaveRequestRow({
-  request, isApproving, isRejecting, onApprove, onReject,
+  request,
+  isApproving,
+  isRejecting,
+  onApprove,
+  onReject,
 }: Readonly<{
   request: LeaveRequestRecord;
-  isApproving: boolean; isRejecting: boolean;
-  onApprove: (requestId: string) => void; onReject: (requestId: string) => void;
+  isApproving: boolean;
+  isRejecting: boolean;
+  onApprove: (requestId: string) => void;
+  onReject: (requestId: string) => void;
 }>) {
   const memberName = getDisplayName(request.member.name, "Unnamed member");
   return (
     <div className="flex items-center justify-between gap-4 border-b border-black/4 px-5 py-3.5 last:border-0">
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="min-w-0 flex items-center gap-3">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-500">
           {memberName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "U"}
         </div>
@@ -247,7 +263,7 @@ function LeaveRequestRow({
           <p className="text-xs text-neutral-500">{request.leaveType.name} · {formatRangeLabel(request.startDate, request.endDate, request.days)}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex shrink-0 items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => onReject(request.id)} disabled={isApproving || isRejecting}>Deny</Button>
         <Button size="sm" className="bg-primary text-white hover:opacity-90" onClick={() => onApprove(request.id)} disabled={isApproving || isRejecting}>Approve</Button>
       </div>
@@ -255,36 +271,105 @@ function LeaveRequestRow({
   );
 }
 
-// ─── Quick Links stack (vertical, for bento bottom-left cell) ───────────────
+function AdminActionItem({
+  title,
+  description,
+  href,
+  actionLabel,
+  children,
+}: Readonly<{
+  title: string;
+  description: string;
+  href?: string;
+  actionLabel?: string;
+  children?: React.ReactNode;
+}>) {
+  const content = (
+    <div className="flex items-center gap-4 rounded-3xl border border-[#e6edf5] bg-[#fbfcfe] px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.02)]">
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-semibold text-[#0f172a]">{title}</p>
+        <p className="mt-0.5 text-[14px] leading-5 text-[#8aa0c3]">{description}</p>
+      </div>
+      {children ?? (
+        actionLabel ? (
+          <Button
+            variant="outline"
+            className="h-9 rounded-xl border-[#d6dfeb] bg-white px-4 text-[14px] font-semibold text-[#355070] hover:bg-[#f8fafc]"
+          >
+            {actionLabel}
+          </Button>
+        ) : null
+      )}
+    </div>
+  );
 
-function QuickLinksStack({ orgSlug }: { orgSlug: string }) {
-  const links = [
-    { href: `/${orgSlug}/weekly-plan`, label: "Weekly Plan", icon: CalendarDays, color: "bg-[#e8f8f1] text-primary" },
-    { href: `/${orgSlug}/timesheet`, label: "Timesheet", icon: Clock, color: "bg-[#eef2ff] text-[#4f46e5]" },
-    { href: `/${orgSlug}/leaves/requests`, label: "Leave", icon: Umbrella, color: "bg-[#fdf2f8] text-[#db2777]" },
+  if (href) {
+    return (
+      <Link href={href} className="block transition-transform duration-200 hover:scale-[1.01]">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
+}
+
+function EmployeeHeroBanner({
+  orgSlug,
+  memberId,
+  roleName,
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName">>) {
+  return (
+    <section className="rounded-2xl bg-(--color-sidebar-bg) px-7 py-3 shadow-[0_10px_28px_rgba(14,20,35,0.22)]">
+      <DashboardClockWidget orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
+    </section>
+  );
+}
+
+function QuickShortcutsCard({ orgSlug }: { readonly orgSlug: string }) {
+  const shortcuts = [
+    {
+      href: `/${orgSlug}/weekly-plan`,
+      label: "Weekly Plan",
+      icon: CalendarDays,
+      iconBg: "bg-[#e6f7f0]",
+      iconColor: "text-[#059669]",
+    },
+    {
+      href: `/${orgSlug}/timesheet`,
+      label: "Timesheet",
+      icon: FileText,
+      iconBg: "bg-[#eef2ff]",
+      iconColor: "text-[#4f46e5]",
+    },
+    {
+      href: `/${orgSlug}/leaves/requests`,
+      label: "Leave Request",
+      icon: Umbrella,
+      iconBg: "bg-[#fdf2f8]",
+      iconColor: "text-[#db2777]",
+    },
   ];
 
   return (
-    <div className="flex h-full flex-col justify-between gap-4">
-      <div className="flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.04] pb-3">
-        <h2 className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">Quick Links</h2>
-      </div>
-      <div className="flex flex-1 flex-col justify-between gap-3">
-        {links.map((link) => {
-          const Icon = link.icon;
+    <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <h2 className="mb-4 text-[0.9375rem] font-semibold text-neutral-900">Quick Shortcuts</h2>
+      <div className="grid grid-cols-3 gap-3">
+        {shortcuts.map((s) => {
+          const Icon = s.icon;
           return (
             <Link
-              key={link.href}
-              href={link.href}
-              className="flex flex-1 items-center gap-3 rounded-xl border border-zinc-200/80 bg-white/60 px-4 py-3 transition-all duration-300 hover:border-zinc-300 hover:bg-white hover:scale-[1.015] dark:border-zinc-800/60 dark:bg-zinc-950/60 dark:hover:bg-zinc-900/80 dark:hover:border-zinc-700/80 shadow-[0_1px_2px_rgba(0,0,0,0.015)]"
+              key={s.href}
+              href={s.href}
+              className="group flex items-center gap-3 rounded-xl border border-zinc-200/70 bg-white px-4 py-3 transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50/80 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] active:scale-[0.98]"
             >
-              <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${link.color}`}>
-                <Icon className="size-4" />
+              <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", s.iconBg, s.iconColor)}>
+                <Icon className="size-4" aria-hidden="true" />
               </div>
-              <p className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                {link.label}
-              </p>
-              <ArrowRight className="size-4 shrink-0 text-neutral-400" />
+              <span className="min-w-0 flex-1 text-[0.8125rem] font-medium text-neutral-700">
+                {s.label}
+              </span>
+              <ArrowRight className="size-3.5 shrink-0 text-neutral-400 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
             </Link>
           );
         })}
@@ -293,129 +378,159 @@ function QuickLinksStack({ orgSlug }: { orgSlug: string }) {
   );
 }
 
-// ─── Bento dashboard layout ──────────────────────────────────────────────────
-
-function BentoDashboardGrid({
+function OpenInternalPositionsCard({
   orgSlug,
   memberId,
-  roleName,
-  variant = "admin",
-}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName"> & {
-  variant?: "admin" | "employee";
-}>) {
-  const isEmployeeVariant = variant === "employee";
-
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId">>) {
   return (
-    <BentoGrid
-      className={cn(
-        "max-w-none md:grid-cols-8 gap-6",
-        isEmployeeVariant
-          ? "md:auto-rows-[31rem] lg:auto-rows-[32.5rem] xl:auto-rows-[34rem]"
-          : "md:auto-rows-[24rem] lg:auto-rows-[25rem] xl:auto-rows-[26rem]",
-      )}
-    >
-      {/* ── Top-left: Clock In / Clock Out ── */}
-      <BentoGridItem
-        className="md:col-span-4 p-6 flex flex-col justify-between h-full"
-        header={
-          <DashboardClockWidget
-            orgSlug={orgSlug}
-            memberId={memberId}
-            roleName={roleName}
-          />
-        }
-      />
-
-      {/* ── Top-right: Calendar heatmap ── */}
-      <BentoGridItem
-        className="md:col-span-4 p-6 flex flex-col h-full"
-        header={
-          <WorkLogHeatmapCard
-            orgSlug={orgSlug}
-            memberId={memberId}
-            variant={isEmployeeVariant ? "employee" : "default"}
-          />
-        }
-      />
-
-      {/* ── Bottom-left: Quick Links stack ── */}
-      <BentoGridItem
-        className="md:col-span-3 p-6 flex flex-col justify-between h-full"
-        header={
-          <QuickLinksStack orgSlug={orgSlug} />
-        }
-      />
-
-      {/* ── Bottom-right: Open Positions ── */}
-      <BentoGridItem
-        className="md:col-span-5 p-6 flex flex-col h-full overflow-hidden"
-        header={
-          <div className="h-full overflow-auto">
-            <JobOpeningsCard orgSlug={orgSlug} memberId={memberId} />
-          </div>
-        }
-      />
-    </BentoGrid>
+    <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <JobOpeningsCard orgSlug={orgSlug} memberId={memberId} />
+    </div>
   );
 }
 
-// ─── Dashboard variants ──────────────────────────────────────────────────────
+function HeatmapPanel({
+  orgSlug,
+  memberId,
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId">>) {
+  return (
+    <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <WorkLogHeatmapCard orgSlug={orgSlug} memberId={memberId} variant="default" />
+    </div>
+  );
+}
+
+function MainDashboardLayout({
+  orgSlug,
+  memberId,
+  roleName,
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName"> & {
+}>) {
+  return (
+    <>
+      <DashboardTopBar/>
+      <EmployeeHeroBanner orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px]">
+        <div className="flex flex-col gap-5">
+          <QuickShortcutsCard orgSlug={orgSlug} />
+          <OpenInternalPositionsCard orgSlug={orgSlug} memberId={memberId} />
+        </div>
+        <HeatmapPanel orgSlug={orgSlug} memberId={memberId} />
+      </div>
+    </>
+  );
+}
 
 function AdminDashboardContent({
-  orgSlug, memberId, roleName, permissions,
+  orgSlug,
+  memberId,
+  roleName,
+  permissions,
 }: Readonly<DashboardShellProps>) {
   const attendancePermissions = resolveAttendancePermissions(permissions ?? {});
   const leavePermissions = resolveLeavePermissions(permissions ?? {});
   const canViewOrgAttendance = attendancePermissions.view === "organization";
   const canApproveLeave = canApproveLeaves(leavePermissions.approve);
+  const canInviteEmployees = getScope(permissions, "employees", "create") !== "none";
+  const canManageDepartments = hasPermission(permissions, "departments");
+  const canManageAssets = hasPermission(permissions, "assets") || hasPermission(permissions, "maintenance");
+  const canManagePermissions = hasPermission(permissions, "permission");
+  const showAdminControlPanel =
+    canApproveLeave || canInviteEmployees || canManageDepartments || canManageAssets || canManagePermissions;
 
   return (
-    <div className="flex flex-col gap-8 p-4 sm:p-6">
-      {/* Primary bento grid */}
-      <BentoDashboardGrid orgSlug={orgSlug} memberId={memberId} roleName={roleName} variant="admin" />
-
-      {/* Admin-only: Attendance overview + Leave requests */}
+    <div className="flex flex-col gap-5 p-3">
+      <MainDashboardLayout orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
       <div className="flex flex-col gap-6">
         {canViewOrgAttendance ? <AttendanceOverviewSection orgSlug={orgSlug} memberId={memberId} /> : null}
-        {canApproveLeave ? <PendingLeaveRequestsSection orgSlug={orgSlug} memberId={memberId} /> : null}
-      </div>
+        {showAdminControlPanel ? (
+          <div className={cn(
+            "grid gap-6",
+            canApproveLeave
+              ? "xl:grid-cols-[minmax(0,1.9fr)_minmax(320px,0.85fr)]"
+              : "xl:grid-cols-[minmax(0,1fr)]",
+          )}>
+            {canApproveLeave ? <PendingLeaveRequestsSection orgSlug={orgSlug} memberId={memberId} /> : null}
 
-      {/* Invite Employee */}
-      {getScope(permissions, 'employees', 'create') !== 'none' && (
-        <section>
-          <h2 className="text-base font-semibold text-neutral-900 mb-4">Quick Actions</h2>
-          <div className="relative overflow-hidden rounded-[8px] border border-zinc-200/80 bg-white/80 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-[#0A0A0C] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.015)] flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Invite a new employee</p>
-              <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-                Add someone to the organization with a role and default password
-              </p>
-            </div>
-            <InviteEmployeeDialog orgSlug={orgSlug} memberId={memberId} />
+            {(canInviteEmployees || canManageDepartments || canManageAssets || canManagePermissions) ? (
+              <section className="rounded-[28px] border border-[#dbe4ef] bg-white px-7 py-7 shadow-[0_14px_40px_rgba(15,23,42,0.04)]">
+                <div className="flex items-start">
+                  <div className="min-w-0">
+                    <h2 className="text-[1.05rem] font-semibold text-[#0f172a]">Quick Actions</h2>
+                    <p className="mt-1 text-[15px] leading-6 text-[#64748b]">
+                      Fast organizational control pathways.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-8 space-y-4">
+                  {canInviteEmployees ? (
+                    <AdminActionItem
+                      title="Invite employee"
+                      description="Add to organization"
+                    >
+                      <InviteEmployeeDialog
+                        orgSlug={orgSlug}
+                        memberId={memberId}
+                        triggerLabel="Invite"
+                        triggerClassName="h-9 rounded-xl border border-[#d6dfeb] bg-white px-4 text-[14px] font-semibold text-[#355070] hover:bg-[#f8fafc]"
+                      />
+                    </AdminActionItem>
+                  ) : null}
+
+                  {canManageDepartments ? (
+                    <AdminActionItem
+                      href={`/${orgSlug}/departments`}
+                      title="Create Department"
+                      description="Configure structures"
+                      actionLabel="Action"
+                    />
+                  ) : null}
+
+                  {canManageAssets ? (
+                    <AdminActionItem
+                      href={`/${orgSlug}/assets`}
+                      title="Asset Requests"
+                      description="Hardware allocations"
+                      actionLabel="Reviews"
+                    />
+                  ) : null}
+
+                  {canManagePermissions ? (
+                    <AdminActionItem
+                      href={`/${orgSlug}/permissions`}
+                      title="User Roles"
+                      description="Adjust permissions"
+                      actionLabel="Roles"
+                    />
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
           </div>
-        </section>
-      )}
-
+        ) : null}
+      </div>
     </div>
   );
 }
 
 function DefaultDashboardContent({
-  orgSlug, memberId, roleName,
+  orgSlug,
+  memberId,
+  roleName,
 }: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName">>) {
   return (
-    <div className="flex flex-col gap-8 p-4 sm:p-6">
-      {/* Primary bento grid */}
-      <BentoDashboardGrid orgSlug={orgSlug} memberId={memberId} roleName={roleName} variant="employee" />
-
-      {/* Today's Work Logs below the bento */}
-      <TodayWorkLogsCard orgSlug={orgSlug} memberId={memberId} />
+    <div className="flex flex-col gap-5 p-3">
+      <MainDashboardLayout orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
     </div>
   );
 }
 
 export function DashboardShell({
-  orgSlug, memberId, roleName, permissions,
+  orgSlug,
+  memberId,
+  roleName,
+  permissions,
 }: Readonly<DashboardShellProps>) {
   const attendancePermissions = resolveAttendancePermissions(permissions ?? {});
   const leavePermissions = resolveLeavePermissions(permissions ?? {});
