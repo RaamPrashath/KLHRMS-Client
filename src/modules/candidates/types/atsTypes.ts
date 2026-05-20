@@ -4,6 +4,10 @@ export interface PipelineJobPosting {
   title: string;
   status: string;
   requisitionId: string | null;
+  candidateCount: number;
+  stageCount: number;
+  priority: string | null;
+  openings: number | null;
 }
 
 export interface CandidateSummary {
@@ -18,11 +22,12 @@ export interface CandidateSummary {
   currentTitle: string | null;
   totalExperience: string | null;
   resumeUrl: string | null;
+  image: string | null;
 }
 
 export interface ApplicationInterviewMeeting {
   id: string;
-  status: 'PENDING' | 'ONGOING' | 'COMPLETED';
+  status: 'PENDING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED' | 'RESCHEDULED';
   scheduledStartAt: string;
   scheduledEndAt: string;
   meetingUrl: string | null;
@@ -44,6 +49,7 @@ export interface PipelineApplication {
   status: string;
   resumeUrl: string | null;
   interviewMeeting: ApplicationInterviewMeeting | null;
+  currentAssignment: StageWorkspaceAssignment | null;
 }
 
 export interface StageEvaluationCategory {
@@ -51,6 +57,7 @@ export interface StageEvaluationCategory {
   stageId: string;
   name: string;
   type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
+  maxScore?: number | null;
   order: number;
 }
 
@@ -79,10 +86,12 @@ export interface PipelineStage {
   meetingEnabled: boolean;
   offerLetterEnabled: boolean;
   evaluationEnabled: boolean;
+  sheetEnabled?: boolean;
   evaluationType: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
   evaluationIncludeTotal: boolean;
   evaluationIncludeAnalysis: boolean;
   dueDate: string | null;
+  completedAt: string | null;
   extendToNextWorkingDay: boolean;
   evaluationCategories: StageEvaluationCategory[];
   evaluationWorkspace: StageEvaluationWorkspace | null;
@@ -211,7 +220,7 @@ export interface StageWorkspaceAssignment {
   scheduledStartAt: string | null;
   scheduledEndAt: string | null;
   meetLink: string | null;
-  status: 'PENDING' | 'PENDING_ACCEPTANCE' | 'ACCEPTED' | 'SCHEDULED' | 'REJECTED' | 'COMPLETED' | 'UNASSIGNED' | string;
+  status: 'PENDING' | 'PENDING_ACCEPTANCE' | 'ACCEPTED' | 'SCHEDULED' | 'ONGOING' | 'REJECTED' | 'COMPLETED' | 'UNASSIGNED' | string;
   emailSentAt: string | null;
 }
 

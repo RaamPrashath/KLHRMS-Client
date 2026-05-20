@@ -11,6 +11,7 @@ export const createPipelineStageSchema = z.object({
   afterStageId: z.string().min(1).optional().nullable(),
   stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).default('DEFAULT'),
   evaluationEnabled: z.boolean().default(false),
+  sheetEnabled: z.boolean().default(false),
   evaluationType: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).optional().nullable(),
   evaluationIncludeTotal: z.boolean().default(false),
   evaluationIncludeAnalysis: z.boolean().default(false),
@@ -21,6 +22,7 @@ export const createPipelineStageSchema = z.object({
         id: z.string().min(1).optional().nullable(),
         name: z.string().trim().min(1, 'Category name is required').max(120),
         type: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).default('NUMERIC'),
+        maxScore: z.number().int().min(1).optional().nullable(),
         order: z.number().int().min(1).optional(),
       }),
     )
@@ -32,6 +34,7 @@ export const updatePipelineStageSchema = z.object({
   order: z.number().optional(),
   stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).optional(),
   evaluationEnabled: z.boolean().optional(),
+  sheetEnabled: z.boolean().optional(),
   evaluationType: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).optional().nullable(),
   evaluationIncludeTotal: z.boolean().optional(),
   evaluationIncludeAnalysis: z.boolean().optional(),
@@ -43,6 +46,7 @@ export const updatePipelineStageSchema = z.object({
         id: z.string().min(1).optional().nullable(),
         name: z.string().trim().min(1, 'Category name is required').max(120),
         type: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).default('NUMERIC'),
+        maxScore: z.number().int().min(1).optional().nullable(),
         order: z.number().int().min(1).optional(),
       }),
     )
@@ -80,10 +84,12 @@ export const stageInterviewAssignmentSchema = z.object({
 
 export const stageInterviewAssignmentRequestSchema = z.object({
   assignments: z.array(stageInterviewAssignmentSchema).min(1),
+  jobPostingId: z.string().optional(),
 });
 
 export const stageInterviewWarningRequestSchema = z.object({
   assignments: z.array(stageInterviewAssignmentSchema).default([]),
+  jobPostingId: z.string().optional(),
 });
 
 export const acceptInterviewSchema = z.object({
@@ -108,6 +114,7 @@ export interface StageEvaluationCategoryInput {
   id?: string | null;
   name: string;
   type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
+  maxScore?: number | null;
   order?: number;
 }
 
@@ -117,6 +124,7 @@ export interface CreatePipelineStageInput {
   afterStageId?: string | null;
   stageType: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
   evaluationEnabled: boolean;
+  sheetEnabled?: boolean;
   evaluationType?: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
   evaluationIncludeTotal: boolean;
   evaluationIncludeAnalysis: boolean;
@@ -129,6 +137,7 @@ export interface UpdatePipelineStageInput {
   order?: number;
   stageType?: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
   evaluationEnabled?: boolean;
+  sheetEnabled?: boolean;
   evaluationType?: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
   evaluationIncludeTotal?: boolean;
   evaluationIncludeAnalysis?: boolean;
@@ -144,6 +153,13 @@ export interface ExtendPipelineStageInput {
 export interface CreateInterviewMeetingInput {
   mode: 'SCHEDULE' | 'START_NOW';
   scheduledStartAt?: string | null;
+  durationMinutes: number;
+  title?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateInterviewMeetingInput {
+  scheduledStartAt: string;
   durationMinutes: number;
   title?: string | null;
   notes?: string | null;

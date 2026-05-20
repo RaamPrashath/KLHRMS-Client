@@ -5,7 +5,6 @@ import {
   DragOverlay,
   PointerSensor,
   closestCorners,
-  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
@@ -14,8 +13,8 @@ import {
 } from '@dnd-kit/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, Clock, Loader2, Search, Send, Shuffle, X } from 'lucide-react';
-import Link from 'next/link';
+import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, Clock, Inbox, Loader2, Plus, Search, Send, Shuffle, UserCheck, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -35,18 +34,31 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
+import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer';
+import { InterviewerSelectDialog } from '@/modules/candidates/components/InterviewerSelectDialog';
 import {
+  useAddHiringTeamMember,
   useAssignStageInterviews,
+  useCompleteInterviewMeeting,
+  useCompleteStage,
   useCreateHiringTeam,
   useDistributeStageInterviews,
   useFetchHiringTeams,
   useInterviewersSearch,
+  useMoveInterviewAssignment,
+  useReopenStage,
   usePreviewStageInterviewWarnings,
+  useRemoveHiringTeamMember,
+  useStartInterviewMeeting,
   useStageWorkspace,
   useStageWorkspaceByJobSlug,
 } from '@/modules/candidates/hooks/useAtsPipeline';
 import type {
+  ApplicationInterviewMeeting,
   HiringTeam,
+  PipelineApplication,
+  PipelineStage,
   StageInterviewAssignment,
   StageInterviewWarning,
   StageWorkspaceCandidate,
@@ -76,6 +88,7 @@ interface AssignmentColumnModel {
   title: string;
   interviewer: StageWorkspaceInterviewer | null;
   candidates: StageWorkspaceCandidate[];
+  isBackup?: boolean;
 }
 
 function initials(value: string): string {
@@ -148,122 +161,199 @@ function memberIdFromColumnId(columnId: string): string | null {
   return columnId.startsWith('interviewer:') ? columnId.slice('interviewer:'.length) : null;
 }
 
-function assignmentStatusLabel(candidate: StageWorkspaceCandidate): string | null {
-  const status = candidate.currentAssignment?.status;
-  if (!status) return null;
-  if (status === 'PENDING_ACCEPTANCE' || status === 'PENDING') return 'Awaiting response';
-  if (status === 'ACCEPTED') return 'Accepted';
-  if (status === 'SCHEDULED') return 'Scheduled';
-  if (status === 'COMPLETED') return 'Completed';
-  return status;
+function assignmentToMeeting(candidate: StageWorkspaceCandidate): ApplicationInterviewMeeting | null {
+  const assignment = candidate.currentAssignment;
+  if (!assignment?.scheduledStartAt || !assignment.scheduledEndAt) return null;
+
+  const status: ApplicationInterviewMeeting['status'] =
+    assignment.status === 'ONGOING'
+      ? 'ONGOING'
+      : assignment.status === 'COMPLETED'
+        ? 'COMPLETED'
+        : 'PENDING';
+
+  return {
+    id: assignment.eventId,
+    status,
+    scheduledStartAt: assignment.scheduledStartAt,
+    scheduledEndAt: assignment.scheduledEndAt,
+    meetingUrl: assignment.meetLink,
+    interviewerName: assignment.interviewer?.name ?? null,
+    completedAt: status === 'COMPLETED' ? assignment.scheduledEndAt : null,
+  };
+}
+
+function workspaceCandidateToApplication(
+  candidate: StageWorkspaceCandidate,
+  stage: PipelineStage,
+  jobPostingId: string,
+): PipelineApplication {
+  return {
+    id: candidate.applicationId,
+    jobPostingId,
+    pipelineStageId: stage.id,
+    currentStage: stage.name,
+    candidate: candidate.candidate,
+    score: candidate.score,
+    rating: candidate.rating,
+    source: candidate.source,
+    appliedDate: candidate.appliedAt,
+    lastMovedAt: null,
+    status: candidate.currentAssignment?.status ?? 'UNASSIGNED',
+    resumeUrl: candidate.candidate.resumeUrl,
+    interviewMeeting: assignmentToMeeting(candidate),
+  };
 }
 
 function AllocationCard({
   candidate,
+  stage,
+  jobPostingId,
+  onOpenCandidate,
+  onStartInterview,
+  onCompleteInterview,
   disabled = false,
 }: {
   readonly candidate: StageWorkspaceCandidate;
+  readonly stage: PipelineStage;
+  readonly jobPostingId: string;
+  readonly onOpenCandidate?: (applicationId: string) => void;
+  readonly onStartInterview?: (application: PipelineApplication) => void;
+  readonly onCompleteInterview?: (
+    application: PipelineApplication,
+    data?: {
+      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
+      notes?: string | null;
+    },
+  ) => void;
   readonly disabled?: boolean;
 }) {
   const locked = disabled || isLockedAssignment(candidate);
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: candidate.applicationId,
-    disabled: locked,
-  });
-  const name = candidateName(candidate);
-  const status = assignmentStatusLabel(candidate);
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
+  const application = workspaceCandidateToApplication(candidate, stage, jobPostingId);
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={cn(
-        'rounded-xl border border-neutral-100 bg-surface p-3 shadow-[var(--shadow-1)] transition',
-        locked ? 'cursor-not-allowed opacity-70' : 'cursor-grab active:cursor-grabbing',
-        isDragging && 'opacity-40',
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <Avatar className="size-9 shrink-0">
-          <AvatarFallback className="bg-primary-ghost text-xs font-semibold text-primary">
-            {initials(name)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
-          <p className="truncate text-xs text-neutral-500">{candidate.candidate.email}</p>
-          <p className="mt-1 truncate text-xs text-neutral-400">{candidate.jobTitle}</p>
-          {status ? (
-            <span className={cn(
-              'mt-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
-              locked ? 'bg-success-bg text-success-text' : 'bg-warning-bg text-warning-text',
-            )}>
-              {status}
-            </span>
-          ) : null}
-        </div>
-      </div>
-    </div>
+    <CandidateCard
+      application={application}
+      onOpen={onOpenCandidate}
+      meetingEnabled={Boolean(stage.meetingEnabled && application.interviewMeeting)}
+      evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
+      onStartInterview={onStartInterview}
+      onCompleteInterview={onCompleteInterview}
+      draggable
+      dragLocked={locked}
+    />
   );
 }
 
 function AssignmentColumn({
   column,
+  stage,
+  jobPostingId,
   onRemove,
+  onOpenCandidate,
+  onStartInterview,
+  onCompleteInterview,
 }: {
   readonly column: AssignmentColumnModel;
+  readonly stage: PipelineStage;
+  readonly jobPostingId: string;
   readonly onRemove?: (memberId: string) => void;
+  readonly onOpenCandidate: (applicationId: string) => void;
+  readonly onStartInterview: (application: PipelineApplication) => void;
+  readonly onCompleteInterview: (
+    application: PipelineApplication,
+    data?: {
+      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
+      notes?: string | null;
+    },
+  ) => void;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id });
+  const count = column.candidates.length;
+  const isUnassigned = column.id === 'unassigned';
 
   return (
     <section
       ref={setNodeRef}
       className={cn(
-        'flex min-h-[360px] min-w-[280px] flex-col rounded-xl border border-neutral-100 bg-neutral-50/60 shadow-[var(--shadow-1)]',
-        isOver && 'border-primary bg-primary-ghost',
+        'flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden px-2 pt-2',
+        isOver && 'bg-neutral-100/90',
       )}
     >
-      <div className="border-b border-neutral-100 bg-surface px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="truncate text-sm font-semibold text-neutral-900">{column.title}</h3>
-            {column.interviewer ? (
-              <p className="truncate text-xs text-neutral-500">{column.interviewer.email}</p>
-            ) : (
-              <p className="text-xs text-neutral-500">Drag candidates here to unassign</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-xs text-neutral-600">
-              {column.candidates.length}
-            </span>
-            {column.interviewer && onRemove ? (
-              <button
-                type="button"
-                className="rounded-md p-1 text-neutral-400 hover:bg-neutral-50 hover:text-destructive-text"
-                onClick={() => onRemove(column.interviewer?.memberId ?? '')}
-                aria-label={`Remove ${column.interviewer.name}`}
-              >
-                <X className="size-4" />
-              </button>
-            ) : null}
+      <header className="sticky top-0 z-10 mb-3">
+        <div className={cn(
+          'rounded-xl px-3 py-2 shadow-[0_2px_10px_rgba(0,0,0,0.05)]',
+          isUnassigned ? 'border border-dashed border-neutral-300 bg-neutral-50/80' : 'bg-surface',
+        )}>
+          {/* Header top row: avatar/title + count badge */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              {isUnassigned ? (
+                <Inbox className="size-5 shrink-0 text-neutral-400" />
+              ) : column.interviewer ? (
+                <div
+                  className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                  style={{
+                    backgroundColor: column.isBackup ? '#F0F5FF' : '#EEEDFE',
+                    color: column.isBackup ? '#185FA5' : '#534AB7',
+                  }}
+                >
+                  {initials(column.interviewer.name)}
+                </div>
+              ) : null}
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="truncate text-sm font-semibold text-neutral-900">
+                    {column.title}
+                  </h3>
+                  {column.isBackup ? (
+                    <span className="shrink-0 rounded border border-info-border bg-info-bg px-1.5 py-0.5 text-[10px] font-medium text-info-text leading-none">
+                      Backup
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className={cn(
+                'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium leading-none',
+                count > 0
+                  ? 'bg-primary-ghost text-primary'
+                  : 'bg-neutral-100 text-neutral-500',
+              )}>
+                {count}
+              </span>
+              {column.interviewer && onRemove ? (
+                <button
+                  type="button"
+                  className="rounded-md p-1 text-neutral-400 hover:bg-neutral-50 hover:text-destructive-text"
+                  onClick={() => onRemove(column.interviewer?.memberId ?? '')}
+                  aria-label={`Remove ${column.interviewer.name}`}
+                >
+                  <X className="size-3.5" />
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex flex-1 flex-col gap-3 p-3">
-        {column.candidates.length > 0 ? (
+      </header>
+
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto no-scrollbar pb-6">
+        {count > 0 ? (
           column.candidates.map((candidate) => (
-            <AllocationCard key={candidate.applicationId} candidate={candidate} />
+            <AllocationCard
+              key={candidate.applicationId}
+              candidate={candidate}
+              stage={stage}
+              jobPostingId={jobPostingId}
+              onOpenCandidate={onOpenCandidate}
+              onStartInterview={onStartInterview}
+              onCompleteInterview={onCompleteInterview}
+            />
           ))
         ) : (
-          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-neutral-200 p-4 text-center text-xs text-neutral-400">
-            Drop candidates here
+          <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 p-4 text-center text-xs text-neutral-500">
+            {isUnassigned ? 'All candidates assigned' : 'Drop candidates here'}
           </div>
         )}
       </div>
@@ -277,17 +367,22 @@ function InterviewerSelect({
   value,
   placeholder,
   onSelect,
+  excludedMemberIds,
 }: {
   readonly orgSlug: string;
   readonly memberId: string;
   readonly value: StageWorkspaceInterviewer | null;
   readonly placeholder?: string;
   readonly onSelect: (interviewer: StageWorkspaceInterviewer) => void;
+  readonly excludedMemberIds?: ReadonlySet<string>;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const interviewersQuery = useInterviewersSearch(orgSlug, memberId, search);
-  const interviewers = interviewersQuery.data?.items ?? [];
+  const allInterviewers = interviewersQuery.data?.items ?? [];
+  const interviewers = excludedMemberIds
+    ? allInterviewers.filter((iv) => !excludedMemberIds.has(iv.memberId))
+    : allInterviewers;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -359,10 +454,10 @@ export function StageWorkspacePageShell({
   const stageWorkspaceQuery = useStageWorkspace(orgSlug, memberId, stageSlug);
   const jobStageWorkspaceQuery = useStageWorkspaceByJobSlug(orgSlug, memberId, jobSlug, stageSlug);
   const workspaceQuery = jobSlug ? jobStageWorkspaceQuery : stageWorkspaceQuery;
-  const previewWarnings = usePreviewStageInterviewWarnings(orgSlug, memberId, stageSlug);
-  const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug);
+  const previewWarnings = usePreviewStageInterviewWarnings(orgSlug, memberId, stageSlug, workspaceQuery.data?.jobPosting.id ?? null);
+  const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug, workspaceQuery.data?.jobPosting.id ?? null);
   const distributeInterviews = useDistributeStageInterviews(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
-  const hiringTeamsQuery = useFetchHiringTeams(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
+  const hiringTeamsQuery = useFetchHiringTeams(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null, workspaceQuery.data?.stage.id ?? null);
   const createHiringTeam = useCreateHiringTeam(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
 
   const [assignmentMode, setAssignmentMode] = useState<'direct' | 'automatic'>('direct');
@@ -384,6 +479,25 @@ export function StageWorkspacePageShell({
   const [teamWarningsReviewed, setTeamWarningsReviewed] = useState(false);
   const [boardAssignments, setBoardAssignments] = useState<Record<string, string | null>>({});
   const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
+
+  // Search + filter state for automatic tab
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterMode, setFilterMode] = useState<'all' | 'unassigned' | 'assigned'>('all');
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addDialogMode, setAddDialogMode] = useState<'interviewer' | 'backup'>('interviewer');
+  const [assignmentTeamId, setAssignmentTeamId] = useState<string | null>(null);
+  const [backupTeamId, setBackupTeamId] = useState<string | null>(null);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+
+  const addTeamMember = useAddHiringTeamMember(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
+  const removeTeamMember = useRemoveHiringTeamMember(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
+  const startInterviewMeeting = useStartInterviewMeeting(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
+  const completeInterviewMeeting = useCompleteInterviewMeeting(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
+  const moveInterview = useMoveInterviewAssignment(orgSlug, memberId);
+  const completeStage = useCompleteStage(orgSlug, memberId);
+  const reopenStage = useReopenStage(orgSlug, memberId);
+  const router = useRouter();
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const workspace = workspaceQuery.data;
@@ -402,6 +516,54 @@ export function StageWorkspacePageShell({
     [workspace],
   );
 
+  // On workspace load, populate customTeamMembers / backupMembers from existing workspace teams.
+  // Track which stage we've initialized for so we reset on stage change.
+  const initializedStageRef = useRef<string | null>(null);
+
+  // Reset team-local state whenever the stageId changes
+  const prevStageIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentStageId = workspace?.stage.id ?? null;
+    if (currentStageId !== prevStageIdRef.current) {
+      prevStageIdRef.current = currentStageId;
+      initializedStageRef.current = null;
+      setAssignmentTeamId('');
+      setBackupTeamId(null);
+      setCustomTeamMembers([]);
+      setBackupMembers([]);
+      setSelectedTeamId('');
+    }
+  }, [workspace?.stage.id]);
+
+  useEffect(() => {
+    const stageId = workspace?.stage.id;
+    if (!stageId) return;
+    if (initializedStageRef.current === stageId) return;
+
+    const primaryTeam = hiringTeams.find(
+      (team) => team.name === `Workspace-Primary-${stageId}`,
+    );
+    const backupTeam = hiringTeams.find(
+      (team) => team.name === `Workspace-Backup-${stageId}`,
+    );
+
+    if (primaryTeam || backupTeam) {
+      initializedStageRef.current = stageId;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (primaryTeam) {
+        setAssignmentTeamId(primaryTeam.id);
+        setCustomTeamMembers(teamMemberToInterviewer(primaryTeam));
+      }
+      if (backupTeam) {
+        setBackupTeamId(backupTeam.id);
+        setBackupMembers(teamMemberToInterviewer(backupTeam));
+      }
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [hiringTeams, workspace?.stage.id]);
+
   const resolvedTeamMembers = useMemo(() => {
     if (selectedTeam) return teamMemberToInterviewer(selectedTeam);
     return customTeamMembers;
@@ -412,17 +574,43 @@ export function StageWorkspacePageShell({
     [activeApplicationId, workspace],
   );
 
+  /** Whether this candidate passes the current filterMode (all / unassigned / assigned) */
+  function matchesFilterMode(candidate: StageWorkspaceCandidate): boolean {
+    const isAssigned =
+      boardAssignments[candidate.applicationId] !== undefined ||
+      candidate.currentAssignment?.interviewer !== null;
+    if (filterMode === 'unassigned' && isAssigned) return false;
+    if (filterMode === 'assigned' && !isAssigned) return false;
+    return true;
+  }
+
+  /** Whether a candidate's name or email includes the active search query */
+  function candidateMatchesQuery(candidate: StageWorkspaceCandidate): boolean {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    const name = candidateName(candidate).toLowerCase();
+    const email = candidate.candidate.email.toLowerCase();
+    return name.includes(q) || email.includes(q);
+  }
+
   const assignmentColumns = useMemo<AssignmentColumnModel[]>(() => {
     if (!workspace) return [];
-    const memberMap = new Map(resolvedTeamMembers.map((member) => [member.memberId, member]));
+
+    // Build primary interviewer columns (in order)
+    const primaryIds = new Set(resolvedTeamMembers.map((m) => m.memberId));
+    const backupIds = new Set(backupMembers.map((m) => m.memberId));
+
+    // Collect any extra interviewers from existing assignments
+    const extraInterviewers = new Map<string, StageWorkspaceInterviewer>();
     for (const candidate of workspace.candidates) {
-      const assignmentMemberId = candidate.currentAssignment?.interviewer?.memberId;
-      const assignmentInterviewer = candidate.currentAssignment?.interviewer;
-      if (assignmentMemberId && assignmentInterviewer && !memberMap.has(assignmentMemberId)) {
-        memberMap.set(assignmentMemberId, assignmentInterviewer);
+      const memberId = candidate.currentAssignment?.interviewer?.memberId;
+      const interviewer = candidate.currentAssignment?.interviewer;
+      if (memberId && interviewer && !primaryIds.has(memberId) && !backupIds.has(memberId)) {
+        extraInterviewers.set(memberId, interviewer);
       }
     }
 
+    // Column order: Unassigned → Primary interviewers → Extra interviewers → Backups
     const columns: AssignmentColumnModel[] = [
       {
         id: 'unassigned',
@@ -430,16 +618,34 @@ export function StageWorkspacePageShell({
         interviewer: null,
         candidates: [],
       },
-      ...Array.from(memberMap.values()).map((interviewer) => ({
+      ...resolvedTeamMembers.map((interviewer) => ({
         id: allocationColumnId(interviewer.memberId),
         title: interviewer.name,
         interviewer,
         candidates: [],
       })),
+      ...Array.from(extraInterviewers.values()).map((interviewer) => ({
+        id: allocationColumnId(interviewer.memberId),
+        title: interviewer.name,
+        interviewer,
+        candidates: [],
+      })),
+      ...backupMembers
+        .filter((member) => !primaryIds.has(member.memberId))
+        .map((interviewer) => ({
+          id: allocationColumnId(interviewer.memberId),
+          title: interviewer.name,
+          interviewer,
+          isBackup: true,
+          candidates: [],
+        })),
     ];
     const columnsById = new Map(columns.map((column) => [column.id, column]));
 
+    // Place candidates filtered by filterMode only (search is handled below)
     for (const candidate of workspace.candidates) {
+      if (!matchesFilterMode(candidate)) continue;
+
       const memberId = boardAssignments[candidate.applicationId]
         ?? candidate.currentAssignment?.interviewer?.memberId
         ?? null;
@@ -448,8 +654,43 @@ export function StageWorkspacePageShell({
       column?.candidates.push(candidate);
     }
 
+    // Apply search-based column visibility and candidate sorting
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+
+      // Within each column, sort matching candidates to the top
+      for (const column of columns) {
+        const matched: StageWorkspaceCandidate[] = [];
+        const unmatched: StageWorkspaceCandidate[] = [];
+        for (const candidate of column.candidates) {
+          const name = candidateName(candidate).toLowerCase();
+          const email = candidate.candidate.email.toLowerCase();
+          if (name.includes(q) || email.includes(q)) {
+            matched.push(candidate);
+          } else {
+            unmatched.push(candidate);
+          }
+        }
+        column.candidates = [...matched, ...unmatched];
+      }
+
+      // Keep only columns that have matching candidates OR a matching interviewer
+      return columns.filter((column) => {
+        if (column.id === 'unassigned') {
+          return column.candidates.length > 0 && column.candidates.some(
+            (c) => candidateName(c).toLowerCase().includes(q) || c.candidate.email.toLowerCase().includes(q),
+          );
+        }
+        const interviewerMatch = column.interviewer?.name.toLowerCase().includes(q) ?? false;
+        const candidateMatch = column.candidates.some(
+          (c) => candidateName(c).toLowerCase().includes(q) || c.candidate.email.toLowerCase().includes(q),
+        );
+        return interviewerMatch || candidateMatch;
+      });
+    }
+
     return columns;
-  }, [boardAssignments, resolvedTeamMembers, workspace]);
+  }, [boardAssignments, resolvedTeamMembers, workspace, backupMembers, searchQuery, filterMode]);
 
   const completedAssignments = useMemo<StageInterviewAssignment[]>(() => {
     if (!workspace || assignmentMode !== 'direct') return [];
@@ -486,6 +727,43 @@ export function StageWorkspacePageShell({
     return map;
   }, [assignmentMode, teamWarnings, warnings]);
 
+  const stats = useMemo(() => {
+    const total = workspace?.candidates.length ?? 0;
+    const assignedSet = new Set<string>();
+    for (const candidate of workspace?.candidates ?? []) {
+      const memberId =
+        boardAssignments[candidate.applicationId] ??
+        candidate.currentAssignment?.interviewer?.memberId ??
+        null;
+      if (memberId) assignedSet.add(candidate.applicationId);
+    }
+    return {
+      total,
+      assigned: assignedSet.size,
+      unassigned: total - assignedSet.size,
+      interviewers: resolvedTeamMembers.length,
+    };
+  }, [boardAssignments, resolvedTeamMembers, workspace]);
+
+  const isStageCompleted = Boolean(workspace?.stage.completedAt);
+
+  const excludedMemberIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const member of resolvedTeamMembers) ids.add(member.memberId);
+    for (const member of backupMembers) ids.add(member.memberId);
+    return ids;
+  }, [resolvedTeamMembers, backupMembers]);
+
+  const directExcludedMemberIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const member of resolvedTeamMembers) ids.add(member.memberId);
+    for (const member of backupMembers) ids.add(member.memberId);
+    for (const draft of Object.values(drafts)) {
+      if (draft?.interviewer) ids.add(draft.interviewer.memberId);
+    }
+    return ids;
+  }, [resolvedTeamMembers, backupMembers, drafts]);
+
   function updateDraft(applicationId: string, patch: Partial<AssignmentDraft>) {
     setDrafts((current) => ({
       ...current,
@@ -499,10 +777,36 @@ export function StageWorkspacePageShell({
     setWarnings([]);
   }
 
-  function addCustomTeamMember(interviewer: StageWorkspaceInterviewer) {
+  async function addCustomTeamMember(interviewer: StageWorkspaceInterviewer) {
     setSelectedTeamId('');
     setTeamWarnings([]);
     setTeamWarningsReviewed(false);
+
+    // Persist to server
+    const stageId = workspace?.stage.id;
+    const jobPostingId = workspace?.jobPosting.id;
+    const dept = interviewer.department ?? undefined;
+    try {
+      if (!assignmentTeamId && jobPostingId && stageId) {
+        const created = await createHiringTeam.mutateAsync({
+          jobPostingId,
+          name: `Workspace-Primary-${stageId}`,
+          description: null,
+          stageId,
+          members: [{ memberId: interviewer.memberId, role: dept }],
+        });
+        setAssignmentTeamId(created.id);
+      } else if (assignmentTeamId) {
+        await addTeamMember.mutateAsync({
+          teamId: assignmentTeamId,
+          data: { memberId: interviewer.memberId, role: dept },
+        });
+      }
+    } catch {
+      toast.error('Failed to add interviewer. Please try again.');
+      return;
+    }
+
     setCustomTeamMembers((current) => (
       current.some((member) => member.memberId === interviewer.memberId)
         ? current
@@ -510,9 +814,34 @@ export function StageWorkspacePageShell({
     ));
   }
 
-  function addBackupMember(interviewer: StageWorkspaceInterviewer) {
+  async function addBackupMember(interviewer: StageWorkspaceInterviewer) {
     setTeamWarnings([]);
     setTeamWarningsReviewed(false);
+
+    // Persist to server
+    const stageId = workspace?.stage.id;
+    const jobPostingId = workspace?.jobPosting.id;
+    try {
+      if (!backupTeamId && jobPostingId && stageId) {
+        const created = await createHiringTeam.mutateAsync({
+          jobPostingId,
+          name: `Workspace-Backup-${stageId}`,
+          description: null,
+          stageId,
+          members: [{ memberId: interviewer.memberId }],
+        });
+        setBackupTeamId(created.id);
+      } else if (backupTeamId) {
+        await addTeamMember.mutateAsync({
+          teamId: backupTeamId,
+          data: { memberId: interviewer.memberId },
+        });
+      }
+    } catch {
+      toast.error('Failed to add backup. Please try again.');
+      return;
+    }
+
     setBackupMembers((current) => (
       current.some((member) => member.memberId === interviewer.memberId)
         ? current
@@ -520,16 +849,46 @@ export function StageWorkspacePageShell({
     ));
   }
 
-  function removeBackupMember(memberId: string) {
+  async function removeBackupMember(memberId: string) {
     setTeamWarnings([]);
     setTeamWarningsReviewed(false);
+
+    // Remove from server
+    if (backupTeamId) {
+      try {
+        await removeTeamMember.mutateAsync({ teamId: backupTeamId, memberToRemoveId: memberId });
+      } catch {
+        toast.error('Failed to remove backup. Please try again.');
+        return;
+      }
+    }
+
     setBackupMembers((current) => current.filter((member) => member.memberId !== memberId));
   }
 
-  function removeBoardInterviewer(memberId: string) {
+  async function removeBoardInterviewer(memberId: string) {
     if (!memberId) return;
     setSelectedTeamId('');
+
+    // Remove from server — try both teams
+    if (assignmentTeamId) {
+      try {
+        await removeTeamMember.mutateAsync({ teamId: assignmentTeamId, memberToRemoveId: memberId });
+      } catch {
+        toast.error('Failed to remove interviewer. Please try again.');
+        return;
+      }
+    }
+    if (backupTeamId) {
+      try {
+        await removeTeamMember.mutateAsync({ teamId: backupTeamId, memberToRemoveId: memberId });
+      } catch {
+        // Non-critical — backup removal failure is not blocking
+      }
+    }
+
     setCustomTeamMembers((current) => current.filter((member) => member.memberId !== memberId));
+    setBackupMembers((current) => current.filter((member) => member.memberId !== memberId));
     setBoardAssignments((current) => {
       const next = { ...current };
       for (const [applicationId, assignedMemberId] of Object.entries(next)) {
@@ -581,27 +940,59 @@ export function StageWorkspacePageShell({
     if (!workspace) {
       return;
     }
-    const assignments = workspace.candidates.flatMap((candidate) => {
-      if (isLockedAssignment(candidate)) return [];
-      const interviewerMemberId = boardAssignments[candidate.applicationId]
+
+    const newAssignments: StageInterviewAssignment[] = [];
+    const moves: Array<{ applicationId: string; eventId: string; newInterviewerMemberId: string }> = [];
+
+    for (const candidate of workspace.candidates) {
+      if (isLockedAssignment(candidate)) continue;
+      const newMemberId = boardAssignments[candidate.applicationId]
         ?? candidate.currentAssignment?.interviewer?.memberId
         ?? null;
-      if (!interviewerMemberId) return [];
-      return [{
-        applicationId: candidate.applicationId,
-        interviewerMemberId,
-        scheduledStartAt: null,
-        durationMinutes: teamDurationMinutes,
-        backupInterviewers: backupMembers.map((member) => member.memberId),
-      }];
-    });
-    if (assignments.length === 0) {
+      if (!newMemberId) continue;
+
+      const existingEventId = candidate.currentAssignment?.eventId;
+      const existingMemberId = candidate.currentAssignment?.interviewer?.memberId ?? null;
+
+      if (existingEventId && existingMemberId && existingMemberId !== newMemberId) {
+        // This is a move — use approval-based endpoint
+        moves.push({
+          applicationId: candidate.applicationId,
+          eventId: existingEventId,
+          newInterviewerMemberId: newMemberId,
+        });
+      } else if (!existingEventId) {
+        // New assignment
+        newAssignments.push({
+          applicationId: candidate.applicationId,
+          interviewerMemberId: newMemberId,
+          scheduledStartAt: null,
+          durationMinutes: teamDurationMinutes,
+          backupInterviewers: backupMembers.map((member) => member.memberId),
+        });
+      }
+    }
+
+    if (newAssignments.length === 0 && moves.length === 0) {
       toast.error('Assign at least one candidate to an interviewer');
       return;
     }
+
     try {
-      const result = await assignInterviews.mutateAsync(assignments);
-      toast.success(`${result.assignedCount} assignment${result.assignedCount === 1 ? '' : 's'} saved`);
+      let totalCount = 0;
+      if (newAssignments.length > 0) {
+        const result = await assignInterviews.mutateAsync(newAssignments);
+        totalCount += result.assignedCount;
+      }
+      for (const move of moves) {
+        await moveInterview.mutateAsync({
+          applicationId: move.applicationId,
+          eventId: move.eventId,
+          data: { newInterviewerMemberId: move.newInterviewerMemberId },
+        });
+        totalCount += 1;
+      }
+      toast.success(`${totalCount} assignment${totalCount === 1 ? '' : 's'} saved`);
       setBackupMembers([]);
       setBoardAssignments({});
     } catch (error) {
@@ -691,6 +1082,7 @@ export function StageWorkspacePageShell({
           jobPostingId: workspace?.jobPosting.id ?? '',
           name: customTeamName.trim() || `${workspace?.stage.name ?? 'Interview'} shuffle team`,
           description: null,
+          stageId: workspace?.stage.id ?? null,
           members: resolvedTeamMembers.map((member) => ({ memberId: member.memberId })),
         });
         hiringTeamId = created.id;
@@ -729,6 +1121,55 @@ export function StageWorkspacePageShell({
     }
   }
 
+  function handleOpenCandidate(applicationId: string) {
+    setSelectedApplicationId(applicationId);
+  }
+
+  function handleStartInterview(application: PipelineApplication) {
+    const meeting = application.interviewMeeting;
+    if (!meeting || meeting.status !== 'PENDING') return;
+
+    startInterviewMeeting.mutate(
+      { applicationId: application.id, eventId: meeting.id },
+      {
+        onSuccess: (updatedMeeting) => {
+          void workspaceQuery.refetch();
+          if (updatedMeeting.meetingUrl) {
+            window.open(updatedMeeting.meetingUrl, '_blank', 'noopener,noreferrer');
+          }
+        },
+        onError: (error) => {
+          toast.error(readActionError(error, 'Failed to start interview'));
+          if (meeting.meetingUrl) {
+            window.open(meeting.meetingUrl, '_blank', 'noopener,noreferrer');
+          }
+        },
+      },
+    );
+  }
+
+  function handleCompleteInterview(
+    application: PipelineApplication,
+    data?: {
+      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
+      notes?: string | null;
+    },
+  ) {
+    const meeting = application.interviewMeeting;
+    if (!meeting?.id) return;
+
+    completeInterviewMeeting.mutate(
+      { applicationId: application.id, eventId: meeting.id, data },
+      {
+        onSuccess: () => {
+          void workspaceQuery.refetch();
+          toast.success('Interview marked completed');
+        },
+        onError: (error) => toast.error(readActionError(error, 'Failed to complete interview')),
+      },
+    );
+  }
+
   if (workspaceQuery.isLoading) {
     return (
       <div className="min-h-full bg-canvas p-6">
@@ -750,15 +1191,12 @@ export function StageWorkspacePageShell({
   }
 
   return (
-    <div className="min-h-full bg-canvas px-8 py-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-10">
-          <div className="flex items-center justify-between">
+    <div className="min-h-full bg-canvas px-6 sm:px-8">
+      <div className="mb-6">
+          <div className="flex items-center justify-between mt-7">
             <div className="flex items-center gap-4">
-              <Button asChild variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900">
-                <Link href={`/${orgSlug}/candidates`}>
-                  <ChevronLeft className="size-5" />
-                </Link>
+              <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900" onClick={() => router.back()}>
+                <ChevronLeft className="size-5" />
               </Button>
               <div>
                 <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">
@@ -774,34 +1212,118 @@ export function StageWorkspacePageShell({
               </div>
             </div>
 
-            <div className="flex items-center gap-1 rounded-lg border border-neutral-200 bg-white p-1">
-              <button
-                type="button"
-                onClick={() => setAssignmentMode('direct')}
-                className={cn(
-                  "rounded-md px-4 py-2 text-sm font-semibold transition-all",
-                  assignmentMode === 'direct'
-                    ? "bg-neutral-900 text-white shadow-sm"
-                    : "text-neutral-600 hover:text-neutral-900"
-                )}
-              >
-                Direct
-              </button>
-              <button
-                type="button"
-                onClick={() => setAssignmentMode('automatic')}
-                className={cn(
-                  "rounded-md px-4 py-2 text-sm font-semibold transition-all",
-                  assignmentMode === 'automatic'
-                    ? "bg-neutral-900 text-white shadow-sm"
-                    : "text-neutral-600 hover:text-neutral-900"
-                )}
-              >
-                Automatic
-              </button>
+            <div className="flex items-center gap-2">
+              {isStageCompleted ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!workspace) return;
+                    try {
+                      await reopenStage.mutateAsync({ stageId: workspace.stage.id });
+                      toast.success('Stage reopened');
+                      void workspaceQuery.refetch();
+                    } catch (error) {
+                      toast.error(readActionError(error, 'Failed to reopen stage'));
+                    }
+                  }}
+                  disabled={reopenStage.isPending}
+                >
+                  {reopenStage.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-1.5 size-3.5" />
+                  )}
+                  Reopen Stage
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-warning-text border-warning-bg hover:bg-warning-bg"
+                  onClick={async () => {
+                    if (!workspace) return;
+                    try {
+                      await completeStage.mutateAsync({ stageId: workspace.stage.id });
+                      toast.success('Stage marked as complete');
+                      void workspaceQuery.refetch();
+                    } catch (error) {
+                      toast.error(readActionError(error, 'Failed to complete stage'));
+                    }
+                  }}
+                  disabled={completeStage.isPending}
+                >
+                  {completeStage.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-1.5 size-3.5" />
+                  )}
+                  Mark Complete
+                </Button>
+              )}
+              <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
+                {([
+                  { key: 'direct' as const, icon: UserCheck, label: 'Direct' },
+                  { key: 'automatic' as const, icon: Shuffle, label: 'Automatic' },
+                ] as const).map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = tab.key === assignmentMode;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setAssignmentMode(tab.key)}
+                      aria-pressed={isActive}
+                      className={cn(
+                        'relative inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
+                        isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
+                      )}
+                    >
+                      {isActive ? (
+                        <motion.span
+                          layoutId="stage-assignment-mode-pill"
+                          className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                          transition={{
+                            type: 'spring',
+                            stiffness: 520,
+                            damping: 36,
+                            mass: 0.65,
+                          }}
+                        />
+                      ) : null}
+                      <span className="relative z-10 inline-flex items-center gap-1.5">
+                        <Icon className="size-3.5" />
+                        {tab.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
+
+        {isStageCompleted ? (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            className="mb-4 overflow-hidden"
+          >
+            <div className="rounded-xl border border-neutral-200 bg-neutral-100 p-4 text-sm text-neutral-600">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="size-5 text-neutral-500" />
+                <div>
+                  <p className="font-semibold text-neutral-800">Stage Completed</p>
+                  <p className="mt-0.5 text-neutral-500">
+                    This stage has been marked as complete. All operations are now read-only.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ) : null}
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -841,7 +1363,7 @@ export function StageWorkspacePageShell({
                       size="lg"
                       className="bg-primary hover:bg-primary-hover shadow-md transition-all active:scale-[0.98]"
                       onClick={handleAssignDirect}
-                      disabled={completedAssignments.length === 0 || assignInterviews.isPending}
+                      disabled={completedAssignments.length === 0 || assignInterviews.isPending || isStageCompleted}
                     >
                       {assignInterviews.isPending ? (
                         <Loader2 className="mr-2 size-4 animate-spin" />
@@ -907,6 +1429,7 @@ export function StageWorkspacePageShell({
                                   orgSlug={orgSlug}
                                   memberId={memberId}
                                   value={draft?.interviewer ?? null}
+                                  excludedMemberIds={directExcludedMemberIds}
                                   onSelect={(interviewer) =>
                                     updateDraft(candidate.applicationId, { interviewer, scheduledLocal })
                                   }
@@ -961,386 +1484,227 @@ export function StageWorkspacePageShell({
                 </div>
               </div>
             ) : (
-              <div className="space-y-5">
-                <div className="rounded-2xl border border-neutral-100 bg-surface p-5 shadow-[var(--shadow-1)]">
-                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-                    <div className="space-y-2">
-                      <label className="text-[13px] font-medium text-neutral-700">Add interviewer</label>
-                      <InterviewerSelect
-                        orgSlug={orgSlug}
-                        memberId={memberId}
-                        value={null}
-                        placeholder="Search employees..."
-                        onSelect={addCustomTeamMember}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleAutoDistributeDraft}
-                        disabled={resolvedTeamMembers.length === 0}
-                      >
-                        <Shuffle className="mr-2 size-4" />
-                        Auto distribute
-                      </Button>
-                      <Button
-                        type="button"
-                        className="bg-primary hover:bg-primary-hover"
-                        onClick={handleSaveBoardAssignments}
-                        disabled={assignInterviews.isPending}
-                      >
-                        {assignInterviews.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Send className="mr-2 size-4" />}
-                        Save Assignments
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-neutral-500">
-                    Automatic assignments are sent for interviewer approval. The interviewer schedules the interview only after accepting.
-                  </p>
-                  <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-[13px] font-semibold text-neutral-700">Primary interviewers</p>
-                        <span className="font-mono text-xs text-neutral-400">{resolvedTeamMembers.length}</span>
+              <div className="flex flex-col gap-4">
+                {/* Stats bar */}
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { label: 'Total candidates', value: stats.total },
+                    { label: 'Assigned', value: stats.assigned },
+                    { label: 'Unassigned', value: stats.unassigned },
+                    { label: 'Interviewers', value: stats.interviewers },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-xl border border-neutral-100 bg-neutral-50/60 p-3"
+                    >
+                      <div className="text-2xl font-semibold tracking-tight text-neutral-900">
+                        {stat.value}
                       </div>
-                      <div className="flex min-h-9 flex-wrap gap-2">
-                        {resolvedTeamMembers.map((member) => (
-                          <span key={member.memberId} className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium text-neutral-700">
-                            {member.name}
-                            <button
-                              type="button"
-                              className="text-neutral-400 hover:text-destructive-text"
-                              onClick={() => removeBoardInterviewer(member.memberId)}
-                              aria-label={`Remove ${member.name}`}
-                            >
-                              <X className="size-3" />
-                            </button>
-                          </span>
-                        ))}
-                        {resolvedTeamMembers.length === 0 ? (
-                          <span className="text-xs text-neutral-400">Search and add interviewers to create board columns.</span>
-                        ) : null}
-                      </div>
+                      <div className="mt-0.5 text-xs text-neutral-500">{stat.label}</div>
                     </div>
+                  ))}
+                </div>
 
-                    <div className="space-y-2">
-                      <label className="text-[13px] font-semibold text-neutral-700">Backup interviewers</label>
-                      <InterviewerSelect
-                        orgSlug={orgSlug}
-                        memberId={memberId}
-                        value={null}
-                        placeholder="Search backup employees..."
-                        onSelect={addBackupMember}
-                      />
-                      <div className="flex min-h-9 flex-wrap gap-2">
-                        {backupMembers.map((member) => (
-                          <span key={member.memberId} className="inline-flex items-center gap-2 rounded-full border border-info-border bg-info-bg px-3 py-1 text-xs font-medium text-info-text">
-                            {member.name}
-                            <button
-                              type="button"
-                              className="text-info-text/70 hover:text-destructive-text"
-                              onClick={() => removeBackupMember(member.memberId)}
-                              aria-label={`Remove backup ${member.name}`}
-                            >
-                              <X className="size-3" />
-                            </button>
-                          </span>
-                        ))}
-                        {backupMembers.length === 0 ? (
-                          <span className="text-xs text-neutral-400">Backups are promoted automatically if a primary rejects.</span>
-                        ) : null}
-                      </div>
-                    </div>
+                {/* Search + Filter pills */}
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+                    <Input
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Filter candidates..."
+                      className="h-9 bg-white pl-9 text-[13px]"
+                    />
+                  </div>
+                  <div className="flex items-center self-stretch rounded-xl border border-black/4 bg-neutral-50 p-1">
+                    {([
+                      { key: 'all' as const, label: 'All' },
+                      { key: 'unassigned' as const, label: 'Unassigned' },
+                      { key: 'assigned' as const, label: 'Assigned' },
+                    ]).map((pill) => {
+                      const isActive = pill.key === filterMode;
+                      return (
+                        <button
+                          key={pill.key}
+                          type="button"
+                          onClick={() => setFilterMode(pill.key)}
+                          aria-pressed={isActive}
+                          className={cn(
+                            'relative inline-flex h-8 items-center rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
+                            isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
+                          )}
+                        >
+                          {isActive ? (
+                            <motion.span
+                              layoutId="candidate-filter-mode-pill"
+                              className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                              transition={{
+                                type: 'spring',
+                                stiffness: 520,
+                                damping: 36,
+                                mass: 0.65,
+                              }}
+                            />
+                          ) : null}
+                          <span className="relative z-10">{pill.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCorners}
-                  onDragStart={handleBoardDragStart}
-                  onDragEnd={handleBoardDragEnd}
-                  onDragCancel={() => setActiveApplicationId(null)}
-                >
-                  <div className="flex gap-4 overflow-x-auto pb-3">
-                    {assignmentColumns.map((column) => (
-                      <AssignmentColumn
-                        key={column.id}
-                        column={column}
-                        onRemove={column.interviewer ? removeBoardInterviewer : undefined}
-                      />
+                {/* Action buttons */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setAddDialogMode('interviewer');
+                        setAddDialogOpen(true);
+                      }}
+                      disabled={isStageCompleted}
+                    >
+                      <Plus className="mr-1.5 size-3.5" />
+                      Add Interviewer
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setAddDialogMode('backup');
+                        setAddDialogOpen(true);
+                      }}
+                      disabled={isStageCompleted}
+                    >
+                      <Plus className="mr-1.5 size-3.5" />
+                      Add Backup
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAutoDistributeDraft}
+                      disabled={resolvedTeamMembers.length === 0 || isStageCompleted}
+                    >
+                      <Shuffle className="mr-1.5 size-3.5" />
+                      Auto-distribute
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-primary hover:bg-primary-hover"
+                      onClick={handleSaveBoardAssignments}
+                      disabled={assignInterviews.isPending || isStageCompleted}
+                    >
+                      {assignInterviews.isPending ? (
+                        <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                      ) : (
+                        <Send className="mr-1.5 size-3.5" />
+                      )}
+                      Save Assignments
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Board */}
+                {!isStageCompleted ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCorners}
+                    onDragStart={handleBoardDragStart}
+                    onDragEnd={handleBoardDragEnd}
+                    onDragCancel={() => setActiveApplicationId(null)}
+                  >
+                  <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
+                    style={{ maxHeight: 'calc(100dvh - 280px)' }}
+                  >
+                    {assignmentColumns.map((column, index) => (
+                      <div key={column.id} className={cn(
+                        'flex shrink-0',
+                        index < assignmentColumns.length - 1 ? 'border-r border-neutral-200/70' : '',
+                      )}>
+                        <AssignmentColumn
+                          column={column}
+                          stage={workspace.stage}
+                          jobPostingId={workspace.jobPosting.id}
+                          onRemove={column.interviewer ? removeBoardInterviewer : undefined}
+                          onOpenCandidate={handleOpenCandidate}
+                          onStartInterview={handleStartInterview}
+                          onCompleteInterview={handleCompleteInterview}
+                        />
+                      </div>
                     ))}
                   </div>
                   <DragOverlay zIndex={9999}>
-                    {activeCandidate ? <AllocationCard candidate={activeCandidate} disabled /> : null}
+                    {activeCandidate ? (
+                      <AllocationCard
+                        candidate={activeCandidate}
+                        stage={workspace.stage}
+                        jobPostingId={workspace.jobPosting.id}
+                        disabled
+                      />
+                    ) : null}
                   </DragOverlay>
                 </DndContext>
-
-                {false ? (
-                <div className="mx-auto max-w-4xl">
-                <div className="mb-8 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold text-neutral-900">Automatic Team Shuffle</h2>
-                    <p className="mt-1 text-sm text-neutral-500">Configure your hiring team and schedule for an optimized round-robin distribution.</p>
+                ) : (
+                  <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
+                    style={{ maxHeight: 'calc(100dvh - 280px)' }}
+                  >
+                    {assignmentColumns.map((column, index) => (
+                      <div key={column.id} className={cn(
+                        'flex shrink-0',
+                        index < assignmentColumns.length - 1 ? 'border-r border-neutral-200/70' : '',
+                      )}>
+                        <AssignmentColumn
+                          column={column}
+                          stage={workspace.stage}
+                          jobPostingId={workspace.jobPosting.id}
+                          onOpenCandidate={handleOpenCandidate}
+                          onStartInterview={handleStartInterview}
+                          onCompleteInterview={handleCompleteInterview}
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <div className="hidden rounded-full bg-primary/10 px-4 py-2 text-xs font-bold text-primary sm:block">
-                    {selectedApplicationIds.length} Candidates to Process
-                  </div>
-                </div>
+                )}
 
-                <div className="grid gap-8">
-                  {/* Step 1: Schedule */}
-                  <section className="rounded-2xl border border-neutral-100 bg-surface p-8 shadow-[var(--shadow-1)]">
-                    <div className="mb-6 flex items-center gap-3">
-                      <div className="flex size-8 items-center justify-center rounded-full bg-neutral-900 text-xs font-bold text-white">1</div>
-                      <h3 className="text-lg font-semibold text-neutral-900">Define Schedule</h3>
-                    </div>
-                    <div className="grid gap-6 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-neutral-700">Start Date & Time</label>
-                        <div className="relative">
-                          <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-                          <Input
-                            type="datetime-local"
-                            value={teamScheduledLocal}
-                            onChange={(e) => {
-                              setTeamScheduledLocal(e.target.value);
-                              setTeamWarnings([]);
-                              setTeamWarningsReviewed(false);
-                            }}
-                            className="h-12 border-neutral-200 pl-10 text-base focus:border-primary focus:ring-primary/20"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-neutral-700">Duration per Interview</label>
-                        <div className="flex items-center gap-3">
-                          <Input
-                            type="number"
-                            min="15"
-                            value={teamDurationMinutes}
-                            onChange={(e) => setTeamDurationMinutes(parseInt(e.target.value, 10) || 30)}
-                            className="h-12 border-neutral-200 text-base focus:border-primary focus:ring-primary/20"
-                          />
-                          <span className="text-sm font-medium text-neutral-500">minutes</span>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Step 2: Team Selection */}
-                  <section className="rounded-2xl border border-neutral-100 bg-surface p-8 shadow-[var(--shadow-1)]">
-                    <div className="mb-6 flex items-center gap-3">
-                      <div className="flex size-8 items-center justify-center rounded-full bg-neutral-900 text-xs font-bold text-white">2</div>
-                      <h3 className="text-lg font-semibold text-neutral-900">Assemble Hiring Team</h3>
-                    </div>
-                    
-                    <div className="space-y-8">
-                      <div className="space-y-3">
-                        <label className="text-sm font-semibold text-neutral-700">Team Template</label>
-                        <div className="flex flex-wrap gap-2">
-                          {hiringTeams.length > 0 ? (
-                            hiringTeams.map((team) => (
-                              <button
-                                key={team.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedTeamId(team.id);
-                                  setCustomTeamMembers([]);
-                                  setCustomTeamName(team.name);
-                                }}
-                                className={cn(
-                                  "rounded-xl border px-4 py-2.5 text-sm font-medium transition-all",
-                                  selectedTeamId === team.id
-                                    ? "border-primary bg-primary-ghost text-primary shadow-sm"
-                                    : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50"
-                                )}
-                              >
-                                {team.name}
-                              </button>
-                            ))
-                          ) : (
-                            <p className="text-xs text-neutral-400 italic">No templates found. Create a new team below.</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 rounded-xl bg-neutral-50/50 p-6 border border-neutral-100">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <label className="text-[13px] font-semibold text-neutral-600 uppercase tracking-wide">Team Name</label>
-                            <Input
-                              placeholder="e.g. Engineering Final Panel"
-                              value={customTeamName}
-                              onChange={(e) => {
-                                setSelectedTeamId('');
-                                setCustomTeamName(e.target.value);
-                              }}
-                              className="h-10 bg-white"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[13px] font-semibold text-neutral-600 uppercase tracking-wide">Add Interviewers</label>
-                            <InterviewerSelect
-                              orgSlug={orgSlug}
-                              memberId={memberId}
-                              value={null}
-                              placeholder="Search employees..."
-                              onSelect={addCustomTeamMember}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {resolvedTeamMembers.map((member) => (
-                            <div key={member.memberId} className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white py-1.5 pl-2 pr-3 text-sm shadow-sm">
-                              <Avatar className="size-6">
-                                <AvatarFallback className="bg-primary-ghost text-[10px] font-bold text-primary">
-                                  {initials(member.name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium text-neutral-700">{member.name}</span>
-                              {!selectedTeam && (
-                                <button
-                                  type="button"
-                                  onClick={() => setCustomTeamMembers(m => m.filter(x => x.memberId !== member.memberId))}
-                                  className="ml-1 text-neutral-400 hover:text-destructive"
-                                >
-                                  ×
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          {resolvedTeamMembers.length === 0 && (
-                            <p className="text-xs text-neutral-400 py-2">Add at least one interviewer to start the shuffle.</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Step 3: Backups */}
-                  <section className="rounded-2xl border border-neutral-100 bg-surface p-8 shadow-[var(--shadow-1)]">
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="flex size-8 items-center justify-center rounded-full bg-neutral-900 text-xs font-bold text-white">3</div>
-                      <h3 className="text-lg font-semibold text-neutral-900">Backup Support <span className="text-sm font-normal text-neutral-500 ml-2">(Optional)</span></h3>
-                    </div>
-                    <p className="mb-6 text-sm text-neutral-500">Backups are automatically promoted if a primary interviewer has a conflict later.</p>
-                    
-                    <div className="space-y-4">
-                      <InterviewerSelect
-                        orgSlug={orgSlug}
-                        memberId={memberId}
-                        value={null}
-                        placeholder="Add backup interviewer..."
-                        onSelect={addBackupMember}
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        {backupMembers.map((member) => (
-                          <div key={member.memberId} className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white py-1.5 pl-2 pr-3 text-sm shadow-sm">
-                            <Avatar className="size-6">
-                              <AvatarFallback className="bg-info-bg text-[10px] font-bold text-info-text">
-                                {initials(member.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium text-neutral-700">{member.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => setBackupMembers(m => m.filter(x => x.memberId !== member.memberId))}
-                              className="ml-1 text-neutral-400 hover:text-destructive"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Summary & Execution */}
-                  <div className="mt-4 flex flex-col gap-6 rounded-3xl border-2 border-neutral-900 bg-neutral-900 p-10 text-white shadow-2xl sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-2">
-                      <h4 className="text-2xl font-bold">Ready to shuffle?</h4>
-                      <div className="flex flex-wrap gap-x-6 gap-y-2 text-neutral-400">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-lg text-white">{selectedApplicationIds.length}</span>
-                          <span className="text-xs uppercase tracking-widest font-semibold">Candidates</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-lg text-white">{resolvedTeamMembers.length}</span>
-                          <span className="text-xs uppercase tracking-widest font-semibold">Interviewers</span>
-                        </div>
-                        {teamScheduledLocal && (
-                          <div className="flex items-center gap-2">
-                            <CalendarDays className="size-4" />
-                            <span className="text-sm font-medium text-neutral-200">{formatDateTime(toIsoFromLocal(teamScheduledLocal))}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <Button
-                        variant="ghost"
-                        size="lg"
-                        className="text-neutral-400 hover:bg-white/10 hover:text-white"
-                        onClick={() => {
-                          setSelectedTeamId('');
-                          setCustomTeamName('');
-                          setCustomTeamMembers([]);
-                          setBackupMembers([]);
-                          setTeamScheduledLocal('');
-                          setTeamDurationMinutes(30);
-                        }}
-                      >
-                        Reset
-                      </Button>
-                      <Button
-                        size="lg"
-                        className="bg-primary hover:bg-primary-hover px-10 text-lg font-bold shadow-xl transition-all active:scale-95"
-                        disabled={resolvedTeamMembers.length === 0 || !teamScheduledLocal || distributeInterviews.isPending}
-                        onClick={handleDistributeTeam}
-                      >
-                        {distributeInterviews.isPending ? (
-                          <Loader2 className="mr-2 size-5 animate-spin" />
-                        ) : (
-                          <Shuffle className="mr-2 size-5" />
-                        )}
-                        Execute Shuffle
-                      </Button>
-                    </div>
-                  </div>
-
-                  {teamWarnings.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="rounded-2xl border border-warning-bg bg-warning-bg/50 p-6"
-                    >
-                      <div className="mb-4 flex items-center gap-2 text-warning-text">
-                        <AlertTriangle className="size-5" />
-                        <h4 className="font-bold uppercase tracking-wider text-xs">Conflicts Detected</h4>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {teamWarnings.slice(0, 6).map((w, i) => (
-                          <div key={i} className="rounded-lg bg-white/50 p-3 text-xs text-warning-text border border-warning-bg">
-                            {w.messages[0]}
-                          </div>
-                        ))}
-                      </div>
-                      <p className="mt-4 text-xs font-medium text-warning-text/80">
-                        Review the conflicts above. You can still proceed by clicking Execute Shuffle again.
-                      </p>
-                    </motion.div>
-                  )}
-                </div>
-                </div>
-                ) : null}
+                {/* Dialogs */}
+                <InterviewerSelectDialog
+                  open={addDialogOpen && addDialogMode === 'interviewer'}
+                  onOpenChange={(open) => setAddDialogOpen(open)}
+                  orgSlug={orgSlug}
+                  memberId={memberId}
+                  mode="interviewer"
+                  onSelect={addCustomTeamMember}
+                  excludedMemberIds={excludedMemberIds}
+                />
+                <InterviewerSelectDialog
+                  open={addDialogOpen && addDialogMode === 'backup'}
+                  onOpenChange={(open) => setAddDialogOpen(open)}
+                  orgSlug={orgSlug}
+                  memberId={memberId}
+                  mode="backup"
+                  onSelect={addBackupMember}
+                  excludedMemberIds={excludedMemberIds}
+                />
               </div>
             )}
           </motion.div>
         </AnimatePresence>
-      </div>
+        <CandidateDrawer
+          orgSlug={orgSlug}
+          memberId={memberId}
+          applicationId={selectedApplicationId}
+          open={selectedApplicationId !== null}
+          onOpenChange={(open) => {
+            if (!open) setSelectedApplicationId(null);
+          }}
+        />
     </div>
   );
 }

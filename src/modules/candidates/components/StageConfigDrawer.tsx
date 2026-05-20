@@ -66,6 +66,7 @@ function getDefaults(jobPostingId: string, afterStageId: string | null, stage?: 
     afterStageId,
     stageType: (stage?.stageType as CreatePipelineStageInput['stageType'] | undefined) ?? 'DEFAULT',
     evaluationEnabled: stage?.evaluationEnabled ?? false,
+    sheetEnabled: stage?.sheetEnabled ?? false,
     evaluationType: stage?.evaluationType ?? 'NUMERIC',
     evaluationIncludeTotal: stage?.evaluationIncludeTotal ?? true,
     evaluationIncludeAnalysis: stage?.evaluationIncludeAnalysis ?? false,
@@ -74,6 +75,7 @@ function getDefaults(jobPostingId: string, afterStageId: string | null, stage?: 
       id: item.id,
       name: item.name,
       type: item.type ?? 'NUMERIC',
+      maxScore: item.maxScore ?? undefined,
       order: item.order,
     })) ?? [],
   };

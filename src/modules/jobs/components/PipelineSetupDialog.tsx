@@ -186,6 +186,7 @@ function newStageDefaults(): CreatePipelineStageInput {
     name: '',
     stageType: 'DEFAULT',
     evaluationEnabled: false,
+    sheetEnabled: false,
     evaluationType: 'NUMERIC',
     evaluationIncludeTotal: true,
     evaluationIncludeAnalysis: false,
@@ -499,78 +500,119 @@ function NewColumnForm({
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => append({ name: '', type: 'NUMERIC', order: fields.length + 1 })}
+                    onClick={() => append({ name: '', type: 'NUMERIC', maxScore: undefined, order: fields.length + 1 })}
                   >
                     <Plus className="size-4" />
                     Add
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  {fields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="grid grid-cols-[minmax(0,1fr)_130px_32px_32px_32px] items-center gap-2"
-                    >
-                      <Input
-                        {...form.register(`evaluationCategories.${index}.name`)}
-                        placeholder="Category name"
-                        className="h-9"
-                      />
-                      <Select
-                        defaultValue={field.type ?? 'NUMERIC'}
-                        onValueChange={(value) =>
-                          form.setValue(
-                            `evaluationCategories.${index}.type`,
-                            value as 'NUMERIC' | 'TEXT' | 'CHECKBOX',
-                          )
-                        }
+                  {fields.map((field, index) => {
+                    const catType = form.watch(`evaluationCategories.${index}.type`) ?? 'NUMERIC';
+                    const isNumeric = catType === 'NUMERIC';
+
+                    return (
+                      <div
+                        key={field.id}
+                        className="grid grid-cols-[1fr_120px_28px_28px_28px] items-center gap-2"
                       >
-                        <SelectTrigger className="h-9 bg-surface">
-                          <SelectValue placeholder="Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="NUMERIC">Numeric</SelectItem>
-                          <SelectItem value="TEXT">Text</SelectItem>
-                          <SelectItem value="CHECKBOX">Checkbox</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="ghost"
-                        disabled={index === 0}
-                        aria-label="Move category up"
-                        onClick={() => move(index, index - 1)}
-                      >
-                        <ChevronsUpDown className="size-4 rotate-90" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="ghost"
-                        disabled={index === fields.length - 1}
-                        aria-label="Move category down"
-                        onClick={() => move(index, index + 1)}
-                      >
-                        <ChevronsUpDown className="size-4 -rotate-90" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="ghost"
-                        aria-label="Delete category"
-                        onClick={() => remove(index)}
-                      >
-                        <Trash2 className="size-4 text-destructive-text" />
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Input
+                            {...form.register(`evaluationCategories.${index}.name`)}
+                            placeholder="Category name"
+                            className="h-9 flex-1 min-w-0"
+                          />
+                          {isNumeric ? (
+                            <Input
+                              type="number"
+                              min={1}
+                              placeholder="Total"
+                              className="h-9 w-20 text-center shrink-0"
+                              {...form.register(`evaluationCategories.${index}.maxScore`, {
+                                setValueAs: (value) => {
+                                  if (value === '' || value === undefined || value === null) return undefined;
+                                  const num = Number(value);
+                                  return Number.isNaN(num) ? undefined : num;
+                                },
+                              })}
+                            />
+                          ) : null}
+                        </div>
+                        <Select
+                          value={catType}
+                          onValueChange={(value) => {
+                            form.setValue(
+                              `evaluationCategories.${index}.type`,
+                              value as 'NUMERIC' | 'TEXT' | 'CHECKBOX',
+                            );
+                            if (value !== 'NUMERIC') {
+                              form.setValue(`evaluationCategories.${index}.maxScore`, undefined);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-9 bg-surface">
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="NUMERIC">Numeric</SelectItem>
+                            <SelectItem value="TEXT">Text</SelectItem>
+                            <SelectItem value="CHECKBOX">Checkbox</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="ghost"
+                          disabled={index === 0}
+                          aria-label="Move category up"
+                          className="size-7"
+                          onClick={() => move(index, index - 1)}
+                        >
+                          <ChevronsUpDown className="size-4 rotate-90" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="ghost"
+                          disabled={index === fields.length - 1}
+                          aria-label="Move category down"
+                          className="size-7"
+                          onClick={() => move(index, index + 1)}
+                        >
+                          <ChevronsUpDown className="size-4 -rotate-90" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="ghost"
+                          aria-label="Delete category"
+                          className="size-7"
+                          onClick={() => remove(index)}
+                        >
+                          <Trash2 className="size-4 text-destructive-text" />
+                        </Button>
+                      </div>
+                    );
+                  })}
                   {fields.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-neutral-200 bg-surface p-3 text-xs text-neutral-500">
                       No evaluation subcategories yet.
                     </div>
                   ) : null}
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-neutral-100 bg-surface p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-neutral-900">Google Sheets integration</p>
+                  <p className="text-xs text-neutral-500">
+                    Automatically write feedback values to a Google Sheet for this stage.
+                  </p>
+                </div>
+                <Switch
+                  checked={Boolean(form.watch('sheetEnabled'))}
+                  onCheckedChange={(checked) => form.setValue('sheetEnabled', checked)}
+                />
               </div>
             </div>
           ) : null}
