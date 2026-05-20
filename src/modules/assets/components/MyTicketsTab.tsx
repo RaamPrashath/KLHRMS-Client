@@ -36,6 +36,14 @@ function MyTicketsTable({ tickets }: { tickets: MyTicket[] }) {
   const columns = useMemo(
     () => [
       {
+        id: 'ticketId',
+        header: 'Ticket ID',
+        accessorFn: (row: MyTicket) => row.ticketId,
+        cell: ({ getValue }: { getValue: () => string }) => (
+          <span className="text-[12px] font-semibold tabular-nums text-[#1d1d1f]">{getValue()}</span>
+        ),
+      },
+      {
         id: 'assetName',
         header: 'Asset',
         accessorFn: (row: MyTicket) => row.assetName,

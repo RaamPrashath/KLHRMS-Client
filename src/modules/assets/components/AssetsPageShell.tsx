@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { AssetRegisterTab } from '@/modules/assets/components/AssetRegisterTab';
 import { CategoryTab } from '@/modules/assets/components/CategoryTab';
 import { DashboardTab } from '@/modules/assets/components/dashboard/DashboardTab';
+import { EmployeeAssetGallery } from '@/modules/assets/components/EmployeeAssetGallery';
 import { IssueAssetTab } from '@/modules/assets/components/IssueAssetTab';
 import { MyTicketsTab } from '@/modules/assets/components/MyTicketsTab';
 import { RaiseTicketDialog } from '@/modules/assets/components/RaiseTicketDialog';
@@ -238,50 +239,50 @@ export function AssetsPageShell({
   if (!canManageAssets) {
     return (
       <div className="w-full">
-        <div className="mb-2 border-b border-[#e5e7eb] pb-6">
-          <div>
-            <h1 className="text-4xl font-semibold tracking-tight text-[#111827]">Assets</h1>
-            <p className="mt-1 text-[14px] text-[#6b7280]">View equipment and devices assigned to you</p>
-          </div>
-
-          <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="overflow-x-auto">
-              <div className="inline-flex min-w-fit items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
-                <button
-                  type="button"
-                  onClick={() => setEmployeeTab('assets')}
-                  className={cn(
-                    'inline-flex h-8 items-center rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
-                    employeeTab === 'assets'
-                      ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-                      : 'text-neutral-500 hover:text-neutral-900',
-                  )}
-                >
-                  My Assets
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEmployeeTab('tickets')}
-                  className={cn(
-                    'inline-flex h-8 items-center rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
-                    employeeTab === 'tickets'
-                      ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-                      : 'text-neutral-500 hover:text-neutral-900',
-                  )}
-                >
-                  My Tickets
-                </button>
-              </div>
+        <div className="mb-2 border-b border-[#e5e7eb] pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-4xl font-semibold tracking-tight text-[#111827]">Assets</h1>
+              <p className="mt-1 text-[14px] text-[#6b7280]">View equipment and devices assigned to you</p>
             </div>
 
             <Button
               onClick={() => setRaiseTicketOpen(true)}
-              className="h-8 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm"
+              className="h-8 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm self-start sm:self-auto"
               style={{ backgroundColor: '#b3261e' }}
             >
               <Hammer className="mr-1.5 size-4" />
               Report Issue
             </Button>
+          </div>
+
+          <div className="mt-6 overflow-x-auto pb-1">
+            <div className="inline-flex min-w-fit items-center rounded-xl border border-black/4 bg-neutral-50 p-1">
+              <button
+                type="button"
+                onClick={() => setEmployeeTab('assets')}
+                className={cn(
+                  'inline-flex h-8 items-center rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+                  employeeTab === 'assets'
+                    ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                    : 'text-neutral-500 hover:text-neutral-900',
+                )}
+              >
+                My Assets
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmployeeTab('tickets')}
+                className={cn(
+                  'inline-flex h-8 items-center rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+                  employeeTab === 'tickets'
+                    ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                    : 'text-neutral-500 hover:text-neutral-900',
+                )}
+              >
+                My Tickets
+              </button>
+            </div>
           </div>
         </div>
 
@@ -332,15 +333,7 @@ export function AssetsPageShell({
                 </Select>
               </div>
             </div>
-            <AssetRegisterTab
-              assets={filteredAssets}
-              isLoading={registerQuery.isLoading}
-              onOpenDetail={openDetail}
-              onEdit={() => {}}
-              onProvide={() => {}}
-              onMaintenance={seedMaintenanceForm}
-              onDecommission={() => {}}
-            />
+            <EmployeeAssetGallery assets={filteredAssets} isLoading={registerQuery.isLoading} />
           </>
         ) : (
           <div className="rounded-xl border border-[#e5e7eb] bg-white p-5">
@@ -348,18 +341,6 @@ export function AssetsPageShell({
           </div>
         )}
 
-        <AssetDetailDialog
-          open={!!detailAssetId}
-          onOpenChange={(open) => !open && setDetailAssetId(null)}
-          isLoading={detailQuery.isLoading}
-          asset={selectedAsset ?? undefined}
-          canManageAssets={false}
-          onEdit={() => {}}
-          onArchive={() => {}}
-          onProvide={() => {}}
-          onReturn={() => {}}
-          onMaintenance={seedMaintenanceForm}
-        />
         <RaiseTicketDialog
           open={raiseTicketOpen}
           onOpenChange={setRaiseTicketOpen}
@@ -374,49 +355,47 @@ export function AssetsPageShell({
   return (
     <div className="w-full">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-6">
-        <div className="mb-2 border-b border-[#e5e7eb] pb-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-4xl font-semibold tracking-tight text-[#111827]">Asset Management</h1>
-              <p className="mt-1 text-[14px] text-[#6b7280]">
-                Manage your company equipment, track assignments, and log maintenance
-              </p>
-            </div>
+        <div className="mb-2 border-b border-[#e5e7eb] pb-4">
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight text-[#111827]">Asset Management</h1>
+            <p className="mt-1 text-[14px] text-[#6b7280]">
+              Manage your company equipment, track assignments, and log maintenance
+            </p>
+          </div>
 
-            <div className="flex flex-col gap-3 xl:min-w-0 xl:items-end">
-              <div className="overflow-x-auto">
-                <div className="inline-flex min-w-fit items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1 xl:self-auto">
-                  {tabOptions.map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = activeTab === tab.value;
-                    return (
-                      <button
-                        key={tab.value}
-                        type="button"
-                        onClick={() => setActiveTab(tab.value)}
-                        className={cn(
-                          'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
-                          isActive
-                            ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-                            : 'text-neutral-500 hover:text-neutral-900',
-                        )}
-                      >
-                        <Icon className="size-3.5 shrink-0" />
-                        <span className="whitespace-nowrap">{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+          <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="overflow-x-auto pb-1">
+              <div className="inline-flex min-w-fit items-center rounded-xl border border-black/4 bg-neutral-50 p-1">
+                {tabOptions.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => setActiveTab(tab.value)}
+                      className={cn(
+                        'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+                        isActive
+                          ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                          : 'text-neutral-500 hover:text-neutral-900',
+                      )}
+                    >
+                      <Icon className="size-3.5 shrink-0" />
+                      <span className="whitespace-nowrap">{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-
-              <Button
-                onClick={openCreateAssetDialog}
-                className="h-8 shrink-0 self-start bg-primary px-4 text-[13px] font-medium text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover xl:self-end"
-              >
-                <PackagePlus className="mr-1.5 size-3.5" />
-                Add New Asset
-              </Button>
             </div>
+
+            <Button
+              onClick={openCreateAssetDialog}
+              className="h-8 shrink-0 bg-primary px-4 text-[13px] font-medium text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] self-start sm:self-auto"
+            >
+              <PackagePlus className="mr-1.5 size-3.5" />
+              Add New Asset
+            </Button>
           </div>
         </div>
 

@@ -192,23 +192,23 @@ function PendingLeaveRequestsSection({
   }
 
   return (
-    <section className="rounded-[28px] border border-[#dbe4ef] bg-white px-7 py-7 shadow-[0_14px_40px_rgba(15,23,42,0.04)]">
+    <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
       <div className="flex items-start gap-4">
         <div className="min-w-0">
-          <h2 className="text-[1.05rem] font-semibold text-[#0f172a]">Leave Requests</h2>
-          <p className="mt-1 text-[15px] leading-6 text-[#64748b]">
+          <h2 className="text-[0.9375rem] font-semibold text-neutral-900">Leave Requests</h2>
+          <p className="mt-1 text-xs text-neutral-500">
             Incoming employee time-off approval requests pipeline.
           </p>
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-5">
         {leaveRequestsQuery.isLoading ? (
-          <div className="flex min-h-[300px] gap-3 rounded-[28px] border border-dashed border-[#dbe4ef] bg-[#fcfdff] p-6">
-            {[1, 2, 3].map((i) => <div key={i} className="h-14 flex-1 animate-pulse rounded-2xl bg-neutral-100" />)}
+          <div className="flex min-h-[180px] gap-3 rounded-xl border border-dashed border-zinc-200 bg-neutral-50/50 p-4">
+            {[1, 2, 3].map((i) => <div key={i} className="h-12 flex-1 animate-pulse rounded-lg bg-neutral-100" />)}
           </div>
         ) : (leaveRequestsQuery.data?.items?.length ?? 0) > 0 ? (
-          <div className="overflow-hidden rounded-[28px] border border-[#dbe4ef] bg-[#fcfdff] shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-neutral-50/20 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
             {(leaveRequestsQuery.data?.items ?? []).map((request) => (
               <LeaveRequestRow
                 key={request.id}
@@ -221,13 +221,13 @@ function PendingLeaveRequestsSection({
             ))}
           </div>
         ) : (
-          <div className="rounded-[28px] border border-dashed border-[#dbe4ef] bg-[#fcfdff] px-6 py-14 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-            <div className="mx-auto flex min-h-[272px] max-w-md flex-col items-center justify-center text-center">
-              <div className="mb-5 flex size-14 items-center justify-center rounded-full bg-[#eef4fb] text-[#94a3b8]">
-                <Inbox className="size-6" />
+          <div className="rounded-xl border border-dashed border-zinc-200 bg-neutral-50/20 px-4 py-8 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <div className="mx-auto flex min-h-[180px] max-w-md flex-col items-center justify-center text-center">
+              <div className="mb-3.5 flex size-11 items-center justify-center rounded-full bg-zinc-100 text-neutral-400">
+                <Inbox className="size-5" />
               </div>
-              <p className="text-[18px] font-semibold leading-7 text-[#0f172a]">No leave requests pending</p>
-              <p className="mt-2 max-w-[420px] text-[15px] leading-7 text-[#94a3b8]">
+              <p className="text-sm font-semibold text-neutral-900">No leave requests pending</p>
+              <p className="mt-1.5 max-w-[320px] text-xs text-neutral-400 leading-relaxed">
                 New approvals will appear here automatically when someone submits a leave form request.
               </p>
             </div>
@@ -255,7 +255,7 @@ function LeaveRequestRow({
   return (
     <div className="flex items-center justify-between gap-4 border-b border-black/4 px-5 py-3.5 last:border-0">
       <div className="min-w-0 flex items-center gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-500">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-[11px] font-medium text-primary">
           {memberName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "U"}
         </div>
         <div className="min-w-0">
@@ -264,8 +264,23 @@ function LeaveRequestRow({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <Button variant="outline" size="sm" onClick={() => onReject(request.id)} disabled={isApproving || isRejecting}>Deny</Button>
-        <Button size="sm" className="bg-primary text-white hover:opacity-90" onClick={() => onApprove(request.id)} disabled={isApproving || isRejecting}>Approve</Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-lg text-xs transition-all active:scale-[0.98] duration-100"
+          onClick={() => onReject(request.id)}
+          disabled={isApproving || isRejecting}
+        >
+          Deny
+        </Button>
+        <Button
+          size="sm"
+          className="h-8 rounded-lg bg-primary text-xs text-white hover:bg-primary-hover active:scale-[0.98] transition-all duration-100"
+          onClick={() => onApprove(request.id)}
+          disabled={isApproving || isRejecting}
+        >
+          Approve
+        </Button>
       </div>
     </div>
   );
@@ -285,16 +300,16 @@ function AdminActionItem({
   children?: React.ReactNode;
 }>) {
   const content = (
-    <div className="flex items-center gap-4 rounded-3xl border border-[#e6edf5] bg-[#fbfcfe] px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.02)]">
+    <div className="flex items-center gap-4 rounded-xl border border-zinc-200/70 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all hover:border-zinc-300 hover:bg-zinc-50/40">
       <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold text-[#0f172a]">{title}</p>
-        <p className="mt-0.5 text-[14px] leading-5 text-[#8aa0c3]">{description}</p>
+        <p className="text-[13px] font-semibold text-neutral-800">{title}</p>
+        <p className="mt-0.5 text-xs text-neutral-400 leading-normal">{description}</p>
       </div>
       {children ?? (
         actionLabel ? (
           <Button
             variant="outline"
-            className="h-9 rounded-xl border-[#d6dfeb] bg-white px-4 text-[14px] font-semibold text-[#355070] hover:bg-[#f8fafc]"
+            className="h-8 rounded-lg border-zinc-200 bg-white px-3.5 text-xs font-semibold text-neutral-700 hover:bg-zinc-50 transition-all duration-100 active:scale-[0.98]"
           >
             {actionLabel}
           </Button>
@@ -305,7 +320,7 @@ function AdminActionItem({
 
   if (href) {
     return (
-      <Link href={href} className="block transition-transform duration-200 hover:scale-[1.01]">
+      <Link href={href} className="block transition-all duration-150 active:scale-[0.99]">
         {content}
       </Link>
     );
@@ -453,17 +468,17 @@ function AdminDashboardContent({
             {canApproveLeave ? <PendingLeaveRequestsSection orgSlug={orgSlug} memberId={memberId} /> : null}
 
             {(canInviteEmployees || canManageDepartments || canManageAssets || canManagePermissions) ? (
-              <section className="rounded-[28px] border border-[#dbe4ef] bg-white px-7 py-7 shadow-[0_14px_40px_rgba(15,23,42,0.04)]">
+              <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
                 <div className="flex items-start">
                   <div className="min-w-0">
-                    <h2 className="text-[1.05rem] font-semibold text-[#0f172a]">Quick Actions</h2>
-                    <p className="mt-1 text-[15px] leading-6 text-[#64748b]">
+                    <h2 className="text-[0.9375rem] font-semibold text-neutral-900">Quick Actions</h2>
+                    <p className="mt-1 text-xs text-neutral-500">
                       Fast organizational control pathways.
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-8 space-y-4">
+                <div className="mt-5 space-y-3.5">
                   {canInviteEmployees ? (
                     <AdminActionItem
                       title="Invite employee"
@@ -473,7 +488,7 @@ function AdminDashboardContent({
                         orgSlug={orgSlug}
                         memberId={memberId}
                         triggerLabel="Invite"
-                        triggerClassName="h-9 rounded-xl border border-[#d6dfeb] bg-white px-4 text-[14px] font-semibold text-[#355070] hover:bg-[#f8fafc]"
+                        triggerClassName="h-8 rounded-lg border border-zinc-200 bg-white px-3.5 text-xs font-semibold text-neutral-700 hover:bg-zinc-50 transition-all duration-100 active:scale-[0.98]"
                       />
                     </AdminActionItem>
                   ) : null}

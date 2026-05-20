@@ -423,9 +423,9 @@ export function AssetSettingsDialog({
   onOpenChange: (open: boolean) => void;
   defaultTab?: 'create' | 'manage';
   categories: AssetCategoryDefinition[];
-  onCreateCategory: (data: { name: string }) => Promise<AssetCategoryDefinition>;
+  onCreateCategory: (data: { name: string; assetCode?: string | null }) => Promise<AssetCategoryDefinition>;
   onCreateField: (categoryId: string, data: AssetCategoryFieldCreateInput) => Promise<AssetCategoryFieldDefinition>;
-  onUpdateCategory: (categoryId: string, data: { name: string }) => Promise<AssetCategoryDefinition>;
+  onUpdateCategory: (categoryId: string, data: { name: string; assetCode?: string | null }) => Promise<AssetCategoryDefinition>;
   onDeleteCategory: (categoryId: string) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');

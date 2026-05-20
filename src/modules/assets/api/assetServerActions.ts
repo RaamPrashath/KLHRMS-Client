@@ -449,6 +449,7 @@ export async function deleteAssetCategoryFieldAction(params: {
 
 export interface MaintenanceTicket {
   id: string;
+  ticketId: string;
   assetId: string;
   assetName: string;
   assetCode: string;
@@ -481,6 +482,7 @@ export async function fetchMyTicketsAction(params: {
   memberId: string;
 }): Promise<Array<{
   id: string;
+  ticketId: string;
   assetId: string;
   assetName: string;
   assetCode: string;

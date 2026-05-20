@@ -20,7 +20,7 @@ import {
   humanize,
   statusBadge,
 } from '@/modules/assets/lib/assetUtils';
-import type { AssetCondition, AssetDetail, AssetMaintenanceSummary, AssetSummary, AssetUnitResponse } from '@/modules/assets/types/assetTypes';
+import type { AssetCondition, AssetDetail, AssetSummary, AssetUnitResponse } from '@/modules/assets/types/assetTypes';
 
 function UnitStatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
@@ -250,7 +250,7 @@ export function AssetDetailDialog({
                           asset.maintenanceHistory.map((log) => (
                             <TimelineCard
                               key={log.id}
-                              title={humanize(log.maintenanceType)}
+                              title={`${log.ticketId} \u00B7 ${humanize(log.maintenanceType)}`}
                               subtitle={`${humanize(log.status)} \u00B7 Service date ${formatDate(log.serviceDate)}`}
                               body={log.issueDescription}
                               footer={

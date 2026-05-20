@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -48,6 +48,7 @@ export function HolidayDialog({
       description: '',
     },
   });
+  const isRecurring = useWatch({ control: form.control, name: 'isRecurring' });
 
   useEffect(() => {
     form.reset({
@@ -101,7 +102,7 @@ export function HolidayDialog({
             </label>
             <Switch 
               id="recurring-switch"
-              checked={form.watch('isRecurring')} 
+              checked={isRecurring} 
               onCheckedChange={(checked) => {
                 form.setValue('isRecurring', checked, { shouldDirty: true });
               }} 

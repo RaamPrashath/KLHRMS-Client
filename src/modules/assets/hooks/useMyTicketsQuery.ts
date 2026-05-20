@@ -5,6 +5,7 @@ import { fetchMyTicketsAction } from '@/modules/assets/api/assetServerActions';
 
 export interface MyTicket {
   id: string;
+  ticketId: string;
   assetId: string;
   assetName: string;
   assetCode: string;

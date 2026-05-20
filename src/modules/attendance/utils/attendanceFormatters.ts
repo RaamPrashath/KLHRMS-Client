@@ -11,6 +11,22 @@ import type {
 
 const IST = 'Asia/Kolkata';
 
+function hasTimezoneSuffix(isoDatetime: string): boolean {
+  return /(?:Z|[+-]\d{2}:?\d{2})$/i.test(isoDatetime);
+}
+
+function parseAttendanceDate(isoDatetime: string): Date {
+  if (hasTimezoneSuffix(isoDatetime)) {
+    return new Date(isoDatetime);
+  }
+
+  const utcDate = new Date(`${isoDatetime}Z`);
+  if (utcDate.getTime() > Date.now() + 60_000) {
+    return new Date(isoDatetime);
+  }
+  return utcDate;
+}
+
 // ─── Core formatters ──────────────────────────────────────────────────────────
 
 /**
@@ -22,15 +38,13 @@ export function formatTime(isoDatetime: string | null | undefined): string {
   if (!isoDatetime) return '—';
   try {
     // Normalize to UTC if no timezone suffix — prevents local-time misparse
-    const normalized = isoDatetime.endsWith('Z') || isoDatetime.includes('+')
-      ? isoDatetime
-      : `${isoDatetime}Z`;
+    const parsedDate = parseAttendanceDate(isoDatetime);
     return new Intl.DateTimeFormat('en-IN', {
       timeZone: IST,
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
-    }).format(new Date(normalized));
+    }).format(parsedDate);
   } catch {
     return '—';
   }
@@ -105,13 +119,7 @@ export function formatTodayLabel(): string {
  */
 export function formatElapsed(clockInIso: string): string {
   try {
-    // Ensure the string is treated as UTC. If the backend omits the 'Z' suffix
-    // (naive datetime), appending it prevents the browser from parsing it as
-    // local time (IST), which would add 5:30 to the elapsed calculation.
-    const normalized = clockInIso.endsWith('Z') || clockInIso.includes('+')
-      ? clockInIso
-      : `${clockInIso}Z`;
-    const elapsedMs = Date.now() - new Date(normalized).getTime();
+    const elapsedMs = Date.now() - parseAttendanceDate(clockInIso).getTime();
     if (elapsedMs < 0) return '00:00:00';
     const totalSeconds = Math.floor(elapsedMs / 1000);
     const h = Math.floor(totalSeconds / 3600);

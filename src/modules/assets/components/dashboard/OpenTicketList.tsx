@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, Clock, Wrench } from 'lucide-react';
+import { Clock, Wrench } from 'lucide-react';
 import { formatDate } from '@/modules/assets/lib/assetUtils';
 import { humanize } from '@/modules/assets/lib/assetUtils';
 import type { TicketAlertItem } from './dashboard.types';
@@ -43,6 +43,9 @@ export function OpenTicketList({ tickets }: { tickets: TicketAlertItem[] }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
+                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-[#86868b]">
+                  {ticket.ticketId}
+                </span>
                 <span className="text-[13px] font-medium text-[#1d1d1f] truncate">
                   {ticket.assetName}
                 </span>

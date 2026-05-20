@@ -182,6 +182,7 @@ export interface AssetProvideRecordSummary {
 
 export interface AssetMaintenanceSummary {
   id: string;
+  ticketId: string;
   assetUnitId: string | null;
   maintenanceType: AssetMaintenanceType;
   issueDescription: string;
