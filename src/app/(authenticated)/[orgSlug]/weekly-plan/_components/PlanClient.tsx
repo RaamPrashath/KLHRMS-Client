@@ -76,7 +76,7 @@ export function PlanClient({
 
   return (
     <div className="flex flex-col gap-6 mx-7 mb-7">
-      <div className="flex items-center gap-1">
+      <div className="mt-2 flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
         {TAB_OPTIONS.filter((tab) => !tab.requireTeam || canViewTeam).map((tab) => {
           const Icon = tab.icon;
           const isActive = activeView === tab.value;
@@ -87,16 +87,14 @@ export function PlanClient({
               type="button"
               onClick={() => handleViewChange(tab.value)}
               className={cn(
-                'relative px-5 py-2.5 text-sm font-medium rounded-lg transition-colors',
+                'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
                 isActive
-                  ? 'bg-[#1d1d1f] text-white'
-                  : 'text-neutral-500 hover:text-neutral-900 hover:bg-black/[0.04]',
+                  ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                  : 'text-neutral-500 hover:text-neutral-900',
               )}
             >
-              <span className="flex items-center gap-2">
-                <Icon className="h-3.5 w-3.5" />
-                {tab.label}
-              </span>
+              <Icon className="size-3.5 shrink-0" />
+              {tab.label}
             </button>
           );
         })}

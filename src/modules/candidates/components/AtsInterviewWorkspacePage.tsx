@@ -270,8 +270,8 @@ export function AtsInterviewWorkspacePage({
             Back to Pipeline
           </Link>
         </Button>
-        <h1 className="text-2xl font-semibold text-neutral-900">{workspace.stage.name}</h1>
-        <p className="mt-1 text-sm text-neutral-500">{workspace.jobPosting.title} · {workspace.candidateCount} candidates in this stage</p>
+        <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">{workspace.stage.name}</h1>
+        <p className="mt-1 text-[14px] text-neutral-500">{workspace.jobPosting.title} · {workspace.candidateCount} candidates in this stage</p>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-surface shadow-[var(--shadow-1)]">

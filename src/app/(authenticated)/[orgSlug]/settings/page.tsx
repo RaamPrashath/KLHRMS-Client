@@ -41,8 +41,8 @@ export default async function OrganizationSettingsPage({
   return (
     <section className="grid gap-6">
       <div>
-        <h2 className="text-3xl font-semibold tracking-tight">Settings</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">Settings</h1>
+        <p className="mt-1 text-[14px] text-muted-foreground">
           Admin-only controls for {org.name}.
         </p>
       </div>

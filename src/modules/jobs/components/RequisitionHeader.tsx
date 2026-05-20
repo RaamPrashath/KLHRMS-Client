@@ -75,7 +75,7 @@ export function RequisitionHeader({
               {formatLabel(requisition.status)}
             </Badge>
           </div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-neutral-900">
             {requisition.title}
           </h1>
           <div className="mt-4 flex flex-wrap gap-2">

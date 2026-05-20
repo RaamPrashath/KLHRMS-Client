@@ -181,17 +181,26 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
         style={{ top: 'calc(100% + 8px)' }}
         data-date={dateStr}
       >
-        <button
-          type="button"
+        <span
+          role="button"
+          tabIndex={0}
           onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onAddLog(dateStr);
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
             e.stopPropagation();
             onAddLog(dateStr);
           }}
           className="pointer-events-auto inline-flex h-7 items-center justify-center rounded-md border border-input bg-white/95 px-3 text-[11px] font-semibold shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-primary hover:text-white"
+          aria-label={`Add worklog for ${format(date, 'EEEE, MMMM d')}`}
         >
           <Plus className="size-3 mr-1.5" strokeWidth={2.5} />
           Add worklog
-        </button>
+        </span>
       </div>
     </div>
   );

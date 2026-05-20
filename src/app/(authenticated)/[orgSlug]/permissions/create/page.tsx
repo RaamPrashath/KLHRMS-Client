@@ -36,10 +36,10 @@ export default async function CreateRolePage({
 
         {/* Page header */}
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">
+          <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
             Create role
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="mt-1 text-[14px] text-neutral-500">
             Define a name and set permissions for the new role.
           </p>
         </div>

@@ -761,7 +761,7 @@ export function StageWorkspacePageShell({
                 </Link>
               </Button>
               <div>
-                <h1 className="text-4xl font-bold tracking-tight text-neutral-900">
+                <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">
                   {workspace.stage.name}
                 </h1>
                 <div className="mt-1 flex items-center gap-2">
