@@ -84,10 +84,12 @@ export const stageInterviewAssignmentSchema = z.object({
 
 export const stageInterviewAssignmentRequestSchema = z.object({
   assignments: z.array(stageInterviewAssignmentSchema).min(1),
+  jobPostingId: z.string().optional(),
 });
 
 export const stageInterviewWarningRequestSchema = z.object({
   assignments: z.array(stageInterviewAssignmentSchema).default([]),
+  jobPostingId: z.string().optional(),
 });
 
 export const acceptInterviewSchema = z.object({

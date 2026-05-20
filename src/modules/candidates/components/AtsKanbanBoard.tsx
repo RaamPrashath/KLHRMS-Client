@@ -47,9 +47,11 @@ import { PipelineSetupCard } from '@/modules/jobs/components/PipelineSetupCard';
 import { PipelineSetupDialog } from '@/modules/jobs/components/PipelineSetupDialog';
 import { authClient } from '@/lib/auth-client';
 import {
+  useAcceptInterview,
   useCreatePipelineStage,
   useCreateInterviewMeeting,
   useCompleteInterviewMeeting,
+  useRejectInterview,
   useStartInterviewMeeting,
   useUpdateInterviewMeeting,
   useDeletePipelineStage,
@@ -329,6 +331,8 @@ export function AtsKanbanBoard({
   const updateInterviewMeeting = useUpdateInterviewMeeting(orgSlug, memberId, jobPostingId);
   const startInterviewMeeting = useStartInterviewMeeting(orgSlug, memberId, jobPostingId);
   const completeInterviewMeeting = useCompleteInterviewMeeting(orgSlug, memberId, jobPostingId);
+  const acceptInterview = useAcceptInterview(orgSlug, memberId);
+  const rejectInterview = useRejectInterview(orgSlug, memberId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const pendingStorageKey = useMemo(
     () => `ats-google-pending:${orgSlug}:${jobPostingId ?? 'none'}`,
@@ -827,6 +831,36 @@ export function AtsKanbanBoard({
     );
   }
 
+  function handleAcceptInterview(_applicationId: string, eventId: string) {
+    acceptInterview.mutate(
+      { eventId, data: { scheduledStartAt: undefined, durationMinutes: 30 } },
+      {
+        onSuccess: () => {
+          toast.success('Interview accepted');
+          void boardQuery.refetch();
+        },
+        onError: (error) => {
+          toast.error(readActionError(error, 'Failed to accept interview'));
+        },
+      },
+    );
+  }
+
+  function handleRejectInterview(_applicationId: string, eventId: string) {
+    rejectInterview.mutate(
+      { eventId },
+      {
+        onSuccess: () => {
+          toast.success('Interview rejected');
+          void boardQuery.refetch();
+        },
+        onError: (error) => {
+          toast.error(readActionError(error, 'Failed to reject interview'));
+        },
+      },
+    );
+  }
+
   const stages = boardQuery.data?.stages ?? [];
   const onlyAppliedSetup =
     resolvedViewMode === 'kanban' &&
@@ -953,6 +987,9 @@ export function AtsKanbanBoard({
               onScheduleInterview={openScheduleInterview}
               onCompleteInterview={markInterviewCompleted}
               onStartInterview={handleStartInterview}
+              onAcceptInterview={handleAcceptInterview}
+              onRejectInterview={handleRejectInterview}
+              currentMemberId={memberId}
             />
             <div className="flex min-h-0 items-center justify-center">
               <PipelineSetupCard
@@ -1040,6 +1077,9 @@ export function AtsKanbanBoard({
                   onScheduleInterview={openScheduleInterview}
                   onCompleteInterview={markInterviewCompleted}
                   onStartInterview={handleStartInterview}
+                  onAcceptInterview={handleAcceptInterview}
+                  onRejectInterview={handleRejectInterview}
+                  currentMemberId={memberId}
                 />
               );
             })}

@@ -162,8 +162,9 @@ export async function previewStageInterviewWarningsAction(params: {
   memberId: string;
   stageSlug: string;
   assignments: StageInterviewAssignmentInput[];
+  jobPostingId?: string;
 }): Promise<StageInterviewWarningResponse> {
-  const parsed = stageInterviewWarningRequestSchema.safeParse({ assignments: params.assignments });
+  const parsed = stageInterviewWarningRequestSchema.safeParse({ assignments: params.assignments, jobPostingId: params.jobPostingId });
   if (!parsed.success) {
     throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
   }
@@ -181,8 +182,9 @@ export async function assignStageInterviewsAction(params: {
   memberId: string;
   stageSlug: string;
   assignments: StageInterviewAssignmentInput[];
+  jobPostingId?: string;
 }): Promise<StageInterviewAssignmentResponse> {
-  const parsed = stageInterviewAssignmentRequestSchema.safeParse({ assignments: params.assignments });
+  const parsed = stageInterviewAssignmentRequestSchema.safeParse({ assignments: params.assignments, jobPostingId: params.jobPostingId });
   if (!parsed.success) {
     throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
   }

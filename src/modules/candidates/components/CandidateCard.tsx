@@ -4,7 +4,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { AnimatePresence, motion } from 'framer-motion';
 import { isSameDay } from 'date-fns';
-import { CalendarDays, Check, CheckCircle2, Clock, Copy, Gauge, Play } from 'lucide-react';
+import { CalendarDays, Check, CheckCircle2, Clock, Copy, Gauge, Play, X } from 'lucide-react';
 import { useState, type CSSProperties } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -72,11 +72,14 @@ export function CandidateCard({
   onScheduleInterview,
   onStartInterview,
   onCompleteInterview,
+  onAcceptInterview,
+  onRejectInterview,
   evaluationCategories = [],
   isOverlay = false,
   compact = false,
   draggable = true,
   dragLocked = false,
+  currentMemberId = null,
 }: {
   application: PipelineApplication;
   onOpen?: (applicationId: string) => void;
@@ -90,11 +93,14 @@ export function CandidateCard({
       notes?: string | null;
     },
   ) => void;
+  onAcceptInterview?: (applicationId: string, eventId: string) => void;
+  onRejectInterview?: (applicationId: string, eventId: string) => void;
   evaluationCategories?: StageEvaluationCategory[];
   isOverlay?: boolean;
   compact?: boolean;
   draggable?: boolean;
   dragLocked?: boolean;
+  currentMemberId?: string | null;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: application.id,
@@ -108,7 +114,9 @@ export function CandidateCard({
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
   const candidateImage = imageSrc && failedImageSrc !== imageSrc ? imageSrc : null;
   const meeting = application.interviewMeeting;
-  const canSchedule = !meeting || meeting.status === 'COMPLETED';
+  const assignment = application.currentAssignment;
+  const hasPendingAssignment = assignment !== null && meeting === null;
+  const canSchedule = !meeting || meeting.status === 'COMPLETED' || meeting.status === 'CANCELLED' || meeting.status === 'RESCHEDULED';
   const isOngoing = meeting?.status === 'ONGOING';
   const isPending = meeting?.status === 'PENDING';
   const isScheduledToday = meeting?.scheduledStartAt ? isSameDay(new Date(meeting.scheduledStartAt), new Date()) : false;
@@ -180,9 +188,31 @@ export function CandidateCard({
           <p className="truncate text-sm font-semibold text-neutral-900">{fullName}</p>
           <p className="truncate text-xs text-neutral-500">{application.candidate.email}</p>
         </div>
-        {meetingEnabled && meeting ? (
+        {meetingEnabled && (meeting || hasPendingAssignment) ? (
           <div className="flex-shrink-0">
-            {meeting.status === 'PENDING' ? (
+            {hasPendingAssignment && assignment ? (
+              <Popover open={scheduledOpen} onOpenChange={setScheduledOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Pending assignment"
+                    onClick={(event) => event.stopPropagation()}
+                    onMouseEnter={() => setScheduledOpen(true)}
+                    onMouseLeave={() => setScheduledOpen(false)}
+                  >
+                    <Clock className="size-4 text-info-text" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" className="w-60 p-3" onMouseEnter={() => setScheduledOpen(true)} onMouseLeave={() => setScheduledOpen(false)}>
+                  <p className="text-xs font-medium text-neutral-700">
+                    Pending acceptance by {assignment.interviewer?.name ?? 'interviewer'}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Awaiting interviewer response
+                  </p>
+                </PopoverContent>
+              </Popover>
+            ) : meeting?.status === 'PENDING' ? (
               <Popover open={scheduledOpen} onOpenChange={setScheduledOpen}>
                 <PopoverTrigger asChild>
                   <button
@@ -204,7 +234,7 @@ export function CandidateCard({
                   </p>
                 </PopoverContent>
               </Popover>
-            ) : meeting.status === 'ONGOING' ? (
+            ) : meeting?.status === 'ONGOING' ? (
               <Popover open={ongoingOpen} onOpenChange={setOngoingOpen}>
                 <PopoverTrigger asChild>
                   <button
@@ -233,7 +263,7 @@ export function CandidateCard({
                   </p>
                 </PopoverContent>
               </Popover>
-            ) : (
+            ) : meeting?.status === 'COMPLETED' ? (
               <Popover open={completedOpen} onOpenChange={setCompletedOpen}>
                 <PopoverTrigger asChild>
                   <button
@@ -259,7 +289,7 @@ export function CandidateCard({
                   </p>
                 </PopoverContent>
               </Popover>
-            )}
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -344,10 +374,55 @@ export function CandidateCard({
             transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
               'grid gap-2 overflow-hidden',
-              isPending ? 'grid-cols-2' : 'grid-cols-1',
+              hasPendingAssignment || isPending ? 'grid-cols-2' : 'grid-cols-1',
             )}
           >
-            {canSchedule && onScheduleInterview ? (
+            {hasPendingAssignment && onScheduleInterview ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs col-span-full"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onScheduleInterview?.(application);
+                }}
+              >
+                <CalendarDays className="size-3.5" />
+                Schedule interview
+              </Button>
+            ) : null}
+            {hasPendingAssignment && assignment?.interviewer?.memberId === currentMemberId && onAcceptInterview && onRejectInterview ? (
+              <div className="col-span-full flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="default"
+                  className="h-8 flex-1 text-xs"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAcceptInterview(application.id, assignment.eventId);
+                  }}
+                >
+                  <Check className="size-3.5" />
+                  Accept
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 flex-1 text-xs text-destructive-text border-destructive-text/30 hover:bg-destructive-text/5"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRejectInterview(application.id, assignment.eventId);
+                  }}
+                >
+                  <X className="size-3.5" />
+                  Reject
+                </Button>
+              </div>
+            ) : null}
+            {canSchedule && !hasPendingAssignment && onScheduleInterview ? (
               <Button
                 type="button"
                 size="sm"

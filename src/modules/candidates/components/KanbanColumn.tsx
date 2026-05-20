@@ -7,13 +7,17 @@ import {
   ArrowRight,
   CalendarDays,
   ExternalLink,
+  Inbox,
   LoaderCircle,
   MoreVertical,
   Pencil,
   Plus,
   Trash2,
+  UserCheck,
 } from 'lucide-react';
+import { useMemo } from 'react';
 
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -34,6 +38,74 @@ function formatStageDate(value: string): string {
   }).format(new Date(value));
 }
 
+function initials(value: string): string {
+  return value
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+}
+
+interface CandidateGroup {
+  id: string;
+  type: 'my' | 'unassigned' | 'other';
+  title: string;
+  interviewerName?: string;
+  interviewerMemberId?: string;
+  candidates: PipelineApplication[];
+}
+
+function buildGroups(
+  applications: PipelineApplication[],
+  currentMemberId: string | null,
+): CandidateGroup[] {
+  const groups: Record<string, CandidateGroup> = {};
+  const myId = 'group:my';
+  const unassignedId = 'group:unassigned';
+
+  for (const app of applications) {
+    const assignment = app.currentAssignment;
+    const interviewer = assignment?.interviewer;
+    const memberId = interviewer?.memberId ?? null;
+
+    if (memberId && memberId === currentMemberId) {
+      if (!groups[myId]) {
+        groups[myId] = { id: myId, type: 'my', title: 'My interviews', candidates: [] };
+      }
+      groups[myId].candidates.push(app);
+    } else if (!memberId) {
+      if (!groups[unassignedId]) {
+        groups[unassignedId] = { id: unassignedId, type: 'unassigned', title: 'Unassigned', candidates: [] };
+      }
+      groups[unassignedId].candidates.push(app);
+    } else {
+      const groupId = `group:${memberId}`;
+      if (!groups[groupId]) {
+        groups[groupId] = {
+          id: groupId,
+          type: 'other',
+          title: interviewer?.name ?? 'Unknown interviewer',
+          interviewerName: interviewer?.name,
+          interviewerMemberId: memberId,
+          candidates: [],
+        };
+      }
+      groups[groupId].candidates.push(app);
+    }
+  }
+
+  const ordered: CandidateGroup[] = [];
+  if (groups[myId]) ordered.push(groups[myId]);
+  if (groups[unassignedId]) ordered.push(groups[unassignedId]);
+  for (const [id, group] of Object.entries(groups)) {
+    if (id !== myId && id !== unassignedId) {
+      ordered.push(group);
+    }
+  }
+  return ordered;
+}
+
 export function KanbanColumn({
   stage,
   isFirst,
@@ -49,9 +121,12 @@ export function KanbanColumn({
   onScheduleInterview,
   onCompleteInterview,
   onStartInterview,
+  onAcceptInterview,
+  onRejectInterview,
   filteredApplications,
   previewApplication,
   isUpdating = false,
+  currentMemberId = null,
 }: {
   readonly stage: PipelineStage;
   readonly isFirst: boolean;
@@ -73,14 +148,54 @@ export function KanbanColumn({
       notes?: string | null;
     },
   ) => void;
+  readonly onAcceptInterview?: (applicationId: string, eventId: string) => void;
+  readonly onRejectInterview?: (applicationId: string, eventId: string) => void;
   readonly filteredApplications: PipelineApplication[];
   readonly previewApplication?: PipelineApplication | null;
   readonly isUpdating?: boolean;
+  readonly currentMemberId?: string | null;
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: stage.id,
     data: { type: 'stage' },
   });
+
+  const groups = useMemo(
+    () => (stage.meetingEnabled ? buildGroups(filteredApplications, currentMemberId) : null),
+    [filteredApplications, stage.meetingEnabled, currentMemberId],
+  );
+
+  const showGroups = groups !== null;
+
+  function renderEmpty() {
+    return (
+      <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 p-4 text-center text-xs text-neutral-500">
+        {stage.applications.length === 0 && isFirst && isLast
+          ? 'No candidates yet'
+          : stage.applications.length === 0
+            ? 'Drop candidates here'
+            : 'No candidates match'}
+      </div>
+    );
+  }
+
+  function renderCard(application: PipelineApplication) {
+    return (
+      <CandidateCard
+        key={application.id}
+        application={application}
+        onOpen={onOpenCandidate}
+        meetingEnabled={stage.meetingEnabled}
+        evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
+        onScheduleInterview={onScheduleInterview}
+        onCompleteInterview={onCompleteInterview}
+        onStartInterview={onStartInterview}
+        onAcceptInterview={onAcceptInterview}
+        onRejectInterview={onRejectInterview}
+        currentMemberId={currentMemberId}
+      />
+    );
+  }
 
   return (
     <section
@@ -175,41 +290,59 @@ export function KanbanColumn({
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto no-scrollbar pb-6">
-        <AnimatePresence initial={false}>
-          {filteredApplications.map((application) => (
-            <CandidateCard
-              key={application.id}
-              application={application}
-              onOpen={onOpenCandidate}
-              meetingEnabled={stage.meetingEnabled}
-              evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
-              onScheduleInterview={onScheduleInterview}
-              onCompleteInterview={onCompleteInterview}
-              onStartInterview={onStartInterview}
-            />
-          ))}
-          {previewApplication ? (
-            <CandidateCard
-              key={`preview-${previewApplication.id}-${stage.id}`}
-              application={previewApplication}
-              meetingEnabled={stage.meetingEnabled}
-              evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
-              onScheduleInterview={onScheduleInterview}
-              onCompleteInterview={onCompleteInterview}
-              onStartInterview={onStartInterview}
-              compact
-              draggable={false}
-            />
-          ) : null}
-        </AnimatePresence>
-        {filteredApplications.length === 0 && (
-          <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 p-4 text-center text-xs text-neutral-500">
-            {stage.applications.length === 0 && isFirst && isLast
-              ? 'No candidates yet'
-              : stage.applications.length === 0
-                ? 'Drop candidates here'
-                : 'No candidates match'}
+      <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar pb-6">
+        {showGroups ? (
+          <div className="space-y-4">
+            {groups.map((group) => (
+              <div key={group.id}>
+                <div className="mb-2 flex items-center gap-1.5 px-1">
+                  {group.type === 'my' ? (
+                    <UserCheck className="size-3.5 text-primary" />
+                  ) : group.type === 'unassigned' ? (
+                    <Inbox className="size-3.5 text-neutral-400" />
+                  ) : (
+                    <Avatar className="size-5">
+                      <AvatarFallback className="bg-neutral-100 text-[9px] font-medium text-neutral-600">
+                        {group.interviewerName ? initials(group.interviewerName) : '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <span className={cn(
+                    'text-[11px] font-semibold uppercase tracking-wider',
+                    group.type === 'my' ? 'text-primary' : group.type === 'unassigned' ? 'text-neutral-500' : 'text-neutral-600',
+                  )}>
+                    {group.title}
+                  </span>
+                  <span className="ml-auto text-[10px] font-medium text-neutral-400">{group.candidates.length}</span>
+                </div>
+                <div className="space-y-2">
+                  <AnimatePresence initial={false}>
+                    {group.candidates.map(renderCard)}
+                  </AnimatePresence>
+                </div>
+              </div>
+            ))}
+            {groups.length === 0 && renderEmpty()}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <AnimatePresence initial={false}>
+              {filteredApplications.map(renderCard)}
+              {previewApplication ? (
+                <CandidateCard
+                  key={`preview-${previewApplication.id}-${stage.id}`}
+                  application={previewApplication}
+                  meetingEnabled={stage.meetingEnabled}
+                  evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
+                  onScheduleInterview={onScheduleInterview}
+                  onCompleteInterview={onCompleteInterview}
+                  onStartInterview={onStartInterview}
+                  compact
+                  draggable={false}
+                />
+              ) : null}
+            </AnimatePresence>
+            {filteredApplications.length === 0 && renderEmpty()}
           </div>
         )}
       </div>

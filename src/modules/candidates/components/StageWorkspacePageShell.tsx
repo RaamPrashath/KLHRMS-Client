@@ -454,8 +454,8 @@ export function StageWorkspacePageShell({
   const stageWorkspaceQuery = useStageWorkspace(orgSlug, memberId, stageSlug);
   const jobStageWorkspaceQuery = useStageWorkspaceByJobSlug(orgSlug, memberId, jobSlug, stageSlug);
   const workspaceQuery = jobSlug ? jobStageWorkspaceQuery : stageWorkspaceQuery;
-  const previewWarnings = usePreviewStageInterviewWarnings(orgSlug, memberId, stageSlug);
-  const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug);
+  const previewWarnings = usePreviewStageInterviewWarnings(orgSlug, memberId, stageSlug, workspaceQuery.data?.jobPosting.id ?? null);
+  const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug, workspaceQuery.data?.jobPosting.id ?? null);
   const distributeInterviews = useDistributeStageInterviews(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
   const hiringTeamsQuery = useFetchHiringTeams(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null, workspaceQuery.data?.stage.id ?? null);
   const createHiringTeam = useCreateHiringTeam(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);

@@ -270,10 +270,11 @@ export function usePreviewStageInterviewWarnings(
   orgSlug: string,
   memberId: string,
   stageSlug: string,
+  jobPostingId?: string | null,
 ) {
   return useMutation<StageInterviewWarningResponse, Error, StageInterviewAssignment[]>({
     mutationFn: (assignments) =>
-      previewStageInterviewWarningsAction({ orgSlug, memberId, stageSlug, assignments }),
+      previewStageInterviewWarningsAction({ orgSlug, memberId, stageSlug, assignments, jobPostingId: jobPostingId ?? undefined }),
   });
 }
 
@@ -281,13 +282,20 @@ export function useAssignStageInterviews(
   orgSlug: string,
   memberId: string,
   stageSlug: string,
+  jobPostingId?: string | null,
 ) {
   const queryClient = useQueryClient();
   return useMutation<StageInterviewAssignmentResponse, Error, StageInterviewAssignment[]>({
     mutationFn: (assignments) =>
-      assignStageInterviewsAction({ orgSlug, memberId, stageSlug, assignments }),
+      assignStageInterviewsAction({ orgSlug, memberId, stageSlug, assignments, jobPostingId: jobPostingId ?? undefined }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: stageWorkspaceKey(orgSlug, stageSlug) });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug', orgSlug] });
+      if (jobPostingId) {
+        queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      }
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug', orgSlug] });
       queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug] });
     },
   });
@@ -647,6 +655,9 @@ export function useMoveInterviewAssignment(orgSlug: string, memberId: string) {
       moveInterviewAssignmentAction({ orgSlug, memberId, ...args }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug', orgSlug] });
       queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
     },
   });

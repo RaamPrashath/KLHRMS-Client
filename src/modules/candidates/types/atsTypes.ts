@@ -27,7 +27,7 @@ export interface CandidateSummary {
 
 export interface ApplicationInterviewMeeting {
   id: string;
-  status: 'PENDING' | 'ONGOING' | 'COMPLETED';
+  status: 'PENDING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED' | 'RESCHEDULED';
   scheduledStartAt: string;
   scheduledEndAt: string;
   meetingUrl: string | null;
@@ -49,6 +49,7 @@ export interface PipelineApplication {
   status: string;
   resumeUrl: string | null;
   interviewMeeting: ApplicationInterviewMeeting | null;
+  currentAssignment: StageWorkspaceAssignment | null;
 }
 
 export interface StageEvaluationCategory {
