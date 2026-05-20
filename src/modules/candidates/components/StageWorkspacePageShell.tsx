@@ -41,10 +41,13 @@ import {
   useAddHiringTeamMember,
   useAssignStageInterviews,
   useCompleteInterviewMeeting,
+  useCompleteStage,
   useCreateHiringTeam,
   useDistributeStageInterviews,
   useFetchHiringTeams,
   useInterviewersSearch,
+  useMoveInterviewAssignment,
+  useReopenStage,
   usePreviewStageInterviewWarnings,
   useRemoveHiringTeamMember,
   useStartInterviewMeeting,
@@ -364,17 +367,22 @@ function InterviewerSelect({
   value,
   placeholder,
   onSelect,
+  excludedMemberIds,
 }: {
   readonly orgSlug: string;
   readonly memberId: string;
   readonly value: StageWorkspaceInterviewer | null;
   readonly placeholder?: string;
   readonly onSelect: (interviewer: StageWorkspaceInterviewer) => void;
+  readonly excludedMemberIds?: ReadonlySet<string>;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const interviewersQuery = useInterviewersSearch(orgSlug, memberId, search);
-  const interviewers = interviewersQuery.data?.items ?? [];
+  const allInterviewers = interviewersQuery.data?.items ?? [];
+  const interviewers = excludedMemberIds
+    ? allInterviewers.filter((iv) => !excludedMemberIds.has(iv.memberId))
+    : allInterviewers;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -449,7 +457,7 @@ export function StageWorkspacePageShell({
   const previewWarnings = usePreviewStageInterviewWarnings(orgSlug, memberId, stageSlug);
   const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug);
   const distributeInterviews = useDistributeStageInterviews(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
-  const hiringTeamsQuery = useFetchHiringTeams(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
+  const hiringTeamsQuery = useFetchHiringTeams(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null, workspaceQuery.data?.stage.id ?? null);
   const createHiringTeam = useCreateHiringTeam(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
 
   const [assignmentMode, setAssignmentMode] = useState<'direct' | 'automatic'>('direct');
@@ -485,6 +493,9 @@ export function StageWorkspacePageShell({
   const removeTeamMember = useRemoveHiringTeamMember(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
   const startInterviewMeeting = useStartInterviewMeeting(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
   const completeInterviewMeeting = useCompleteInterviewMeeting(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
+  const moveInterview = useMoveInterviewAssignment(orgSlug, memberId);
+  const completeStage = useCompleteStage(orgSlug, memberId);
+  const reopenStage = useReopenStage(orgSlug, memberId);
   const router = useRouter();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -505,20 +516,41 @@ export function StageWorkspacePageShell({
     [workspace],
   );
 
-  // On workspace load, populate customTeamMembers / backupMembers from existing workspace teams
-  const initRanRef = useRef(false);
+  // On workspace load, populate customTeamMembers / backupMembers from existing workspace teams.
+  // Track which stage we've initialized for so we reset on stage change.
+  const initializedStageRef = useRef<string | null>(null);
+
+  // Reset team-local state whenever the stageId changes
+  const prevStageIdRef = useRef<string | null>(null);
   useEffect(() => {
-    const jobPostingId = workspace?.jobPosting.id;
-    if (!jobPostingId || initRanRef.current) return;
+    const currentStageId = workspace?.stage.id ?? null;
+    if (currentStageId !== prevStageIdRef.current) {
+      prevStageIdRef.current = currentStageId;
+      initializedStageRef.current = null;
+      setAssignmentTeamId('');
+      setBackupTeamId(null);
+      setCustomTeamMembers([]);
+      setBackupMembers([]);
+      setSelectedTeamId('');
+    }
+  }, [workspace?.stage.id]);
+
+  useEffect(() => {
+    const stageId = workspace?.stage.id;
+    if (!stageId) return;
+    if (initializedStageRef.current === stageId) return;
+
     const primaryTeam = hiringTeams.find(
-      (team) => team.name === `Workspace-Primary-${jobPostingId}`,
+      (team) => team.name === `Workspace-Primary-${stageId}`,
     );
     const backupTeam = hiringTeams.find(
-      (team) => team.name === `Workspace-Backup-${jobPostingId}`,
+      (team) => team.name === `Workspace-Backup-${stageId}`,
     );
+
     if (primaryTeam || backupTeam) {
-      initRanRef.current = true;
+      initializedStageRef.current = stageId;
     }
+
     const timeoutId = window.setTimeout(() => {
       if (primaryTeam) {
         setAssignmentTeamId(primaryTeam.id);
@@ -530,7 +562,7 @@ export function StageWorkspacePageShell({
       }
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [hiringTeams, workspace?.jobPosting.id]);
+  }, [hiringTeams, workspace?.stage.id]);
 
   const resolvedTeamMembers = useMemo(() => {
     if (selectedTeam) return teamMemberToInterviewer(selectedTeam);
@@ -713,12 +745,24 @@ export function StageWorkspacePageShell({
     };
   }, [boardAssignments, resolvedTeamMembers, workspace]);
 
+  const isStageCompleted = Boolean(workspace?.stage.completedAt);
+
   const excludedMemberIds = useMemo(() => {
     const ids = new Set<string>();
     for (const member of resolvedTeamMembers) ids.add(member.memberId);
     for (const member of backupMembers) ids.add(member.memberId);
     return ids;
   }, [resolvedTeamMembers, backupMembers]);
+
+  const directExcludedMemberIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const member of resolvedTeamMembers) ids.add(member.memberId);
+    for (const member of backupMembers) ids.add(member.memberId);
+    for (const draft of Object.values(drafts)) {
+      if (draft?.interviewer) ids.add(draft.interviewer.memberId);
+    }
+    return ids;
+  }, [resolvedTeamMembers, backupMembers, drafts]);
 
   function updateDraft(applicationId: string, patch: Partial<AssignmentDraft>) {
     setDrafts((current) => ({
@@ -739,14 +783,16 @@ export function StageWorkspacePageShell({
     setTeamWarningsReviewed(false);
 
     // Persist to server
+    const stageId = workspace?.stage.id;
     const jobPostingId = workspace?.jobPosting.id;
     const dept = interviewer.department ?? undefined;
     try {
-      if (!assignmentTeamId && jobPostingId) {
+      if (!assignmentTeamId && jobPostingId && stageId) {
         const created = await createHiringTeam.mutateAsync({
           jobPostingId,
-          name: `Workspace-Primary-${jobPostingId}`,
+          name: `Workspace-Primary-${stageId}`,
           description: null,
+          stageId,
           members: [{ memberId: interviewer.memberId, role: dept }],
         });
         setAssignmentTeamId(created.id);
@@ -773,13 +819,15 @@ export function StageWorkspacePageShell({
     setTeamWarningsReviewed(false);
 
     // Persist to server
+    const stageId = workspace?.stage.id;
     const jobPostingId = workspace?.jobPosting.id;
     try {
-      if (!backupTeamId && jobPostingId) {
+      if (!backupTeamId && jobPostingId && stageId) {
         const created = await createHiringTeam.mutateAsync({
           jobPostingId,
-          name: `Workspace-Backup-${jobPostingId}`,
+          name: `Workspace-Backup-${stageId}`,
           description: null,
+          stageId,
           members: [{ memberId: interviewer.memberId }],
         });
         setBackupTeamId(created.id);
@@ -892,27 +940,59 @@ export function StageWorkspacePageShell({
     if (!workspace) {
       return;
     }
-    const assignments = workspace.candidates.flatMap((candidate) => {
-      if (isLockedAssignment(candidate)) return [];
-      const interviewerMemberId = boardAssignments[candidate.applicationId]
+
+    const newAssignments: StageInterviewAssignment[] = [];
+    const moves: Array<{ applicationId: string; eventId: string; newInterviewerMemberId: string }> = [];
+
+    for (const candidate of workspace.candidates) {
+      if (isLockedAssignment(candidate)) continue;
+      const newMemberId = boardAssignments[candidate.applicationId]
         ?? candidate.currentAssignment?.interviewer?.memberId
         ?? null;
-      if (!interviewerMemberId) return [];
-      return [{
-        applicationId: candidate.applicationId,
-        interviewerMemberId,
-        scheduledStartAt: null,
-        durationMinutes: teamDurationMinutes,
-        backupInterviewers: backupMembers.map((member) => member.memberId),
-      }];
-    });
-    if (assignments.length === 0) {
+      if (!newMemberId) continue;
+
+      const existingEventId = candidate.currentAssignment?.eventId;
+      const existingMemberId = candidate.currentAssignment?.interviewer?.memberId ?? null;
+
+      if (existingEventId && existingMemberId && existingMemberId !== newMemberId) {
+        // This is a move — use approval-based endpoint
+        moves.push({
+          applicationId: candidate.applicationId,
+          eventId: existingEventId,
+          newInterviewerMemberId: newMemberId,
+        });
+      } else if (!existingEventId) {
+        // New assignment
+        newAssignments.push({
+          applicationId: candidate.applicationId,
+          interviewerMemberId: newMemberId,
+          scheduledStartAt: null,
+          durationMinutes: teamDurationMinutes,
+          backupInterviewers: backupMembers.map((member) => member.memberId),
+        });
+      }
+    }
+
+    if (newAssignments.length === 0 && moves.length === 0) {
       toast.error('Assign at least one candidate to an interviewer');
       return;
     }
+
     try {
-      const result = await assignInterviews.mutateAsync(assignments);
-      toast.success(`${result.assignedCount} assignment${result.assignedCount === 1 ? '' : 's'} saved`);
+      let totalCount = 0;
+      if (newAssignments.length > 0) {
+        const result = await assignInterviews.mutateAsync(newAssignments);
+        totalCount += result.assignedCount;
+      }
+      for (const move of moves) {
+        await moveInterview.mutateAsync({
+          applicationId: move.applicationId,
+          eventId: move.eventId,
+          data: { newInterviewerMemberId: move.newInterviewerMemberId },
+        });
+        totalCount += 1;
+      }
+      toast.success(`${totalCount} assignment${totalCount === 1 ? '' : 's'} saved`);
       setBackupMembers([]);
       setBoardAssignments({});
     } catch (error) {
@@ -1002,6 +1082,7 @@ export function StageWorkspacePageShell({
           jobPostingId: workspace?.jobPosting.id ?? '',
           name: customTeamName.trim() || `${workspace?.stage.name ?? 'Interview'} shuffle team`,
           description: null,
+          stageId: workspace?.stage.id ?? null,
           members: resolvedTeamMembers.map((member) => ({ memberId: member.memberId })),
         });
         hiringTeamId = created.id;
@@ -1131,46 +1212,118 @@ export function StageWorkspacePageShell({
               </div>
             </div>
 
-            <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
-              {([
-                { key: 'direct' as const, icon: UserCheck, label: 'Direct' },
-                { key: 'automatic' as const, icon: Shuffle, label: 'Automatic' },
-              ] as const).map((tab) => {
-                const Icon = tab.icon;
-                const isActive = tab.key === assignmentMode;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setAssignmentMode(tab.key)}
-                    aria-pressed={isActive}
-                    className={cn(
-                      'relative inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
-                      isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
-                    )}
-                  >
-                    {isActive ? (
-                      <motion.span
-                        layoutId="stage-assignment-mode-pill"
-                        className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
-                        transition={{
-                          type: 'spring',
-                          stiffness: 520,
-                          damping: 36,
-                          mass: 0.65,
-                        }}
-                      />
-                    ) : null}
-                    <span className="relative z-10 inline-flex items-center gap-1.5">
-                      <Icon className="size-3.5" />
-                      {tab.label}
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-2">
+              {isStageCompleted ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!workspace) return;
+                    try {
+                      await reopenStage.mutateAsync({ stageId: workspace.stage.id });
+                      toast.success('Stage reopened');
+                      void workspaceQuery.refetch();
+                    } catch (error) {
+                      toast.error(readActionError(error, 'Failed to reopen stage'));
+                    }
+                  }}
+                  disabled={reopenStage.isPending}
+                >
+                  {reopenStage.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-1.5 size-3.5" />
+                  )}
+                  Reopen Stage
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-warning-text border-warning-bg hover:bg-warning-bg"
+                  onClick={async () => {
+                    if (!workspace) return;
+                    try {
+                      await completeStage.mutateAsync({ stageId: workspace.stage.id });
+                      toast.success('Stage marked as complete');
+                      void workspaceQuery.refetch();
+                    } catch (error) {
+                      toast.error(readActionError(error, 'Failed to complete stage'));
+                    }
+                  }}
+                  disabled={completeStage.isPending}
+                >
+                  {completeStage.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-1.5 size-3.5" />
+                  )}
+                  Mark Complete
+                </Button>
+              )}
+              <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
+                {([
+                  { key: 'direct' as const, icon: UserCheck, label: 'Direct' },
+                  { key: 'automatic' as const, icon: Shuffle, label: 'Automatic' },
+                ] as const).map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = tab.key === assignmentMode;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setAssignmentMode(tab.key)}
+                      aria-pressed={isActive}
+                      className={cn(
+                        'relative inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
+                        isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
+                      )}
+                    >
+                      {isActive ? (
+                        <motion.span
+                          layoutId="stage-assignment-mode-pill"
+                          className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                          transition={{
+                            type: 'spring',
+                            stiffness: 520,
+                            damping: 36,
+                            mass: 0.65,
+                          }}
+                        />
+                      ) : null}
+                      <span className="relative z-10 inline-flex items-center gap-1.5">
+                        <Icon className="size-3.5" />
+                        {tab.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
+
+        {isStageCompleted ? (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            className="mb-4 overflow-hidden"
+          >
+            <div className="rounded-xl border border-neutral-200 bg-neutral-100 p-4 text-sm text-neutral-600">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="size-5 text-neutral-500" />
+                <div>
+                  <p className="font-semibold text-neutral-800">Stage Completed</p>
+                  <p className="mt-0.5 text-neutral-500">
+                    This stage has been marked as complete. All operations are now read-only.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ) : null}
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -1210,7 +1363,7 @@ export function StageWorkspacePageShell({
                       size="lg"
                       className="bg-primary hover:bg-primary-hover shadow-md transition-all active:scale-[0.98]"
                       onClick={handleAssignDirect}
-                      disabled={completedAssignments.length === 0 || assignInterviews.isPending}
+                      disabled={completedAssignments.length === 0 || assignInterviews.isPending || isStageCompleted}
                     >
                       {assignInterviews.isPending ? (
                         <Loader2 className="mr-2 size-4 animate-spin" />
@@ -1276,6 +1429,7 @@ export function StageWorkspacePageShell({
                                   orgSlug={orgSlug}
                                   memberId={memberId}
                                   value={draft?.interviewer ?? null}
+                                  excludedMemberIds={directExcludedMemberIds}
                                   onSelect={(interviewer) =>
                                     updateDraft(candidate.applicationId, { interviewer, scheduledLocal })
                                   }
@@ -1410,6 +1564,7 @@ export function StageWorkspacePageShell({
                         setAddDialogMode('interviewer');
                         setAddDialogOpen(true);
                       }}
+                      disabled={isStageCompleted}
                     >
                       <Plus className="mr-1.5 size-3.5" />
                       Add Interviewer
@@ -1422,6 +1577,7 @@ export function StageWorkspacePageShell({
                         setAddDialogMode('backup');
                         setAddDialogOpen(true);
                       }}
+                      disabled={isStageCompleted}
                     >
                       <Plus className="mr-1.5 size-3.5" />
                       Add Backup
@@ -1433,7 +1589,7 @@ export function StageWorkspacePageShell({
                       variant="outline"
                       size="sm"
                       onClick={handleAutoDistributeDraft}
-                      disabled={resolvedTeamMembers.length === 0}
+                      disabled={resolvedTeamMembers.length === 0 || isStageCompleted}
                     >
                       <Shuffle className="mr-1.5 size-3.5" />
                       Auto-distribute
@@ -1443,7 +1599,7 @@ export function StageWorkspacePageShell({
                       size="sm"
                       className="bg-primary hover:bg-primary-hover"
                       onClick={handleSaveBoardAssignments}
-                      disabled={assignInterviews.isPending}
+                      disabled={assignInterviews.isPending || isStageCompleted}
                     >
                       {assignInterviews.isPending ? (
                         <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -1456,13 +1612,14 @@ export function StageWorkspacePageShell({
                 </div>
 
                 {/* Board */}
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCorners}
-                  onDragStart={handleBoardDragStart}
-                  onDragEnd={handleBoardDragEnd}
-                  onDragCancel={() => setActiveApplicationId(null)}
-                >
+                {!isStageCompleted ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCorners}
+                    onDragStart={handleBoardDragStart}
+                    onDragEnd={handleBoardDragEnd}
+                    onDragCancel={() => setActiveApplicationId(null)}
+                  >
                   <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
                     style={{ maxHeight: 'calc(100dvh - 280px)' }}
                   >
@@ -1494,6 +1651,27 @@ export function StageWorkspacePageShell({
                     ) : null}
                   </DragOverlay>
                 </DndContext>
+                ) : (
+                  <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
+                    style={{ maxHeight: 'calc(100dvh - 280px)' }}
+                  >
+                    {assignmentColumns.map((column, index) => (
+                      <div key={column.id} className={cn(
+                        'flex shrink-0',
+                        index < assignmentColumns.length - 1 ? 'border-r border-neutral-200/70' : '',
+                      )}>
+                        <AssignmentColumn
+                          column={column}
+                          stage={workspace.stage}
+                          jobPostingId={workspace.jobPosting.id}
+                          onOpenCandidate={handleOpenCandidate}
+                          onStartInterview={handleStartInterview}
+                          onCompleteInterview={handleCompleteInterview}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Dialogs */}
                 <InterviewerSelectDialog

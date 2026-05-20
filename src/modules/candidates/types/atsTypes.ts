@@ -90,6 +90,7 @@ export interface PipelineStage {
   evaluationIncludeTotal: boolean;
   evaluationIncludeAnalysis: boolean;
   dueDate: string | null;
+  completedAt: string | null;
   extendToNextWorkingDay: boolean;
   evaluationCategories: StageEvaluationCategory[];
   evaluationWorkspace: StageEvaluationWorkspace | null;

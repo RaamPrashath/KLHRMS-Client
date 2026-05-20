@@ -435,8 +435,11 @@ export async function fetchHiringTeamsAction(params: {
   orgSlug: string;
   memberId: string;
   jobPostingId: string;
+  stageId?: string | null;
 }): Promise<{ items: HiringTeam[]; total: number }> {
-  const res = await fetch(`${getApiUrl()}/hiring-teams?jobPostingId=${encodeURIComponent(params.jobPostingId)}`, {
+  const query = new URLSearchParams({ jobPostingId: params.jobPostingId });
+  if (params.stageId) query.set('stageId', params.stageId);
+  const res = await fetch(`${getApiUrl()}/hiring-teams?${query.toString()}`, {
     method: 'GET',
     headers: buildHeaders(params.orgSlug, params.memberId),
     cache: 'no-store',
@@ -453,15 +456,18 @@ export async function createHiringTeamAction(params: {
     name: string;
     description: string | null;
     members: Array<{ memberId: string; role?: string | null }>;
+    stageId?: string | null;
   };
 }): Promise<HiringTeam> {
+  const body: Record<string, unknown> = {
+    ...params.data,
+    jobPostingId: params.data.jobPostingId || params.jobPostingId,
+  };
+  if (params.data.stageId) body.stageId = params.data.stageId;
   const res = await fetch(`${getApiUrl()}/hiring-teams`, {
     method: 'POST',
     headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify({
-      ...params.data,
-      jobPostingId: params.data.jobPostingId || params.jobPostingId,
-    }),
+    body: JSON.stringify(body),
   });
   return handleResponse<HiringTeam>(res);
 }
@@ -478,6 +484,75 @@ export async function distributeStageInterviewsAction(params: {
     body: JSON.stringify(params.data),
   });
   return handleResponse<TeamDistributionResponse>(res);
+}
+
+export async function completeStageAction(params: {
+  orgSlug: string;
+  memberId: string;
+  stageId: string;
+}): Promise<PipelineStage> {
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/${params.stageId}/complete`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: '{}',
+  });
+  return handleResponse<PipelineStage>(res);
+}
+
+export async function reopenStageAction(params: {
+  orgSlug: string;
+  memberId: string;
+  stageId: string;
+}): Promise<PipelineStage> {
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/${params.stageId}/reopen`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: '{}',
+  });
+  return handleResponse<PipelineStage>(res);
+}
+
+export async function previewEmployeeDeleteAction(params: {
+  orgSlug: string;
+  memberId: string;
+  memberToDeleteId: string;
+}): Promise<{ member_id: string; name: string; email: string; interview_count: number; team_membership_count: number }> {
+  const res = await fetch(`${getApiUrl()}/employees/${params.memberToDeleteId}/delete-preview`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<{ member_id: string; name: string; email: string; interview_count: number; team_membership_count: number }>(res);
+}
+
+export async function deleteEmployeeAction(params: {
+  orgSlug: string;
+  memberId: string;
+  memberToDeleteId: string;
+}): Promise<{ member_id: string; unassigned_interviews: number; removed_team_memberships: number }> {
+  const res = await fetch(`${getApiUrl()}/employees/${params.memberToDeleteId}`, {
+    method: 'DELETE',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<{ member_id: string; unassigned_interviews: number; removed_team_memberships: number }>(res);
+}
+
+export async function moveInterviewAssignmentAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  eventId: string;
+  data: { newInterviewerMemberId: string };
+}): Promise<{ eventId: string; newInterviewerMemberId: string; status: string }> {
+  const res = await fetch(
+    `${getApiUrl()}/candidates/applications/${params.applicationId}/interview-events/${params.eventId}/move`,
+    {
+      method: 'POST',
+      headers: buildHeaders(params.orgSlug, params.memberId),
+      body: JSON.stringify(params.data),
+    }
+  );
+  return handleResponse<{ eventId: string; newInterviewerMemberId: string; status: string }>(res);
 }
 
 export async function reshuffleInterviewAssignmentAction(params: {
