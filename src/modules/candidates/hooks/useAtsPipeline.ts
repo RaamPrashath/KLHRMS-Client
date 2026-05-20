@@ -4,11 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   acceptInterviewAction,
+  addHiringTeamMemberAction,
   assignStageInterviewsAction,
   completeInterviewMeetingAction,
   createCandidateApplicationNoteAction,
   createPipelineStageAction,
   createInterviewMeetingAction,
+  startInterviewMeetingAction,
+  updateInterviewMeetingAction,
   createReassignmentRequestAction,
   deletePipelineStageAction,
   distributeStageInterviewsAction,
@@ -26,6 +29,7 @@ import {
   generateEvaluationWorkspaceAction,
   moveApplicationStageAction,
   previewStageInterviewWarningsAction,
+  removeHiringTeamMemberAction,
   rejectInterviewAction,
   reshuffleInterviewAssignmentAction,
   searchInterviewersAction,
@@ -55,6 +59,7 @@ import type {
 } from '@/modules/candidates/types/atsTypes';
 import type {
   CreateInterviewMeetingInput,
+  UpdateInterviewMeetingInput,
   AcceptInterviewInput,
   CreatePipelineStageInput,
   UpdatePipelineStageInput,
@@ -303,6 +308,49 @@ export function useCreateInterviewMeeting(
   });
 }
 
+export function useUpdateInterviewMeeting(
+  orgSlug: string,
+  memberId: string,
+  jobPostingId: string | null,
+) {
+  const queryClient = useQueryClient();
+  return useMutation<InterviewMeeting, Error, { applicationId: string; eventId: string; data: UpdateInterviewMeetingInput }>({
+    mutationFn: (params) =>
+      updateInterviewMeetingAction({
+        orgSlug,
+        memberId,
+        applicationId: params.applicationId,
+        eventId: params.eventId,
+        data: params.data,
+      }),
+    onSuccess: (_meeting, params) => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+    },
+  });
+}
+
+export function useStartInterviewMeeting(
+  orgSlug: string,
+  memberId: string,
+  jobPostingId: string | null,
+) {
+  const queryClient = useQueryClient();
+  return useMutation<InterviewMeeting, Error, { applicationId: string; eventId: string }>({
+    mutationFn: (params) =>
+      startInterviewMeetingAction({
+        orgSlug,
+        memberId,
+        applicationId: params.applicationId,
+        eventId: params.eventId,
+      }),
+    onSuccess: (_meeting, params) => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+    },
+  });
+}
+
 export function useCompleteInterviewMeeting(
   orgSlug: string,
   memberId: string,
@@ -512,6 +560,28 @@ export function useCreateHiringTeam(orgSlug: string, memberId: string, jobPostin
   return useMutation({
     mutationFn: (data: { jobPostingId: string; name: string; description: string | null; members: Array<{ memberId: string; role?: string | null }> }) =>
       createHiringTeamAction({ orgSlug, memberId, jobPostingId: jobPostingId ?? '', data }),
+    onSuccess: () => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: ['hiring-teams', orgSlug, jobPostingId] });
+    },
+  });
+}
+
+export function useAddHiringTeamMember(orgSlug: string, memberId: string, jobPostingId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { teamId: string; data: { memberId: string; role?: string | null } }) =>
+      addHiringTeamMemberAction({ orgSlug, memberId, ...params }),
+    onSuccess: () => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: ['hiring-teams', orgSlug, jobPostingId] });
+    },
+  });
+}
+
+export function useRemoveHiringTeamMember(orgSlug: string, memberId: string, jobPostingId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { teamId: string; memberToRemoveId: string }) =>
+      removeHiringTeamMemberAction({ orgSlug, memberId, ...params }),
     onSuccess: () => {
       if (jobPostingId) queryClient.invalidateQueries({ queryKey: ['hiring-teams', orgSlug, jobPostingId] });
     },

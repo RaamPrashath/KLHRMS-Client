@@ -3,9 +3,11 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CalendarDays, Check, CheckCircle2, Clock, Gauge, Play, Settings } from 'lucide-react';
+import { isSameDay } from 'date-fns';
+import { CalendarDays, Check, CheckCircle2, Clock, Copy, Gauge, Play } from 'lucide-react';
 import { useState, type CSSProperties } from 'react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,6 +23,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { PipelineApplication, StageEvaluationCategory } from '@/modules/candidates/types/atsTypes';
 
@@ -68,6 +76,7 @@ export function CandidateCard({
   isOverlay = false,
   compact = false,
   draggable = true,
+  dragLocked = false,
 }: {
   application: PipelineApplication;
   onOpen?: (applicationId: string) => void;
@@ -85,23 +94,31 @@ export function CandidateCard({
   isOverlay?: boolean;
   compact?: boolean;
   draggable?: boolean;
+  dragLocked?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: application.id,
-    disabled: isOverlay || !draggable || application.interviewMeeting?.status === 'ONGOING',
+    disabled: isOverlay || !draggable || dragLocked || application.interviewMeeting?.status === 'ONGOING',
     data: { type: 'application', stageId: application.pipelineStageId },
   });
 
   const fullName = `${application.candidate.firstName} ${application.candidate.lastName}`;
+  const initials = `${application.candidate.firstName[0] ?? ''}${application.candidate.lastName[0] ?? ''}`.toUpperCase();
+  const imageSrc = application.candidate.image?.trim() || null;
+  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
+  const candidateImage = imageSrc && failedImageSrc !== imageSrc ? imageSrc : null;
   const meeting = application.interviewMeeting;
   const canSchedule = !meeting || meeting.status === 'COMPLETED';
   const isOngoing = meeting?.status === 'ONGOING';
-  const canDrag = draggable && meeting?.status !== 'ONGOING';
+  const isPending = meeting?.status === 'PENDING';
+  const isScheduledToday = meeting?.scheduledStartAt ? isSameDay(new Date(meeting.scheduledStartAt), new Date()) : false;
+  const canDrag = draggable && !dragLocked && meeting?.status !== 'ONGOING';
   const style: CSSProperties | undefined =
     transform && !isOverlay ? { transform: CSS.Translate.toString(transform) } : undefined;
   const [ongoingOpen, setOngoingOpen] = useState(false);
   const [scheduledOpen, setScheduledOpen] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [completionOpen, setCompletionOpen] = useState(false);
   const [completionValues, setCompletionValues] = useState<Record<string, string | boolean>>({});
   const [completionNotes, setCompletionNotes] = useState('');
@@ -146,7 +163,19 @@ export function CandidateCard({
       {...(!isOverlay && canDrag ? listeners : {})}
       {...(!isOverlay && canDrag ? attributes : {})}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start gap-3">
+        <Avatar className="size-9 shrink-0">
+          <AvatarImage
+            key={candidateImage ?? 'fallback'}
+            src={candidateImage ?? undefined}
+            alt={fullName}
+            referrerPolicy="no-referrer"
+            onError={() => setFailedImageSrc(imageSrc)}
+          />
+          <AvatarFallback className="bg-primary-ghost text-xs font-semibold text-primary">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-neutral-900">{fullName}</p>
           <p className="truncate text-xs text-neutral-500">{application.candidate.email}</p>
@@ -253,7 +282,7 @@ export function CandidateCard({
           </motion.div>
         ) : null}
 
-        {!compact && meetingEnabled && meeting && meeting.status === 'PENDING' ? (
+        {!compact && meetingEnabled && meeting && isPending ? (
           <motion.div
             key="meeting"
             layout
@@ -268,19 +297,38 @@ export function CandidateCard({
                 <p className="text-xs text-neutral-500">
                   {meeting.interviewerName ?? 'Interview'} at {formatDateTime(meeting.scheduledStartAt)}
                 </p>
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  className="size-6 flex-shrink-0"
-                  aria-label="Edit scheduled interview"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onScheduleInterview?.(application);
-                  }}
-                >
-                  <Settings className="size-3.5" />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip
+                    open={copied ? true : undefined}
+                    onOpenChange={(open) => { if (!copied && !open) setCopied(false); }}
+                  >
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        className="size-6 flex-shrink-0"
+                        aria-label="Copy meeting link"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (meeting.meetingUrl) {
+                            navigator.clipboard.writeText(meeting.meetingUrl)
+                              .then(() => {
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                              })
+                              .catch(() => {});
+                          }
+                        }}
+                      >
+                        <Copy className="size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" align="end">
+                      {copied ? 'Copied!' : 'Copy meeting link'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </motion.div>
@@ -294,9 +342,12 @@ export function CandidateCard({
             animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
             transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-            className={cn('grid gap-2 overflow-hidden', canSchedule || isOngoing ? 'grid-cols-2' : 'grid-cols-1')}
+            className={cn(
+              'grid gap-2 overflow-hidden',
+              isPending ? 'grid-cols-2' : 'grid-cols-1',
+            )}
           >
-            {canSchedule ? (
+            {canSchedule && onScheduleInterview ? (
               <Button
                 type="button"
                 size="sm"
@@ -308,38 +359,52 @@ export function CandidateCard({
                 }}
               >
                 <CalendarDays className="size-3.5" />
-                Schedule
+                {meeting?.status === 'COMPLETED' ? 'Schedule again' : 'Schedule'}
               </Button>
             ) : null}
-            {isOngoing ? (
+            {isPending && onScheduleInterview ? (
               <Button
                 type="button"
                 size="sm"
+                variant="outline"
                 className="h-8 text-xs"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (meeting?.meetingUrl) {
-                    window.open(meeting.meetingUrl, '_blank', 'noopener,noreferrer');
-                  }
+                  onScheduleInterview?.(application);
                 }}
               >
-                <Play className="size-3.5" />
-                Join
+                <CalendarDays className="size-3.5" />
+                Reschedule
               </Button>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 text-xs"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onStartInterview?.(application);
-                }}
-              >
-                <Play className="size-3.5" />
-                {meeting?.status === 'COMPLETED' ? 'Start again' : 'Start now'}
-              </Button>
-            )}
+            ) : null}
+            {isPending ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex w-full">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className={cn('h-8 w-full text-xs', !isScheduledToday && 'pointer-events-none opacity-50')}
+                        disabled={!isScheduledToday}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onStartInterview?.(application);
+                        }}
+                      >
+                        <Play className="size-3.5" />
+                        Join
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!isScheduledToday ? (
+                    <TooltipContent side="top" align="center">
+                      Can only join on the scheduled day
+                    </TooltipContent>
+                  ) : null}
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
             {isOngoing ? (
               <Button
                 type="button"
@@ -371,7 +436,12 @@ export function CandidateCard({
         <div className="space-y-3">
           {evaluationCategories.map((category) => (
             <label key={category.id} className="grid gap-1.5 text-sm font-medium text-neutral-700">
-              {category.name}
+              <span>
+                {category.name}
+                {category.type === 'NUMERIC' && category.maxScore ? (
+                  <span className="ml-1 text-neutral-400 font-normal">(out of {category.maxScore})</span>
+                ) : null}
+              </span>
               {category.type === 'CHECKBOX' ? (
                 <input
                   type="checkbox"
@@ -381,9 +451,25 @@ export function CandidateCard({
                     setCompletionValues((current) => ({ ...current, [category.id]: event.target.checked }))
                   }
                 />
+              ) : category.type === 'NUMERIC' ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={category.maxScore ?? undefined}
+                    value={String(completionValues[category.id] ?? '')}
+                    onChange={(event) =>
+                      setCompletionValues((current) => ({ ...current, [category.id]: event.target.value }))
+                    }
+                    className="w-28"
+                  />
+                  {category.maxScore ? (
+                    <span className="text-sm text-neutral-400 select-none">/ {category.maxScore}</span>
+                  ) : null}
+                </div>
               ) : (
                 <Input
-                  type={category.type === 'NUMERIC' ? 'number' : 'text'}
+                  type="text"
                   value={String(completionValues[category.id] ?? '')}
                   onChange={(event) =>
                     setCompletionValues((current) => ({ ...current, [category.id]: event.target.value }))

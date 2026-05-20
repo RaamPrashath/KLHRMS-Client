@@ -11,6 +11,7 @@ import {
   updatePipelineStageSchema,
   type CreatePipelineStageInput,
   type CreateInterviewMeetingInput,
+  type UpdateInterviewMeetingInput,
   type AcceptInterviewInput,
   type ExtendPipelineStageInput,
   type MoveApplicationStageInput,
@@ -292,6 +293,35 @@ export async function createInterviewMeetingAction(params: {
   return handleResponse<InterviewMeeting>(res);
 }
 
+export async function startInterviewMeetingAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  eventId: string;
+}): Promise<InterviewMeeting> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/interview-meetings/${params.eventId}/start`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: '{}',
+  });
+  return handleResponse<InterviewMeeting>(res);
+}
+
+export async function updateInterviewMeetingAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+  eventId: string;
+  data: UpdateInterviewMeetingInput;
+}): Promise<InterviewMeeting> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/interview-meetings/${params.eventId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<InterviewMeeting>(res);
+}
+
 export async function completeInterviewMeetingAction(params: {
   orgSlug: string;
   memberId: string;
@@ -523,4 +553,31 @@ export async function createReassignmentRequestAction(params: {
     body: JSON.stringify(params.data),
   });
   return handleResponse<void>(res);
+}
+
+export async function addHiringTeamMemberAction(params: {
+  orgSlug: string;
+  memberId: string;
+  teamId: string;
+  data: { memberId: string; role?: string | null };
+}): Promise<HiringTeam> {
+  const res = await fetch(`${getApiUrl()}/hiring-teams/${params.teamId}/members`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<HiringTeam>(res);
+}
+
+export async function removeHiringTeamMemberAction(params: {
+  orgSlug: string;
+  memberId: string;
+  teamId: string;
+  memberToRemoveId: string;
+}): Promise<HiringTeam> {
+  const res = await fetch(`${getApiUrl()}/hiring-teams/${params.teamId}/members/${params.memberToRemoveId}`, {
+    method: 'DELETE',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<HiringTeam>(res);
 }

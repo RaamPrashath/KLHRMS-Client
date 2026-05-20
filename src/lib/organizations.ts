@@ -5,6 +5,8 @@ import { prisma } from "./prisma";
 import { getScope, type RolePermissions } from "./hrms-roles";
 import { ROLE_TEMPLATES } from "@/modules/roles/utils/defaultPermissions";
 
+type PermissionMap = Record<string, Record<string, string>>;
+
 function normalizeSlug(input: string) {
   return input
     .toLowerCase()
@@ -46,10 +48,10 @@ function getSeedTemplates() {
 }
 
 function mergeMissingPermissions(
-  current: RolePermissions | null | undefined,
-  template: RolePermissions,
+  current: PermissionMap | null | undefined,
+  template: PermissionMap,
 ) {
-  const merged: RolePermissions = {
+  const merged: PermissionMap = {
     ...(current ?? {}),
   };
   let changed = false;

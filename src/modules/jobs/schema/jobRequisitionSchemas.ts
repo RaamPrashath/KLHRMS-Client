@@ -129,6 +129,7 @@ export const createPipelineStageSchema = z.object({
   name: z.string().trim().min(1, 'Stage name is required').max(50, 'Stage name is too long'),
   stageType: z.enum(PIPELINE_STAGE_TYPES).default('DEFAULT'),
   evaluationEnabled: z.boolean().default(false),
+  sheetEnabled: z.boolean().default(false),
   evaluationType: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).optional().nullable(),
   evaluationIncludeTotal: z.boolean().default(false),
   evaluationIncludeAnalysis: z.boolean().default(false),
@@ -140,6 +141,7 @@ export const createPipelineStageSchema = z.object({
         id: z.string().min(1).optional().nullable(),
         name: z.string().trim().min(1, 'Category name is required').max(120),
         type: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).default('NUMERIC'),
+        maxScore: z.number().int().min(1).optional().nullable(),
         order: z.number().int().min(1).optional(),
       }),
     )

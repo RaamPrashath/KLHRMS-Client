@@ -47,8 +47,8 @@ export function KanbanColumn({
   onOpenStageWorkspace,
   onOpenEvaluationWorkspace,
   onScheduleInterview,
-  onStartInterview,
   onCompleteInterview,
+  onStartInterview,
   filteredApplications,
   previewApplication,
   isUpdating = false,
@@ -185,8 +185,8 @@ export function KanbanColumn({
               meetingEnabled={stage.meetingEnabled}
               evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
               onScheduleInterview={onScheduleInterview}
-              onStartInterview={onStartInterview}
               onCompleteInterview={onCompleteInterview}
+              onStartInterview={onStartInterview}
             />
           ))}
           {previewApplication ? (
@@ -196,8 +196,8 @@ export function KanbanColumn({
               meetingEnabled={stage.meetingEnabled}
               evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
               onScheduleInterview={onScheduleInterview}
-              onStartInterview={onStartInterview}
               onCompleteInterview={onCompleteInterview}
+              onStartInterview={onStartInterview}
               compact
               draggable={false}
             />
