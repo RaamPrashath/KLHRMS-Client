@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { KanbanSquare, LayoutDashboard, List, Plus, Search } from 'lucide-react';
+import { ArrowLeft, KanbanSquare, LayoutDashboard, List, Plus, Search } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
@@ -74,7 +74,7 @@ export function AtsPipelineSectionLayout({
   }, []);
 
   useEffect(() => {
-    void router.prefetch(`/${orgSlug}/candidates/${jobSlug}/overview`);
+    void router.prefetch(`/${orgSlug}/candidates/${jobSlug}`);
     void router.prefetch(`/${orgSlug}/candidates/${jobSlug}/kanban`);
     void router.prefetch(`/${orgSlug}/candidates/${jobSlug}/table`);
   }, [jobSlug, orgSlug, router]);
@@ -91,7 +91,11 @@ export function AtsPipelineSectionLayout({
     setAddStageSignal(0);
     addStageSignalRef.current = 0;
     setNavigatingTab(nextTab);
-    router.push(`/${orgSlug}/candidates/${jobSlug}/${nextTab}`);
+    router.push(
+      nextTab === 'overview'
+        ? `/${orgSlug}/candidates/${jobSlug}`
+        : `/${orgSlug}/candidates/${jobSlug}/${nextTab}`,
+    );
   }
 
   const tabContent = isTabNavigating ? (
@@ -123,8 +127,16 @@ export function AtsPipelineSectionLayout({
     <CandidatesJobContext.Provider value={ctxValue}>
       <div className="min-h-full bg-canvas">
         <div className="sticky top-0 z-20 bg-canvas/95 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl flex-col gap-4 p-7 pb-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+          <div className="flex flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => router.push(`/${orgSlug}/candidates`)}
+                className="flex size-10 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+                aria-label="Back to candidates"
+              >
+                <ArrowLeft className="size-5" />
+              </button>
               {postingsQuery.isLoading ? (
                 <Skeleton className="h-10 w-64 rounded-lg" />
               ) : (
@@ -135,7 +147,7 @@ export function AtsPipelineSectionLayout({
             </div>
             <Select
               value={currentPosting?.slug}
-              onValueChange={(value) => router.push(`/${orgSlug}/candidates/${value}/overview`)}
+              onValueChange={(value) => router.push(`/${orgSlug}/candidates/${value}`)}
               disabled={postingsQuery.isLoading || postings.length === 0}
             >
               <SelectTrigger className="w-full bg-surface lg:w-[320px]">
@@ -150,7 +162,7 @@ export function AtsPipelineSectionLayout({
               </SelectContent>
             </Select>
           </div>
-          <div className="mx-auto flex max-w-7xl items-center gap-3 px-7 pb-3">
+          <div className="flex items-center gap-3 px-6 pb-2">
             <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
               {TABS.map((tab) => {
                 const Icon = tab.icon;
@@ -213,7 +225,7 @@ export function AtsPipelineSectionLayout({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
-              className="mx-auto max-w-7xl px-6"
+              className="px-4 sm:px-6"
             >
               {tabContent}
             </motion.div>

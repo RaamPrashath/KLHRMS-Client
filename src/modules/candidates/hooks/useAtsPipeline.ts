@@ -4,11 +4,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   acceptInterviewAction,
+  addHiringTeamMemberAction,
   assignStageInterviewsAction,
   completeInterviewMeetingAction,
+  completeStageAction,
   createCandidateApplicationNoteAction,
+  deleteEmployeeAction,
+  moveInterviewAssignmentAction,
+  previewEmployeeDeleteAction,
+  reopenStageAction,
   createPipelineStageAction,
   createInterviewMeetingAction,
+  startInterviewMeetingAction,
+  updateInterviewMeetingAction,
   createReassignmentRequestAction,
   deletePipelineStageAction,
   distributeStageInterviewsAction,
@@ -26,6 +34,7 @@ import {
   generateEvaluationWorkspaceAction,
   moveApplicationStageAction,
   previewStageInterviewWarningsAction,
+  removeHiringTeamMemberAction,
   rejectInterviewAction,
   reshuffleInterviewAssignmentAction,
   searchInterviewersAction,
@@ -40,6 +49,7 @@ import type {
   PipelineApplication,
   PipelineBoard,
   PipelineJobPosting,
+  PipelineStage,
   StageEvaluationWorkspace,
   InterviewMeeting,
   InterviewerSearchResponse,
@@ -55,6 +65,7 @@ import type {
 } from '@/modules/candidates/types/atsTypes';
 import type {
   CreateInterviewMeetingInput,
+  UpdateInterviewMeetingInput,
   AcceptInterviewInput,
   CreatePipelineStageInput,
   UpdatePipelineStageInput,
@@ -259,10 +270,11 @@ export function usePreviewStageInterviewWarnings(
   orgSlug: string,
   memberId: string,
   stageSlug: string,
+  jobPostingId?: string | null,
 ) {
   return useMutation<StageInterviewWarningResponse, Error, StageInterviewAssignment[]>({
     mutationFn: (assignments) =>
-      previewStageInterviewWarningsAction({ orgSlug, memberId, stageSlug, assignments }),
+      previewStageInterviewWarningsAction({ orgSlug, memberId, stageSlug, assignments, jobPostingId: jobPostingId ?? undefined }),
   });
 }
 
@@ -270,13 +282,20 @@ export function useAssignStageInterviews(
   orgSlug: string,
   memberId: string,
   stageSlug: string,
+  jobPostingId?: string | null,
 ) {
   const queryClient = useQueryClient();
   return useMutation<StageInterviewAssignmentResponse, Error, StageInterviewAssignment[]>({
     mutationFn: (assignments) =>
-      assignStageInterviewsAction({ orgSlug, memberId, stageSlug, assignments }),
+      assignStageInterviewsAction({ orgSlug, memberId, stageSlug, assignments, jobPostingId: jobPostingId ?? undefined }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: stageWorkspaceKey(orgSlug, stageSlug) });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug', orgSlug] });
+      if (jobPostingId) {
+        queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      }
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug', orgSlug] });
       queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug] });
     },
   });
@@ -295,6 +314,49 @@ export function useCreateInterviewMeeting(
         memberId,
         applicationId: params.applicationId,
         data: params.data,
+      }),
+    onSuccess: (_meeting, params) => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+    },
+  });
+}
+
+export function useUpdateInterviewMeeting(
+  orgSlug: string,
+  memberId: string,
+  jobPostingId: string | null,
+) {
+  const queryClient = useQueryClient();
+  return useMutation<InterviewMeeting, Error, { applicationId: string; eventId: string; data: UpdateInterviewMeetingInput }>({
+    mutationFn: (params) =>
+      updateInterviewMeetingAction({
+        orgSlug,
+        memberId,
+        applicationId: params.applicationId,
+        eventId: params.eventId,
+        data: params.data,
+      }),
+    onSuccess: (_meeting, params) => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
+      queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+    },
+  });
+}
+
+export function useStartInterviewMeeting(
+  orgSlug: string,
+  memberId: string,
+  jobPostingId: string | null,
+) {
+  const queryClient = useQueryClient();
+  return useMutation<InterviewMeeting, Error, { applicationId: string; eventId: string }>({
+    mutationFn: (params) =>
+      startInterviewMeetingAction({
+        orgSlug,
+        memberId,
+        applicationId: params.applicationId,
+        eventId: params.eventId,
       }),
     onSuccess: (_meeting, params) => {
       if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
@@ -495,12 +557,12 @@ export function useDeletePipelineStage(orgSlug: string, memberId: string, jobPos
   });
 }
 
-export function useFetchHiringTeams(orgSlug: string, memberId: string, jobPostingId: string | null) {
+export function useFetchHiringTeams(orgSlug: string, memberId: string, jobPostingId: string | null, stageId?: string | null) {
   return useQuery({
-    queryKey: ['hiring-teams', orgSlug, jobPostingId],
+    queryKey: ['hiring-teams', orgSlug, jobPostingId, stageId],
     queryFn: async () => {
       if (!jobPostingId) throw new Error('Job posting ID is required');
-      return fetchHiringTeamsAction({ orgSlug, memberId, jobPostingId });
+      return fetchHiringTeamsAction({ orgSlug, memberId, jobPostingId, stageId });
     },
     enabled: !!orgSlug && !!memberId && !!jobPostingId,
     retry: false,
@@ -510,8 +572,32 @@ export function useFetchHiringTeams(orgSlug: string, memberId: string, jobPostin
 export function useCreateHiringTeam(orgSlug: string, memberId: string, jobPostingId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { jobPostingId: string; name: string; description: string | null; members: Array<{ memberId: string; role?: string | null }> }) =>
+    mutationFn: (data: { jobPostingId: string; name: string; description: string | null; members: Array<{ memberId: string; role?: string | null }>; stageId?: string | null }) =>
       createHiringTeamAction({ orgSlug, memberId, jobPostingId: jobPostingId ?? '', data }),
+    onSuccess: (_data) => {
+      if (jobPostingId) {
+        queryClient.invalidateQueries({ queryKey: ['hiring-teams', orgSlug, jobPostingId] });
+      }
+    },
+  });
+}
+
+export function useAddHiringTeamMember(orgSlug: string, memberId: string, jobPostingId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { teamId: string; data: { memberId: string; role?: string | null } }) =>
+      addHiringTeamMemberAction({ orgSlug, memberId, ...params }),
+    onSuccess: () => {
+      if (jobPostingId) queryClient.invalidateQueries({ queryKey: ['hiring-teams', orgSlug, jobPostingId] });
+    },
+  });
+}
+
+export function useRemoveHiringTeamMember(orgSlug: string, memberId: string, jobPostingId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { teamId: string; memberToRemoveId: string }) =>
+      removeHiringTeamMemberAction({ orgSlug, memberId, ...params }),
     onSuccess: () => {
       if (jobPostingId) queryClient.invalidateQueries({ queryKey: ['hiring-teams', orgSlug, jobPostingId] });
     },
@@ -562,6 +648,21 @@ export function useRejectInterview(orgSlug: string, memberId: string) {
   });
 }
 
+export function useMoveInterviewAssignment(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { applicationId: string; eventId: string; data: { newInterviewerMemberId: string } }) =>
+      moveInterviewAssignmentAction({ orgSlug, memberId, ...args }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
+    },
+  });
+}
+
 export function useReshuffleInterviewAssignment(orgSlug: string, memberId: string) {
   const queryClient = useQueryClient();
   return useMutation<ReshuffleResponse, Error, { applicationId: string; eventId: string; data: ReshuffleRequest }>({
@@ -587,5 +688,52 @@ export function useCreateReassignmentRequest(orgSlug: string, memberId: string) 
   return useMutation({
     mutationFn: (args: { eventId: string; data: { reason: string } }) =>
       createReassignmentRequestAction({ orgSlug, memberId, ...args }),
+  });
+}
+
+// ─── Stage Complete / Reopen ───────────────────────────────────────────────────
+
+export function useCompleteStage(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<PipelineStage, Error, { stageId: string }>({
+    mutationFn: (args) =>
+      completeStageAction({ orgSlug, memberId, stageId: args.stageId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+    },
+  });
+}
+
+export function useReopenStage(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<PipelineStage, Error, { stageId: string }>({
+    mutationFn: (args) =>
+      reopenStageAction({ orgSlug, memberId, stageId: args.stageId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+    },
+  });
+}
+
+// ─── Employee Delete ───────────────────────────────────────────────────────────
+
+export function usePreviewEmployeeDelete(orgSlug: string, memberId: string) {
+  return useMutation({
+    mutationFn: (memberToDeleteId: string) =>
+      previewEmployeeDeleteAction({ orgSlug, memberId, memberToDeleteId }),
+  });
+}
+
+export function useDeleteEmployee(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (memberToDeleteId: string) =>
+      deleteEmployeeAction({ orgSlug, memberId, memberToDeleteId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+    },
   });
 }

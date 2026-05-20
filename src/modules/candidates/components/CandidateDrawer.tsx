@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -15,12 +16,13 @@ import {
   Pencil,
   Phone,
   Save,
-  Star,
+  Send,
   UserRound,
   UsersRound,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,8 +32,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import {
   useCandidateApplicationDetail,
   useCreateCandidateApplicationNote,
@@ -414,51 +416,133 @@ function NoteCard({
   readonly note: CandidateApplicationNote;
   readonly draft: string;
   readonly onDraftChange: (value: string) => void;
-  readonly onSave: () => void;
+  readonly onSave: () => Promise<void> | void;
   readonly saving: boolean;
 }) {
   const initials = candidateInitials(note.authorName);
+  const [editing, setEditing] = useState(false);
+
+  async function handleSave() {
+    await onSave();
+    setEditing(false);
+  }
 
   return (
-    <section className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 transition-colors hover:bg-surface">
-      <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-xs font-semibold text-primary">
-          {initials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <p className="text-sm font-semibold text-neutral-900">{note.authorName}</p>
-              <p className="text-xs text-neutral-500 mt-0.5">{formatDateTime(note.updatedAt)}</p>
-            </div>
-            {note.canEdit ? (
-              <Badge variant="outline" className="text-xs">
-                <Pencil className="mr-1 size-3" />
-                Editable
-              </Badge>
-            ) : null}
+    <article className="group flex items-start gap-3">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-xs font-semibold text-primary ring-1 ring-primary-light/30">
+        {initials}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+            <p className="truncate text-sm font-semibold text-neutral-900">{note.authorName}</p>
+            <span className="text-xs text-neutral-400">{formatDateTime(note.updatedAt)}</span>
           </div>
+          {note.canEdit && !editing ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-neutral-500 opacity-0 transition-opacity hover:text-neutral-900 group-hover:opacity-100 focus-visible:opacity-100"
+              onClick={() => setEditing(true)}
+            >
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
+          ) : null}
+        </div>
 
-          {note.canEdit ? (
-            <div className="mt-3">
+        <div className="rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-[var(--shadow-1)]">
+          {editing ? (
+            <div className="space-y-3">
               <Textarea
-                className="min-h-25 resize-y"
+                className="min-h-28 resize-y border-neutral-200 text-sm leading-6"
                 value={draft}
                 onChange={(event) => onDraftChange(event.target.value)}
               />
-              <div className="mt-3 flex justify-end">
-                <Button size="sm" onClick={onSave} disabled={saving || !draft.trim() || draft === note.body}>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onDraftChange(note.body);
+                    setEditing(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={() => { void handleSave(); }} disabled={saving || !draft.trim() || draft === note.body}>
                   <Save className="size-4" />
-                  {saving ? 'Saving' : 'Save note'}
+                  {saving ? 'Saving' : 'Save'}
                 </Button>
               </div>
             </div>
           ) : (
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-700">{note.body}</p>
+            <p className="whitespace-pre-wrap text-sm leading-6 text-neutral-700">{note.body}</p>
           )}
         </div>
       </div>
-    </section>
+    </article>
+  );
+}
+
+function NotesEmptyState() {
+  return (
+    <div className="flex h-full min-h-64 items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-canvas px-6 text-center">
+      <div>
+        <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-surface text-neutral-300 shadow-[var(--shadow-1)]">
+          <MessageSquareText className="size-5" />
+        </div>
+        <p className="text-sm font-medium text-neutral-900">No notes yet</p>
+        <p className="mt-1 text-xs text-neutral-500">Start the conversation with the hiring team.</p>
+      </div>
+    </div>
+  );
+}
+
+function NotesComposer({
+  value,
+  onChange,
+  onSubmit,
+  pending,
+}: {
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly onSubmit: () => void;
+  readonly pending: boolean;
+}) {
+  return (
+    <form
+      className="shrink-0 bg-surface px-5 py-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <div className="rounded-xl border border-neutral-200 bg-surface p-3 shadow-[var(--shadow-1)] focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/10">
+        <Textarea
+          className="min-h-24 resize-none border-0 p-0 text-sm leading-6 shadow-none focus-visible:ring-0"
+          placeholder="Add a note..."
+          value={value}
+          maxLength={1000}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+              event.preventDefault();
+              onSubmit();
+            }
+          }}
+        />
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-xs text-neutral-400">{value.trim().length}/1000</p>
+          <Button type="submit" size="sm" disabled={pending || !value.trim()}>
+            <Send className="size-4" />
+            {pending ? 'Adding' : 'Add note'}
+          </Button>
+        </div>
+      </div>
+    </form>
   );
 }
 
@@ -487,52 +571,32 @@ function NotesTab({
   }
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-md bg-primary-light/20">
-            <MessageSquareText className="size-4 text-primary" />
-          </div>
-          <p className="text-sm font-semibold text-neutral-900">Add internal note</p>
-        </div>
-        <Textarea
-          className="mt-4 min-h-32 resize-y"
-          placeholder="Write a note for the hiring team..."
-          value={composer}
-          onChange={(event) => setComposer(event.target.value)}
-        />
-        <div className="mt-3 flex justify-end">
-          <Button 
-            size="sm" 
-            onClick={() => { void handleCreate(); }} 
-            disabled={createNote.isPending || !composer.trim()}
-            className="w-full"
-          >
-            <Save className="size-4" />
-            {createNote.isPending ? 'Saving' : 'Save note'}
-          </Button>
-        </div>
-      </section>
-
-      <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-col bg-surface">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
         {(detail.notes ?? []).length === 0 ? (
-          <div className="rounded-lg border border-dashed border-neutral-200 bg-canvas p-8 text-center">
-            <MessageSquareText className="size-8 text-neutral-300 mx-auto mb-2" />
-            <p className="text-sm text-neutral-500">No internal notes yet.</p>
-          </div>
+          <NotesEmptyState />
         ) : (
-          detail.notes.map((note) => (
-            <NoteCard
-              key={note.id}
-              note={note}
-              draft={drafts[note.id] ?? note.body}
-              onDraftChange={(value) => setDrafts((current) => ({ ...current, [note.id]: value }))}
-              onSave={() => { void handleUpdate(note); }}
-              saving={updateNote.isPending}
-            />
-          ))
+          <div className="space-y-5">
+            {detail.notes.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                draft={drafts[note.id] ?? note.body}
+                onDraftChange={(value) => setDrafts((current) => ({ ...current, [note.id]: value }))}
+                onSave={() => handleUpdate(note)}
+                saving={updateNote.isPending}
+              />
+            ))}
+          </div>
         )}
       </div>
+
+      <NotesComposer
+        value={composer}
+        onChange={setComposer}
+        onSubmit={() => { void handleCreate(); }}
+        pending={createNote.isPending}
+      />
     </div>
   );
 }
@@ -559,31 +623,33 @@ export function CandidateDrawer({
     [detail],
   );
   const initials = candidateInitials(candidateName);
+  const imageSrc = detail?.candidate.image?.trim() || null;
+  const [imageFailed, setImageFailed] = useState(false);
+  const [activeSection, setActiveSection] = useState<'profile' | 'history' | 'notes'>('profile');
+
+  // Reset image error state when switching candidates
+  useMemo(() => { setImageFailed(false); }, [imageSrc]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!fixed !bottom-0 !right-0 !left-auto !top-0 z-50 flex h-dvh max-h-dvh w-full !max-w-none !translate-x-0 !translate-y-0 flex-col overflow-hidden rounded-none border-0 border-l border-neutral-100 bg-surface p-0 shadow-[var(--shadow-4)] duration-200 data-open:slide-in-from-right-full data-open:zoom-in-100 data-closed:slide-out-to-right-full data-closed:zoom-out-100 sm:w-[40vw]">
-        <DialogHeader className="border-b border-neutral-100 bg-surface px-5 py-5">
-          <div className="flex items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-base font-semibold text-primary ring-1 ring-primary-light/40">
-              {initials}
-            </div>
+        <DialogHeader className="bg-surface px-5 py-5">
+          <div className="flex items-center gap-4">
+            <Avatar className="size-14 shrink-0">
+              <AvatarImage
+                key={imageSrc ?? 'fallback'}
+                src={imageFailed ? undefined : (imageSrc ?? undefined)}
+                alt={candidateName}
+                referrerPolicy="no-referrer"
+                onError={() => setImageFailed(true)}
+              />
+              <AvatarFallback className="bg-primary-ghost text-lg font-semibold text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
             <div className="min-w-0 flex-1">
               <DialogTitle className="truncate text-2xl font-semibold text-neutral-900">{candidateName}</DialogTitle>
-              {detail ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2.5 text-sm text-neutral-600">
-                  <span className="font-medium text-neutral-900">{detail.jobPostingTitle}</span>
-                  <span className="h-5 w-px bg-neutral-200" />
-                  <span>{relativeAppliedDate(detail.appliedAt)}</span>
-                  <Badge variant={statusTone(detail.status)} className="text-xs">{detail.currentStage}</Badge>
-                  {detail.rating ? (
-                    <span className="inline-flex items-center gap-1.5 font-medium text-neutral-900">
-                      <Star className="size-4 fill-warning-text text-warning-text" />
-                      {detail.rating}/5
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
+              <p className="mt-1 truncate text-sm text-neutral-500">{detail?.candidate.email ?? '—'}</p>
             </div>
           </div>
         </DialogHeader>
@@ -597,27 +663,64 @@ export function CandidateDrawer({
         ) : null}
 
         {detail ? (
-          <Tabs defaultValue="profile" className="flex min-h-0 flex-1 flex-col">
-            <div className="border-b border-neutral-100 bg-surface px-5 py-3">
-              <TabsList className="grid w-full grid-cols-3 gap-4 bg-transparent p-0">
-                <TabsTrigger value="profile" className="rounded-none border-b-2 border-transparent px-0 py-2 font-semibold text-neutral-600 data-active:border-primary data-active:text-primary data-active:shadow-none">Profile</TabsTrigger>
-                <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent px-0 py-2 font-semibold text-neutral-600 data-active:border-primary data-active:text-primary data-active:shadow-none">History</TabsTrigger>
-                <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent px-0 py-2 font-semibold text-neutral-600 data-active:border-primary data-active:text-primary data-active:shadow-none">Notes</TabsTrigger>
-              </TabsList>
+          <div className="flex min-h-0 flex-1 flex-col">
+            {/* Pill-style tab bar — matches AtsPipelineSectionLayout design */}
+            <div className="bg-surface px-5 py-3">
+              <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
+                {([
+                  { key: 'profile' as const, label: 'Profile' },
+                  { key: 'history' as const, label: 'History' },
+                  { key: 'notes' as const, label: 'Notes' },
+                ]).map((tab) => {
+                  const isActive = tab.key === activeSection;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveSection(tab.key)}
+                      aria-pressed={isActive}
+                      className={cn(
+                        'relative inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
+                        isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
+                      )}
+                    >
+                      {isActive ? (
+                        <motion.span
+                          layoutId="candidate-drawer-tab-pill"
+                          className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                          transition={{
+                            type: 'spring',
+                            stiffness: 520,
+                            damping: 36,
+                            mass: 0.65,
+                          }}
+                        />
+                      ) : null}
+                      <span className="relative z-10">{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <TabsContent value="profile" className="min-h-0 flex-1 overflow-y-auto px-5 py-5 data-active:animate-in data-active:fade-in-0 data-active:slide-in-from-bottom-1">
-              <ProfileTab detail={detail} />
-            </TabsContent>
+            {activeSection === 'profile' ? (
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                <ProfileTab detail={detail} />
+              </div>
+            ) : null}
 
-            <TabsContent value="history" className="min-h-0 flex-1 overflow-y-auto px-5 py-5 data-active:animate-in data-active:fade-in-0 data-active:slide-in-from-bottom-1">
-              <HistoryTab detail={detail} />
-            </TabsContent>
+            {activeSection === 'history' ? (
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                <HistoryTab detail={detail} />
+              </div>
+            ) : null}
 
-            <TabsContent value="notes" className="min-h-0 flex-1 overflow-y-auto px-5 py-5 data-active:animate-in data-active:fade-in-0 data-active:slide-in-from-bottom-1">
-              <NotesTab detail={detail} createNote={createNote} updateNote={updateNote} />
-            </TabsContent>
-          </Tabs>
+            {activeSection === 'notes' ? (
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <NotesTab detail={detail} createNote={createNote} updateNote={updateNote} />
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>

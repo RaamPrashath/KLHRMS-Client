@@ -36,7 +36,7 @@ export function AtsJobPipelinePageShell({
       onJobPostingChange={(postingId) => {
         const posting = postings.find((item) => item.id === postingId);
         if (posting) {
-          router.push(`/${orgSlug}/candidates/${posting.slug}/overview`);
+          router.push(`/${orgSlug}/candidates/${posting.slug}`);
         }
       }}
       isLoadingPostings={postingsQuery.isLoading}

@@ -62,11 +62,11 @@ interface PipelineTableRow {
   currentStage: string;
   pipelineStageId: string;
   stageOrder: number;
-  rating: number | null;
   appliedDate: string;
   lastMovedAt: string | null;
   status: string;
   isInterviewOngoing: boolean;
+  displayStatus: 'Scheduled' | 'Ongoing' | 'Completed' | null;
   application: PipelineApplication;
 }
 
@@ -98,6 +98,15 @@ function buildRows(stages: PipelineStage[]): PipelineTableRow[] {
   return stages.flatMap((stage) =>
     stage.applications.map((application) => {
       const name = `${application.candidate.firstName} ${application.candidate.lastName}`.trim();
+      const meeting = application.interviewMeeting;
+      const displayStatus: PipelineTableRow['displayStatus'] =
+        meeting?.status === 'PENDING'
+          ? 'Scheduled'
+          : meeting?.status === 'ONGOING'
+            ? 'Ongoing'
+            : meeting?.status === 'COMPLETED'
+              ? 'Completed'
+              : null;
 
       return {
         id: application.id,
@@ -109,11 +118,11 @@ function buildRows(stages: PipelineStage[]): PipelineTableRow[] {
         currentStage: stage.name,
         pipelineStageId: stage.id,
         stageOrder: stage.order,
-        rating: application.rating,
         appliedDate: application.appliedDate,
         lastMovedAt: application.lastMovedAt,
         status: application.status,
-        isInterviewOngoing: application.interviewMeeting?.status === 'ONGOING',
+        isInterviewOngoing: meeting?.status === 'ONGOING',
+        displayStatus,
         application,
       };
     }),
@@ -168,11 +177,26 @@ export function AtsPipelineTable({
   }, [rowIds]);
 
   async function moveSelected() {
-    const selectedIds = Object.entries(rowSelection)
+    const rawIds = Object.entries(rowSelection)
       .filter(([, selected]) => selected)
       .map(([id]) => id);
 
-    if (!targetStageId || targetStageId === 'all' || selectedIds.length === 0) return;
+    if (!targetStageId || targetStageId === 'all' || rawIds.length === 0) return;
+
+    // Safety net: filter out any ongoing-interview rows that may have been selected
+    const selectedIds = rawIds.filter((id) => {
+      const row = rows.find((r) => r.id === id);
+      return row && !row.isInterviewOngoing;
+    });
+
+    if (selectedIds.length === 0) {
+      toast.error('None of the selected candidates can be moved because they have ongoing interviews');
+      return;
+    }
+
+    if (selectedIds.length !== rawIds.length) {
+      toast.warning('Skipped candidates with ongoing interviews');
+    }
 
     try {
       await onMoveSelected(selectedIds, targetStageId);
@@ -265,24 +289,40 @@ export function AtsPipelineTable({
         ),
       },
       {
-        accessorKey: 'rating',
-        header: ({ column }) => (
-          <SortButton label="Rating" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm text-neutral-700">{row.original.rating ? `${row.original.rating}/5` : '—'}</span>
-        ),
-      },
-      {
-        accessorKey: 'status',
+        id: 'status',
         header: ({ column }) => (
           <SortButton label="Status" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
         ),
-        cell: ({ row }) => (
-          <span className="inline-flex rounded-full bg-neutral-50 px-2 py-0.5 text-xs font-medium text-neutral-700">
-            {row.original.status}
-          </span>
-        ),
+        sortingFn: (rowA, rowB) => {
+          const order: Record<string, number> = { Scheduled: 0, Ongoing: 1, Completed: 2 };
+          const a = order[rowA.original.displayStatus ?? ''] ?? -1;
+          const b = order[rowB.original.displayStatus ?? ''] ?? -1;
+          return a - b;
+        },
+        cell: ({ row }) => {
+          const status = row.original.displayStatus;
+          if (!status) {
+            return <span className="text-sm text-neutral-400">—</span>;
+          }
+          const styles: Record<string, string> = {
+            Scheduled: 'bg-warning-bg text-warning-text',
+            Ongoing: 'bg-yellow-100 text-yellow-800',
+            Completed: 'bg-success-bg text-success-text',
+          };
+          return (
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}
+            >
+              {status === 'Ongoing' && (
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-yellow-500/40" />
+                  <span className="relative inline-flex size-2 rounded-full bg-yellow-500" />
+                </span>
+              )}
+              {status}
+            </span>
+          );
+        },
       },
     ],
     [],
@@ -304,7 +344,7 @@ export function AtsPipelineTable({
         pageSize: 25,
       },
     },
-    enableRowSelection: true,
+    enableRowSelection: (row) => !row.original.isInterviewOngoing,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
@@ -318,9 +358,8 @@ export function AtsPipelineTable({
         row.original.phone,
         row.original.source,
         row.original.currentStage,
-        row.original.rating,
         row.original.lastMovedAt,
-        row.original.status,
+        row.original.displayStatus,
       ].some((value) => normalize(value).includes(query));
     },
     getCoreRowModel: getCoreRowModel(),

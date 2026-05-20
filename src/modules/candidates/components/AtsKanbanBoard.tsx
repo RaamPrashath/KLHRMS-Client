@@ -18,6 +18,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -26,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { TimePicker } from '@/components/ui/time-picker';
 import { useCandidatesJobContext } from '@/modules/candidates/components/CandidatesJobContext';
 import {
   Select,
@@ -46,9 +47,13 @@ import { PipelineSetupCard } from '@/modules/jobs/components/PipelineSetupCard';
 import { PipelineSetupDialog } from '@/modules/jobs/components/PipelineSetupDialog';
 import { authClient } from '@/lib/auth-client';
 import {
+  useAcceptInterview,
   useCreatePipelineStage,
   useCreateInterviewMeeting,
   useCompleteInterviewMeeting,
+  useRejectInterview,
+  useStartInterviewMeeting,
+  useUpdateInterviewMeeting,
   useDeletePipelineStage,
   useMoveApplicationStage,
   usePipelineBoard,
@@ -60,6 +65,7 @@ import {
 } from '@/modules/jobs/hooks/usePipelineMutations';
 import type {
   CreateInterviewMeetingInput,
+  UpdateInterviewMeetingInput,
   CreatePipelineStageInput,
   UpdatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
@@ -75,7 +81,8 @@ const DRAG_EDGE_SCROLL_SPEED = 18;
 type PendingGoogleAction =
   | { kind: 'create-stage'; data: CreatePipelineStageInput }
   | { kind: 'update-stage'; stageId: string; data: UpdatePipelineStageInput }
-  | { kind: 'create-interview'; applicationId: string; data: CreateInterviewMeetingInput };
+  | { kind: 'create-interview'; applicationId: string; data: CreateInterviewMeetingInput }
+  | { kind: 'reschedule-interview'; applicationId: string; eventId: string; data: UpdateInterviewMeetingInput };
 
 function matchesApplicationSearch(application: PipelineApplication, stageName: string, query: string): boolean {
   const normalized = query.trim().toLowerCase();
@@ -120,6 +127,7 @@ function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineSt
     name: data.name,
     stageType: data.stageType,
     evaluationEnabled: data.evaluationEnabled,
+    sheetEnabled: data.sheetEnabled,
     evaluationType: data.evaluationType,
     evaluationIncludeTotal: data.evaluationIncludeTotal,
     evaluationIncludeAnalysis: data.evaluationIncludeAnalysis,
@@ -130,11 +138,13 @@ function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineSt
 }
 
 function actionNeedsGoogle(action: PendingGoogleAction): boolean {
-  return action.kind === 'create-interview' || action.data.evaluationEnabled === true;
+  if (action.kind === 'create-interview' || action.kind === 'reschedule-interview') return true;
+  return action.data.evaluationEnabled === true;
 }
 
 function requiredGoogleScope(action: PendingGoogleAction): string {
-  return action.kind === 'create-interview' ? GOOGLE_CALENDAR_SCOPE : GOOGLE_SHEETS_SCOPE;
+  if (action.kind === 'create-interview' || action.kind === 'reschedule-interview') return GOOGLE_CALENDAR_SCOPE;
+  return GOOGLE_SHEETS_SCOPE;
 }
 
 function readGoogleAccounts(data: unknown): Array<{ providerId?: unknown; scope?: unknown; scopes?: unknown }> {
@@ -154,15 +164,6 @@ function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): 
     return account.scope.split(/[,\s]+/).filter(Boolean);
   }
   return [];
-}
-
-function toIstDateTimeInput(value: Date): string {
-  const ist = new Date(value.getTime() + 5.5 * 60 * 60 * 1000);
-  return ist.toISOString().slice(0, 16);
-}
-
-function istDateTimeInputToIso(value: string): string {
-  return new Date(`${value}:00+05:30`).toISOString();
 }
 
 function getStageReorderOrder(
@@ -191,7 +192,7 @@ function getStageReorderOrder(
 
 function BoardSkeleton() {
   return (
-    <div className="flex h-[calc(100dvh-140px)] items-stretch gap-4 overflow-x-auto pb-4">
+    <div className="flex h-[calc(100dvh-124px)] items-stretch gap-4 overflow-x-auto pb-4">
       {[1, 2, 3, 4].map((column) => (
         <div key={column} className="flex w-[300px] shrink-0 flex-col rounded-xl border border-neutral-100 bg-surface-subtle">
           <div className="border-b border-neutral-100 bg-surface p-3">
@@ -327,7 +328,11 @@ export function AtsKanbanBoard({
   const updateStage = useUpdatePipelineStage(orgSlug, memberId, jobPostingId);
   const deleteStage = useDeletePipelineStage(orgSlug, memberId, jobPostingId);
   const createInterviewMeeting = useCreateInterviewMeeting(orgSlug, memberId, jobPostingId);
+  const updateInterviewMeeting = useUpdateInterviewMeeting(orgSlug, memberId, jobPostingId);
+  const startInterviewMeeting = useStartInterviewMeeting(orgSlug, memberId, jobPostingId);
   const completeInterviewMeeting = useCompleteInterviewMeeting(orgSlug, memberId, jobPostingId);
+  const acceptInterview = useAcceptInterview(orgSlug, memberId);
+  const rejectInterview = useRejectInterview(orgSlug, memberId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const pendingStorageKey = useMemo(
     () => `ats-google-pending:${orgSlug}:${jobPostingId ?? 'none'}`,
@@ -337,8 +342,10 @@ export function AtsKanbanBoard({
   const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const [schedulingApplication, setSchedulingApplication] = useState<PipelineApplication | null>(null);
-  const [meetingStartLocal, setMeetingStartLocal] = useState('');
-  const pendingMeetingWindowRef = useRef<Window | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedHour, setSelectedHour] = useState<string>('');
+  const [selectedMinute, setSelectedMinute] = useState<string>('');
+  const [durationMinutes, setDurationMinutes] = useState<number>(30);
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const dragPointerXRef = useRef<number | null>(null);
   const dragEdgeDirectionRef = useRef<-1 | 0 | 1>(0);
@@ -383,10 +390,6 @@ export function AtsKanbanBoard({
       if (!options?.skipGoogleCheck && actionNeedsGoogle(action)) {
         const hasAccess = await hasGoogleAccess(requiredGoogleScope(action));
         if (!hasAccess) {
-          if (pendingMeetingWindowRef.current) {
-            pendingMeetingWindowRef.current.close();
-            pendingMeetingWindowRef.current = null;
-          }
           requestGoogleConnection(action);
           return;
         }
@@ -400,27 +403,23 @@ export function AtsKanbanBoard({
         }
 
         if (action.kind === 'create-interview') {
-          const meeting = await createInterviewMeeting.mutateAsync({
+          await createInterviewMeeting.mutateAsync({
             applicationId: action.applicationId,
             data: action.data,
           });
           setSchedulingApplication(null);
-          if (action.data.mode === 'SCHEDULE') {
-            toast.success('Interview scheduled and email sent');
-            return;
-          }
-          toast.success('Interview email sent');
-          if (meeting.meetingUrl) {
-            if (pendingMeetingWindowRef.current) {
-              pendingMeetingWindowRef.current.location.href = meeting.meetingUrl;
-              pendingMeetingWindowRef.current = null;
-            } else {
-              window.open(meeting.meetingUrl, '_blank', 'noopener,noreferrer');
-            }
-          } else if (pendingMeetingWindowRef.current) {
-            pendingMeetingWindowRef.current.close();
-            pendingMeetingWindowRef.current = null;
-          }
+          toast.success('Interview scheduled and email sent');
+          return;
+        }
+
+        if (action.kind === 'reschedule-interview') {
+          await updateInterviewMeeting.mutateAsync({
+            applicationId: action.applicationId,
+            eventId: action.eventId,
+            data: action.data,
+          });
+          setSchedulingApplication(null);
+          toast.success('Interview rescheduled and email sent');
           return;
         }
 
@@ -431,16 +430,8 @@ export function AtsKanbanBoard({
         setRenamingStage(null);
       } catch (error) {
         if (!options?.skipGoogleCheck && isGoogleConnectError(error)) {
-          if (pendingMeetingWindowRef.current) {
-            pendingMeetingWindowRef.current.close();
-            pendingMeetingWindowRef.current = null;
-          }
           requestGoogleConnection(action);
           return;
-        }
-        if (pendingMeetingWindowRef.current) {
-          pendingMeetingWindowRef.current.close();
-          pendingMeetingWindowRef.current = null;
         }
         toast.error(readActionError(error, action.kind === 'create-interview' ? 'Failed to create meeting' : action.kind === 'create-stage' ? 'Failed to create stage' : 'Failed to update stage'));
       }
@@ -595,6 +586,7 @@ export function AtsKanbanBoard({
         afterStageId: stages[0]?.id ?? null,
         stageType: data.stageType ?? 'DEFAULT',
         evaluationEnabled: data.evaluationEnabled ?? false,
+        sheetEnabled: data.sheetEnabled ?? false,
         evaluationType: data.evaluationType ?? null,
         evaluationIncludeTotal: data.evaluationIncludeTotal ?? false,
         evaluationIncludeAnalysis: data.evaluationIncludeAnalysis ?? false,
@@ -603,6 +595,7 @@ export function AtsKanbanBoard({
           id: category.id ?? null,
           name: category.name,
           type: category.type ?? 'NUMERIC',
+          maxScore: category.maxScore ?? undefined,
           order: category.order ?? index + 1,
         })),
       },
@@ -703,40 +696,52 @@ export function AtsKanbanBoard({
     updateStage.mutate({ stageId: stage.id, data: { order: nextOrder } });
   }
 
-  function startInterviewNow(application: PipelineApplication) {
-    pendingMeetingWindowRef.current = window.open('about:blank', '_blank');
-    if (pendingMeetingWindowRef.current) {
-      pendingMeetingWindowRef.current.opener = null;
-    }
-    void runStageAction({
-      kind: 'create-interview',
-      applicationId: application.id,
-      data: {
-        mode: 'START_NOW',
-        durationMinutes: 30,
-      },
-    });
-  }
-
   function openScheduleInterview(application: PipelineApplication) {
     const existingStart = application.interviewMeeting?.scheduledStartAt;
     const start = existingStart ? new Date(existingStart) : new Date(Date.now() + 60 * 60 * 1000);
     if (!existingStart) start.setMinutes(0, 0, 0);
-    setMeetingStartLocal(toIstDateTimeInput(start));
+
+    setSelectedDate(start);
+    setSelectedHour(String(start.getHours()).padStart(2, '0'));
+    setSelectedMinute(String(start.getMinutes() < 15 ? '00' : start.getMinutes() < 30 ? '15' : start.getMinutes() < 45 ? '30' : '45'));
+    setDurationMinutes(30);
     setSchedulingApplication(application);
   }
 
   function scheduleInterview() {
-    if (!schedulingApplication || !meetingStartLocal) return;
-    void runStageAction({
-      kind: 'create-interview',
-      applicationId: schedulingApplication.id,
-      data: {
-        mode: 'SCHEDULE',
-        scheduledStartAt: istDateTimeInputToIso(meetingStartLocal),
-        durationMinutes: 30,
-      },
-    });
+    if (!schedulingApplication || !selectedDate || selectedHour === '' || selectedMinute === '') return;
+
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    const day = selectedDate.getDate();
+    const hour = parseInt(selectedHour, 10);
+    const minute = parseInt(selectedMinute, 10);
+
+    // Construct as IST (+05:30) to match the expected server format
+    const istDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+05:30`;
+
+    const existingMeeting = schedulingApplication.interviewMeeting;
+    if (existingMeeting && existingMeeting.status === 'PENDING') {
+      void runStageAction({
+        kind: 'reschedule-interview',
+        applicationId: schedulingApplication.id,
+        eventId: existingMeeting.id,
+        data: {
+          scheduledStartAt: new Date(istDateStr).toISOString(),
+          durationMinutes,
+        },
+      });
+    } else {
+      void runStageAction({
+        kind: 'create-interview',
+        applicationId: schedulingApplication.id,
+        data: {
+          mode: 'SCHEDULE',
+          scheduledStartAt: new Date(istDateStr).toISOString(),
+          durationMinutes,
+        },
+      });
+    }
   }
 
   function markInterviewCompleted(
@@ -799,6 +804,63 @@ export function AtsKanbanBoard({
     router.push(`${basePath}/${stage.slug}${jobContext}`);
   }
 
+  function handleOpenCandidate(applicationId: string) {
+    setSelectedApplicationId(applicationId);
+  }
+
+  function handleStartInterview(application: PipelineApplication) {
+    const meeting = application.interviewMeeting;
+    if (!meeting || meeting.status !== 'PENDING') return;
+
+    startInterviewMeeting.mutate(
+      { applicationId: application.id, eventId: meeting.id },
+      {
+        onSuccess: (updatedMeeting) => {
+          if (updatedMeeting.meetingUrl) {
+            window.open(updatedMeeting.meetingUrl, '_blank', 'noopener,noreferrer');
+          }
+        },
+        onError: (error) => {
+          toast.error(readActionError(error, 'Failed to start interview'));
+          // Fallback: still open the meeting URL if available
+          if (meeting.meetingUrl) {
+            window.open(meeting.meetingUrl, '_blank', 'noopener,noreferrer');
+          }
+        },
+      },
+    );
+  }
+
+  function handleAcceptInterview(_applicationId: string, eventId: string) {
+    acceptInterview.mutate(
+      { eventId, data: { scheduledStartAt: undefined, durationMinutes: 30 } },
+      {
+        onSuccess: () => {
+          toast.success('Interview accepted');
+          void boardQuery.refetch();
+        },
+        onError: (error) => {
+          toast.error(readActionError(error, 'Failed to accept interview'));
+        },
+      },
+    );
+  }
+
+  function handleRejectInterview(_applicationId: string, eventId: string) {
+    rejectInterview.mutate(
+      { eventId },
+      {
+        onSuccess: () => {
+          toast.success('Interview rejected');
+          void boardQuery.refetch();
+        },
+        onError: (error) => {
+          toast.error(readActionError(error, 'Failed to reject interview'));
+        },
+      },
+    );
+  }
+
   const stages = boardQuery.data?.stages ?? [];
   const onlyAppliedSetup =
     resolvedViewMode === 'kanban' &&
@@ -837,6 +899,8 @@ export function AtsKanbanBoard({
         })
         .filter((application) => matchesApplicationSearch(application, stages[0].name, deferredGlobalSearch))
     : [];
+
+  const scheduleFormValid = selectedDate !== undefined && selectedHour !== '' && selectedMinute !== '';
 
   return (
     <>
@@ -899,12 +963,12 @@ export function AtsKanbanBoard({
           stages={stages}
           globalSearch={deferredGlobalSearch}
           isMoving={moveApplication.isPending}
-          onOpenCandidate={setSelectedApplicationId}
+          onOpenCandidate={handleOpenCandidate}
           onMoveSelected={moveSelectedApplications}
         />
       ) : onlyAppliedSetup ? (
         <DndContext sensors={sensors} collisionDetection={closestCorners}>
-          <div className="grid h-[calc(100dvh-140px)] min-w-0 grid-cols-[300px_minmax(0,1fr)] gap-5 overflow-hidden rounded-xl bg-canvas">
+          <div className="grid h-[calc(100dvh-124px)] min-w-0 grid-cols-[300px_minmax(0,1fr)] gap-5 overflow-hidden rounded-xl bg-canvas">
             <KanbanColumn
               stage={stages[0]}
               isFirst
@@ -912,7 +976,7 @@ export function AtsKanbanBoard({
               filteredApplications={setupApplications}
               previewApplication={null}
               isUpdating={false}
-              onOpenCandidate={setSelectedApplicationId}
+              onOpenCandidate={handleOpenCandidate}
               onAddAfter={setAddAfterStageId}
               onRename={setRenamingStage}
               onDelete={(item) => deleteStage.mutate(item.id)}
@@ -921,8 +985,11 @@ export function AtsKanbanBoard({
               onOpenStageWorkspace={openStageWorkspace}
               onOpenEvaluationWorkspace={openEvaluationWorkspace}
               onScheduleInterview={openScheduleInterview}
-              onStartInterview={startInterviewNow}
               onCompleteInterview={markInterviewCompleted}
+              onStartInterview={handleStartInterview}
+              onAcceptInterview={handleAcceptInterview}
+              onRejectInterview={handleRejectInterview}
+              currentMemberId={memberId}
             />
             <div className="flex min-h-0 items-center justify-center">
               <PipelineSetupCard
@@ -950,7 +1017,7 @@ export function AtsKanbanBoard({
         >
           <div
             ref={boardScrollRef}
-            className="flex h-[calc(100dvh-140px)] items-stretch overflow-x-auto overflow-y-hidden no-scrollbar"
+            className="flex h-[calc(100dvh-124px)] items-stretch overflow-x-auto overflow-y-hidden no-scrollbar"
             onScroll={(event) => {
               if (!activeApplication) return;
               const container = event.currentTarget;
@@ -999,7 +1066,7 @@ export function AtsKanbanBoard({
                   filteredApplications={visibleApplications}
                   previewApplication={previewApplication}
                   isUpdating={updateStage.isPending && updateStage.variables?.stageId === stage.id}
-                  onOpenCandidate={setSelectedApplicationId}
+                  onOpenCandidate={handleOpenCandidate}
                   onAddAfter={setAddAfterStageId}
                   onRename={setRenamingStage}
                   onDelete={(item) => deleteStage.mutate(item.id)}
@@ -1008,8 +1075,11 @@ export function AtsKanbanBoard({
                   onOpenStageWorkspace={openStageWorkspace}
                   onOpenEvaluationWorkspace={openEvaluationWorkspace}
                   onScheduleInterview={openScheduleInterview}
-                  onStartInterview={startInterviewNow}
                   onCompleteInterview={markInterviewCompleted}
+                  onStartInterview={handleStartInterview}
+                  onAcceptInterview={handleAcceptInterview}
+                  onRejectInterview={handleRejectInterview}
+                  currentMemberId={memberId}
                 />
               );
             })}
@@ -1077,10 +1147,12 @@ export function AtsKanbanBoard({
               <FileSpreadsheet className="size-5" />
             </div>
             <DialogTitle>
-              {pendingGoogleAction?.kind === 'create-interview' ? 'Connect Google Calendar' : 'Connect Google Sheets'}
+              {pendingGoogleAction?.kind === 'create-interview' || pendingGoogleAction?.kind === 'reschedule-interview'
+                ? 'Connect Google Calendar'
+                : 'Connect Google Sheets'}
             </DialogTitle>
             <DialogDescription>
-              {pendingGoogleAction?.kind === 'create-interview'
+              {pendingGoogleAction?.kind === 'create-interview' || pendingGoogleAction?.kind === 'reschedule-interview'
                 ? 'Interview meetings need Google Calendar access to create a Meet link and email the candidate.'
                 : 'Evaluation workspaces need Google Sheets access. After Google connects, this action will continue automatically.'}
             </DialogDescription>
@@ -1101,36 +1173,152 @@ export function AtsKanbanBoard({
         </DialogContent>
       </Dialog>
       <Dialog open={schedulingApplication !== null} onOpenChange={(open) => setSchedulingApplication(open ? schedulingApplication : null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Schedule interview</DialogTitle>
-            <DialogDescription>
-              Create a Google Meet event and email the candidate.
-            </DialogDescription>
+        <DialogContent className="w-[min(92vw,760px)] sm:max-w-[760px] gap-0 rounded bg-white p-0 shadow-2xl">
+          <DialogHeader className="px-8 pt-8 pb-6">
+            <DialogTitle>
+              {schedulingApplication?.interviewMeeting?.status === 'PENDING' ? 'Reschedule interview' : 'Schedule interview'}
+            </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4">
-            <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
-              Start time (IST)
-              <Input
-                type="datetime-local"
-                value={meetingStartLocal}
-                onChange={(event) => setMeetingStartLocal(event.target.value)}
-              />
-            </label>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setSchedulingApplication(null)}
-              disabled={createInterviewMeeting.isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="button" onClick={scheduleInterview} disabled={createInterviewMeeting.isPending || !meetingStartLocal}>
-              {createInterviewMeeting.isPending ? 'Scheduling' : 'Schedule'}
-            </Button>
-          </DialogFooter>
+
+          {(() => {
+            const stages = boardQuery.data?.stages ?? [];
+            const schedulingStage = schedulingApplication
+              ? stages.find((s) => s.id === schedulingApplication.pipelineStageId)
+              : undefined;
+            const dueDate = schedulingStage?.dueDate ? new Date(schedulingStage.dueDate) : undefined;
+
+            const now = new Date();
+            // 5-minute buffer: allow selecting up to 5 mins before current time
+            const adjustedNow = new Date(now.getTime() - 5 * 60 * 1000);
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const isSelectedToday =
+              selectedDate &&
+              selectedDate.getFullYear() === now.getFullYear() &&
+              selectedDate.getMonth() === now.getMonth() &&
+              selectedDate.getDate() === now.getDate();
+
+            const minTime = isSelectedToday
+              ? { hour: adjustedNow.getHours(), minute: adjustedNow.getMinutes() }
+              : undefined;
+
+            return (
+              <div className="grid gap-8 px-8 pb-8 md:grid-cols-2 md:items-start">
+                {/* Left: Date */}
+                <div className="grid min-w-0 content-start gap-3">
+                  <label className="text-sm font-medium text-neutral-700" id="schedule-date-label">
+                    Date
+                  </label>
+                  <Calendar
+                    className="w-fit p-0"
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDate(new Date(date.getFullYear(), date.getMonth(), date.getDate()));
+                      } else {
+                        setSelectedDate(undefined);
+                      }
+                    }}
+                    disabled={[
+                      { before: todayStart },
+                      ...(dueDate ? [{ after: dueDate } as const] : []),
+                    ]}
+                    aria-labelledby="schedule-date-label"
+                  />
+                  {dueDate ? (
+                    <p className="text-xs text-neutral-500">
+                      Available until{' '}
+                      {dueDate.toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        timeZone: 'Asia/Kolkata',
+                      })}
+                    </p>
+                  ) : null}
+                </div>
+
+                {/* Right: Time + Duration */}
+                <div className="grid min-w-0 content-start gap-8 md:pt-0.5">
+                  {/* Time */}
+                  <div className="grid gap-3">
+                    <label className="text-sm font-medium text-neutral-700" id="schedule-time-label">
+                      Time (IST)
+                    </label>
+                    <TimePicker
+                      hour={selectedHour}
+                      minute={selectedMinute}
+                      onHourChange={setSelectedHour}
+                      onMinuteChange={setSelectedMinute}
+                      minTime={minTime}
+                    />
+                    {isSelectedToday ? (
+                      <p className="min-h-4 text-xs leading-5 text-neutral-500">
+                        Times before{' '}
+                        {adjustedNow.toLocaleTimeString('en-IN', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                          timeZone: 'Asia/Kolkata',
+                        })}{' '}
+                        are unavailable
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {/* Duration (optional) */}
+                  <div className="grid gap-3">
+                    <label className="text-sm font-medium text-neutral-700" id="schedule-duration-label">
+                      Duration <span className="text-neutral-400 font-normal">(optional)</span>
+                    </label>
+                    <Select
+                      value={String(durationMinutes)}
+                      onValueChange={(value) => setDurationMinutes(Number(value))}
+                    >
+                      <SelectTrigger className="h-11 w-[140px] rounded-xl border-[#d8dce5] bg-white px-3 text-base shadow-none" aria-labelledby="schedule-duration-label">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-[#d8dce5]">
+                        <SelectItem value="15">15 min</SelectItem>
+                        <SelectItem value="30">30 min</SelectItem>
+                        <SelectItem value="45">45 min</SelectItem>
+                        <SelectItem value="60">1 hour</SelectItem>
+                        <SelectItem value="90">1.5 hours</SelectItem>
+                        <SelectItem value="120">2 hours</SelectItem>
+                        <SelectItem value="180">3 hours</SelectItem>
+                        <SelectItem value="240">4 hours</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {(() => {
+            const isReschedule = schedulingApplication?.interviewMeeting?.status === 'PENDING';
+            const isPending = createInterviewMeeting.isPending || updateInterviewMeeting.isPending;
+
+            return (
+              <DialogFooter className="border-t border-neutral-100 px-8 py-5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSchedulingApplication(null)}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={scheduleInterview}
+                  disabled={isPending || !scheduleFormValid}
+                >
+                  {isPending ? (isReschedule ? 'Rescheduling' : 'Scheduling') : isReschedule ? 'Reschedule' : 'Schedule'}
+                </Button>
+              </DialogFooter>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </>

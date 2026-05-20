@@ -156,6 +156,7 @@ export interface PipelineStageRecord {
   meetingEnabled: boolean;
   offerLetterEnabled: boolean;
   evaluationEnabled: boolean;
+  sheetEnabled?: boolean;
   evaluationType: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
   evaluationIncludeTotal: boolean;
   evaluationIncludeAnalysis: boolean;
@@ -174,6 +175,7 @@ export interface StageEvaluationCategory {
   stageId: string;
   name: string;
   type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
+  maxScore?: number | null;
   order: number;
 }
 
