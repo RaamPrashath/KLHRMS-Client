@@ -81,9 +81,9 @@ export function DepartmentTeamsDialog({
                     key={team.id}
                     onClick={() => setActiveTeamId(team.id)}
                     className={cn(
-                      'rounded-full border px-4 py-1.5 text-[13px] font-medium transition-colors',
+                      'rounded-lg border px-4 py-1.5 text-[13px] font-medium transition-colors',
                       activeTeam?.id === team.id
-                        ? 'border-[#1d1d1f] bg-[#1d1d1f] text-white'
+                        ? 'border-primary bg-primary text-white'
                         : 'border-[#e5e5ea] bg-white text-[#1d1d1f] hover:bg-[#f5f5f7]',
                     )}
                   >
@@ -219,8 +219,7 @@ export function DepartmentTeamsDialog({
                         </div>
                         <Button
                           onClick={() => void onAssignMember(activeTeam.id)}
-                          className="h-11 shrink-0 rounded-full px-5 text-[14px] font-medium text-white"
-                          style={{ backgroundColor: '#00874a' }}
+                          className="h-11 shrink-0 rounded-lg px-5 text-[14px] font-medium"
                         >
                           <UserPlus className="mr-2 size-4" />
                           Add
@@ -262,7 +261,7 @@ export function DepartmentTeamsDialog({
                                   </div>
                                 </TableCell>
                                 <TableCell className="px-4 py-3">
-                                  <Badge className="rounded-full bg-[#f5f5f7] px-3 py-1 text-[11px] font-medium text-[#1d1d1f]">
+                                  <Badge className="rounded-lg bg-[#f5f5f7] px-3 py-1 text-[11px] font-medium text-[#1d1d1f]">
                                     {project.status}
                                   </Badge>
                                 </TableCell>

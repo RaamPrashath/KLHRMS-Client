@@ -167,7 +167,7 @@ export async function updateEmployeeRoleAction(
 
     const { org, member } = await organizations.requireOrgMembership(session.user.id, slug);
     const permissions = member.role?.permissions as RolePermissions | null;
-    if (!permissions || getScope(permissions, 'employees', 'edit') === 'none') {
+    if (!permissions || getScope(permissions, 'permission', 'edit') === 'none') {
       return { success: false, error: 'You do not have permission to edit employee roles' };
     }
 

@@ -310,37 +310,35 @@ function LocationOptionCard({
   return (
     <label
       className={[
-        "relative flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all duration-200",
+        "relative flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all duration-200 w-full max-w-sm",
         disabled ? "cursor-not-allowed opacity-60" : "hover:border-neutral-300 hover:bg-neutral-50/70",
         isSelected
           ? "border-neutral-900 bg-neutral-50 text-foreground shadow-[0_16px_40px_rgba(15,23,42,0.08)]"
           : "border-border bg-white text-foreground",
       ].join(" ")}
     >
-      <RadioGroupItem value={value} className="mt-1 border-current text-current" disabled={disabled} />
-      <div className="min-w-0 space-y-2">
+      <RadioGroupItem value={value} className="border-current text-current" disabled={disabled} />
+      <div className="flex items-center gap-2">
+        <div
+          className={[
+            "flex size-8 shrink-0 items-center justify-center rounded-full",
+            isSelected ? `bg-neutral-100 ${accentClassName}` : `bg-neutral-100 ${accentClassName}`,
+          ].join(" ")}
+        >
+          <Icon className="size-4" />
+        </div>
         <div className="flex items-center gap-2">
-          <div
-            className={[
-              "flex size-8 shrink-0 items-center justify-center rounded-full",
-              isSelected ? `bg-neutral-100 ${accentClassName}` : `bg-neutral-100 ${accentClassName}`,
-            ].join(" ")}
-          >
-            <Icon className="size-4" />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold">{title}</span>
-            {isDetected ? (
-              <span
-                className={[
-                  "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]",
-                  "bg-emerald-100 text-emerald-700",
-                ].join(" ")}
-              >
-                Detected
-              </span>
-            ) : null}
-          </div>
+          <span className="text-sm font-semibold">{title}</span>
+          {isDetected ? (
+            <span
+              className={[
+                "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]",
+                "bg-emerald-100 text-emerald-700",
+              ].join(" ")}
+            >
+              Detected
+            </span>
+          ) : null}
         </div>
       </div>
     </label>
@@ -780,13 +778,13 @@ export function AttendanceClockCard({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Confirm clock-in location</DialogTitle>
+            <DialogTitle className="text-center">Confirm clock-in location</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5">
             <div
               className={[
-                "rounded-2xl border px-4 py-3 text-sm",
+                "rounded-2xl border px-4 py-3 text-sm text-center",
                 dialogStatus.tone === "success"
                   ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                   : dialogStatus.tone === "warning"
@@ -794,16 +792,16 @@ export function AttendanceClockCard({
                     : "border-border bg-muted/25 text-muted-foreground",
               ].join(" ")}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2">
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-2">
                   {dialogStatus.tone === "success" ? (
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+                    <CheckCircle2 className="size-4 shrink-0" />
                   ) : dialogStatus.tone === "warning" ? (
-                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                    <AlertCircle className="size-4 shrink-0" />
                   ) : (
                     <Loader2
                       className={[
-                        "mt-0.5 size-4 shrink-0",
+                        "size-4 shrink-0",
                         geoState.status === "loading" || isClockContextLoading ? "animate-spin" : "",
                       ].join(" ")}
                     />
@@ -827,7 +825,7 @@ export function AttendanceClockCard({
             <RadioGroup
               value={selectedLocation}
               onValueChange={(value) => setSelectedLocation(value as ClockChoice)}
-              className="grid gap-3 md:grid-cols-2"
+              className="flex flex-col items-center gap-3"
             >
               <LocationOptionCard
                 value="OFFICE"
@@ -885,7 +883,7 @@ export function AttendanceClockCard({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="sm:justify-center">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>

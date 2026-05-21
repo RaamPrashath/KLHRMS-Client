@@ -26,7 +26,7 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
   // ── Role editing state ──────────────────────────────────────────────────────
   const [editTarget, setEditTarget] = useState<{ memberId: string; currentRoleName: string | null } | null>(null);
 
-  const canEditRole = permissions ? getScope(permissions, 'employees', 'edit') !== 'none' : false;
+  const canEditRole = permissions ? getScope(permissions, 'permission', 'edit') !== 'none' : false;
 
   const handleEditRole = useCallback((targetMemberId: string, currentRoleName: string | null) => {
     setEditTarget({ memberId: targetMemberId, currentRoleName });

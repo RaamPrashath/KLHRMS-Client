@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -37,21 +37,6 @@ function isWeekend(dateStr: string): boolean {
 
 function isHoliday(dateStr: string, holidays: HolidayRecord[]): boolean {
   return holidays.some((h) => h.isHoliday && h.holidayDate.slice(0, 10) === dateStr);
-}
-
-function calculateWorkingDays(startDate: string, endDate: string, holidays: HolidayRecord[]): number {
-  const start = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate}T00:00:00`);
-  let count = 0;
-  const current = new Date(start);
-  while (current <= end) {
-    const dateStr = current.toISOString().slice(0, 10);
-    if (!isWeekend(dateStr) && !isHoliday(dateStr, holidays)) {
-      count++;
-    }
-    current.setDate(current.getDate() + 1);
-  }
-  return count;
 }
 
 function getExcludedInfo(startDate: string, endDate: string, holidays: HolidayRecord[]) {
@@ -92,8 +77,10 @@ export function ApplyLeaveSheet({
     },
   });
 
-  const startDate = form.watch('startDate');
-  const endDate = form.watch('endDate');
+  const startDate = useWatch({ control: form.control, name: 'startDate' });
+  const endDate = useWatch({ control: form.control, name: 'endDate' });
+  const selectedMemberId = useWatch({ control: form.control, name: 'memberId' });
+  const selectedLeaveTypeId = useWatch({ control: form.control, name: 'leaveTypeId' });
 
   const leaveInfo = useMemo(() => {
     if (!startDate || !endDate || endDate < startDate) return null;
@@ -146,7 +133,7 @@ export function ApplyLeaveSheet({
                   Member
                 </Label>
                 <Select
-                  value={form.watch('memberId')}
+                  value={selectedMemberId}
                   onValueChange={(value) => form.setValue('memberId', value, { shouldValidate: true })}
                 >
                   <SelectTrigger id="leave-member" className="h-10">
@@ -171,7 +158,7 @@ export function ApplyLeaveSheet({
                 Leave Type
               </Label>
               <Select
-                value={form.watch('leaveTypeId')}
+                value={selectedLeaveTypeId}
                 onValueChange={(value) => form.setValue('leaveTypeId', value, { shouldValidate: true })}
               >
                 <SelectTrigger id="leave-type" className="h-10">
