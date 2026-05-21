@@ -58,24 +58,23 @@ async function handleResponse<T>(res: Response): Promise<T> {
 export async function fetchJobRequisitionsAction(params: {
   orgSlug: string;
   memberId: string;
+  viewScope?: string;
 }): Promise<JobRequisitionRecord[]> {
   const { member } = await getCurrentOrgMember(params.orgSlug);
   const permissions = (member.role?.permissions as RolePermissions | null) ?? null;
   const jobsViewScope = getScope(permissions, 'jobs', 'view');
   const jobsApproveScope = getScope(permissions, 'jobs', 'approve');
 
-  const res = await fetch(`${getApiUrl()}/jobs/requisitions`, {
+  const queryParams = params.viewScope ? `?view_scope=${encodeURIComponent(params.viewScope)}` : '';
+  const res = await fetch(`${getApiUrl()}/jobs/requisitions${queryParams}`, {
     method: 'GET',
     headers: buildHeaders(params.orgSlug, member.id),
     cache: 'no-store',
   });
   const requisitions = await handleResponse<JobRequisitionRecord[]>(res);
 
-  if (jobsViewScope === 'organization' || jobsApproveScope === 'organization') {
+  if (params.viewScope || jobsViewScope === 'organization' || jobsApproveScope === 'organization') {
     return requisitions;
-  }
-  if (jobsViewScope === 'self') {
-    return requisitions.filter((requisition) => requisition.raisedById === member.id);
   }
   if (jobsViewScope === 'team' || jobsViewScope === 'department') {
     return requisitions;

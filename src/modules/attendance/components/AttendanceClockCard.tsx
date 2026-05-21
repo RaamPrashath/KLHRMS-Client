@@ -310,7 +310,7 @@ function LocationOptionCard({
   return (
     <label
       className={[
-        "relative flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all duration-200 w-full max-w-sm",
+        "relative flex w-full cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all duration-200",
         disabled ? "cursor-not-allowed opacity-60" : "hover:border-neutral-300 hover:bg-neutral-50/70",
         isSelected
           ? "border-neutral-900 bg-neutral-50 text-foreground shadow-[0_16px_40px_rgba(15,23,42,0.08)]"
@@ -792,8 +792,8 @@ export function AttendanceClockCard({
                     : "border-border bg-muted/25 text-muted-foreground",
               ].join(" ")}
             >
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2 text-left">
                   {dialogStatus.tone === "success" ? (
                     <CheckCircle2 className="size-4 shrink-0" />
                   ) : dialogStatus.tone === "warning" ? (
@@ -806,7 +806,7 @@ export function AttendanceClockCard({
                       ].join(" ")}
                     />
                   )}
-                  <p className="font-medium">{dialogStatus.message}</p>
+                  <p className="min-w-0 font-medium">{dialogStatus.message}</p>
                 </div>
                 <Button
                   type="button"
@@ -825,7 +825,7 @@ export function AttendanceClockCard({
             <RadioGroup
               value={selectedLocation}
               onValueChange={(value) => setSelectedLocation(value as ClockChoice)}
-              className="flex flex-col items-center gap-3"
+              className="grid grid-cols-2 gap-3"
             >
               <LocationOptionCard
                 value="OFFICE"

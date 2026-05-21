@@ -93,8 +93,12 @@ function isScheduledToday(interview: MyInterview): boolean {
   return nowParts === interviewParts;
 }
 
+function normalizeInterviewStatus(status: string): string {
+  return status.trim().toUpperCase().replace(/[\s-]+/g, '_');
+}
+
 function statusMeta(status: string): { label: string; className: string } {
-  switch (status) {
+  switch (normalizeInterviewStatus(status)) {
     case 'PENDING':
     case 'PENDING_ACCEPTANCE':
       return { label: 'Pending acceptance', className: 'bg-warning-bg text-warning-text border-warning-border' };
@@ -120,7 +124,7 @@ function StatusBadge({ status }: { readonly status: string }) {
   const meta = statusMeta(status);
   return (
     <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-xs font-medium', meta.className)}>
-      {status === 'ONGOING' ? (
+      {normalizeInterviewStatus(status) === 'ONGOING' ? (
         <span className="mr-0.5 size-1.5 rounded-full bg-warning-text" />
       ) : null}
       {meta.label}
@@ -293,10 +297,17 @@ function InterviewActionsCell({
   readonly isRejecting: boolean;
   readonly isStarting: boolean;
 }) {
-  if (interview.isBackup) return null;
+  const status = normalizeInterviewStatus(interview.status);
+  if (interview.isBackup) {
+    return (
+      <span className="block text-right text-xs text-neutral-400">
+        No action
+      </span>
+    );
+  }
   const canJoinToday = isScheduledToday(interview);
 
-  if (interview.status === 'PENDING' || interview.status === 'PENDING_ACCEPTANCE') {
+  if (status === 'PENDING' || status === 'PENDING_ACCEPTANCE') {
     return (
       <div className="flex items-center justify-end gap-2">
         <Button size="sm" variant="default" disabled={isAccepting} onClick={() => onAccept(interview)}>
@@ -317,18 +328,18 @@ function InterviewActionsCell({
     );
   }
 
-  if (interview.status === 'ACCEPTED' || interview.status === 'COMPLETED') {
+  if (status === 'ACCEPTED' || status === 'COMPLETED') {
     return (
       <div className="flex justify-end">
         <Button size="sm" variant="outline" onClick={() => onSchedule(interview)}>
           <CalendarDays className="size-4" />
-          {interview.status === 'COMPLETED' ? 'Schedule again' : 'Schedule'}
+          {status === 'COMPLETED' ? 'Schedule again' : 'Schedule'}
         </Button>
       </div>
     );
   }
 
-  if (interview.status === 'SCHEDULED') {
+  if (status === 'SCHEDULED') {
     return (
       <div className="flex items-center justify-end gap-2">
         <Button size="sm" variant="outline" onClick={() => onSchedule(interview)}>
@@ -361,7 +372,7 @@ function InterviewActionsCell({
     );
   }
 
-  if (interview.status === 'ONGOING') {
+  if (status === 'ONGOING') {
     return (
       <div className="flex justify-end">
         <Button size="sm" variant="default" onClick={() => onComplete(interview)}>
@@ -372,7 +383,7 @@ function InterviewActionsCell({
     );
   }
 
-  if (interview.status === 'REJECTED') {
+  if (status === 'REJECTED') {
     return (
       <span className="block text-right text-xs text-neutral-400">
         No action
@@ -639,7 +650,7 @@ export function InterviewsPageShell({
                     </div>
 
                     <div className="min-w-0">
-                      <StatusBadge status={interview.status} />
+                      <StatusBadge status={interview.isBackup ? 'REJECTED' : interview.status} />
                     </div>
 
                     <div className="min-w-0">
@@ -692,7 +703,8 @@ export function InterviewsPageShell({
         }}
         onSubmit={async (payload) => {
           if (!schedulingInterview) return;
-          const isReschedule = schedulingInterview.status === 'SCHEDULED' || schedulingInterview.status === 'ONGOING';
+          const schedulingStatus = normalizeInterviewStatus(schedulingInterview.status);
+          const isReschedule = schedulingStatus === 'SCHEDULED' || schedulingStatus === 'ONGOING';
           try {
             if (isReschedule) {
               await updateMeeting.mutateAsync({
@@ -706,7 +718,7 @@ export function InterviewsPageShell({
                 eventId: schedulingInterview.eventId,
                 data: payload,
               });
-              toast.success(schedulingInterview.status === 'COMPLETED' ? 'Interview scheduled again' : 'Interview scheduled');
+              toast.success(schedulingStatus === 'COMPLETED' ? 'Interview scheduled again' : 'Interview scheduled');
             }
             setSchedulingInterview(null);
           } catch {

@@ -80,15 +80,6 @@ const columns: ColumnDef<ProjectSummary>[] = [
     ),
   },
   {
-    id: 'hours',
-    header: 'Allocated',
-    cell: ({ row }) => (
-      <span className="text-sm font-medium text-neutral-900">
-        {row.original.allocatedHours}h
-      </span>
-    ),
-  },
-  {
     id: 'status',
     header: 'Status',
     cell: ({ row }) => (
@@ -157,10 +148,6 @@ function TableBody({ isLoading, rows, pageSize, onRowClick }: Readonly<TableBody
               {flexRender(row.getVisibleCells()[4].column.columnDef.cell, row.getVisibleCells()[4].getContext())}
             </div>
 
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[5].column.columnDef.cell, row.getVisibleCells()[5].getContext())}
-            </div>
-
             <div className="w-10 shrink-0 flex justify-end">
               <Button variant="ghost" className="h-9 px-3 text-neutral-700 hover:bg-black/5 rounded-xl">
                 <ChevronRight className="size-4 opacity-50" />
@@ -216,7 +203,6 @@ export function ProjectsTable({
             <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Client</div>
             <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Team</div>
             <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">People</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Allocated</div>
             <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</div>
             <div className="w-10 shrink-0" />
           </div>

@@ -293,7 +293,7 @@ export function AtsJobOverviewDashboard({
         <OverviewCard label="Offer Rejected" value={dashboard.rejected} helper="Candidates closed as rejected" icon={XCircle} />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+      <div className="grid gap-5 grid-cols-2">
         <Panel title="Upcoming Interviews" eyebrow="Next scheduled">
           {dashboard.upcomingInterviews.length === 0 ? (
             <EmptyPanelMessage>No upcoming interviews scheduled for this job.</EmptyPanelMessage>

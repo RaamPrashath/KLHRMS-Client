@@ -230,28 +230,26 @@ export function ProjectPageShell({
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="w-[92vw]! sm:w-[78vw]! lg:w-[44vw]! xl:w-[40vw]! max-w-none! max-h-[82vh] overflow-hidden rounded-[18px] border border-[#e5e5ea] bg-white p-0 shadow-2xl">
           <div className="flex max-h-[82vh] flex-col">
-            <DialogHeader className="shrink-0 border-b border-[#e5e5ea] px-6 py-4">
+            <DialogHeader className="shrink-0 px-6 py-4">
               <DialogTitle className="text-[22px] font-semibold tracking-[-0.01em] text-[#1d1d1f]">
                 {editingProjectId ? 'Edit project' : 'Create project'}
               </DialogTitle>
-              <DialogDescription className="text-[13px] leading-5 text-[#6e6e73]">
-                Add the key project details, then open it for staffing and delivery tracking.
-              </DialogDescription>
+
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto px-6 py-4">
               <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="project-name">Project name</Label>
-                  <Input
-                    id="project-name"
-                    value={projectForm.name}
-                    onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                    className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
-                  />
-                </div>
-
                 <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="project-name">Project name</Label>
+                    <Input
+                      id="project-name"
+                      value={projectForm.name}
+                      onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                    />
+                  </div>
+
                   <div className="grid gap-2">
                     <Label htmlFor="project-client">Client</Label>
                     <Input
@@ -261,7 +259,9 @@ export function ProjectPageShell({
                       className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
                     />
                   </div>
+                </div>
 
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Team</Label>
                     <Select
@@ -270,7 +270,7 @@ export function ProjectPageShell({
                         setProjectForm({ ...projectForm, teamId: value === 'none' ? '' : value })
                       }
                     >
-                      <SelectTrigger className="h-10 rounded-lg border-[#e5e5ea] shadow-none">
+                      <SelectTrigger className="h-10 w-full rounded-lg border-[#e5e5ea] shadow-none">
                         <SelectValue placeholder="Select team" />
                       </SelectTrigger>
                       <SelectContent>
@@ -283,9 +283,7 @@ export function ProjectPageShell({
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Status</Label>
                     <Select
@@ -294,7 +292,7 @@ export function ProjectPageShell({
                         setProjectForm({ ...projectForm, status: value as ProjectStatus })
                       }
                     >
-                      <SelectTrigger className="h-10 rounded-lg border-[#e5e5ea] shadow-none">
+                      <SelectTrigger className="h-10 w-full rounded-lg border-[#e5e5ea] shadow-none">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -317,7 +315,12 @@ export function ProjectPageShell({
                   />
                 </div>
 
-                <label className="flex items-center gap-3 rounded-lg border border-[#e5e5ea] px-4 py-2.5 text-[14px] text-[#1d1d1f]">
+              </div>
+            </div>
+
+            <DialogFooter className="shrink-0 px-6 py-3">
+              <div className="flex w-full items-center justify-between">
+                <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[#1d1d1f]">
                   <input
                     type="checkbox"
                     checked={projectForm.billable}
@@ -326,30 +329,30 @@ export function ProjectPageShell({
                   />
                   Billable project
                 </label>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setFormOpen(false)}
+                    className="h-10 rounded-xl px-5"
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    onClick={() => void handleSaveProject()}
+                    disabled={mutations.createProject.isPending || mutations.updateProject.isPending}
+                    style={{ backgroundColor: '#00874a' }}
+                    className="h-10 rounded-xl px-6 text-white"
+                  >
+                    {mutations.createProject.isPending || mutations.updateProject.isPending
+                      ? 'Saving…'
+                      : editingProjectId
+                        ? 'Save changes'
+                        : 'Create Project'}
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            <DialogFooter className="shrink-0 border-t border-[#e5e5ea] px-6 py-3">
-              <Button
-                variant="ghost"
-                onClick={() => setFormOpen(false)}
-                className="h-10 rounded-full px-5"
-              >
-                Cancel
-              </Button>
-
-              <Button
-                onClick={() => void handleSaveProject()}
-                disabled={mutations.createProject.isPending || mutations.updateProject.isPending}
-                style={{ backgroundColor: '#00874a' }}
-                className="h-10 rounded-full px-6 text-white"
-              >
-                {mutations.createProject.isPending || mutations.updateProject.isPending
-                  ? 'Saving…'
-                  : editingProjectId
-                    ? 'Save changes'
-                    : 'Create Project'}
-              </Button>
             </DialogFooter>
           </div>
         </DialogContent>
