@@ -31,6 +31,21 @@ export type AssetMaintenanceStatus =
   | 'COMPLETED'
   | 'CANCELLED';
 
+export type TicketMode = 'ASSET_ISSUE' | 'GENERAL_HELP_REQUEST';
+
+export type HelpdeskCategory =
+  | 'HR_QUERIES'
+  | 'IT_SUPPORT'
+  | 'FINANCE'
+  | 'GENERAL';
+
+export interface TicketAttachmentMetadata {
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number | null;
+  contentType?: string | null;
+}
+
 export type AssetReportType =
   | 'ALL_ASSETS'
   | 'AVAILABLE_ASSETS'
@@ -182,7 +197,13 @@ export interface AssetProvideRecordSummary {
 
 export interface AssetMaintenanceSummary {
   id: string;
+  ticketId: string;
+  ticketMode: TicketMode;
+  assetId: string | null;
   assetUnitId: string | null;
+  category: string | null;
+  subject: string | null;
+  attachmentsMetadata: TicketAttachmentMetadata[];
   maintenanceType: AssetMaintenanceType;
   issueDescription: string;
   serviceDate: string;
@@ -225,6 +246,7 @@ export interface AssetMetaResponse {
   conditions: AssetCondition[];
   maintenanceTypes: AssetMaintenanceType[];
   maintenanceStatuses: AssetMaintenanceStatus[];
+  ticketModes: TicketMode[];
   reportTypes: AssetReportType[];
 }
 

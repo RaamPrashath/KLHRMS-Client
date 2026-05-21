@@ -36,7 +36,7 @@ import type {
   AssetDetail,
 } from '@/modules/assets/types/assetTypes';
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 9;
 
 const STATUS_DOT: Record<string, string> = {
   AVAILABLE: 'bg-[#22c55e]',

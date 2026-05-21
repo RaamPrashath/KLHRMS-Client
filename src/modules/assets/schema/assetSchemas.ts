@@ -41,6 +41,18 @@ export const assetMaintenanceStatusOptions = [
   'CANCELLED',
 ] as const;
 
+export const ticketModeOptions = [
+  'ASSET_ISSUE',
+  'GENERAL_HELP_REQUEST',
+] as const;
+
+export const helpdeskCategoryOptions = [
+  'HR_QUERIES',
+  'IT_SUPPORT',
+  'FINANCE',
+  'GENERAL',
+] as const;
+
 export const assetReportTypeOptions = [
   'ALL_ASSETS',
   'AVAILABLE_ASSETS',
@@ -143,6 +155,44 @@ export const assetMaintenanceCreateSchema = z.object({
   notes: z.string().optional().or(z.literal('')),
 });
 
+export const ticketAttachmentMetadataSchema = z.object({
+  fileName: z.string().trim().min(1, 'File name is required'),
+  fileUrl: z.string().url('Attachment URL is invalid'),
+  fileSize: z.number().nullable().optional(),
+  contentType: z.string().nullable().optional(),
+});
+
+export const helpdeskTicketCreateSchema = z
+  .object({
+    ticketMode: z.enum(ticketModeOptions),
+    assetId: z.string().optional().nullable(),
+    assetUnitId: z.string().optional().nullable(),
+    category: z.enum(helpdeskCategoryOptions).optional().nullable(),
+    subject: z.string().trim().min(1, 'Subject is required').max(160, 'Subject is too long'),
+    issueDescription: z.string().trim().min(1, 'Description is required'),
+    attachmentsMetadata: z.array(ticketAttachmentMetadataSchema).optional().default([]),
+    maintenanceType: z.enum(assetMaintenanceTypeOptions).default('REPAIR'),
+    serviceDate: z.string().optional().or(z.literal('')),
+    conditionBeforeMaintenance: z.enum(assetConditionOptions).optional().nullable(),
+    notes: z.string().optional().or(z.literal('')),
+  })
+  .superRefine((data, ctx) => {
+    if (data.ticketMode === 'ASSET_ISSUE' && !data.assetId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['assetId'],
+        message: 'Asset is required for asset issues',
+      });
+    }
+    if (data.ticketMode === 'GENERAL_HELP_REQUEST' && !data.category) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['category'],
+        message: 'Category is required',
+      });
+    }
+  });
+
 export const assetMaintenanceUpdateSchema = z
   .object({
     maintenanceId: z.string().min(1, 'Maintenance record is required'),
@@ -202,6 +252,7 @@ export type AssetIssueInput = z.infer<typeof assetIssueSchema>;
 export type AssetReturnInput = z.infer<typeof assetReturnSchema>;
 export type AssetMaintenanceCreateInput = z.infer<typeof assetMaintenanceCreateSchema>;
 export type AssetMaintenanceUpdateInput = z.infer<typeof assetMaintenanceUpdateSchema>;
+export type HelpdeskTicketCreateInput = z.infer<typeof helpdeskTicketCreateSchema>;
 export type AssetCategoryCreateInput = z.infer<typeof assetCategoryCreateSchema>;
 export type AssetCategoryFieldCreateInput = z.infer<typeof assetCategoryFieldCreateSchema>;
 export type AssetCategoryFieldUpdateInput = z.infer<typeof assetCategoryFieldUpdateSchema>;

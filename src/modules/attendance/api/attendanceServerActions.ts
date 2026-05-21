@@ -4,6 +4,7 @@ import { getServerSession } from '@/lib/server-session';
 import { prisma } from '@/lib/prisma';
 import type { PlanLocationValue } from '@/types/weekly_plan';
 import type {
+  ApiError,
   AttendanceClockContext,
   AttendanceRecord,
   AttendanceListResponse,
@@ -63,6 +64,36 @@ async function handleResponse<T>(res: Response): Promise<T> {
   // Throw a real Error so Next.js server actions can serialize it to the client.
   // Encode status + message as JSON in the Error.message so the client can parse it.
   throw new Error(JSON.stringify({ status: res.status, message }));
+}
+
+export type AttendanceActionResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: ApiError };
+
+async function handleActionResponse<T>(res: Response): Promise<AttendanceActionResult<T>> {
+  try {
+    const data = await handleResponse<T>(res);
+    return { ok: true, data };
+  } catch (error) {
+    return { ok: false, error: parseApiError(error) };
+  }
+}
+
+function parseApiError(error: unknown): ApiError {
+  if (error instanceof Error) {
+    try {
+      const parsed = JSON.parse(error.message) as Partial<ApiError>;
+      if (typeof parsed.message === 'string') {
+        return {
+          status: typeof parsed.status === 'number' ? parsed.status : 500,
+          message: parsed.message,
+        };
+      }
+    } catch {
+      return { status: 500, message: error.message };
+    }
+  }
+  return { status: 500, message: 'Request failed' };
 }
 
 function buildQuery(params: Record<string, string | number | undefined | null>): string {
@@ -151,29 +182,41 @@ export async function clockInAction(params: {
   orgSlug: string;
   memberId: string;
   data: ClockInInput;
-}): Promise<AttendanceRecord> {
+}): Promise<AttendanceActionResult<AttendanceRecord>> {
   const { orgSlug, memberId, data } = params;
   const parsed = clockInSchema.safeParse(data);
   if (!parsed.success) {
-    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+    return {
+      ok: false,
+      error: {
+        status: 400,
+        message: parsed.error.issues[0]?.message ?? 'Validation failed',
+      },
+    };
   }
   const res = await fetch(`${getApiUrl()}/attendance/clock-in`, {
     method: 'POST',
     headers: buildHeaders(orgSlug, memberId),
     body: JSON.stringify(parsed.data),
   });
-  return handleResponse<AttendanceRecord>(res);
+  return handleActionResponse<AttendanceRecord>(res);
 }
 
 export async function clockOutAction(params: {
   orgSlug: string;
   memberId: string;
   data: ClockOutInput;
-}): Promise<AttendanceRecord[]> {
+}): Promise<AttendanceActionResult<AttendanceRecord[]>> {
   const { orgSlug, memberId, data } = params;
   const parsed = clockOutSchema.safeParse(data);
   if (!parsed.success) {
-    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+    return {
+      ok: false,
+      error: {
+        status: 400,
+        message: parsed.error.issues[0]?.message ?? 'Validation failed',
+      },
+    };
   }
   const res = await fetch(`${getApiUrl()}/attendance/clock-out`, {
     method: 'POST',
@@ -181,7 +224,7 @@ export async function clockOutAction(params: {
     body: JSON.stringify(parsed.data),
   });
   // Always returns an array — backend may split midnight sessions
-  return handleResponse<AttendanceRecord[]>(res);
+  return handleActionResponse<AttendanceRecord[]>(res);
 }
 
 export async function manualAttendanceAction(params: {

@@ -9,11 +9,14 @@ export function useApproveLeaveRequest(orgSlug: string, memberId: string) {
   return useMutation({
     mutationFn: ({ leaveRequestId, data }: { leaveRequestId: string; data: LeaveDecisionInput }) =>
       approveLeaveRequestAction({ orgSlug, memberId, leaveRequestId, data }),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['leave-requests', orgSlug] });
-      queryClient.invalidateQueries({ queryKey: ['leave-request', orgSlug, variables.leaveRequestId] });
-      queryClient.invalidateQueries({ queryKey: ['leave-balances', orgSlug] });
-      queryClient.invalidateQueries({ queryKey: ['leave-calendar', orgSlug] });
+    onSuccess: async (_, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leave-requests', orgSlug] }),
+        queryClient.invalidateQueries({ queryKey: ['leave-request', orgSlug, variables.leaveRequestId] }),
+        queryClient.invalidateQueries({ queryKey: ['leave-balances', orgSlug] }),
+        queryClient.invalidateQueries({ queryKey: ['leave-calendar', orgSlug] }),
+      ]);
+      await queryClient.refetchQueries({ queryKey: ['leave-balances', orgSlug], type: 'active' });
     },
   });
 }

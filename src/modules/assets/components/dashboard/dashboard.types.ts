@@ -19,6 +19,7 @@ export interface RecentActivityItem {
 
 export interface TicketAlertItem {
   id: string;
+  ticketId: string;
   assetName: string;
   maintenanceType: string;
   status: string;

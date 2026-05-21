@@ -200,6 +200,7 @@ function workspaceCandidateToApplication(
     appliedDate: candidate.appliedAt,
     lastMovedAt: null,
     status: candidate.currentAssignment?.status ?? 'UNASSIGNED',
+    currentAssignment: candidate.currentAssignment ?? null,
     resumeUrl: candidate.candidate.resumeUrl,
     interviewMeeting: assignmentToMeeting(candidate),
   };
@@ -1353,7 +1354,7 @@ export function StageWorkspacePageShell({
                   </motion.div>
                 ) : null}
 
-                <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-surface shadow-[var(--shadow-2)]">
+                <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-surface shadow-(--shadow-2)">
                   <div className="flex flex-col gap-4 border-b border-neutral-100 bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h2 className="text-lg font-semibold text-neutral-900">Direct Assignment</h2>

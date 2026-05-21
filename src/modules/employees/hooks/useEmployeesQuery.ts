@@ -1,7 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  deactivateEmployeeAction,
   fetchEmployeesAction,
   fetchEmployeeRolesAction,
 } from '@/modules/employees/api/employeeServerActions';
@@ -30,5 +31,17 @@ export function useEmployeeRolesQuery(orgSlug: string, memberId: string) {
     queryFn: () => fetchEmployeeRolesAction({ orgSlug, memberId }),
     enabled: !!orgSlug && !!memberId,
     staleTime: 60_000,
+  });
+}
+
+export function useDeactivateEmployeeMutation(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (targetMemberId: string) =>
+      deactivateEmployeeAction({ orgSlug, memberId, targetMemberId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['employees', orgSlug] });
+    },
   });
 }

@@ -22,28 +22,28 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        'flex h-full min-h-0 flex-col rounded-xl border border-border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.06)]',
-        isCollapsed ? 'w-12 flex-none' : 'min-w-0 flex-1 basis-0',
+        'flex h-full min-h-0 flex-col border-r border-[#e8ebf0] bg-[#fbfbfc] last:border-r-0',
+        isCollapsed ? 'w-14 flex-none' : 'min-w-0 flex-1 basis-0',
       )}
     >
       <div
         className={cn(
-          'flex items-center gap-2 rounded-t-xl border-b border-border px-3 py-2.5 cursor-pointer select-none',
+          'flex h-[58px] cursor-pointer select-none items-center gap-2 border-b border-[#edf0f4] px-5',
           column.bg,
         )}
         onClick={onToggleCollapse}
       >
-        <span className={cn('size-2 rounded-full', column.dot)} />
+        <span className={cn('size-2.5 rounded-full', column.dot)} />
         {!isCollapsed && (
           <>
-            <span className={cn('text-[12px] font-semibold', column.text)}>{column.title}</span>
-            <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-white/70 text-[10px] font-medium text-muted-foreground">
+            <span className={cn('text-[14px] font-semibold uppercase tracking-[0.01em]', column.text)}>{column.title}</span>
+            <span className="ml-auto flex h-7 min-w-8 items-center justify-center rounded-full bg-[#f1f3f7] px-2.5 text-[12px] font-semibold text-[#475569]">
               {issues.length}
             </span>
           </>
         )}
         {isCollapsed && (
-          <span className="flex size-5 items-center justify-center rounded-full bg-white/70 text-[10px] font-medium text-muted-foreground">
+          <span className="flex size-7 items-center justify-center rounded-full bg-[#f1f3f7] text-[11px] font-semibold text-[#475569]">
             {issues.length}
           </span>
         )}
@@ -53,13 +53,13 @@ export function KanbanColumn({
         <div
           ref={setNodeRef}
           className={cn(
-            'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2',
-            isOver && 'ring-2 ring-primary/30 rounded-b-xl',
+            'flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4',
+            isOver && 'bg-[#f5f9ff] ring-2 ring-inset ring-primary/20',
           )}
         >
           {issues.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border py-8 text-center">
-              <p className="text-[12px] text-muted-foreground">No issues</p>
+            <div className="flex flex-1 items-start justify-center pt-16 text-center">
+              <p className="text-[14px] font-semibold text-[#c8ced8]">No requests</p>
             </div>
           ) : (
             <SortableContext items={issues.map((i) => i.id)} strategy={verticalListSortingStrategy}>

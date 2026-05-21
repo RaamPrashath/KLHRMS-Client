@@ -6,6 +6,7 @@ import {
   createAssetAction,
   createAssetCategoryAction,
   createAssetCategoryFieldAction,
+  createHelpdeskTicketAction,
   createAssetMaintenanceAction,
   deleteAssetAction,
   deleteAssetCategoryAction,
@@ -26,6 +27,8 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     await queryClient.invalidateQueries({ queryKey: ['assets-meta', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['asset-categories', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['asset-available-groups', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['my-tickets', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['maintenance-tickets', orgSlug] });
     if (assetId) {
       await queryClient.invalidateQueries({ queryKey: ['asset', orgSlug, assetId] });
     }
@@ -66,15 +69,20 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
         createAssetMaintenanceAction({ orgSlug, memberId, data }),
       onSuccess: async (asset) => invalidateAll(asset.id),
     }),
+    createHelpdeskTicket: useMutation({
+      mutationFn: (data: Parameters<typeof createHelpdeskTicketAction>[0]['data']) =>
+        createHelpdeskTicketAction({ orgSlug, memberId, data }),
+      onSuccess: async (ticket) => invalidateAll(ticket.assetId ?? undefined),
+    }),
     updateMaintenance: useMutation({
       mutationFn: ({
         assetId,
         data,
       }: {
-        assetId: string;
+        assetId?: string | null;
         data: Parameters<typeof updateAssetMaintenanceAction>[0]['data'];
       }) => updateAssetMaintenanceAction({ orgSlug, memberId, assetId, data }),
-      onSuccess: async (asset) => invalidateAll(asset.id),
+      onSuccess: async (_asset, variables) => invalidateAll(variables.assetId ?? undefined),
     }),
     createCategory: useMutation({
       mutationFn: (data: { name: string; description?: string; assetCode?: string | null }) =>

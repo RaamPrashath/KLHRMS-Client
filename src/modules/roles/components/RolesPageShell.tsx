@@ -8,6 +8,14 @@ import { type RoleResponse } from '@/modules/roles/types/role';
 import { DeleteRoleDialog } from '@/modules/roles/components/DeleteRoleDialog';
 import { RolesSlideOver } from '@/modules/roles/components/RolesSlideOver';
 import { RolesTable } from '@/modules/roles/components/RolesTable';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from '@/components/ui/table';
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -21,20 +29,46 @@ function RolesTableSkeleton() {
         <div className="flex-1 h-9 rounded-md bg-neutral-100 animate-pulse" />
         <div className="h-9 w-28 rounded-md bg-neutral-100 animate-pulse shrink-0" />
       </div>
-      {/* Header */}
-      <div className="border-b border-black/4 bg-canvas px-6 py-3 grid grid-cols-[1fr_1fr_120px] gap-4">
-        {['Role Name', 'Members', ''].map((h) => (
-          <div key={h} className="h-3 w-20 rounded bg-neutral-200 animate-pulse" />
-        ))}
-      </div>
-      {/* Rows */}
-      <div className="divide-y divide-black/4 bg-white">
-        {SKELETON_IDS.map((id) => (
-          <div key={id} className="px-6 py-4">
-            <div className="h-9 w-full rounded-xl bg-neutral-100 animate-pulse" />
-          </div>
-        ))}
-      </div>
+      
+      {/* Table skeleton using shadcn table */}
+      <Table className="table-fixed min-w-[500px]">
+        <colgroup>
+          <col style={{ width: '35%' }} />
+          <col style={{ width: '45%' }} />
+          <col style={{ width: '20%' }} />
+        </colgroup>
+        <TableHeader className="bg-canvas border-b border-black/4">
+          <TableRow className="border-b-0 hover:bg-transparent">
+            <TableHead className="h-12 px-6 text-left">
+              <div className="h-3.5 w-20 rounded bg-neutral-200 animate-pulse" />
+            </TableHead>
+            <TableHead className="h-12 px-6 text-left">
+              <div className="h-3.5 w-16 rounded bg-neutral-200 animate-pulse" />
+            </TableHead>
+            <TableHead className="h-12 px-6 text-right">
+              {/* empty spacer */}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="bg-white">
+          {SKELETON_IDS.map((id) => (
+            <TableRow key={id} className="border-b border-black/4">
+              <TableCell className="px-6 py-4.5">
+                <div className="h-4.5 w-32 rounded-md bg-neutral-100 animate-pulse" />
+              </TableCell>
+              <TableCell className="px-6 py-4.5">
+                <div className="flex items-center gap-2">
+                  <div className="size-7 rounded-full bg-neutral-100 animate-pulse" />
+                  <div className="h-4 w-24 rounded-md bg-neutral-100 animate-pulse" />
+                </div>
+              </TableCell>
+              <TableCell className="px-6 py-4.5 text-right">
+                <div className="inline-block h-8 w-24 rounded-full bg-neutral-100 animate-pulse" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

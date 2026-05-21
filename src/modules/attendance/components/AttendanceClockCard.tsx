@@ -285,7 +285,7 @@ function getDialogStatusMessage(args: {
   if (!planMatchesSelection) {
     return {
       tone: "warning",
-      message: "Your detected location does not match today's weekly plan.",
+      message: "Your detected location differs from today's weekly plan. Clock-in will use your detected location.",
     };
   }
 
@@ -378,7 +378,11 @@ export function AttendanceClockCard({
   });
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { data: todayData, isLoading } = useAttendanceTodayQuery(orgSlug, memberId, todayIso);
+  const {
+    data: todayData,
+    isLoading,
+    refetch: refetchTodayAttendance,
+  } = useAttendanceTodayQuery(orgSlug, memberId, todayIso);
   const { data: profile } = useMemberProfileQuery(memberId);
   const { data: clockContext, isLoading: isClockContextLoading } =
     useAttendanceClockContextQuery(orgSlug, memberId, todayIso);
@@ -402,7 +406,6 @@ export function AttendanceClockCard({
     geoState.status === "ready" &&
     !!clockContext?.office &&
     locationMatchesSelection &&
-    planMatchesSelection &&
     !!selectedProjectId &&
     !!selectedTaskId &&
     !clockInMutation.isPending;
@@ -564,11 +567,17 @@ export function AttendanceClockCard({
         description: clockInDescription.trim() || undefined,
       })
       .then((record) => {
+        if (!record?.clockIn) {
+          setInlineError("Clock-in was saved, but the active session could not be loaded. Refreshing attendance...");
+          void refetchTodayAttendance();
+          return;
+        }
         setWidgetState("CLOCKED_IN");
         setActiveClockIn(record.clockIn);
         setCompletedRecord(null);
         setElapsedDisplay("00:00:00");
         setIsDialogOpen(false);
+        void refetchTodayAttendance();
       })
       .catch((error: unknown) => {
         setInlineError(parseErrorMessage(error, "Clock-in failed."));
@@ -584,6 +593,7 @@ export function AttendanceClockCard({
         setWidgetState("COMPLETED");
         setActiveClockIn(null);
         setCompletedRecord(record);
+        void refetchTodayAttendance();
       })
       .catch((error: unknown) => {
         const message = parseErrorMessage(error, "Clock-out failed.");
@@ -591,6 +601,8 @@ export function AttendanceClockCard({
         if (message.includes("No active clock-in session found")) {
           setWidgetState("NOT_CLOCKED_IN");
           setActiveClockIn(null);
+          setCompletedRecord(null);
+          void refetchTodayAttendance();
         }
       });
   }
