@@ -2,7 +2,7 @@
 
 import { memo, startTransition, useEffect, useMemo, useState } from "react";
 import { format, isToday, parseISO } from "date-fns";
-import { CalendarRange, CheckCircle2, Eraser, Save, Sparkles } from "lucide-react";
+import { CheckCircle2, Eraser, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -396,33 +396,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="rounded-2xl border border-border bg-[#f5f5f7] p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
-              <CalendarRange className="h-4 w-4" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Monthly Plan</h2>
-              <p className="max-w-xl text-[11px] font-medium leading-5 text-muted-foreground/75">
-                Set defaults and refine weekdays directly from the calendar.
-              </p>
-            </div>
-          </div>
-
-          <span
-            className={cn(
-              "inline-flex min-h-9 items-center rounded-full border px-3 text-[10px] font-semibold uppercase tracking-[0.16em]",
-              isDirty
-                ? "border-primary/20 bg-primary/10 text-primary"
-                : "border-border bg-background text-muted-foreground",
-            )}
-          >
-            {isDirty ? "Unsaved changes" : "All changes saved"}
-          </span>
-        </div>
-
-        <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <section className="bg-white rounded-2xl p-6 flex flex-wrap items-center justify-between gap-3">
           <MonthNavigator
             year={monthState.year}
             month={monthState.month}
@@ -432,7 +406,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
 
           <div className="flex flex-wrap items-center gap-2">
             <Select value={selectedLocation} onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}>
-              <SelectTrigger className="h-11 min-w-[220px] rounded-full border-border bg-background text-xs font-semibold">
+              <SelectTrigger className="h-11 min-w-[220px] rounded-lg border-border bg-background text-xs font-semibold">
                 <SelectValue placeholder="Choose a location" />
               </SelectTrigger>
               <SelectContent>
@@ -447,7 +421,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              className="h-11 rounded-lg border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
               onClick={handleApplyEverywhere}
               disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
             >
@@ -458,7 +432,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-full border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              className="h-11 rounded-lg border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
               onClick={handleClearAll}
               disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
             >
@@ -468,7 +442,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
 
             <Button
               type="button"
-              className="h-11 rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              className="h-11 rounded-lg px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
               onClick={handleSave}
               disabled={!isDirty || saveMutation.isPending || isMonthLoading}
             >
@@ -476,16 +450,12 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
               {saveMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
-        </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-background p-6">
+      <section className="bg-white rounded-2xl p-6">
         <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Calendar</h3>
-            <p className="text-[11px] font-medium text-muted-foreground/70">
-              Protected holiday/leave days cannot be edited.
-            </p>
           </div>
           <span className="inline-flex min-h-9 items-center rounded-full bg-muted px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {plannedDaysCount} of {weekdayDates.length} weekdays planned
@@ -540,7 +510,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-[#f5f5f7] p-6">
+      <section className="bg-background rounded-2xl p-6">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr]">
           <div className="flex flex-col gap-4">
             <div>

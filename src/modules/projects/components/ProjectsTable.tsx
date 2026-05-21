@@ -126,7 +126,7 @@ function TableBody({ isLoading, rows, pageSize, onRowClick }: Readonly<TableBody
           <div
             key={row.id}
             onClick={() => onRowClick(project)}
-            className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4 cursor-pointer"
+            className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 cursor-pointer"
           >
             <div className="flex-1 flex justify-center">
               {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
@@ -198,7 +198,7 @@ export function ProjectsTable({
         </div>
 
         <div className="w-full">
-          <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
+          <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3">
             <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Project</div>
             <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Client</div>
             <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Team</div>
@@ -207,7 +207,7 @@ export function ProjectsTable({
             <div className="w-10 shrink-0" />
           </div>
 
-          <div className="px-4">
+          <div>
             <TableBody
               isLoading={isLoading}
               rows={table.getRowModel().rows}
