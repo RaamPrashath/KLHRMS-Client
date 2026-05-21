@@ -8,7 +8,8 @@ import {
   type Row,
 } from '@tanstack/react-table';
 import { useMemo } from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, UserX } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AttendanceBadge } from './AttendanceBadge';
 import { EmployeeFilters } from './EmployeeFilters';
@@ -44,9 +45,26 @@ interface EmployeeTableProps {
   // role editing
   canEditRole?: boolean;
   onEditRole?: (memberId: string, currentRoleName: string | null) => void;
+  // deactivation
+  onDeactivate?: (memberId: string, name: string) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function colWidth(id: string): string {
+  const map: Record<string, string> = {
+    employee: 'w-[240px]',
+    email: 'w-[200px]',
+    role: 'w-[170px]',
+    attendance: 'w-[150px]',
+    actions: 'w-[100px]',
+  };
+  return map[id] ?? 'w-[120px]';
+}
+
+function colAlign(id: string): string {
+  return id === 'attendance' || id === 'actions' ? 'justify-end' : 'justify-start';
+}
 
 function getInitials(name: string): string {
   return name
@@ -64,6 +82,7 @@ const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-
 function buildColumns(
   canEditRole: boolean,
   onEditRole?: (memberId: string, currentRoleName: string | null) => void,
+  onDeactivate?: (memberId: string, name: string) => void,
 ): ColumnDef<EmployeeListItem>[] {
   const cols: ColumnDef<EmployeeListItem>[] = [
     {
@@ -134,6 +153,24 @@ function buildColumns(
     },
   ];
 
+  if (onDeactivate) {
+    cols.push({
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <button
+          type="button"
+          onClick={() => onDeactivate(row.original.member_id, row.original.name)}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+          title="Deactivate employee"
+        >
+          <UserX className="size-3.5" />
+          Deactivate
+        </button>
+      ),
+    });
+  }
+
   return cols;
 }
 
@@ -172,18 +209,14 @@ function TableBody({ isLoading, rows, pageSize, canEditRole }: Readonly<TableBod
           key={row.id}
           className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4"
         >
-          <div className="w-[240px] shrink-0 flex justify-start">
-            {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
-          </div>
-          <div className="w-[200px] shrink-0 flex justify-start">
-            {flexRender(row.getVisibleCells()[1].column.columnDef.cell, row.getVisibleCells()[1].getContext())}
-          </div>
-          <div className="w-[170px] shrink-0 flex justify-start">
-            {flexRender(row.getVisibleCells()[2].column.columnDef.cell, row.getVisibleCells()[2].getContext())}
-          </div>
-          <div className="w-[150px] shrink-0 flex justify-end">
-            {flexRender(row.getVisibleCells()[3].column.columnDef.cell, row.getVisibleCells()[3].getContext())}
-          </div>
+          {row.getVisibleCells().map((cell) => (
+            <div
+              key={cell.id}
+              className={cn(colWidth(cell.column.id), 'shrink-0 flex', colAlign(cell.column.id))}
+            >
+              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </div>
+          ))}
         </div>
       ))}
     </div>
@@ -211,8 +244,9 @@ export function EmployeeTable({
   onClearAll,
   canEditRole = false,
   onEditRole,
+  onDeactivate,
 }: Readonly<EmployeeTableProps>) {
-  const columns = useMemo(() => buildColumns(canEditRole, onEditRole), [canEditRole, onEditRole]);
+  const columns = useMemo(() => buildColumns(canEditRole, onEditRole, onDeactivate), [canEditRole, onEditRole, onDeactivate]);
 
   const table = useReactTable({
     data,
@@ -243,10 +277,20 @@ export function EmployeeTable({
         <div className="w-full">
           {/* Header Row */}
           <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
-            <div className="w-[240px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Name</div>
-            <div className="w-[200px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Email</div>
-            <div className="w-[170px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">Role</div>
-            <div className="w-[150px] shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-right">Today's Attendance</div>
+            {table.getHeaderGroups().map((hg) =>
+              hg.headers.map((header) => (
+                <div
+                  key={header.id}
+                  className={cn(
+                    colWidth(header.id),
+                    'shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider',
+                    colAlign(header.id) === 'justify-end' ? 'text-right' : 'text-left',
+                  )}
+                >
+                  {header.isPlaceholder ? '' : flexRender(header.column.columnDef.header, header.getContext())}
+                </div>
+              )),
+            )}
           </div>
 
           <div className="px-4">

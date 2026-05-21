@@ -86,3 +86,17 @@ export async function fetchEmployeeRolesAction(params: {
   });
   return handleResponse<EmployeeFilterOption[]>(res);
 }
+
+export async function deactivateEmployeeAction(params: {
+  orgSlug: string;
+  memberId: string;
+  targetMemberId: string;
+}): Promise<{ member_id: string; name: string; email: string; status: string }> {
+  const { orgSlug, memberId, targetMemberId } = params;
+  const res = await fetch(`${getApiUrl()}/employees/${targetMemberId}/deactivate`, {
+    method: 'PATCH',
+    headers: buildHeaders(orgSlug, memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<{ member_id: string; name: string; email: string; status: string }>(res);
+}

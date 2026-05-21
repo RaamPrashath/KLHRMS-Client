@@ -4,12 +4,14 @@ import {
   assetIssueSchema,
   assetMaintenanceCreateSchema,
   assetMaintenanceUpdateSchema,
+  helpdeskTicketCreateSchema,
   assetReturnSchema,
   assetSchema,
   type AssetInput,
   type AssetIssueInput,
   type AssetMaintenanceCreateInput,
   type AssetMaintenanceUpdateInput,
+  type HelpdeskTicketCreateInput,
   type AssetReturnInput,
 } from '@/modules/assets/schema/assetSchemas';
 import type {
@@ -24,6 +26,8 @@ import type {
   AssetReportType,
   AvailableAssetGroup,
   BulkAssetCreateInput,
+  TicketAttachmentMetadata,
+  TicketMode,
 } from '@/modules/assets/types/assetTypes';
 
 function getApiUrl(): string {
@@ -265,9 +269,9 @@ export async function createAssetMaintenanceAction(params: {
 export async function updateAssetMaintenanceAction(params: {
   orgSlug: string;
   memberId: string;
-  assetId: string;
+  assetId?: string | null;
   data: AssetMaintenanceUpdateInput;
-}): Promise<AssetDetail> {
+}): Promise<AssetDetail | null> {
   const parsed = assetMaintenanceUpdateSchema.safeParse(params.data);
   if (!parsed.success) {
     throw new Error(
@@ -279,7 +283,10 @@ export async function updateAssetMaintenanceAction(params: {
   }
 
   const { maintenanceId, ...payload } = parsed.data;
-  const res = await fetch(`${getApiUrl()}/assets/${params.assetId}/maintenance/${maintenanceId}`, {
+  const path = params.assetId
+    ? `${getApiUrl()}/assets/${params.assetId}/maintenance/${maintenanceId}`
+    : `${getApiUrl()}/assets/maintenance/${maintenanceId}`;
+  const res = await fetch(path, {
     method: 'PATCH',
     headers: buildHeaders(params.orgSlug, params.memberId),
     body: JSON.stringify({
@@ -292,6 +299,58 @@ export async function updateAssetMaintenanceAction(params: {
     }),
   });
   return handleResponse<AssetDetail>(res);
+}
+
+export interface MyTicket {
+  id: string;
+  ticketId: string;
+  ticketMode: TicketMode;
+  assetId: string | null;
+  assetName: string | null;
+  assetCode: string | null;
+  category: string | null;
+  subject: string | null;
+  attachmentsMetadata: TicketAttachmentMetadata[];
+  maintenanceType: string;
+  issueDescription: string;
+  status: string;
+  serviceDate: string;
+  createdAt: string;
+}
+
+export async function createHelpdeskTicketAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: HelpdeskTicketCreateInput;
+}): Promise<MyTicket> {
+  const parsed = helpdeskTicketCreateSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(
+      JSON.stringify({
+        status: 400,
+        message: parsed.error.issues[0]?.message ?? 'Validation failed',
+      }),
+    );
+  }
+
+  const res = await fetch(`${getApiUrl()}/assets/helpdesk`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({
+      ticketMode: parsed.data.ticketMode,
+      assetId: parsed.data.assetId || null,
+      assetUnitId: parsed.data.assetUnitId || null,
+      category: parsed.data.category || null,
+      subject: parsed.data.subject,
+      issueDescription: parsed.data.issueDescription,
+      attachmentsMetadata: parsed.data.attachmentsMetadata,
+      maintenanceType: parsed.data.maintenanceType,
+      serviceDate: parsed.data.serviceDate || null,
+      conditionBeforeMaintenance: parsed.data.conditionBeforeMaintenance || null,
+      notes: parsed.data.notes || null,
+    }),
+  });
+  return handleResponse<MyTicket>(res);
 }
 
 export async function exportAssetsPdfAction(params: {
@@ -450,10 +509,14 @@ export async function deleteAssetCategoryFieldAction(params: {
 export interface MaintenanceTicket {
   id: string;
   ticketId: string;
-  assetId: string;
-  assetName: string;
-  assetCode: string;
-  assetCondition: string;
+  ticketMode: TicketMode;
+  assetId: string | null;
+  assetName: string | null;
+  assetCode: string | null;
+  assetCondition: string | null;
+  category: string | null;
+  subject: string | null;
+  attachmentsMetadata: TicketAttachmentMetadata[];
   maintenanceType: string;
   issueDescription: string;
   status: string;
@@ -480,18 +543,7 @@ export async function fetchMaintenanceTicketsAction(params: {
 export async function fetchMyTicketsAction(params: {
   orgSlug: string;
   memberId: string;
-}): Promise<Array<{
-  id: string;
-  ticketId: string;
-  assetId: string;
-  assetName: string;
-  assetCode: string;
-  maintenanceType: string;
-  issueDescription: string;
-  status: string;
-  serviceDate: string;
-  createdAt: string;
-}>> {
+}): Promise<MyTicket[]> {
   const res = await fetch(`${getApiUrl()}/assets/tickets/mine`, {
     method: 'GET',
     headers: buildHeaders(params.orgSlug, params.memberId),

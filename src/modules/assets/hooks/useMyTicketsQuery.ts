@@ -1,20 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchMyTicketsAction } from '@/modules/assets/api/assetServerActions';
-
-export interface MyTicket {
-  id: string;
-  ticketId: string;
-  assetId: string;
-  assetName: string;
-  assetCode: string;
-  maintenanceType: string;
-  issueDescription: string;
-  status: string;
-  serviceDate: string;
-  createdAt: string;
-}
+import { fetchMyTicketsAction, type MyTicket } from '@/modules/assets/api/assetServerActions';
 
 export function useMyTicketsQuery(orgSlug: string, memberId: string) {
   return useQuery<MyTicket[], Error>({

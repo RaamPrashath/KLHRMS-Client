@@ -3,9 +3,9 @@ import { useEffect, useRef } from 'react';
 
 type GL = Renderer['gl'];
 
-function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
+function debounce<T extends (...args: unknown[]) => void>(func: T, wait: number) {
   let timeout: number;
-  return function (this: any, ...args: Parameters<T>) {
+  return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
     window.clearTimeout(timeout);
     timeout = window.setTimeout(() => func.apply(this, args), wait);
   };
@@ -15,11 +15,12 @@ function lerp(p1: number, p2: number, t: number): number {
   return p1 + (p2 - p1) * t;
 }
 
-function autoBind(instance: any): void {
+function autoBind(instance: object): void {
+  const target = instance as Record<string, unknown>;
   const proto = Object.getPrototypeOf(instance);
   Object.getOwnPropertyNames(proto).forEach(key => {
-    if (key !== 'constructor' && typeof instance[key] === 'function') {
-      instance[key] = instance[key].bind(instance);
+    if (key !== 'constructor' && typeof target[key] === 'function') {
+      target[key] = (target[key] as (...args: unknown[]) => unknown).bind(instance);
     }
   });
 }
@@ -312,7 +313,7 @@ class Media {
     });
   }
 
-  update(scroll: { current: number; last: number }, direction: 'right' | 'left') {
+  update(scroll: { current: number; last: number }) {
     this.plane.position.x = this.x - scroll.current - this.extra;
 
     const x = this.plane.position.x;
@@ -339,19 +340,6 @@ class Media {
     this.speed = scroll.current - scroll.last;
     this.program.uniforms.uTime.value += 0.04;
     this.program.uniforms.uSpeed.value = this.speed;
-
-    const planeOffset = this.plane.scale.x / 2;
-    const viewportOffset = this.viewport.width / 2;
-    this.isBefore = this.plane.position.x + planeOffset < -viewportOffset;
-    this.isAfter = this.plane.position.x - planeOffset > viewportOffset;
-    if (direction === 'right' && this.isBefore) {
-      this.extra -= this.widthTotal;
-      this.isBefore = this.isAfter = false;
-    }
-    if (direction === 'left' && this.isAfter) {
-      this.extra += this.widthTotal;
-      this.isBefore = this.isAfter = false;
-    }
   }
 
   onResize({ screen, viewport }: { screen?: ScreenSize; viewport?: Viewport } = {}) {
@@ -369,7 +357,9 @@ class Media {
     this.padding = 2;
     this.width = this.plane.scale.x + this.padding;
     this.widthTotal = this.width * this.length;
-    this.x = this.width * this.index;
+    // Offset so index 0 starts at the left edge of the viewport
+    const startOffset = -this.viewport.width / 2 + this.plane.scale.x / 2;
+    this.x = startOffset + this.width * this.index;
   }
 }
 
@@ -381,6 +371,7 @@ interface AppConfig {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  onItemClick?: (index: number, rect: DOMRect) => void;
 }
 
 class App {
@@ -393,7 +384,7 @@ class App {
     last: number;
     position?: number;
   };
-  onCheckDebounce: (...args: any[]) => void;
+  onCheckDebounce: () => void;
   renderer!: Renderer;
   gl!: GL;
   camera!: Camera;
@@ -409,10 +400,16 @@ class App {
   boundOnWheel!: (e: Event) => void;
   boundOnTouchDown!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchMove!: (e: MouseEvent | TouchEvent) => void;
-  boundOnTouchUp!: () => void;
+  boundOnTouchUp!: (e: MouseEvent | TouchEvent) => void;
 
   isDown: boolean = false;
   start: number = 0;
+  startY: number = 0;
+  lastPointerX: number = 0;
+  lastPointerY: number = 0;
+  didDrag: boolean = false;
+  touchStarted: boolean = false;
+  onItemClick?: (index: number, rect: DOMRect) => void;
 
   constructor(
     container: HTMLElement,
@@ -423,12 +420,14 @@ class App {
       borderRadius = 0,
       font = 'bold 30px Figtree',
       scrollSpeed = 2,
-      scrollEase = 0.05
+      scrollEase = 0.05,
+      onItemClick
     }: AppConfig
   ) {
     document.documentElement.classList.remove('no-js');
     this.container = container;
     this.scrollSpeed = scrollSpeed;
+    this.onItemClick = onItemClick;
     this.scroll = { ease: scrollEase, current: 0, target: 0, last: 0 };
     this.onCheckDebounce = debounce(this.onCheck.bind(this), 200);
     this.createRenderer();
@@ -527,7 +526,7 @@ class App {
       }
     ];
     const galleryItems = items && items.length ? items : defaultItems;
-    this.mediasImages = galleryItems.concat(galleryItems);
+    this.mediasImages = galleryItems;
     this.medias = this.mediasImages.map((data, index) => {
       return new Media({
         geometry: this.planeGeometry,
@@ -549,28 +548,114 @@ class App {
   }
 
   onTouchDown(e: MouseEvent | TouchEvent) {
+    const isTouch = 'touches' in e;
+    if (isTouch) {
+      this.touchStarted = true;
+    } else if (this.touchStarted) {
+      return;
+    }
+    const point = isTouch ? e.touches[0] : e;
+    if (!this.isPointInsideContainer(point.clientX, point.clientY)) return;
+
     this.isDown = true;
     this.scroll.position = this.scroll.current;
-    this.start = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    this.start = point.clientX;
+    this.startY = point.clientY;
+    this.lastPointerX = this.start;
+    this.lastPointerY = this.startY;
+    this.didDrag = false;
   }
 
   onTouchMove(e: MouseEvent | TouchEvent) {
     if (!this.isDown) return;
+    if ('touches' in e) {
+      this.touchStarted = true;
+    } else if (this.touchStarted) {
+      return;
+    }
     const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
     const distance = (this.start - x) * (this.scrollSpeed * 0.025);
-    this.scroll.target = (this.scroll.position ?? 0) + distance;
+    const raw = (this.scroll.position ?? 0) + distance;
+    this.lastPointerX = x;
+    this.lastPointerY = y;
+    if (Math.abs(x - this.start) > 8 || Math.abs(y - this.startY) > 8) {
+      this.didDrag = true;
+    }
+    this.scroll.target = this.clampScroll(raw);
   }
 
-  onTouchUp() {
+  onTouchUp(e: MouseEvent | TouchEvent) {
     this.isDown = false;
+    const isTouch = 'changedTouches' in e;
+    if (isTouch) {
+      this.touchStarted = false;
+    } else if (this.touchStarted) {
+      return;
+    }
+    const point = isTouch && e.changedTouches.length ? e.changedTouches[0] : e;
+    const clientX = 'clientX' in point ? point.clientX : this.lastPointerX;
+    const clientY = 'clientY' in point ? point.clientY : this.lastPointerY;
+    if (!this.didDrag) {
+      this.handleItemClick(clientX, clientY);
+    }
+    this.didDrag = false;
     this.onCheck();
+  }
+
+  isPointInsideContainer(clientX: number, clientY: number) {
+    const rect = this.container.getBoundingClientRect();
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+  }
+
+  handleItemClick(clientX: number, clientY: number) {
+    if (!this.onItemClick || !this.medias.length) return;
+
+    const containerRect = this.container.getBoundingClientRect();
+    if (!this.isPointInsideContainer(clientX, clientY)) return;
+
+    let matchedMedia: Media | null = null;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    const worldX = ((clientX - containerRect.left) / containerRect.width - 0.5) * this.viewport.width;
+    const worldY = (0.5 - (clientY - containerRect.top) / containerRect.height) * this.viewport.height;
+
+    for (const media of this.medias) {
+      const dx = worldX - media.plane.position.x;
+      const dy = worldY - media.plane.position.y;
+      const rotation = -(media.plane.rotation.z || 0);
+      const localX = dx * Math.cos(rotation) - dy * Math.sin(rotation);
+      const localY = dx * Math.sin(rotation) + dy * Math.cos(rotation);
+
+      if (Math.abs(localX) <= media.plane.scale.x / 2 && Math.abs(localY) <= media.plane.scale.y / 2) {
+        const distance = Math.abs(localX) + Math.abs(localY);
+        if (distance >= closestDistance) continue;
+        matchedMedia = media;
+        closestDistance = distance;
+      }
+    }
+
+    if (!matchedMedia) return;
+
+    const centerX = containerRect.left + ((matchedMedia.plane.position.x / this.viewport.width) + 0.5) * containerRect.width;
+    const centerY = containerRect.top + (0.5 - matchedMedia.plane.position.y / this.viewport.height) * containerRect.height;
+    const rect = new DOMRect(centerX, centerY, 0, 0);
+
+    this.onItemClick(matchedMedia.index, rect);
   }
 
   onWheel(e: Event) {
     const wheelEvent = e as WheelEvent;
-    const delta = wheelEvent.deltaY || (wheelEvent as any).wheelDelta || (wheelEvent as any).detail;
-    this.scroll.target += (delta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.2;
+    const delta = wheelEvent.deltaY;
+    const raw = this.scroll.target + (delta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.2;
+    this.scroll.target = this.clampScroll(raw);
     this.onCheckDebounce();
+  }
+
+  clampScroll(value: number): number {
+    if (!this.medias || !this.medias[0]) return value;
+    const width = this.medias[0].width;
+    const max = width * (this.medias.length - 1);
+    return Math.max(0, Math.min(value, max));
   }
 
   onCheck() {
@@ -578,7 +663,7 @@ class App {
     const width = this.medias[0].width;
     const itemIndex = Math.round(Math.abs(this.scroll.target) / width);
     const item = width * itemIndex;
-    this.scroll.target = this.scroll.target < 0 ? -item : item;
+    this.scroll.target = this.clampScroll(this.scroll.target < 0 ? -item : item);
   }
 
   onResize() {
@@ -601,9 +686,8 @@ class App {
 
   update() {
     this.scroll.current = lerp(this.scroll.current, this.scroll.target, this.scroll.ease);
-    const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
     if (this.medias) {
-      this.medias.forEach(media => media.update(this.scroll, direction));
+      this.medias.forEach(media => media.update(this.scroll));
     }
     this.renderer.render({ scene: this.scene, camera: this.camera });
     this.scroll.last = this.scroll.current;
@@ -652,6 +736,7 @@ interface CircularGalleryProps {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  onItemClick?: (index: number, rect: DOMRect) => void;
 }
 
 export default function CircularGallery({
@@ -661,7 +746,8 @@ export default function CircularGallery({
   borderRadius = 0.05,
   font = 'bold 30px Figtree',
   scrollSpeed = 2,
-  scrollEase = 0.05
+  scrollEase = 0.05,
+  onItemClick
 }: CircularGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -673,11 +759,12 @@ export default function CircularGallery({
       borderRadius,
       font,
       scrollSpeed,
-      scrollEase
+      scrollEase,
+      onItemClick
     });
     return () => {
       app.destroy();
     };
-  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase]);
+  }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase, onItemClick]);
   return <div className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing" ref={containerRef} />;
 }

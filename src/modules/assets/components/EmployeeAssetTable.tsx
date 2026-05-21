@@ -1,12 +1,7 @@
 'use client';
 
-import { memo, useMemo, useState } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  LaptopMinimal,
-  PackageOpen,
-} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, LaptopMinimal, PackageOpen } from 'lucide-react';
 import {
   ColumnDef,
   flexRender,
@@ -14,7 +9,6 @@ import {
   useReactTable,
   type PaginationState,
 } from '@tanstack/react-table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -25,18 +19,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import {
-  conditionBadge,
-  humanize,
-} from '@/modules/assets/lib/assetUtils';
-import type {
-  AssetCategory,
-  AssetCondition,
-  AssetSummary,
-  AssetDetail,
-} from '@/modules/assets/types/assetTypes';
+import { humanize } from '@/modules/assets/lib/assetUtils';
+import type { AssetCategory, AssetSummary } from '@/modules/assets/types/assetTypes';
 
-const PAGE_SIZE = 9;
+const TABLE_HEAD_HEIGHT = 40;
+const TABLE_ROW_HEIGHT = 54;
+const TABLE_FOOTER_HEIGHT = 52;
+const TABLE_VERTICAL_CHROME = 24;
 
 const STATUS_DOT: Record<string, string> = {
   AVAILABLE: 'bg-[#22c55e]',
@@ -48,50 +37,77 @@ const STATUS_DOT: Record<string, string> = {
   DISPOSED: 'bg-[#6b7280]',
 };
 
-const StatusDot = memo(function StatusDot({ status }: { status: string }) {
+function StatusDot({ status }: { status: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className={cn('size-1.5 rounded-full shrink-0', STATUS_DOT[status] || 'bg-[#9ca3af]')} />
+      <span className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[status] || 'bg-[#9ca3af]')} />
       <span className="text-[13px] text-[#374151]">{humanize(status)}</span>
     </span>
   );
-});
+}
 
-export function AssetRegisterTab({
+function calculateVisibleRows(containerTop: number) {
+  const availableHeight =
+    window.innerHeight - containerTop - TABLE_HEAD_HEIGHT - TABLE_FOOTER_HEIGHT - TABLE_VERTICAL_CHROME;
+
+  return Math.max(1, Math.floor(availableHeight / TABLE_ROW_HEIGHT));
+}
+
+export function EmployeeAssetTable({
   assets,
   isLoading,
   onOpenDetail,
-  onEdit,
-  onProvide,
-  onMaintenance,
-  onDecommission,
 }: {
   assets: AssetSummary[];
   isLoading: boolean;
   onOpenDetail: (assetId: string) => void;
-  onEdit: (asset: AssetSummary | AssetDetail) => void;
-  onProvide: (asset: AssetSummary) => void;
-  onMaintenance: (asset: AssetSummary) => void;
-  onDecommission: (assetId: string) => void;
 }) {
-  const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [pageSize, setPageSize] = useState(1);
+  const [{ pageIndex }, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: PAGE_SIZE,
+    pageSize: 1,
   });
 
-  const totalRows = assets.length;
-  const pageCount = Math.ceil(totalRows / pageSize);
+  useEffect(() => {
+    function updateVisibleRows() {
+      if (!containerRef.current) return;
+      const { top } = containerRef.current.getBoundingClientRect();
+      setPageSize(calculateVisibleRows(top));
+    }
 
+    updateVisibleRows();
+    window.addEventListener('resize', updateVisibleRows);
+
+    const resizeObserver = new ResizeObserver(() => updateVisibleRows());
+    if (containerRef.current?.parentElement) {
+      resizeObserver.observe(containerRef.current.parentElement);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateVisibleRows);
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  const totalRows = assets.length;
+  const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
   const safePageIndex = Math.min(pageIndex, Math.max(0, pageCount - 1));
+
+  useEffect(() => {
+    if (safePageIndex !== pageIndex) {
+      setPagination((current) => ({ ...current, pageIndex: safePageIndex }));
+    }
+  }, [pageIndex, safePageIndex]);
 
   const pageData = useMemo(
     () => assets.slice(safePageIndex * pageSize, (safePageIndex + 1) * pageSize),
-    [assets, safePageIndex, pageSize],
+    [assets, pageSize, safePageIndex],
   );
 
   const pagination = useMemo(
     () => ({ pageIndex: safePageIndex, pageSize }),
-    [safePageIndex, pageSize],
+    [pageSize, safePageIndex],
   );
 
   const columns = useMemo<ColumnDef<AssetSummary>[]>(
@@ -107,16 +123,32 @@ export function AssetRegisterTab({
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] text-[#6b7280]">
                 <LaptopMinimal className="size-4" />
               </div>
-              <div className="min-w-0">
-                <p className="text-[14px] font-medium text-[#111827] truncate">{asset.name}</p>
-                <p className="text-[12px] text-[#6b7280] truncate">
-                  {asset.assetCode}
-                  {asset.serialNumber ? ` \u00B7 ${asset.serialNumber}` : ''}
-                </p>
-              </div>
+              <p className="truncate text-[14px] font-medium text-[#111827]">{asset.name}</p>
             </div>
           );
         },
+      },
+      {
+        id: 'assetCode',
+        header: 'Asset ID',
+        accessorKey: 'assetCode',
+        cell: ({ getValue }) => (
+          <span className="text-[13px] font-medium text-[#374151]">{getValue() as string}</span>
+        ),
+      },
+      {
+        id: 'serialNumber',
+        header: 'Serial No.',
+        accessorKey: 'serialNumber',
+        cell: ({ getValue }) => (
+          <span className="text-[13px] font-mono text-[#6b7280]">{(getValue() as string | null) || '\u2014'}</span>
+        ),
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        accessorKey: 'status',
+        cell: ({ getValue }) => <StatusDot status={getValue() as string} />,
       },
       {
         id: 'category',
@@ -126,71 +158,8 @@ export function AssetRegisterTab({
           <span className="text-[13px] text-[#6b7280]">{humanize(getValue() as AssetCategory)}</span>
         ),
       },
-      {
-        id: 'serial',
-        header: 'Serial No.',
-        accessorKey: 'serialNumber',
-        cell: ({ getValue }) => {
-          const sn = getValue() as string | null;
-          return (
-            <span className="text-[13px] font-mono text-[#6b7280]">
-              {sn || '\u2014'}
-            </span>
-          );
-        },
-      },
-      {
-        id: 'holder',
-        header: 'Holder',
-        accessorKey: 'currentHolderName',
-        cell: ({ getValue }) => {
-          const name = getValue() as string | null;
-          return name ? (
-            <span className="text-[13px] text-[#374151]">{name}</span>
-          ) : (
-            <span className="text-[13px] text-[#9ca3af]">In register</span>
-          );
-        },
-      },
-      {
-        id: 'condition',
-        header: 'Condition',
-        accessorKey: 'condition',
-        cell: ({ getValue }) => {
-          const condition = getValue() as AssetCondition;
-          return (
-            <Badge
-              className={cn(
-                'rounded-md border-0 px-2 py-0.5 text-[12px] font-normal',
-                conditionBadge(condition),
-              )}
-            >
-              {humanize(condition)}
-            </Badge>
-          );
-        },
-      },
-      {
-        id: 'status',
-        header: 'Status',
-        accessorKey: 'status',
-        cell: ({ getValue }) => <StatusDot status={getValue() as string} />,
-      },
-      {
-        id: 'location',
-        header: 'Location',
-        accessorKey: 'location',
-        cell: ({ getValue }) => {
-          const loc = getValue() as string | null;
-          return (
-            <span className={cn('text-[13px]', loc ? 'text-[#6b7280]' : 'text-[#9ca3af]')}>
-              {loc || '\u2014'}
-            </span>
-          );
-        },
-      },
     ],
-    [onOpenDetail, onEdit, onProvide, onMaintenance, onDecommission],
+    [],
   );
 
   const table = useReactTable({
@@ -203,25 +172,26 @@ export function AssetRegisterTab({
     manualPagination: true,
   });
 
-  const startRow = safePageIndex * pageSize + 1;
+  const startRow = totalRows === 0 ? 0 : safePageIndex * pageSize + 1;
   const endRow = Math.min((safePageIndex + 1) * pageSize, totalRows);
 
   const paginationPages = useMemo(() => {
     if (pageCount <= 7) {
-      return Array.from({ length: pageCount }, (_, i) => i);
+      return Array.from({ length: pageCount }, (_, index) => index);
     }
+
     const pages: (number | 'ellipsis')[] = [0];
     if (safePageIndex > 2) pages.push('ellipsis');
     const start = Math.max(1, safePageIndex - 1);
     const end = Math.min(pageCount - 2, safePageIndex + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
+    for (let page = start; page <= end; page += 1) pages.push(page);
     if (safePageIndex < pageCount - 3) pages.push('ellipsis');
     pages.push(pageCount - 1);
     return pages;
   }, [pageCount, safePageIndex]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm">
+    <div ref={containerRef} className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -241,11 +211,11 @@ export function AssetRegisterTab({
         </TableHeader>
         <TableBody>
           {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <TableRow key={`skel-${i}`}>
-                {columns.map((col) => (
-                  <TableCell key={col.id} className="px-3 py-2.5">
-                    <div className="h-4 w-full max-w-32 animate-pulse rounded bg-[#f3f4f6]" />
+            Array.from({ length: pageSize }).map((_, index) => (
+              <TableRow key={`employee-asset-skeleton-${index}`}>
+                {columns.map((column) => (
+                  <TableCell key={column.id} className="px-3 py-2.5">
+                    <div className="h-4 w-full max-w-28 animate-pulse rounded bg-[#f3f4f6]" />
                   </TableCell>
                 ))}
               </TableRow>
@@ -256,20 +226,18 @@ export function AssetRegisterTab({
                 <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-[#f9fafb]">
                   <PackageOpen className="size-5 text-[#9ca3af]" />
                 </div>
-                <p className="mt-3 text-[15px] font-medium text-[#111827]">No assets found</p>
-                <p className="mt-0.5 text-[13px] text-[#6b7280]">
-                  Try adjusting your search or filters
-                </p>
+                <p className="mt-3 text-[15px] font-medium text-[#111827]">No issued assets found</p>
+                <p className="mt-0.5 text-[13px] text-[#6b7280]">Try adjusting your search or filters</p>
               </TableCell>
             </TableRow>
           ) : (
-            table.getRowModel().rows.map((r) => (
+            table.getRowModel().rows.map((row) => (
               <TableRow
-                key={r.id}
-                className="group hover:bg-[#f8f9fa] cursor-pointer transition-colors"
-                onClick={() => onOpenDetail(r.original.id)}
+                key={row.id}
+                className="cursor-pointer transition-colors hover:bg-[#f8f9fa]"
+                onClick={() => onOpenDetail(row.original.id)}
               >
-                {r.getVisibleCells().map((cell) => (
+                {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className="px-3 py-2.5 border-b border-[#e5e7eb]">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
@@ -295,25 +263,25 @@ export function AssetRegisterTab({
             >
               <ChevronLeft className="size-3.5" />
             </Button>
-            {paginationPages.map((p, idx) =>
-              p === 'ellipsis' ? (
-                <span key={`e-${idx}`} className="flex size-7 items-center justify-center text-[12px] text-[#6b7280]">
+            {paginationPages.map((page, index) =>
+              page === 'ellipsis' ? (
+                <span key={`employee-ellipsis-${index}`} className="flex size-7 items-center justify-center text-[12px] text-[#6b7280]">
                   \u2026
                 </span>
               ) : (
                 <Button
-                  key={p}
+                  key={page}
                   variant="ghost"
                   size="icon"
-                  onClick={() => setPagination({ pageIndex: p, pageSize })}
+                  onClick={() => setPagination({ pageIndex: page, pageSize })}
                   className={cn(
                     'size-7 rounded-md text-[12px] font-medium',
-                    safePageIndex === p
+                    safePageIndex === page
                       ? 'bg-[#111827] text-white hover:bg-[#111827]'
                       : 'text-[#6b7280] hover:text-[#111827]',
                   )}
                 >
-                  {p + 1}
+                  {page + 1}
                 </Button>
               ),
             )}
@@ -332,5 +300,3 @@ export function AssetRegisterTab({
     </div>
   );
 }
-
-

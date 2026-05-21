@@ -43,7 +43,7 @@ export function OpenTicketList({ tickets }: { tickets: TicketAlertItem[] }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-[#86868b]">
+                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-neutral-400">
                   {ticket.ticketId}
                 </span>
                 <span className="text-[13px] font-medium text-[#1d1d1f] truncate">
@@ -56,7 +56,7 @@ export function OpenTicketList({ tickets }: { tickets: TicketAlertItem[] }) {
               <p className="mt-0.5 truncate text-[12px] text-[#6e6e73]">
                 {ticket.issueDescription}
               </p>
-              <div className="mt-1 flex items-center gap-3 text-[11px] text-[#86868b]">
+              <div className="mt-1 flex items-center gap-3 text-[11px] text-neutral-400">
                 <span className="flex items-center gap-1">
                   <Clock className="size-3" />
                   {formatDate(ticket.createdAt)}

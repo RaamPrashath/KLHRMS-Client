@@ -307,7 +307,7 @@ export function CategoryTab({
           }
           
           return (
-            <div className="flex flex-wrap items-center gap-1.5 max-w-[280px]">
+            <div className="flex flex-wrap items-center gap-1.5 max-w-70">
               {display.map((f) => (
                 <span
                   key={f.id}
