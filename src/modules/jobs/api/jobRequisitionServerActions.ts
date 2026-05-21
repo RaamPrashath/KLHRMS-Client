@@ -77,6 +77,9 @@ export async function fetchJobRequisitionsAction(params: {
   if (jobsViewScope === 'self') {
     return requisitions.filter((requisition) => requisition.raisedById === member.id);
   }
+  if (jobsViewScope === 'team' || jobsViewScope === 'department') {
+    return requisitions;
+  }
 
   throw new Error(JSON.stringify({ status: 403, message: 'you dont have permission' }));
 }

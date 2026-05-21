@@ -44,7 +44,7 @@ export function HiringContextSection({
     <SectionCard id="hiring-context" title="Hiring context" required>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label>Hiring reason<RequiredMark /></Label>
+          <Label>Hiring reason <RequiredMark /></Label>
           <Select
             value={hiringReason ?? ''}
             onValueChange={(value) =>

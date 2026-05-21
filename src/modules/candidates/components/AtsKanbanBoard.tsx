@@ -71,6 +71,7 @@ import type {
 } from '@/modules/candidates/schema/atsSchemas';
 import type { PipelineApplication, PipelineStage } from '@/modules/candidates/types/atsTypes';
 import type { CreatePipelineStageInput as SetupCreatePipelineStageInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
+import type { RolePermissions } from '@/modules/roles/types/role';
 
 const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
@@ -145,6 +146,20 @@ function actionNeedsGoogle(action: PendingGoogleAction): boolean {
 function requiredGoogleScope(action: PendingGoogleAction): string {
   if (action.kind === 'create-interview' || action.kind === 'reschedule-interview') return GOOGLE_CALENDAR_SCOPE;
   return GOOGLE_SHEETS_SCOPE;
+}
+
+function permissionErrorForAction(action: PendingGoogleAction, permissions?: RolePermissions | null): string | null {
+  if (!permissions) return null;
+  const required =
+    action.kind === 'create-interview'
+      ? { module: 'interviews', action: 'create', label: 'schedule interviews' }
+      : action.kind === 'reschedule-interview'
+        ? { module: 'interviews', action: 'edit', label: 'reschedule interviews' }
+        : { module: 'candidates', action: 'edit', label: 'manage pipeline stages' };
+
+  return permissions[required.module]?.[required.action] === 'organization'
+    ? null
+    : `You do not have permission to ${required.label}.`;
 }
 
 function readGoogleAccounts(data: unknown): Array<{ providerId?: unknown; scope?: unknown; scopes?: unknown }> {
@@ -281,6 +296,7 @@ export function AtsKanbanBoard({
   showJobSelector = true,
   pipelineBasePath,
   defaultView,
+  permissions,
 }: {
   readonly orgSlug: string;
   readonly memberId: string;
@@ -291,6 +307,7 @@ export function AtsKanbanBoard({
   readonly showJobSelector?: boolean;
   readonly pipelineBasePath?: string;
   readonly defaultView?: 'kanban' | 'table';
+  readonly permissions?: RolePermissions | null;
 }) {
   const router = useRouter();
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
@@ -387,6 +404,12 @@ export function AtsKanbanBoard({
 
   const runStageAction = useCallback(
     async (action: PendingGoogleAction, options?: { skipGoogleCheck?: boolean }) => {
+      const permissionError = permissionErrorForAction(action, permissions);
+      if (permissionError) {
+        toast.error(permissionError);
+        return;
+      }
+
       if (!options?.skipGoogleCheck && actionNeedsGoogle(action)) {
         const hasAccess = await hasGoogleAccess(requiredGoogleScope(action));
         if (!hasAccess) {
@@ -436,7 +459,7 @@ export function AtsKanbanBoard({
         toast.error(readActionError(error, action.kind === 'create-interview' ? 'Failed to create meeting' : action.kind === 'create-stage' ? 'Failed to create stage' : 'Failed to update stage'));
       }
     },
-    [createInterviewMeeting, createStage, hasGoogleAccess, requestGoogleConnection, updateStage],
+    [createInterviewMeeting, createStage, hasGoogleAccess, permissions, requestGoogleConnection, updateInterviewMeeting, updateStage],
   );
 
   useEffect(() => {
@@ -1178,6 +1201,9 @@ export function AtsKanbanBoard({
             <DialogTitle>
               {schedulingApplication?.interviewMeeting?.status === 'PENDING' ? 'Reschedule interview' : 'Schedule interview'}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Choose an interview date, time, and duration for this candidate.
+            </DialogDescription>
           </DialogHeader>
 
           {(() => {

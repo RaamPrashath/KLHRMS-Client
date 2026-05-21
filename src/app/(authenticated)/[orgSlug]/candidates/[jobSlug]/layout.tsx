@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
 import { AtsPipelineSectionLayout } from '@/modules/candidates/components/AtsPipelineSectionLayout';
+import type { RolePermissions } from '@/modules/roles/types/role';
 
 export default async function CandidatesJobLayout({
   children,
@@ -25,7 +26,12 @@ export default async function CandidatesJobLayout({
   }
 
   return (
-    <AtsPipelineSectionLayout orgSlug={orgSlug} memberId={member.id} jobSlug={jobSlug}>
+    <AtsPipelineSectionLayout
+      orgSlug={orgSlug}
+      memberId={member.id}
+      jobSlug={jobSlug}
+      permissions={(member.role?.permissions as RolePermissions) ?? null}
+    >
       {children}
     </AtsPipelineSectionLayout>
   );

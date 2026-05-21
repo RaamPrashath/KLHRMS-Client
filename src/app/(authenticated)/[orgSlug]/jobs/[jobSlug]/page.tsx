@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { type RolePermissions } from '@/lib/hrms-roles';
 import { requireOrgMembership } from '@/lib/organizations';
 import { prisma } from '@/lib/prisma';
+import { fetchDepartmentMetaAction } from '@/modules/departments/api/departmentServerActions';
 import { JobRequisitionDetailPage } from '@/modules/jobs/pages/JobRequisitionDetailPage';
 
 export default async function JobRequisitionPage({
@@ -24,12 +25,8 @@ export default async function JobRequisitionPage({
     redirect('/organizations');
   }
 
-  const [departments, members] = await Promise.all([
-    prisma.department.findMany({
-      where: { organizationId: member.organizationId, status: 'ACTIVE' },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
-    }),
+  const [departmentMeta, members] = await Promise.all([
+    fetchDepartmentMetaAction({ orgSlug, memberId: member.id }),
     prisma.member.findMany({
       where: { organizationId: member.organizationId },
       select: {
@@ -39,6 +36,8 @@ export default async function JobRequisitionPage({
       orderBy: { user: { name: 'asc' } },
     }),
   ]);
+
+  const departments = departmentMeta.departments.map((d) => ({ id: d.id, name: d.label }));
 
   return (
     <JobRequisitionDetailPage

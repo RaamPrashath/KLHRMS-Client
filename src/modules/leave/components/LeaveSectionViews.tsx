@@ -258,7 +258,7 @@ export function LeaveRequestsView() {
               </tbody>
             </table>
           </div>
-          {totalPages > 1 && (
+          {filtered.length > 0 && (
             <div className="border-t border-black/[0.04] px-8 py-6">
               <EmployeePagination
                 page={page}
@@ -279,33 +279,61 @@ export function LeaveRequestsView() {
 // ─── Leave Balances ───────────────────────────────────────────────────────────
 
 export function LeaveBalancesView() {
-  const { orgSlug, memberId, permissions } = useLeaveShell();
-  const balancesQuery = useLeaveBalances(orgSlug, memberId, { year: new Date().getFullYear() });
-  const showMemberColumn = permissions.view !== 'self';
+  const { orgSlug, memberId, permissions, leaveTypes } = useLeaveShell();
   const [search, setSearch] = useState('');
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const balancesQuery = useLeaveBalances(orgSlug, memberId, {
+    year: new Date().getFullYear(),
+    leaveTypeId: leaveTypeFilter !== 'all' ? leaveTypeFilter : undefined,
+  });
+  const showMemberColumn = permissions.view !== 'self';
 
   const items = balancesQuery.data?.items ?? [];
   const filtered = React.useMemo(() => {
-    if (!search.trim()) return items;
-    const q = search.toLowerCase();
-    return items.filter(
-      (b: LeaveBalanceRecord) =>
-        (b.member.name ?? '').toLowerCase().includes(q) ||
-        (b.member.email ?? '').toLowerCase().includes(q) ||
-        b.leaveType.name.toLowerCase().includes(q),
-    );
+    let result = items;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = items.filter(
+        (b: LeaveBalanceRecord) =>
+          (b.member.name ?? '').toLowerCase().includes(q) ||
+          (b.member.email ?? '').toLowerCase().includes(q) ||
+          b.leaveType.name.toLowerCase().includes(q),
+      );
+    }
+    return result;
   }, [items, search]);
 
-  const balEmptyBody = search ? 'Try adjusting your search.' : 'Balances will appear here once leave types and allocations are in place.';
+  React.useEffect(() => { setPage(1); }, [search, leaveTypeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const balEmptyBody = search || leaveTypeFilter !== 'all' ? 'Try adjusting your search or filter.' : 'Balances will appear here once leave types and allocations are in place.';
 
   return (
     <Card>
       <Toolbar>
         <SearchInput
           value={search}
-          onChange={setSearch}
+          onChange={(v) => { setSearch(v); setPage(1); }}
           placeholder="Search by member or leave type…"
         />
+        <Select value={leaveTypeFilter} onValueChange={(v) => { setLeaveTypeFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-9 w-[180px] text-sm border-0 bg-canvas">
+            <SelectValue placeholder="All Leave Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Leave Types</SelectItem>
+            {leaveTypes.map((lt) => (
+              <SelectItem key={lt.id} value={lt.id} className="text-sm">
+                {lt.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Toolbar>
 
       {balancesQuery.isLoading && (
@@ -321,37 +349,49 @@ export function LeaveBalancesView() {
         <SectionEmpty title="No balances found" body={balEmptyBody} />
       )}
       {!balancesQuery.isLoading && filtered.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-black/[0.04] bg-canvas/50">
-                {showMemberColumn && <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Member</th>}
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Leave Type</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Allocated</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Used</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Carry</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Remaining</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/4 bg-surface">
-              {filtered.map((b: LeaveBalanceRecord) => (
-                <tr key={b.id} className="transition-colors hover:bg-black/[0.02]">
-                  {showMemberColumn && (
-                    <td className="px-6 py-3">
-                      <p className="font-medium text-neutral-900">{b.member.name ?? b.member.email ?? b.member.memberId}</p>
-                      <p className="text-xs text-neutral-500">{b.member.email}</p>
-                    </td>
-                  )}
-                  <td className="px-6 py-3 text-neutral-700">{b.leaveType.name}</td>
-                  <td className="px-6 py-3 font-mono text-neutral-900">{b.allocated}</td>
-                  <td className="px-6 py-3 font-mono text-neutral-900">{b.used}</td>
-                  <td className="px-6 py-3 font-mono text-neutral-900">{b.carriedForward}</td>
-                  <td className="px-6 py-3 font-mono font-semibold text-primary">{b.remaining}</td>
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-black/[0.04] bg-canvas/50">
+                  {showMemberColumn && <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Member</th>}
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Leave Type</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Allocated</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Used</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Carry</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Remaining</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-black/4 bg-surface">
+                {paged.map((b: LeaveBalanceRecord) => (
+                  <tr key={b.id} className="transition-colors hover:bg-black/[0.02]">
+                    {showMemberColumn && (
+                      <td className="px-6 py-3">
+                        <p className="font-medium text-neutral-900">{b.member.name ?? b.member.email ?? b.member.memberId}</p>
+                        <p className="text-xs text-neutral-500">{b.member.email}</p>
+                      </td>
+                    )}
+                    <td className="px-6 py-3 text-neutral-700">{b.leaveType.name}</td>
+                    <td className="px-6 py-3 font-mono text-neutral-900">{b.allocated}</td>
+                    <td className="px-6 py-3 font-mono text-neutral-900">{b.used}</td>
+                    <td className="px-6 py-3 font-mono text-neutral-900">{b.carriedForward}</td>
+                    <td className="px-6 py-3 font-mono font-semibold text-primary">{b.remaining}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-black/[0.04] px-8 py-6">
+            <EmployeePagination
+              page={page}
+              totalPages={totalPages}
+              total={filtered.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={() => undefined}
+            />
+          </div>
+        </>
       )}
     </Card>
   );
@@ -362,6 +402,8 @@ export function LeaveBalancesView() {
 export function LeaveTypesView() {
   const { canApprove, leaveTypes, leaveTypesLoading, openLeaveTypeDialog } = useLeaveShell();
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   if (!canApprove) {
     return (
@@ -375,17 +417,22 @@ export function LeaveTypesView() {
     ? leaveTypes.filter((t: LeaveTypeRecord) => t.name.toLowerCase().includes(search.toLowerCase()))
     : leaveTypes;
 
+  React.useEffect(() => { setPage(1); }, [search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+
   const ltEmptyTitle = search ? 'No leave types match your search.' : 'No leave types configured';
   const ltEmptyBody = search ? 'Try a different search term.' : 'Create your first leave type to start shaping the policy layer.';
 
   return (
     <Card>
       <Toolbar>
-        <SearchInput value={search} onChange={setSearch} placeholder="Search leave types…" />
+        <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search leave types…" />
         {/* spacer */}
         <div className="flex-1" />
         <Button
-          className="h-8 rounded-full bg-primary px-4 text-sm text-white shadow-[0_10px_24px_rgba(0,135,74,0.18)] hover:bg-primary-hover"
+          className="h-8 rounded-md bg-primary px-4 text-sm text-white shadow-[0_10px_24px_rgba(0,135,74,0.18)] hover:bg-primary-hover"
           onClick={() => openLeaveTypeDialog()}
         >
           New Leave Type
@@ -405,38 +452,50 @@ export function LeaveTypesView() {
         <SectionEmpty title={ltEmptyTitle} body={ltEmptyBody} />
       )}
       {!leaveTypesLoading && filtered.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-black/[0.04] bg-canvas/50">
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Quota</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Carry Forward</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Paid</th>
-                <th className="px-6 py-3 text-right text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/4 bg-surface">
-              {filtered.map((t: LeaveTypeRecord) => (
-                <tr key={t.id} className="transition-colors hover:bg-black/[0.02]">
-                  <td className="px-6 py-3 font-medium text-neutral-900">{t.name}</td>
-                  <td className="px-6 py-3 font-mono text-neutral-700">{t.quota}</td>
-                  <td className="px-6 py-3 text-neutral-700">{t.carryForward ? 'Enabled' : 'Off'}</td>
-                  <td className="px-6 py-3 text-neutral-700">{t.isPaid ? 'Yes' : 'No'}</td>
-                  <td className="px-6 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      className="h-7 rounded-full px-3 text-xs text-neutral-600 hover:bg-black/[0.03]"
-                      onClick={() => openLeaveTypeDialog(t)}
-                    >
-                      Edit
-                    </Button>
-                  </td>
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-black/[0.04] bg-canvas/50">
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Quota</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Carry Forward</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Paid</th>
+                  <th className="px-6 py-3 text-right text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-black/4 bg-surface">
+                {paged.map((t: LeaveTypeRecord) => (
+                  <tr key={t.id} className="transition-colors hover:bg-black/[0.02]">
+                    <td className="px-6 py-3 font-medium text-neutral-900">{t.name}</td>
+                    <td className="px-6 py-3 font-mono text-neutral-700">{t.quota}</td>
+                    <td className="px-6 py-3 text-neutral-700">{t.carryForward ? 'Enabled' : 'Off'}</td>
+                    <td className="px-6 py-3 text-neutral-700">{t.isPaid ? 'Yes' : 'No'}</td>
+                    <td className="px-6 py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        className="h-7 rounded-md px-3 text-xs text-neutral-600 hover:bg-black/[0.03]"
+                        onClick={() => openLeaveTypeDialog(t)}
+                      >
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-black/[0.04] px-8 py-6">
+            <EmployeePagination
+              page={page}
+              totalPages={totalPages}
+              total={filtered.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={() => undefined}
+            />
+          </div>
+        </>
       )}
     </Card>
   );
@@ -509,14 +568,14 @@ function buildHolidayColumns(handlers: {
         <div className="flex justify-end gap-1">
           <Button
             variant="ghost"
-            className="h-7 rounded-full px-3 text-xs text-neutral-600 hover:bg-black/[0.03]"
+            className="h-7 rounded-md px-3 text-xs text-neutral-600 hover:bg-black/[0.03]"
             onClick={() => handlers.onEdit(row.original)}
           >
             Edit
           </Button>
           <Button
             variant="ghost"
-            className="h-7 rounded-full px-3 text-xs text-destructive-text hover:bg-destructive-bg"
+            className="h-7 rounded-md px-3 text-xs text-destructive-text hover:bg-destructive-bg"
             onClick={() => handlers.onDelete(row.original.id)}
           >
             Delete
@@ -596,7 +655,7 @@ export function LeaveHolidaysView() {
         {canSync && (
           <Button
             variant="outline"
-            className="h-8 rounded-full px-4 text-sm text-neutral-700"
+            className="h-8 rounded-md px-4 text-sm text-neutral-700"
             onClick={() => void syncHolidays()}
           >
             <RefreshCw className="mr-1.5 size-3.5" />
@@ -604,7 +663,7 @@ export function LeaveHolidaysView() {
           </Button>
         )}
         <Button
-          className="h-8 rounded-full bg-primary px-4 text-sm text-white shadow-[0_10px_24px_rgba(0,135,74,0.18)] hover:bg-primary-hover"
+          className="h-8 rounded-md bg-primary px-4 text-sm text-white shadow-[0_10px_24px_rgba(0,135,74,0.18)] hover:bg-primary-hover"
           onClick={() => openHolidayDialog()}
         >
           New Holiday

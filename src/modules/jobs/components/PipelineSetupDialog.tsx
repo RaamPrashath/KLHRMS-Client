@@ -334,6 +334,8 @@ function NewColumnForm({
   const evaluationType = useWatch({ control: form.control, name: 'evaluationType' });
   const evaluationIncludeTotal = useWatch({ control: form.control, name: 'evaluationIncludeTotal' });
   const evaluationIncludeAnalysis = useWatch({ control: form.control, name: 'evaluationIncludeAnalysis' });
+  const evaluationCategories = useWatch({ control: form.control, name: 'evaluationCategories' });
+  const sheetEnabled = useWatch({ control: form.control, name: 'sheetEnabled' });
   const calendarDate = dueDate ? new Date(`${toDateInputValue(dueDate)}T12:00:00+05:30`) : undefined;
   const { fields, append, remove, move } = useFieldArray({
     control: form.control,
@@ -508,7 +510,7 @@ function NewColumnForm({
                 </div>
                 <div className="space-y-2">
                   {fields.map((field, index) => {
-                    const catType = form.watch(`evaluationCategories.${index}.type`) ?? 'NUMERIC';
+                    const catType = evaluationCategories?.[index]?.type ?? 'NUMERIC';
                     const isNumeric = catType === 'NUMERIC';
 
                     return (
@@ -610,7 +612,7 @@ function NewColumnForm({
                   </p>
                 </div>
                 <Switch
-                  checked={Boolean(form.watch('sheetEnabled'))}
+                  checked={Boolean(sheetEnabled)}
                   onCheckedChange={(checked) => form.setValue('sheetEnabled', checked)}
                 />
               </div>
@@ -639,7 +641,7 @@ export function PipelineSetupDialog({
   const [manualSelection, setManualSelection] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
-  const importOptionsQuery = useImportOptionsQuery(orgSlug, memberId, requisitionId);
+  const importOptionsQuery = useImportOptionsQuery(orgSlug, memberId, requisitionId, open);
 
   const filteredJobs = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
@@ -679,6 +681,9 @@ export function PipelineSetupDialog({
             <div className="border-b border-neutral-100 p-4">
               <DialogHeader className="gap-1">
                 <DialogTitle className="text-[17px] font-semibold text-neutral-900">Pipeline setup</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Create, default, or import pipeline stages for this job posting.
+                </DialogDescription>
               </DialogHeader>
             </div>
 

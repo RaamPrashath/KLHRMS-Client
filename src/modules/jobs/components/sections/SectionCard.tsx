@@ -17,8 +17,7 @@ export function SectionCard({
     <section id={id} className="scroll-mt-24 rounded-xl bg-surface p-6 shadow-[var(--shadow-1)]">
       <div className="mb-5 border-b border-neutral-200 pb-3">
         <h2 className="text-xl font-semibold text-neutral-900">
-          {title}
-          {required ? <RequiredMark /> : null}
+          {title} {required ? <RequiredMark /> : null}
         </h2>
       </div>
       <div className="space-y-5">{children}</div>
@@ -28,7 +27,7 @@ export function SectionCard({
 
 export function RequiredMark() {
   return (
-    <span className="ml-1 text-sm font-semibold text-destructive-text" aria-hidden="true">
+    <span className="inline-flex text-sm font-semibold leading-none text-destructive-text" aria-hidden="true">
       *
     </span>
   );

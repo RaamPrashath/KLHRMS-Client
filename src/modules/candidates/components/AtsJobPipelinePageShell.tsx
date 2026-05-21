@@ -4,15 +4,18 @@ import { useRouter } from 'next/navigation';
 
 import { AtsKanbanBoard } from '@/modules/candidates/components/AtsKanbanBoard';
 import { usePipelineJobPostings } from '@/modules/candidates/hooks/useAtsPipeline';
+import type { RolePermissions } from '@/modules/roles/types/role';
 
 export function AtsJobPipelinePageShell({
   orgSlug,
   memberId,
   jobSlug,
+  permissions,
 }: {
   readonly orgSlug: string;
   readonly memberId: string;
   readonly jobSlug: string;
+  readonly permissions?: RolePermissions | null;
 }) {
   const router = useRouter();
   const postingsQuery = usePipelineJobPostings(orgSlug, memberId);
@@ -42,6 +45,7 @@ export function AtsJobPipelinePageShell({
       isLoadingPostings={postingsQuery.isLoading}
       showJobSelector={true}
       pipelineBasePath={`/${orgSlug}/candidates/${jobSlug}`}
+      permissions={permissions}
     />
   );
 }

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { CandidatesJobPageClient } from '@/app/(authenticated)/[orgSlug]/candidates/[jobSlug]/CandidatesJobPageClient';
 import { CandidatesJobContext } from '@/modules/candidates/components/CandidatesJobContext';
 import { usePipelineJobPostings } from '@/modules/candidates/hooks/useAtsPipeline';
+import type { RolePermissions } from '@/modules/roles/types/role';
 
 const TABS = [
   { key: 'overview', icon: LayoutDashboard, label: 'Overview' },
@@ -32,11 +33,13 @@ export function AtsPipelineSectionLayout({
   orgSlug,
   memberId,
   jobSlug,
+  permissions,
   children,
 }: {
   readonly orgSlug: string;
   readonly memberId: string;
   readonly jobSlug: string;
+  readonly permissions?: RolePermissions | null;
   readonly children: ReactNode;
 }) {
   const router = useRouter();
@@ -115,6 +118,7 @@ export function AtsPipelineSectionLayout({
         memberId={memberId}
         jobSlug={jobSlug}
         defaultView={activeTab}
+        permissions={permissions}
       />
     );
 

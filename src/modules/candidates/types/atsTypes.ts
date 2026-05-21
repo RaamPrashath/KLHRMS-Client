@@ -335,12 +335,16 @@ export interface MyInterview {
   stageName: string;
   candidate: CandidateSummary;
   jobTitle: string;
+  jobPostingId: string;
+  jobSlug: string | null;
   scheduledStartAt: string | null;
   scheduledEndAt: string | null;
   status: string;
   role: 'INTERVIEWER' | 'BACKUP';
   isBackup: boolean;
   meetingUrl: string | null;
+  stageDueDate: string | null;
+  evaluationCategories: StageEvaluationCategory[];
 }
 
 export interface MyInterviewListResponse {

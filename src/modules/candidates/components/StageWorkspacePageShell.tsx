@@ -202,6 +202,7 @@ function workspaceCandidateToApplication(
     status: candidate.currentAssignment?.status ?? 'UNASSIGNED',
     resumeUrl: candidate.candidate.resumeUrl,
     interviewMeeting: assignmentToMeeting(candidate),
+    currentAssignment: candidate.currentAssignment,
   };
 }
 

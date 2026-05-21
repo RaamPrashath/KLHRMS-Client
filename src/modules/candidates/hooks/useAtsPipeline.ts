@@ -318,6 +318,7 @@ export function useCreateInterviewMeeting(
     onSuccess: (_meeting, params) => {
       if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
       queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
     },
   });
 }
@@ -340,6 +341,7 @@ export function useUpdateInterviewMeeting(
     onSuccess: (_meeting, params) => {
       if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
       queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
     },
   });
 }
@@ -361,6 +363,7 @@ export function useStartInterviewMeeting(
     onSuccess: (_meeting, params) => {
       if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
       queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
     },
   });
 }
@@ -432,6 +435,7 @@ export function useCompleteInterviewMeeting(
     onSuccess: (_meeting, params) => {
       if (jobPostingId) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
       queryClient.invalidateQueries({ queryKey: ['ats-application-detail', orgSlug, params.applicationId] });
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
     },
   });
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const publicCareerApplicationSchema = z.object({
   firstName: z.string().trim().min(1, 'First name is required').max(255, 'First name is too long'),
   lastName: z.string().trim().min(1, 'Last name is required').max(255, 'Last name is too long'),
+  email: z.string().trim().email('Enter a valid email address').max(255, 'Email is too long'),
   phone: z.string().trim().max(50, 'Phone number is too long'),
   linkedinUrl: z.union([
     z.url('Enter a valid LinkedIn URL'),
