@@ -2,7 +2,7 @@
 
 import { memo, startTransition, useEffect, useMemo, useState } from "react";
 import { format, isToday, parseISO } from "date-fns";
-import { CheckCircle2, Eraser, Save, Sparkles } from "lucide-react";
+import { Eraser, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -453,12 +453,22 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
       </section>
 
       <section className="bg-white rounded-2xl p-6">
-        <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Calendar</h3>
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {resolvedLocations.map((location) => {
+              const theme = PLAN_LOCATION_THEMES[location.value];
+              const count = summary.counts[location.value] ?? 0;
+              return (
+                <div key={location.value} className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+                  <span className={cn("h-2 w-2 rounded-full", theme.dot)} />
+                  <span>{location.short_label}</span>
+                  <span className="tabular-nums text-muted-foreground">{count}</span>
+                </div>
+              );
+            })}
           </div>
-          <span className="inline-flex min-h-9 items-center rounded-full bg-muted px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {plannedDaysCount} of {weekdayDates.length} weekdays planned
+          <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">
+            {Math.round(completionRatio * 100)}%
           </span>
         </div>
 
@@ -507,86 +517,6 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
                   })}
                 </div>
               ))}
-        </div>
-      </section>
-
-      <section className="bg-background rounded-2xl p-6">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr]">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">Coverage</h3>
-              <p className="text-[11px] font-medium leading-5 text-muted-foreground/70">
-                A quick read on how complete the month is before you save it.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background px-4 py-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
-                  Completion
-                </span>
-                <span className="text-sm font-semibold text-foreground">
-                  {Math.round(completionRatio * 100)}% planned
-                </span>
-              </div>
-            </div>
-
-            <div className="h-2 overflow-hidden rounded-full bg-background">
-              <div
-                className="h-full rounded-full bg-foreground transition-[width] duration-200 ease-out"
-                style={{ width: `${completionRatio * 100}%` }}
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              <span className="rounded-full bg-background px-3 py-2">{plannedDaysCount} set</span>
-              <span className="rounded-full bg-background px-3 py-2">{summary.unset} open</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {resolvedLocations.map((location) => {
-              const theme = PLAN_LOCATION_THEMES[location.value];
-              const count = summary.counts[location.value] ?? 0;
-              const ratio = weekdayDates.length ? count / weekdayDates.length : 0;
-
-              return (
-                <div
-                  key={location.value}
-                  className="grid gap-3 rounded-2xl border border-border/70 bg-background px-4 py-4 sm:grid-cols-[minmax(0,180px)_1fr_auto]"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn("h-2.5 w-2.5 rounded-full", theme.dot)} />
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-foreground">{location.label}</p>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
-                        {location.short_label}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={cn("h-full rounded-full transition-[width] duration-200 ease-out", theme.dot)}
-                        style={{ width: `${ratio * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="text-left sm:text-right">
-                    <p className="text-sm font-semibold tabular-nums text-foreground">{count}</p>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
-                      weekdays
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </section>
     </div>
