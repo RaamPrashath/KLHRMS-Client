@@ -79,6 +79,10 @@ export function LoginForm() {
                 subtitle="Sign in to your Kovan account to continue."
             />
 
+            <SocialButtons onError={setFormError} />
+
+            <AuthDivider className="my-5" />
+
             <form
                 onSubmit={handleSubmit(onSubmit)}
                 className="flex flex-col gap-4"
@@ -132,12 +136,12 @@ export function LoginForm() {
 
                 <NeumorphButton
                     type="submit"
-                    intent="primary"
-                    className="mt-1 h-11 w-full rounded-2xl"
+                    intent="default"
+                    className="mt-5 h-11 w-full rounded-2xl !bg-[#1d1d1f] hover:enabled:!bg-[#0a0a0f] active:enabled:!bg-black !text-white !shadow-[inset_0px_-2px_0px_0px_rgba(0,0,0,0.6),_0px_2px_8px_rgba(0,0,0,0.2)] hover:enabled:!shadow-[inset_0px_-2.5px_0px_0px_rgba(0,0,0,0.8),_0px_4px_12px_rgba(0,0,0,0.3)]"
                     disabled={isSubmitting}
                 >
                     {isSubmitting ? (
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-2 justify-center">
                             <Loader2 className="h-5 w-5 animate-spin" />
                             Signing in...
                         </span>
@@ -147,11 +151,7 @@ export function LoginForm() {
                 </NeumorphButton>
             </form>
 
-            <AuthDivider className="my-3.5" />
-
-            <SocialButtons onError={setFormError} />
-
-            <div className="mt-6 text-center">
+            <div className="mt-8 text-center">
                 <AuthFooterLink
                     text="Don't have an account yet?"
                     linkText="Create an account"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -48,6 +48,8 @@ export function LeaveTypeDialog({
       color: '',
     },
   });
+  const carryForward = useWatch({ control: form.control, name: 'carryForward' });
+  const isPaid = useWatch({ control: form.control, name: 'isPaid' });
 
   useEffect(() => {
     form.reset({
@@ -102,7 +104,7 @@ export function LeaveTypeDialog({
             </label>
             <Switch 
               id="carry-forward-switch"
-              checked={form.watch('carryForward')} 
+              checked={carryForward} 
               onCheckedChange={(checked) => {
                 form.setValue('carryForward', checked, { shouldDirty: true });
               }} 
@@ -116,7 +118,7 @@ export function LeaveTypeDialog({
             </label>
             <Switch 
               id="paid-leave-switch"
-              checked={form.watch('isPaid')} 
+              checked={isPaid} 
               onCheckedChange={(checked) => {
                 form.setValue('isPaid', checked, { shouldDirty: true });
               }} 

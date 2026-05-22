@@ -136,10 +136,10 @@ export function ApplyLeaveSheet({
                   value={selectedMemberId}
                   onValueChange={(value) => form.setValue('memberId', value, { shouldValidate: true })}
                 >
-                  <SelectTrigger id="leave-member" className="h-10">
+                  <SelectTrigger id="leave-member" className="h-10 w-full">
                     <SelectValue placeholder="Select a member" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" className="z-[100]">
                     {members.map((member) => (
                       <SelectItem key={member.memberId} value={member.memberId}>
                         {member.name ?? member.email ?? member.memberId}
@@ -160,11 +160,12 @@ export function ApplyLeaveSheet({
               <Select
                 value={selectedLeaveTypeId}
                 onValueChange={(value) => form.setValue('leaveTypeId', value, { shouldValidate: true })}
+                disabled={leaveTypes.length === 0}
               >
-                <SelectTrigger id="leave-type" className="h-10">
-                  <SelectValue placeholder="Select leave type" />
+                <SelectTrigger id="leave-type" className="h-10 w-full">
+                  <SelectValue placeholder={leaveTypes.length === 0 ? 'No leave types available' : 'Select leave type'} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper" className="z-[100]">
                   {leaveTypes.map((leaveType) => (
                     <SelectItem key={leaveType.id} value={leaveType.id}>
                       {leaveType.name}
@@ -172,6 +173,9 @@ export function ApplyLeaveSheet({
                   ))}
                 </SelectContent>
               </Select>
+              {leaveTypes.length === 0 ? (
+                <p className="text-xs text-neutral-500">Ask an admin to create a leave type before submitting requests.</p>
+              ) : null}
               {form.formState.errors.leaveTypeId ? (
                 <p className="text-xs text-destructive-text">{form.formState.errors.leaveTypeId.message}</p>
               ) : null}

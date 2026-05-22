@@ -103,6 +103,10 @@ export function SignupForm() {
                 subtitle="Join Kovan Labs to start managing your team."
             />
 
+            <SocialButtons onError={setFormError} />
+
+            <AuthDivider className="my-5" />
+
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4" aria-label="Sign up form">
                 {/* Error Summary */}
                 {(formError || Object.keys(errors).length > 0) && (
@@ -185,8 +189,8 @@ export function SignupForm() {
 
                 <NeumorphButton
                     type="submit"
-                    intent="primary"
-                    className="mt-1 h-11 w-full rounded-2xl"
+                    intent="default"
+                    className="mt-5 h-11 w-full rounded-2xl !bg-[#1d1d1f] hover:enabled:!bg-[#0a0a0f] active:enabled:!bg-black !text-white !shadow-[inset_0px_-2px_0px_0px_rgba(0,0,0,0.6),_0px_2px_8px_rgba(0,0,0,0.2)] hover:enabled:!shadow-[inset_0px_-2.5px_0px_0px_rgba(0,0,0,0.8),_0px_4px_12px_rgba(0,0,0,0.3)]"
                     disabled={isSubmitting}
                     aria-busy={isSubmitting}
                 >
@@ -201,11 +205,7 @@ export function SignupForm() {
                 </NeumorphButton>
             </form>
 
-            <AuthDivider className="my-3.5" />
-
-            <SocialButtons onError={setFormError} />
-
-            <div className="mt-6 text-center">
+            <div className="mt-8 text-center">
                 <AuthFooterLink
                     text="Already have an account?"
                     linkText="Sign in"

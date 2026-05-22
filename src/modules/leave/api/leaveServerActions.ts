@@ -3,9 +3,11 @@
 import { prisma } from '@/lib/prisma';
 import {
   holidaySchema,
+  leaveBalanceAssignmentSchema,
   leaveDecisionSchema,
   leaveRequestSchema,
   leaveTypeSchema,
+  type LeaveBalanceAssignmentInput,
   type HolidayInput,
   type LeaveDecisionInput,
   type LeaveRequestInput,
@@ -15,6 +17,7 @@ import type {
   HolidayListResponse,
   HolidayRecord,
   LeaveBalanceListResponse,
+  LeaveBalanceRecord,
   LeaveCalendarResponse,
   LeavePageContext,
   LeaveRequestListResponse,
@@ -62,6 +65,12 @@ function buildQuery(params: Record<string, string | number | undefined | null>):
   }
   const query = search.toString();
   return query ? `?${query}` : '';
+}
+
+function nullableText(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed.toLowerCase() === 'null') return null;
+  return trimmed;
 }
 
 export async function fetchLeavePageContextAction(params: {
@@ -140,6 +149,11 @@ export async function createLeaveTypeAction(params: {
     headers: buildHeaders(params.orgSlug, params.memberId),
     body: JSON.stringify(payload),
   });
+  if (res.status === 409) {
+    const existing = await fetchLeaveTypesAction({ orgSlug: params.orgSlug, memberId: params.memberId });
+    const match = existing.find((item) => item.name.trim().toLowerCase() === parsed.data.name.trim().toLowerCase());
+    if (match) return match;
+  }
   return handleResponse<LeaveTypeRecord>(res);
 }
 
@@ -200,7 +214,7 @@ export async function createHolidayAction(params: {
   }
   const payload = {
     ...parsed.data,
-    description: parsed.data.description || null,
+    description: nullableText(parsed.data.description),
   };
   const res = await fetch(`${getApiUrl()}/leaves/holidays`, {
     method: 'POST',
@@ -222,7 +236,7 @@ export async function updateHolidayAction(params: {
   }
   const payload = {
     ...parsed.data,
-    description: parsed.data.description || null,
+    description: nullableText(parsed.data.description),
   };
   const res = await fetch(`${getApiUrl()}/leaves/holidays/${params.holidayId}`, {
     method: 'PATCH',
@@ -379,6 +393,23 @@ export async function fetchLeaveBalancesAction(params: {
     cache: 'no-store',
   });
   return handleResponse<LeaveBalanceListResponse>(res);
+}
+
+export async function upsertLeaveBalanceAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: LeaveBalanceAssignmentInput;
+}): Promise<LeaveBalanceRecord> {
+  const parsed = leaveBalanceAssignmentSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+  const res = await fetch(`${getApiUrl()}/leaves/balances`, {
+    method: 'PUT',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(parsed.data),
+  });
+  return handleResponse<LeaveBalanceRecord>(res);
 }
 
 export async function fetchLeaveCalendarAction(params: {

@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useTransition } from 'react';
 import { getScope, type RolePermissions } from '@/lib/hrms-roles';
-import { useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
+import { useDeactivateEmployeeMutation, useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { ChangeEmployeeRoleDialog } from './ChangeEmployeeRoleDialog';
+import { DeactivateEmployeeDialog } from './DeactivateEmployeeDialog';
 import { EmployeeTable } from './EmployeeTable';
 import type { AttendanceTodayStatus } from '@/modules/employees/types/employeeTypes';
 
@@ -26,10 +27,17 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
   // ── Role editing state ──────────────────────────────────────────────────────
   const [editTarget, setEditTarget] = useState<{ memberId: string; currentRoleName: string | null } | null>(null);
 
-  const canEditRole = permissions ? getScope(permissions, 'permission', 'edit') !== 'none' : false;
+  const [deactivateTarget, setDeactivateTarget] = useState<{ memberId: string; name: string } | null>(null);
+  const deactivateMutation = useDeactivateEmployeeMutation(orgSlug, memberId);
+
+  const canEditRole = permissions ? getScope(permissions, 'employees', 'edit') !== 'none' : false;
 
   const handleEditRole = useCallback((targetMemberId: string, currentRoleName: string | null) => {
     setEditTarget({ memberId: targetMemberId, currentRoleName });
+  }, []);
+
+  const handleDeactivate = useCallback((targetMemberId: string, name: string) => {
+    setDeactivateTarget({ memberId: targetMemberId, name });
   }, []);
 
   // ── Data queries ────────────────────────────────────────────────────────────
@@ -126,6 +134,7 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
         onClearAll={handleClearAll}
         canEditRole={canEditRole}
         onEditRole={handleEditRole}
+        onDeactivate={canEditRole ? handleDeactivate : undefined}
       />
 
       <ChangeEmployeeRoleDialog
@@ -135,6 +144,14 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
         memberId={editTarget?.memberId ?? ''}
         currentRoleName={editTarget?.currentRoleName ?? null}
         roles={roles}
+      />
+
+      <DeactivateEmployeeDialog
+        open={deactivateTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeactivateTarget(null); }}
+        employeeName={deactivateTarget?.name ?? ''}
+        employeeMemberId={deactivateTarget?.memberId ?? ''}
+        deactivateMutation={deactivateMutation}
       />
     </div>
   );

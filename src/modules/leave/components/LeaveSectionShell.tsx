@@ -38,6 +38,7 @@ interface LeaveShellContextValue {
   canApprove: boolean;
   canCreate: boolean;
   canSync: boolean;
+  members: LeaveMemberSummary[];
   leaveTypes: LeaveTypeRecord[];
   leaveTypesLoading: boolean;
   holidays: HolidayRecord[];
@@ -138,6 +139,7 @@ export function LeaveSectionShell({
       canApprove,
       canCreate,
       canSync,
+      members: initialMembers,
       leaveTypes,
       leaveTypesLoading: leaveTypesQuery.isLoading,
       holidays,
@@ -174,7 +176,7 @@ export function LeaveSectionShell({
       },
     }),
     [
-      canApprove, canCreate, canSync, deleteHolidayMutation, syncHolidaysMutation,
+      canApprove, canCreate, canSync, deleteHolidayMutation, initialMembers, syncHolidaysMutation,
       holidays, holidaysQuery.isLoading, leaveTypes, leaveTypesQuery.isLoading,
       memberId, orgSlug, permissions,
     ],
@@ -232,7 +234,13 @@ export function LeaveSectionShell({
       </div>
 
       <ApplyLeaveSheet open={applyOpen} onOpenChange={setApplyOpen} orgSlug={orgSlug} memberId={memberId} createScope={permissions.create} leaveTypes={leaveTypes} members={initialMembers} />
-      <LeaveTypeDialog open={leaveTypeDialogOpen} onOpenChange={setLeaveTypeDialogOpen} orgSlug={orgSlug} memberId={memberId} leaveType={selectedLeaveType} />
+      <LeaveTypeDialog
+        open={leaveTypeDialogOpen}
+        onOpenChange={setLeaveTypeDialogOpen}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        leaveType={selectedLeaveType}
+      />
       <HolidayDialog open={holidayDialogOpen} onOpenChange={setHolidayDialogOpen} orgSlug={orgSlug} memberId={memberId} holiday={selectedHoliday} />
       <LeaveRequestDetailsDialog open={selectedRequestId !== null} onOpenChange={(open) => { if (!open) setSelectedRequestId(null); }} orgSlug={orgSlug} memberId={memberId} leaveRequestId={selectedRequestId} permissions={permissions} />
     </LeaveShellContext.Provider>

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { type RolePermissions } from '@/lib/hrms-roles';
 import { requireOrgMembership } from '@/lib/organizations';
-import { prisma } from '@/lib/prisma';
+
 import { fetchDepartmentMetaAction } from '@/modules/departments/api/departmentServerActions';
 import { CreateJobRequisitionPage } from '@/modules/jobs/pages/CreateJobRequisitionPage';
 
@@ -25,24 +25,16 @@ export default async function NewJobPage({
     redirect('/organizations');
   }
 
-  const [departmentMeta, members] = await Promise.all([
-    fetchDepartmentMetaAction({ orgSlug, memberId: member.id }),
-    prisma.member.findMany({
-      where: { organizationId: member.organizationId },
-      select: {
-        id: true,
-        user: { select: { name: true, email: true } },
-      },
-      orderBy: { user: { name: 'asc' } },
-    }),
-  ]);
+  const meta = await fetchDepartmentMetaAction({ orgSlug, memberId: member.id });
 
-  const departments = departmentMeta.departments.map((d) => ({ id: d.id, name: d.label }));
-
-  const orgMembers = members.map((orgMember) => ({
+  const departments = meta.departments.map((department) => ({
+    id: department.id,
+    name: department.label,
+  }));
+  const orgMembers = meta.members.map((orgMember) => ({
     id: orgMember.id,
-    name: orgMember.user?.name ?? orgMember.user?.email ?? 'Unknown',
-    email: orgMember.user?.email ?? '',
+    name: orgMember.label,
+    email: orgMember.email ?? '',
   }));
 
   return (

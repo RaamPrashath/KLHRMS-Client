@@ -2,6 +2,7 @@
 
 import { type QueryKey, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  type AttendanceActionResult,
   clockInAction,
   clockOutAction,
   deleteAttendanceAction,
@@ -32,11 +33,19 @@ interface DeleteVariables {
   date: string;
 }
 
+function unwrapAttendanceActionResult<T>(result: AttendanceActionResult<T>): T {
+  if (result.ok) return result.data;
+  throw new Error(JSON.stringify(result.error));
+}
+
 export function useClockInMutation(orgSlug: string, memberId: string) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation<AttendanceRecord, Error, ClockInInput>({
-    mutationFn: (data) => clockInAction({ orgSlug, memberId, data }),
+    mutationFn: async (data) => {
+      const result = await clockInAction({ orgSlug, memberId, data });
+      return unwrapAttendanceActionResult(result);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
       queryClient.invalidateQueries({ queryKey: ['attendance-me', orgSlug] });
@@ -60,7 +69,10 @@ export function useClockOutMutation(orgSlug: string, memberId: string) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation<AttendanceRecord[], Error, ClockOutInput>({
-    mutationFn: (data) => clockOutAction({ orgSlug, memberId, data }),
+    mutationFn: async (data) => {
+      const result = await clockOutAction({ orgSlug, memberId, data });
+      return unwrapAttendanceActionResult(result);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
       queryClient.invalidateQueries({ queryKey: ['attendance-me', orgSlug] });

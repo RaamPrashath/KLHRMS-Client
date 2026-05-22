@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -12,10 +12,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCardDragOverlay } from './KanbanCardDragOverlay';
 import { readError } from '@/modules/assets/lib/assetUtils';
@@ -24,33 +21,67 @@ import type {
   KanbanIssue,
 } from './kanban.types';
 import type { MaintenanceTicket } from '@/modules/assets/api/assetServerActions';
+import type { AssetMaintenanceUpdateInput } from '@/modules/assets/schema/assetSchemas';
 
-const COLUMNS = [
-  { id: 'open' as const, title: 'Open', bg: 'bg-sky-bg', text: 'text-sky-text', dot: 'bg-sky-dot', terminal: false },
-  { id: 'in_progress' as const, title: 'In Progress', bg: 'bg-amber-bg', text: 'text-amber-text', dot: 'bg-amber-dot', terminal: false },
-  { id: 'done' as const, title: 'Done', bg: 'bg-emerald-bg', text: 'text-emerald-text', dot: 'bg-emerald-dot', terminal: true },
-  { id: 'cancelled' as const, title: 'Cancelled', bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-neutral-400', terminal: true },
+export const MAINTENANCE_KANBAN_COLUMNS = [
+  { id: 'open' as const, title: 'Open', bg: 'bg-transparent', text: 'text-[#8b94a3]', dot: 'bg-[#2563eb]', terminal: false },
+  { id: 'in_progress' as const, title: 'In Progress', bg: 'bg-transparent', text: 'text-[#8b94a3]', dot: 'bg-[#f59e0b]', terminal: false },
+  { id: 'done' as const, title: 'Done', bg: 'bg-transparent', text: 'text-[#8b94a3]', dot: 'bg-[#10b981]', terminal: true },
+  { id: 'cancelled' as const, title: 'Cancelled', bg: 'bg-transparent', text: 'text-[#8b94a3]', dot: 'bg-[#98a2b3]', terminal: true },
 ];
 
-const TICKET_STATUS_TO_COLUMN: Record<string, ColumnId> = {
+export const MAINTENANCE_TICKET_STATUS_TO_COLUMN: Record<string, ColumnId> = {
   OPEN: 'open',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'done',
   CANCELLED: 'cancelled',
 };
 
+const COLUMN_TO_TICKET_STATUS: Record<ColumnId, AssetMaintenanceUpdateInput['status']> = {
+  open: 'OPEN',
+  in_progress: 'IN_PROGRESS',
+  done: 'COMPLETED',
+  cancelled: 'CANCELLED',
+};
+
 const COLUMN_IDS: ColumnId[] = ['open', 'in_progress', 'done', 'cancelled'];
 const COLUMNS_SET = new Set<string>(COLUMN_IDS);
+
+function resolvePriority(t: MaintenanceTicket): 'low' | 'medium' | 'high' {
+  const desc = (t.issueDescription || '').toLowerCase();
+  const cond = (t.assetCondition || '').toUpperCase();
+  const type = (t.maintenanceType || '').toLowerCase();
+  
+  if (
+    desc.includes('critical') || 
+    desc.includes('failure') || 
+    desc.includes('broken') || 
+    desc.includes('emergency') ||
+    cond === 'POOR' ||
+    type.includes('critical')
+  ) {
+    return 'high';
+  }
+  if (
+    desc.includes('medium') || 
+    desc.includes('calibration') || 
+    desc.includes('warning') ||
+    cond === 'FAIR'
+  ) {
+    return 'medium';
+  }
+  return 'low';
+}
 
 function mapTicketsToIssues(tickets: MaintenanceTicket[]): KanbanIssue[] {
   return tickets.map((t) => ({
     id: t.id,
     assetId: t.assetId,
     title: t.assetName,
-    ticketId: t.assetCode,
+    ticketId: t.ticketId,
     description: t.issueDescription,
-    priority: 'medium' as const,
-    status: TICKET_STATUS_TO_COLUMN[t.status] || 'open',
+    priority: resolvePriority(t),
+    status: MAINTENANCE_TICKET_STATUS_TO_COLUMN[t.status] || 'open',
     assignees: t.loggedByName ? [{ name: t.loggedByName }] : [],
     dueDate: t.serviceDate,
     createdAt: t.createdAt,
@@ -71,23 +102,28 @@ function groupIssues(issues: KanbanIssue[]): Record<ColumnId, KanbanIssue[]> {
 
 export function KanbanBoard({
   tickets,
+  search,
+  collapsed,
+  onToggleColumn,
   onUpdateMaintenance,
 }: {
   tickets: MaintenanceTicket[];
-  onUpdateMaintenance: (params: { assetId: string; data: { maintenanceId: string; status: string } }) => Promise<unknown>;
+  search: string;
+  collapsed: Record<string, boolean>;
+  onToggleColumn: (columnId: ColumnId) => void;
+  onUpdateMaintenance: (params: { assetId: string; data: AssetMaintenanceUpdateInput }) => Promise<unknown>;
 }) {
   const [activeIssue, setActiveIssue] = useState<KanbanIssue | null>(null);
-  const [search, setSearch] = useState('');
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [grouped, setGrouped] = useState<Record<ColumnId, KanbanIssue[]> | null>(null);
+  const [groupedVersion, setGroupedVersion] = useState<string | null>(null);
 
   const allIssues = useMemo(() => mapTicketsToIssues(tickets), [tickets]);
-
-  useEffect(() => {
-    setGrouped(groupIssues(allIssues));
-  }, [allIssues]);
-
-  const safeGrouped = grouped ?? groupIssues(allIssues);
+  const ticketVersion = useMemo(
+    () => allIssues.map((issue) => `${issue.id}:${issue.status}:${issue.createdAt}`).join('|'),
+    [allIssues],
+  );
+  const baseGrouped = useMemo(() => groupIssues(allIssues), [allIssues]);
+  const safeGrouped = grouped && groupedVersion === ticketVersion ? grouped : baseGrouped;
 
   const filteredGrouped = useMemo(() => {
     if (!search.trim()) return safeGrouped;
@@ -147,15 +183,15 @@ export function KanbanBoard({
     }
 
     setGrouped((prev) => {
-      if (!prev) return prev;
+      const current = prev && groupedVersion === ticketVersion ? prev : safeGrouped;
       const updated: Record<ColumnId, KanbanIssue[]> = {} as Record<ColumnId, KanbanIssue[]>;
       for (const key of COLUMN_IDS) {
-        updated[key] = [...prev[key]];
+        updated[key] = [...current[key]];
       }
 
       const fromItems = updated[fromCol];
       const activeIndex = fromItems.findIndex((i) => i.id === activeId);
-      if (activeIndex === -1) return prev;
+      if (activeIndex === -1) return current;
 
       if (fromCol === toColId) {
         const toIndex = fromItems.findIndex((i) => i.id === overId);
@@ -179,13 +215,14 @@ export function KanbanBoard({
 
       return updated;
     });
+    setGroupedVersion(ticketVersion);
 
     setActiveIssue(null);
 
     if (fromCol !== toColId && activeData) {
-      const targetStatus = Object.entries(TICKET_STATUS_TO_COLUMN).find(([, v]) => v === toColId)?.[0];
+      const targetStatus = COLUMN_TO_TICKET_STATUS[toColId];
       if (targetStatus) {
-        const updateData: { maintenanceId: string; status: string; completedDate?: string; nextAssetStatus?: string } = {
+        const updateData: AssetMaintenanceUpdateInput = {
           maintenanceId: activeData.id,
           status: targetStatus,
         };
@@ -205,55 +242,22 @@ export function KanbanBoard({
     }
   }
 
-  const totalCount = COLUMN_IDS.reduce((sum, col) => sum + safeGrouped[col].length, 0);
-
-  function toggleCollapse(colId: string) {
-    setCollapsed((prev) => ({ ...prev, [colId]: !prev[colId] }));
-  }
-
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-3 flex items-center gap-3">
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 w-full max-w-xs">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tickets..."
-            className="h-auto border-0 bg-transparent px-0 py-0 text-[13px] shadow-none focus-visible:ring-0 placeholder:text-muted-foreground"
-          />
-        </div>
-        <div className="flex items-center gap-3 text-[12px] text-muted-foreground ml-auto">
-          {COLUMNS.map((col) => (
-            <button
-              key={col.id}
-              type="button"
-              onClick={() => toggleCollapse(col.id)}
-              className="flex items-center gap-1.5 cursor-pointer hover:text-foreground transition-colors"
-            >
-              <span className={cn('size-1.5 rounded-full', col.dot)} />
-              <span>{safeGrouped[col.id].length}</span>
-              <span className="hidden sm:inline">{col.title}</span>
-            </button>
-          ))}
-          <span className="text-muted-foreground/60">{totalCount} total</span>
-        </div>
-      </div>
-
+    <div className="h-full min-h-0 overflow-hidden bg-transparent">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex min-h-0 flex-1 items-stretch gap-4 overflow-hidden pb-4">
-          {COLUMNS.map((column) => (
+        <div className="flex h-full min-h-0 items-stretch overflow-hidden">
+          {MAINTENANCE_KANBAN_COLUMNS.map((column) => (
             <KanbanColumn
               key={column.id}
               column={column}
               issues={filteredGrouped[column.id]}
               isCollapsed={collapsed[column.id]}
-              onToggleCollapse={() => toggleCollapse(column.id)}
+              onToggleCollapse={() => onToggleColumn(column.id)}
             />
           ))}
         </div>

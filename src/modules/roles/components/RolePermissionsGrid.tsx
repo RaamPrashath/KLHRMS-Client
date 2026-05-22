@@ -157,11 +157,11 @@ export function RolePermissionsGrid({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-neutral-200">
-      <table className="w-full border-collapse table-fixed" style={{ minWidth: `${180 + ALL_COLUMNS.length * 72}px` }}>
+      <table className="w-full border-collapse table-fixed" style={{ minWidth: `${180 + ALL_COLUMNS.length * 80}px` }}>
         <colgroup>
           <col style={{ width: '180px' }} />
           {ALL_COLUMNS.map((action) => (
-            <col key={action} style={{ width: '72px' }} />
+            <col key={action} style={{ width: '80px' }} />
           ))}
         </colgroup>
         <thead>
@@ -182,14 +182,14 @@ export function RolePermissionsGrid({
         <tbody>
           {SECTIONS.map((section) => (
             <React.Fragment key={section.label}>
-              {/* Section header row */}
+              {/* Section header row — first cell is sticky to keep section context pinned */}
               <tr className="bg-neutral-50/80 border-b border-neutral-100">
-                <td
-                  colSpan={ALL_COLUMNS.length + 1}
-                  className="px-4 py-1.5 text-[10px] font-semibold text-neutral-400 uppercase tracking-widest"
-                >
+                <td className="px-4 py-1.5 text-[10px] font-bold text-neutral-500 uppercase tracking-widest sticky left-0 bg-neutral-50/90 z-10 will-change-transform shadow-[2px_0_4px_rgba(0,0,0,0.02)]">
                   {section.label}
                 </td>
+                {ALL_COLUMNS.map((action) => (
+                  <td key={action} className="bg-neutral-50/80" />
+                ))}
               </tr>
 
               {/* Module rows */}
