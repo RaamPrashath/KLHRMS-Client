@@ -4,8 +4,14 @@
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
-export default function BulkAttendanceLayout({
+export default async function BulkAttendanceLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <>{children}</>;
+  return (
+    <div className="flex min-h-full flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
+    </div>
+  );
 }

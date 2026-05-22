@@ -38,8 +38,8 @@ export function BulkAttendanceEvent({
         'group relative h-full w-full overflow-hidden cursor-pointer select-none',
         'transition-all duration-150',
         'border border-border rounded-lg',
-        'bg-green-500/5',
-        'hover:border-primary/40 hover:shadow-sm hover:bg-green-500/8',
+        'bg-primary/5',
+        'hover:border-primary/40 hover:shadow-sm hover:bg-primary/10',
         isOptimistic ? 'opacity-60' : '',
       ]
         .filter(Boolean)
@@ -85,7 +85,7 @@ export function BulkAttendanceEvent({
           type="button"
           aria-label="Edit work log"
           onClick={(e) => { e.stopPropagation(); onEdit(event); }}
-          className="size-5 flex items-center justify-center rounded-sm bg-white/90 backdrop-blur-sm text-neutral-500 hover:text-primary transition-colors duration-100 shadow-sm"
+          className="size-5 flex items-center justify-center rounded-sm bg-background/90 border border-border/50 backdrop-blur-sm text-muted-foreground hover:text-primary transition-colors duration-100 shadow-sm"
         >
           <Pencil className="size-2.5" strokeWidth={2} />
         </button>
@@ -93,7 +93,7 @@ export function BulkAttendanceEvent({
           type="button"
           aria-label="Delete work log"
           onClick={(e) => { e.stopPropagation(); onDelete(event); }}
-          className="size-5 flex items-center justify-center rounded-sm bg-white/90 backdrop-blur-sm text-neutral-500 hover:text-destructive-text transition-colors duration-100 shadow-sm"
+          className="size-5 flex items-center justify-center rounded-sm bg-background/90 border border-border/50 backdrop-blur-sm text-muted-foreground hover:text-destructive transition-colors duration-100 shadow-sm"
         >
           <Trash2 className="size-2.5" strokeWidth={2} />
         </button>
@@ -102,10 +102,7 @@ export function BulkAttendanceEvent({
       {/* Saving pulse dot */}
       {isOptimistic && (
         <div className="absolute bottom-1 right-1">
-          <div
-            className="size-1.5 rounded-full animate-pulse"
-            style={{ backgroundColor: 'var(--color-warning-text)' }}
-          />
+          <div className="size-1.5 rounded-full bg-warning animate-pulse" />
         </div>
       )}
     </div>

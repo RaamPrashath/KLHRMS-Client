@@ -21,6 +21,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ClockInButton } from "@/modules/attendance/components/ClockInButton";
+import { ClockOutConfirmDialog } from "@/modules/attendance/components/ClockOutConfirmDialog";
 import { ClockOutButton } from "@/modules/attendance/components/ClockOutButton";
 import { ProjectTaskSelector } from "@/modules/attendance/components/ProjectTaskSelector";
 import {
@@ -57,6 +58,8 @@ interface AttendanceClockCardProps {
   variant?: "attendance" | "dashboard";
   roleName?: string | null;
 }
+
+const MIN_CLOCK_OUT_REASON_CHARS = 20;
 
 interface GeoState {
   status: "idle" | "loading" | "ready" | "error";
@@ -361,10 +364,12 @@ export function AttendanceClockCard({
   const [elapsedDisplay, setElapsedDisplay] = useState("00:00:00");
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isClockOutDialogOpen, setIsClockOutDialogOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<ClockChoice>("OFFICE");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [clockInDescription, setClockInDescription] = useState("");
+  const [clockOutWorkLogText, setClockOutWorkLogText] = useState("");
   const [clockInFieldErrors, setClockInFieldErrors] = useState<{
     project?: string;
     task?: string;
@@ -584,15 +589,28 @@ export function AttendanceClockCard({
       });
   }
 
-  function handleClockOut() {
+  function handleOpenClockOutDialog() {
+    setInlineError(null);
+    setClockOutWorkLogText("");
+    setIsClockOutDialogOpen(true);
+  }
+
+  function handleClockOutConfirm() {
+    const trimmedWorkLog = clockOutWorkLogText.trim();
+    if (trimmedWorkLog.length < MIN_CLOCK_OUT_REASON_CHARS) {
+      return;
+    }
+
     setInlineError(null);
     clockOutMutation
-      .mutateAsync({})
+      .mutateAsync({ work_log_text: trimmedWorkLog })
       .then((records) => {
         const record = records.find((item) => item.date === todayIso) ?? records[0] ?? null;
         setWidgetState("COMPLETED");
         setActiveClockIn(null);
         setCompletedRecord(record);
+        setClockOutWorkLogText("");
+        setIsClockOutDialogOpen(false);
         void refetchTodayAttendance();
       })
       .catch((error: unknown) => {
@@ -752,7 +770,7 @@ export function AttendanceClockCard({
                   ) : null}
                   <div className="flex items-center gap-3">
                     <ClockOutButton
-                      onClockOut={handleClockOut}
+                      onClockOut={handleOpenClockOutDialog}
                       isPending={clockOutMutation.isPending}
                     />
                   </div>
@@ -907,6 +925,18 @@ export function AttendanceClockCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ClockOutConfirmDialog
+        open={isClockOutDialogOpen}
+        activeClockIn={activeClockIn}
+        elapsedDisplay={elapsedDisplay}
+        workLogText={clockOutWorkLogText}
+        minChars={MIN_CLOCK_OUT_REASON_CHARS}
+        isPending={clockOutMutation.isPending}
+        onOpenChange={setIsClockOutDialogOpen}
+        onWorkLogChange={setClockOutWorkLogText}
+        onConfirm={handleClockOutConfirm}
+      />
     </>
   );
 }

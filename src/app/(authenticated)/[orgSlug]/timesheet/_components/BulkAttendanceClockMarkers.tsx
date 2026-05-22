@@ -27,8 +27,8 @@ function ClockMarkerLine({
   const topPercent = Math.max(0, Math.min(100, (relativeHour / totalHours) * 100));
 
   const isClockIn = type === 'clock-in';
-  const colorClass = isClockIn ? 'bg-success-text' : 'bg-destructive-text';
-  const labelColorClass = isClockIn ? 'text-success-text' : 'text-destructive-text';
+  const colorClass = isClockIn ? 'bg-emerald-500' : 'bg-rose-500';
+  const labelColorClass = isClockIn ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
   const timeStr = format(time, 'HH:mm');
 
   return (
@@ -41,7 +41,7 @@ function ClockMarkerLine({
       <div className={`h-px flex-1 ${colorClass} opacity-70`} />
       {/* Label */}
       <span
-        className={`text-[10px] font-mono font-medium ${labelColorClass} bg-surface px-1 rounded-sm border border-current/20 ml-1 shrink-0`}
+        className={`text-[10px] font-mono font-medium ${labelColorClass} bg-card px-1 rounded-sm border border-border ml-1 shrink-0`}
       >
         {timeStr}
       </span>

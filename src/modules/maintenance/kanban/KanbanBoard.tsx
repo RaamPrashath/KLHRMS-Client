@@ -76,8 +76,8 @@ function resolvePriority(t: MaintenanceTicket): 'low' | 'medium' | 'high' {
 function mapTicketsToIssues(tickets: MaintenanceTicket[]): KanbanIssue[] {
   return tickets.map((t) => ({
     id: t.id,
-    assetId: t.assetId,
-    title: t.assetName,
+    assetId: t.assetId ?? '',
+    title: t.assetName ?? t.subject ?? '',
     ticketId: t.ticketId,
     description: t.issueDescription,
     priority: resolvePriority(t),

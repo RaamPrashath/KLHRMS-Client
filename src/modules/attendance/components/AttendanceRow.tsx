@@ -3,10 +3,12 @@ import {
   formatTime,
 } from '@/modules/attendance/utils/attendanceFormatters';
 import type { AttendanceRecord, AttendanceStatus } from '@/modules/attendance/types/attendanceTypes';
+import { FileText } from 'lucide-react';
 
 interface AttendanceRowProps {
   record: AttendanceRecord;
   showEmployeeColumn: boolean;
+  onViewWorkLog?: (attendanceRecordId: string) => void;
 }
 
 function getStatusInfo(status: AttendanceStatus) {
@@ -19,6 +21,7 @@ function getStatusInfo(status: AttendanceStatus) {
 export function AttendanceRow({
   record,
   showEmployeeColumn,
+  onViewWorkLog,
 }: Readonly<AttendanceRowProps>) {
   const statusInfo = getStatusInfo(record.status);
 
@@ -58,6 +61,23 @@ export function AttendanceRow({
           <span className="size-1.5 rounded-full" style={{ backgroundColor: statusInfo.color }} />
           {statusInfo.text}
         </div>
+      </div>
+
+      {/* Work Log column */}
+      <div className="flex-1 flex justify-center">
+        {record.status === 'PRESENT' || record.status === 'HALF_DAY' ? (
+          <button
+            type="button"
+            onClick={() => onViewWorkLog?.(record.id)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[12px] font-medium text-foreground shadow-sm transition-all duration-150 hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+            aria-label={`View work log for ${formatDate(record.date)}`}
+          >
+            <FileText className="size-3.5" strokeWidth={1.5} />
+            View Log
+          </button>
+        ) : (
+          <span className="text-sm text-neutral-300">—</span>
+        )}
       </div>
     </div>
   );

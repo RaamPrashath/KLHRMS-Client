@@ -225,7 +225,7 @@ export function WorkLogForm({
       />
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="wl-duration" className="text-[13px] font-medium text-neutral-700">
+        <Label htmlFor="wl-duration" className="text-[13px] font-medium text-foreground">
           Duration
         </Label>
         <Input
@@ -248,7 +248,7 @@ export function WorkLogForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="wl-start" className="text-[13px] font-medium text-neutral-700">
+          <Label htmlFor="wl-start" className="text-[13px] font-medium text-foreground">
             Start <span className="text-destructive">*</span>
           </Label>
           <Input
@@ -265,7 +265,7 @@ export function WorkLogForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="wl-end" className="text-[13px] font-medium text-neutral-700">
+          <Label htmlFor="wl-end" className="text-[13px] font-medium text-foreground">
             End <span className="text-destructive">*</span>
           </Label>
           <Input
@@ -284,7 +284,7 @@ export function WorkLogForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="wl-notes" className="text-[13px] font-medium text-neutral-700">
+        <Label htmlFor="wl-notes" className="text-[13px] font-medium text-foreground">
           Description <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
         <Textarea
@@ -297,7 +297,7 @@ export function WorkLogForm({
         />
       </div>
 
-      <div className="flex items-center gap-3 pt-2 border-t border-neutral-100">
+      <div className="flex items-center gap-3 pt-2 border-t border-border">
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1" size="lg">
           Cancel
         </Button>

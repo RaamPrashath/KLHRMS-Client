@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { BulkAttendanceCalendar } from './BulkAttendanceCalendar';
 import { BulkAttendanceSkeleton } from './BulkAttendanceSkeleton';
 import { BulkAttendanceToolbar } from './BulkAttendanceToolbar';
+import { TimesheetSubnav } from './TimesheetSubnav';
 import { WorkLogDialog } from './WorkLogDialog';
 import type { WorkLogFormValues } from './WorkLogForm';
 
@@ -321,7 +322,7 @@ export function BulkAttendancePageClient({
   if (permLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <span className="text-sm text-neutral-400">Loading…</span>
+        <span className="text-sm text-muted-foreground">Loading…</span>
       </div>
     );
   }
@@ -330,14 +331,14 @@ export function BulkAttendancePageClient({
   if (!canCreate && !canView) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="size-12 rounded-full bg-destructive-bg flex items-center justify-center">
-          <svg className="size-6 text-destructive-text" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="size-12 rounded-full bg-destructive/10 flex items-center justify-center">
+          <svg className="size-6 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
         </div>
         <div className="text-center">
-          <p className="text-sm font-medium text-neutral-900">Access denied</p>
-          <p className="text-xs text-neutral-500 mt-1">
+          <p className="text-sm font-medium text-foreground">Access denied</p>
+          <p className="text-xs text-muted-foreground mt-1">
             You don&apos;t have permission to use bulk attendance.
           </p>
         </div>
@@ -354,12 +355,12 @@ export function BulkAttendancePageClient({
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <p className="text-sm font-medium text-neutral-900">Failed to load attendance data.</p>
-        <p className="text-xs text-neutral-500">There was a problem fetching your work logs.</p>
+        <p className="text-sm font-medium text-foreground">Failed to load attendance data.</p>
+        <p className="text-xs text-muted-foreground">There was a problem fetching your work logs.</p>
         <button
           type="button"
           onClick={refetch}
-          className="mt-1 text-sm font-medium bg-transparent border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-4 py-2 rounded-md transition-colors"
+          className="mt-1 text-sm font-medium bg-transparent border border-border text-foreground hover:bg-muted px-4 py-2 rounded-md transition-colors"
         >
           Retry
         </button>
@@ -368,22 +369,25 @@ export function BulkAttendancePageClient({
   }
 
   return (
-    <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-0 max-h-dvh overflow-hidden">
+    <div className="flex flex-col gap-6 flex-1 bg-background min-h-0 max-h-dvh overflow-hidden">
       {/* Header with nav */}
       <div className="flex items-center justify-between ml-7 mt-7 mr-7 shrink-0">
-        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">Timesheet</h1>
-        <BulkAttendanceToolbar
-          weekStart={currentWeekStart}
-          onPrev={goToPrevWeek}
-          onNext={goToNextWeek}
-          onToday={goToCurrentWeek}
-          saveState={saveState}
-          saveError={saveError}
-        />
+        <h1 className="text-4xl font-semibold text-foreground tracking-tight">Timesheet</h1>
+        <div className="flex items-center gap-3">
+          <TimesheetSubnav orgSlug={orgSlug} />
+          <BulkAttendanceToolbar
+            weekStart={currentWeekStart}
+            onPrev={goToPrevWeek}
+            onNext={goToNextWeek}
+            onToday={goToCurrentWeek}
+            saveState={saveState}
+            saveError={saveError}
+          />
+        </div>
       </div>
 
       {/* Card — fills remaining space, calendar scrolls internally */}
-      <div className="mx-7 bg-surface border border-neutral-100 rounded-xl overflow-y-auto overflow-x-hidden overscroll-contain shadow-[var(--shadow-1)] flex-1 min-h-0">
+      <div className="mx-7 bg-card border border-border rounded-xl overflow-y-auto overflow-x-hidden overscroll-contain shadow-sm flex-1 min-h-0">
         <BulkAttendanceCalendar
           weekStart={currentWeekStart}
           dayMap={dayMap}

@@ -8,6 +8,7 @@ import { AttendanceRow } from '@/modules/attendance/components/AttendanceRow';
 import { AttendanceExportButtons } from '@/modules/attendance/components/AttendanceExportButtons';
 import { AttendancePivotView, type PivotMode } from '@/modules/attendance/components/AttendancePivotView';
 import { SelfAttendanceWeekView } from '@/modules/attendance/components/SelfAttendanceWeekView';
+import { AttendanceWorkLogDialog } from '@/modules/attendance/components/AttendanceWorkLogDialog';
 import {
   formatDate,
   formatTime,
@@ -120,6 +121,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [pivotAnchor, setPivotAnchor] = useState<Date>(() => new Date());
+  const [workLogRecordId, setWorkLogRecordId] = useState<string | null>(null);
 
   useEffect(() => {
     if (viewMode === 'list') return;
@@ -371,6 +373,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                     <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock Out</div>
                     <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Work Time</div>
                     <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</div>
+                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Work Log</div>
                   </div>
 
                   {/* Body */}
@@ -394,6 +397,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                             key={record.id}
                             record={record}
                             showEmployeeColumn={showEmployeeColumn}
+                            onViewWorkLog={(id) => setWorkLogRecordId(id)}
                           />
                         ))}
                       </div>
@@ -421,6 +425,15 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
           })()}
         </div>
       </div>
+
+      {/* Work log detail dialog — org scope list view */}
+      <AttendanceWorkLogDialog
+        orgSlug={orgSlug}
+        memberId={memberId}
+        attendanceRecordId={workLogRecordId}
+        open={workLogRecordId !== null}
+        onOpenChange={(open) => { if (!open) setWorkLogRecordId(null); }}
+      />
     </div>
   );
 }

@@ -1,30 +1,24 @@
 export function BulkAttendanceLegend() {
   return (
     <div className="flex items-center gap-4 flex-wrap">
-      <span className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Legend</span>
+      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Legend</span>
       <div className="flex items-center gap-1.5">
         <div
-          className="w-3 h-3 rounded-sm border-l-2"
-          style={{
-            backgroundColor: 'var(--color-info-bg)',
-            borderLeftColor: 'var(--color-info-text)',
-          }}
+          className="w-3 h-3 rounded-sm border border-primary bg-primary/10"
         />
-        <span className="text-xs text-neutral-500">Work log</span>
+        <span className="text-xs text-muted-foreground">Work log</span>
       </div>
       <div className="flex items-center gap-1.5">
         <div
-          className="size-1.5 rounded-full"
-          style={{ backgroundColor: 'var(--color-primary)' }}
+          className="size-1.5 rounded-full bg-primary"
         />
-        <span className="text-xs text-neutral-500">Current time</span>
+        <span className="text-xs text-muted-foreground">Current time</span>
       </div>
       <div className="flex items-center gap-1.5">
         <div
-          className="size-1.5 rounded-full animate-pulse"
-          style={{ backgroundColor: 'var(--color-warning-text)' }}
+          className="size-1.5 rounded-full bg-warning animate-pulse"
         />
-        <span className="text-xs text-neutral-500">Saving</span>
+        <span className="text-xs text-muted-foreground">Saving</span>
       </div>
     </div>
   );
