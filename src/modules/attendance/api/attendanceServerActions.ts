@@ -26,7 +26,11 @@ import {
 function getApiUrl(): string {
   const url = process.env.HRMS_API_URL;
   if (!url) throw new Error('HRMS_API_URL environment variable is not set');
-  return url;
+  return url.replace(/\/$/, '');
+}
+
+function getApiV1Url(): string {
+  return `${getApiUrl()}/api/v1`;
 }
 
 function buildHeaders(orgSlug: string, memberId: string): HeadersInit {
@@ -319,7 +323,7 @@ export async function fetchAttendanceClockContextAction(params: {
     }
 
     const query = buildQuery({ year, week });
-    const res = await fetch(`${getApiUrl()}/weekly-plans${query}`, {
+    const res = await fetch(`${getApiV1Url()}/weekly-plans${query}`, {
       method: 'GET',
       headers: buildAuthorizedHeaders(params.orgSlug, params.memberId, token),
       cache: 'no-store',
