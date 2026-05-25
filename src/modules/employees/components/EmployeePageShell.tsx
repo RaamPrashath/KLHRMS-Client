@@ -27,7 +27,6 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
   // ── Role editing state ──────────────────────────────────────────────────────
   const [editTarget, setEditTarget] = useState<{ memberId: string; currentRoleName: string | null } | null>(null);
 
-  // ── Deactivation state ──────────────────────────────────────────────────────
   const [deactivateTarget, setDeactivateTarget] = useState<{ memberId: string; name: string } | null>(null);
   const deactivateMutation = useDeactivateEmployeeMutation(orgSlug, memberId);
 

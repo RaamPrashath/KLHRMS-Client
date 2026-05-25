@@ -161,7 +161,7 @@ function TableBody({ isLoading, rows, pageSize, onRowClick }: Readonly<TableBody
             </div>
 
             <div className="w-10 shrink-0 flex justify-end">
-              <Button variant="ghost" className="h-9 px-3 text-neutral-700 hover:bg-black/5 rounded-xl">
+              <Button variant="ghost" className="h-9 px-3 text-neutral-700 hover:bg-black/5 rounded-lg">
                 <ChevronRight className="size-4 opacity-50" />
               </Button>
             </div>

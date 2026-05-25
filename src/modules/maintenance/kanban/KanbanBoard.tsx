@@ -111,7 +111,7 @@ export function KanbanBoard({
   search: string;
   collapsed: Record<string, boolean>;
   onToggleColumn: (columnId: ColumnId) => void;
-  onUpdateMaintenance: (params: { assetId: string; data: AssetMaintenanceUpdateInput }) => Promise<unknown>;
+  onUpdateMaintenance: (params: { assetId: string | null; data: AssetMaintenanceUpdateInput }) => Promise<unknown>;
 }) {
   const [activeIssue, setActiveIssue] = useState<KanbanIssue | null>(null);
   const [grouped, setGrouped] = useState<Record<ColumnId, KanbanIssue[]> | null>(null);
@@ -134,7 +134,7 @@ export function KanbanBoard({
     for (const col of COLUMN_IDS) {
       g[col] = safeGrouped[col].filter(
         (i) =>
-          i.title.toLowerCase().includes(q) ||
+          (i.title ?? '').toLowerCase().includes(q) ||
           i.ticketId.toLowerCase().includes(q) ||
           (i.assignees[0]?.name ?? '').toLowerCase().includes(q),
       );

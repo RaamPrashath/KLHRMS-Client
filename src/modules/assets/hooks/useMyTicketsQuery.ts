@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchMyTicketsAction, type MyTicket } from '@/modules/assets/api/assetServerActions';
+export type { MyTicket };
 
 export function useMyTicketsQuery(orgSlug: string, memberId: string) {
   return useQuery<MyTicket[], Error>({

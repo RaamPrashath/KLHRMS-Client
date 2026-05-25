@@ -13,7 +13,7 @@ import {
 } from '@dnd-kit/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, Clock, Inbox, Loader2, Plus, Search, Send, Shuffle, UserCheck, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Inbox, Loader2, Plus, Search, Send, Shuffle, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -48,7 +48,6 @@ import {
   useInterviewersSearch,
   useMoveInterviewAssignment,
   useReopenStage,
-  usePreviewStageInterviewWarnings,
   useRemoveHiringTeamMember,
   useStartInterviewMeeting,
   useStageWorkspace,
@@ -73,16 +72,6 @@ interface StageWorkspacePageShellProps {
   readonly jobSlug?: string | null;
 }
 
-interface AssignmentDraft {
-  interviewer: StageWorkspaceInterviewer | null;
-  scheduledLocal: string;
-}
-
-interface AvailabilityResult {
-  messages: string[];
-  hasWarnings: boolean;
-}
-
 interface AssignmentColumnModel {
   id: string;
   title: string;
@@ -98,23 +87,6 @@ function initials(value: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('');
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Kolkata',
-  }).format(new Date(value));
-}
-
-function toLocalDateTimeInput(value: string): string {
-  const date = new Date(value);
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return offsetDate.toISOString().slice(0, 16);
 }
 
 function toIsoFromLocal(value: string): string {
@@ -133,10 +105,6 @@ function readActionError(error: unknown, fallback: string): string {
   } catch {
     return error.message || fallback;
   }
-}
-
-function buildAvailabilityKey(interviewerMemberId: string, scheduledStartAt: string): string {
-  return `${interviewerMemberId}::${scheduledStartAt.slice(0, 10)}`;
 }
 
 function isLockedAssignment(candidate: StageWorkspaceCandidate): boolean {
@@ -455,20 +423,12 @@ export function StageWorkspacePageShell({
   const stageWorkspaceQuery = useStageWorkspace(orgSlug, memberId, stageSlug);
   const jobStageWorkspaceQuery = useStageWorkspaceByJobSlug(orgSlug, memberId, jobSlug, stageSlug);
   const workspaceQuery = jobSlug ? jobStageWorkspaceQuery : stageWorkspaceQuery;
-  const previewWarnings = usePreviewStageInterviewWarnings(orgSlug, memberId, stageSlug, workspaceQuery.data?.jobPosting.id ?? null);
   const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug, workspaceQuery.data?.jobPosting.id ?? null);
   const distributeInterviews = useDistributeStageInterviews(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
   const hiringTeamsQuery = useFetchHiringTeams(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null, workspaceQuery.data?.stage.id ?? null);
   const createHiringTeam = useCreateHiringTeam(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
 
-  const [assignmentMode, setAssignmentMode] = useState<'direct' | 'automatic'>('direct');
 
-  const [drafts, setDrafts] = useState<Record<string, AssignmentDraft>>({});
-  const [warnings, setWarnings] = useState<StageInterviewWarning[]>([]);
-  const [warningsReviewed, setWarningsReviewed] = useState(false);
-  const [availabilityMap, setAvailabilityMap] = useState<Record<string, AvailabilityResult>>({});
-  const [availabilityLoadingKeys, setAvailabilityLoadingKeys] = useState<string[]>([]);
-  const availabilityInFlightRef = useRef<Set<string>>(new Set());
 
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [customTeamName, setCustomTeamName] = useState('');
@@ -693,40 +653,13 @@ export function StageWorkspacePageShell({
     return columns;
   }, [boardAssignments, resolvedTeamMembers, workspace, backupMembers, searchQuery, filterMode]);
 
-  const completedAssignments = useMemo<StageInterviewAssignment[]>(() => {
-    if (!workspace || assignmentMode !== 'direct') return [];
-    return workspace.candidates.flatMap((candidate) => {
-      const draft = drafts[candidate.applicationId];
-      if (!draft?.interviewer || !draft.scheduledLocal) return [];
-      return [{
-        applicationId: candidate.applicationId,
-        interviewerMemberId: draft.interviewer.memberId,
-        scheduledStartAt: toIsoFromLocal(draft.scheduledLocal),
-        durationMinutes: 30,
-      }];
-    });
-  }, [assignmentMode, drafts, workspace]);
-
-  const assignmentsByAvailabilityKey = useMemo(() => {
-    const map = new Map<string, StageInterviewAssignment>();
-    for (const assignment of completedAssignments) {
-      if (!assignment.scheduledStartAt) continue;
-      const key = buildAvailabilityKey(assignment.interviewerMemberId, assignment.scheduledStartAt);
-      if (!map.has(key)) {
-        map.set(key, assignment);
-      }
-    }
-    return map;
-  }, [completedAssignments]);
-
   const warningMap = useMemo(() => {
     const map = new Map<string, string[]>();
-    const sourceWarnings = assignmentMode === 'direct' ? warnings : teamWarnings;
-    for (const warning of sourceWarnings) {
+    for (const warning of teamWarnings) {
       map.set(warning.applicationId, warning.messages);
     }
     return map;
-  }, [assignmentMode, teamWarnings, warnings]);
+  }, [teamWarnings]);
 
   const stats = useMemo(() => {
     const total = workspace?.candidates.length ?? 0;
@@ -754,29 +687,6 @@ export function StageWorkspacePageShell({
     for (const member of backupMembers) ids.add(member.memberId);
     return ids;
   }, [resolvedTeamMembers, backupMembers]);
-
-  const directExcludedMemberIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const member of resolvedTeamMembers) ids.add(member.memberId);
-    for (const member of backupMembers) ids.add(member.memberId);
-    for (const draft of Object.values(drafts)) {
-      if (draft?.interviewer) ids.add(draft.interviewer.memberId);
-    }
-    return ids;
-  }, [resolvedTeamMembers, backupMembers, drafts]);
-
-  function updateDraft(applicationId: string, patch: Partial<AssignmentDraft>) {
-    setDrafts((current) => ({
-      ...current,
-      [applicationId]: Object.assign(
-        { interviewer: null, scheduledLocal: '' },
-        current[applicationId],
-        patch,
-      ),
-    }));
-    setWarningsReviewed(false);
-    setWarnings([]);
-  }
 
   async function addCustomTeamMember(interviewer: StageWorkspaceInterviewer) {
     setSelectedTeamId('');
@@ -1001,74 +911,6 @@ export function StageWorkspacePageShell({
     }
   }
 
-  useEffect(() => {
-    const pendingKeys = [...assignmentsByAvailabilityKey.entries()].filter(
-      ([key]) => !availabilityMap[key] && !availabilityInFlightRef.current.has(key),
-    );
-
-    if (pendingKeys.length === 0) return;
-
-    for (const [key, assignment] of pendingKeys) {
-      availabilityInFlightRef.current.add(key);
-      setAvailabilityLoadingKeys((current) => (current.includes(key) ? current : [...current, key]));
-
-      void previewWarnings.mutateAsync([assignment])
-        .then((result) => {
-          const warning = result.warnings[0];
-          setAvailabilityMap((current) => ({
-            ...current,
-            [key]: {
-              messages: warning?.messages ?? [],
-              hasWarnings: Boolean(warning?.messages.length),
-            },
-          }));
-        })
-        .catch(() => {
-          setAvailabilityMap((current) => ({
-            ...current,
-            [key]: {
-              messages: ['Availability check could not be completed right now.'],
-              hasWarnings: true,
-            },
-          }));
-        })
-        .finally(() => {
-          availabilityInFlightRef.current.delete(key);
-          setAvailabilityLoadingKeys((current) => current.filter((item) => item !== key));
-        });
-    }
-  }, [assignmentsByAvailabilityKey, availabilityMap, previewWarnings]);
-
-  async function handlePreviewWarnings() {
-    const result = await previewWarnings.mutateAsync(completedAssignments);
-    setWarnings(result.warnings);
-    return result.warnings;
-  }
-
-  async function handleAssignDirect() {
-    if (completedAssignments.length === 0) {
-      toast.error('Select at least one interviewer and date/time');
-      return;
-    }
-
-    try {
-      const previewedWarnings = await handlePreviewWarnings();
-      if (previewedWarnings.length > 0 && !warningsReviewed) {
-        setWarningsReviewed(true);
-        toast.warning('Warnings found. Review them, then click Assign Interviews again to continue.');
-        return;
-      }
-
-      const result = await assignInterviews.mutateAsync(completedAssignments);
-      toast.success(`${result.assignedCount} interview${result.assignedCount === 1 ? '' : 's'} assigned`);
-      setDrafts({});
-      setWarnings([]);
-      setWarningsReviewed(false);
-    } catch (error) {
-      toast.error(readActionError(error, 'Failed to assign interviews'));
-    }
-  }
-
   async function handleDistributeTeam() {
     if (resolvedTeamMembers.length === 0 || !teamScheduledLocal) {
       toast.error('Select a date first, then choose interviewers for the shuffle');
@@ -1264,44 +1106,7 @@ export function StageWorkspacePageShell({
                   Mark Complete
                 </Button>
               )}
-              <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
-                {([
-                  { key: 'direct' as const, icon: UserCheck, label: 'Direct' },
-                  { key: 'automatic' as const, icon: Shuffle, label: 'Automatic' },
-                ] as const).map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = tab.key === assignmentMode;
-                  return (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => setAssignmentMode(tab.key)}
-                      aria-pressed={isActive}
-                      className={cn(
-                        'relative inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
-                        isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
-                      )}
-                    >
-                      {isActive ? (
-                        <motion.span
-                          layoutId="stage-assignment-mode-pill"
-                          className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
-                          transition={{
-                            type: 'spring',
-                            stiffness: 520,
-                            damping: 36,
-                            mass: 0.65,
-                          }}
-                        />
-                      ) : null}
-                      <span className="relative z-10 inline-flex items-center gap-1.5">
-                        <Icon className="size-3.5" />
-                        {tab.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+
             </div>
           </div>
         </div>
@@ -1326,377 +1131,215 @@ export function StageWorkspacePageShell({
           </motion.div>
         ) : null}
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={assignmentMode}
-            initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
-            transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-          >
-            {assignmentMode === 'direct' ? (
-              <div className="space-y-6">
-                {warnings.length > 0 ? (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="rounded-xl border border-warning-bg bg-warning-bg p-4 text-sm text-warning-text">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="mt-0.5 size-4" />
-                        <div>
-                          <p className="font-semibold">Scheduling Warnings</p>
-                          <p className="mt-0.5 text-warning-text/80">These checks are advisory. Review them and click Assign to proceed.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ) : null}
-
-                <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-surface shadow-(--shadow-2)">
-                  <div className="flex flex-col gap-4 border-b border-neutral-100 bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h2 className="text-lg font-semibold text-neutral-900">Direct Assignment</h2>
-                    </div>
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="bg-primary hover:bg-primary-hover shadow-md transition-all active:scale-[0.98]"
-                      onClick={handleAssignDirect}
-                      disabled={completedAssignments.length === 0 || assignInterviews.isPending || isStageCompleted}
-                    >
-                      {assignInterviews.isPending ? (
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                      ) : (
-                        <Send className="mr-2 size-4" />
-                      )}
-                      Assign {completedAssignments.length > 0 ? `${completedAssignments.length} ` : ''}Interviews
-                    </Button>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-b border-neutral-100 bg-canvas/50 hover:bg-canvas/50">
-                          <TableHead className="w-[30%] px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-500">Candidate</TableHead>
-                          <TableHead className="w-[25%] px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-500">Interviewer</TableHead>
-                          <TableHead className="w-[20%] px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-500">Schedule</TableHead>
-                          <TableHead className="w-[25%] px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-500">Availability</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {workspace.candidates.map((candidate) => {
-                          const draft = drafts[candidate.applicationId];
-                          const fallbackSchedule = candidate.currentAssignment?.scheduledStartAt
-                            ? toLocalDateTimeInput(candidate.currentAssignment.scheduledStartAt)
-                            : '';
-                          const scheduledLocal = draft?.scheduledLocal ?? fallbackSchedule;
-                          const availabilityKey = draft?.interviewer && scheduledLocal
-                            ? buildAvailabilityKey(draft.interviewer.memberId, toIsoFromLocal(scheduledLocal))
-                            : null;
-                          const availability = availabilityKey ? availabilityMap[availabilityKey] : null;
-                          const isCheckingAvailability = availabilityKey ? availabilityLoadingKeys.includes(availabilityKey) : false;
-                          const rowWarnings = warningMap.get(candidate.applicationId) ?? availability?.messages ?? [];
-                          const name = candidateName(candidate);
-
-                          return (
-                            <TableRow key={candidate.applicationId} className="group border-b border-neutral-100 transition-colors hover:bg-neutral-50/50">
-                              <TableCell className="px-6 py-5">
-                                <div className="flex items-center gap-4">
-                                  <Avatar className="size-10 border-2 border-white shadow-sm">
-                                    <AvatarFallback className="bg-primary-ghost text-xs font-bold text-primary">
-                                      {initials(name)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
-                                    <p className="truncate text-xs text-neutral-500">{candidate.candidate.email}</p>
-                                    {candidate.currentAssignment?.scheduledStartAt ? (
-                                      <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-primary">
-                                        <Clock className="size-3" />
-                                        <span>Scheduled: {formatDateTime(candidate.currentAssignment.scheduledStartAt)}</span>
-                                      </div>
-                                    ) : candidate.currentAssignment ? (
-                                      <p className="mt-1 text-[11px] font-medium text-warning-text">Awaiting interviewer response</p>
-                                    ) : (
-                                      <p className="mt-1 text-[11px] font-medium text-neutral-400">Not scheduled</p>
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-6 py-5">
-                                <InterviewerSelect
-                                  orgSlug={orgSlug}
-                                  memberId={memberId}
-                                  value={draft?.interviewer ?? null}
-                                  excludedMemberIds={directExcludedMemberIds}
-                                  onSelect={(interviewer) =>
-                                    updateDraft(candidate.applicationId, { interviewer, scheduledLocal })
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell className="px-6 py-5">
-                                <div className="relative">
-                                  <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-                                  <Input
-                                    type="datetime-local"
-                                    value={scheduledLocal}
-                                    onChange={(e) => updateDraft(candidate.applicationId, { scheduledLocal: e.target.value })}
-                                    className="h-10 border-neutral-200 pl-9 focus:border-primary focus:ring-primary/20"
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-6 py-5">
-                                {draft?.interviewer && scheduledLocal ? (
-                                  <div className="space-y-2">
-                                    <div className={cn(
-                                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight",
-                                      isCheckingAvailability ? "bg-neutral-100 text-neutral-500" :
-                                      availability?.hasWarnings ? "bg-warning-bg text-warning-text" : "bg-success-bg text-success-text"
-                                    )}>
-                                      {isCheckingAvailability ? (
-                                        <Loader2 className="size-3 animate-spin" />
-                                      ) : availability?.hasWarnings ? (
-                                        <AlertTriangle className="size-3" />
-                                      ) : (
-                                        <CheckCircle2 className="size-3" />
-                                      )}
-                                      {isCheckingAvailability ? 'Checking' : availability?.hasWarnings ? 'Conflict' : 'Available'}
-                                    </div>
-                                    {rowWarnings.length > 0 && (
-                                      <div className="space-y-1">
-                                        {rowWarnings.map((m) => (
-                                          <p key={m} className="text-[11px] leading-tight text-warning-text">{m}</p>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-neutral-400">Awaiting selection</span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
+        <div className="flex flex-col gap-4">
+          {/* Stats bar */}
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: 'Total candidates', value: stats.total },
+              { label: 'Assigned', value: stats.assigned },
+              { label: 'Unassigned', value: stats.unassigned },
+              { label: 'Interviewers', value: stats.interviewers },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-xl border border-neutral-100 bg-neutral-50/60 p-3"
+              >
+                <div className="text-2xl font-semibold tracking-tight text-neutral-900">
+                  {stat.value}
                 </div>
+                <div className="mt-0.5 text-xs text-neutral-500">{stat.label}</div>
               </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {/* Stats bar */}
-                <div className="grid grid-cols-4 gap-3">
-                  {[
-                    { label: 'Total candidates', value: stats.total },
-                    { label: 'Assigned', value: stats.assigned },
-                    { label: 'Unassigned', value: stats.unassigned },
-                    { label: 'Interviewers', value: stats.interviewers },
-                  ].map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="rounded-xl border border-neutral-100 bg-neutral-50/60 p-3"
-                    >
-                      <div className="text-2xl font-semibold tracking-tight text-neutral-900">
-                        {stat.value}
-                      </div>
-                      <div className="mt-0.5 text-xs text-neutral-500">{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
+            ))}
+          </div>
 
-                {/* Search + Filter pills */}
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-                    <Input
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder="Filter candidates..."
-                      className="h-9 bg-white pl-9 text-[13px]"
-                    />
-                  </div>
-                  <div className="flex items-center self-stretch rounded-xl border border-black/4 bg-neutral-50 p-1">
-                    {([
-                      { key: 'all' as const, label: 'All' },
-                      { key: 'unassigned' as const, label: 'Unassigned' },
-                      { key: 'assigned' as const, label: 'Assigned' },
-                    ]).map((pill) => {
-                      const isActive = pill.key === filterMode;
-                      return (
-                        <button
-                          key={pill.key}
-                          type="button"
-                          onClick={() => setFilterMode(pill.key)}
-                          aria-pressed={isActive}
-                          className={cn(
-                            'relative inline-flex h-8 items-center rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
-                            isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
-                          )}
-                        >
-                          {isActive ? (
-                            <motion.span
-                              layoutId="candidate-filter-mode-pill"
-                              className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
-                              transition={{
-                                type: 'spring',
-                                stiffness: 520,
-                                damping: 36,
-                                mass: 0.65,
-                              }}
-                            />
-                          ) : null}
-                          <span className="relative z-10">{pill.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setAddDialogMode('interviewer');
-                        setAddDialogOpen(true);
-                      }}
-                      disabled={isStageCompleted}
-                    >
-                      <Plus className="mr-1.5 size-3.5" />
-                      Add Interviewer
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setAddDialogMode('backup');
-                        setAddDialogOpen(true);
-                      }}
-                      disabled={isStageCompleted}
-                    >
-                      <Plus className="mr-1.5 size-3.5" />
-                      Add Backup
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAutoDistributeDraft}
-                      disabled={resolvedTeamMembers.length === 0 || isStageCompleted}
-                    >
-                      <Shuffle className="mr-1.5 size-3.5" />
-                      Auto-distribute
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="bg-primary hover:bg-primary-hover"
-                      onClick={handleSaveBoardAssignments}
-                      disabled={assignInterviews.isPending || isStageCompleted}
-                    >
-                      {assignInterviews.isPending ? (
-                        <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                      ) : (
-                        <Send className="mr-1.5 size-3.5" />
-                      )}
-                      Save Assignments
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Board */}
-                {!isStageCompleted ? (
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCorners}
-                    onDragStart={handleBoardDragStart}
-                    onDragEnd={handleBoardDragEnd}
-                    onDragCancel={() => setActiveApplicationId(null)}
+          {/* Search + Filter pills */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+              <Input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Filter candidates..."
+                className="h-9 bg-white pl-9 text-[13px]"
+              />
+            </div>
+            <div className="flex items-center self-stretch rounded-xl border border-black/4 bg-neutral-50 p-1">
+              {([
+                { key: 'all' as const, label: 'All' },
+                { key: 'unassigned' as const, label: 'Unassigned' },
+                { key: 'assigned' as const, label: 'Assigned' },
+              ]).map((pill) => {
+                const isActive = pill.key === filterMode;
+                return (
+                  <button
+                    key={pill.key}
+                    type="button"
+                    onClick={() => setFilterMode(pill.key)}
+                    aria-pressed={isActive}
+                    className={cn(
+                      'relative inline-flex h-8 items-center rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
+                      isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
+                    )}
                   >
-                  <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
-                    style={{ maxHeight: 'calc(100dvh - 280px)' }}
-                  >
-                    {assignmentColumns.map((column, index) => (
-                      <div key={column.id} className={cn(
-                        'flex shrink-0',
-                        index < assignmentColumns.length - 1 ? 'border-r border-neutral-200/70' : '',
-                      )}>
-                        <AssignmentColumn
-                          column={column}
-                          stage={workspace.stage}
-                          jobPostingId={workspace.jobPosting.id}
-                          onRemove={column.interviewer ? removeBoardInterviewer : undefined}
-                          onOpenCandidate={handleOpenCandidate}
-                          onStartInterview={handleStartInterview}
-                          onCompleteInterview={handleCompleteInterview}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <DragOverlay zIndex={9999}>
-                    {activeCandidate ? (
-                      <AllocationCard
-                        candidate={activeCandidate}
-                        stage={workspace.stage}
-                        jobPostingId={workspace.jobPosting.id}
-                        disabled
+                    {isActive ? (
+                      <motion.span
+                        layoutId="candidate-filter-mode-pill"
+                        className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                        transition={{
+                          type: 'spring',
+                          stiffness: 520,
+                          damping: 36,
+                          mass: 0.65,
+                        }}
                       />
                     ) : null}
-                  </DragOverlay>
-                </DndContext>
-                ) : (
-                  <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
-                    style={{ maxHeight: 'calc(100dvh - 280px)' }}
-                  >
-                    {assignmentColumns.map((column, index) => (
-                      <div key={column.id} className={cn(
-                        'flex shrink-0',
-                        index < assignmentColumns.length - 1 ? 'border-r border-neutral-200/70' : '',
-                      )}>
-                        <AssignmentColumn
-                          column={column}
-                          stage={workspace.stage}
-                          jobPostingId={workspace.jobPosting.id}
-                          onOpenCandidate={handleOpenCandidate}
-                          onStartInterview={handleStartInterview}
-                          onCompleteInterview={handleCompleteInterview}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                    <span className="relative z-10">{pill.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-                {/* Dialogs */}
-                <InterviewerSelectDialog
-                  open={addDialogOpen && addDialogMode === 'interviewer'}
-                  onOpenChange={(open) => setAddDialogOpen(open)}
-                  orgSlug={orgSlug}
-                  memberId={memberId}
-                  mode="interviewer"
-                  onSelect={addCustomTeamMember}
-                  excludedMemberIds={excludedMemberIds}
+          {/* Action buttons */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setAddDialogMode('interviewer');
+                  setAddDialogOpen(true);
+                }}
+                disabled={isStageCompleted}
+              >
+                <Plus className="mr-1.5 size-3.5" />
+                Add Interviewer
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setAddDialogMode('backup');
+                  setAddDialogOpen(true);
+                }}
+                disabled={isStageCompleted}
+              >
+                <Plus className="mr-1.5 size-3.5" />
+                Add Backup
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAutoDistributeDraft}
+                disabled={resolvedTeamMembers.length === 0 || isStageCompleted}
+              >
+                <Shuffle className="mr-1.5 size-3.5" />
+                Auto-distribute
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-primary hover:bg-primary-hover"
+                onClick={handleSaveBoardAssignments}
+                disabled={assignInterviews.isPending || isStageCompleted}
+              >
+                {assignInterviews.isPending ? (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                ) : (
+                  <Send className="mr-1.5 size-3.5" />
+                )}
+                Save Assignments
+              </Button>
+            </div>
+          </div>
+
+          {/* Board */}
+          {!isStageCompleted ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={handleBoardDragStart}
+              onDragEnd={handleBoardDragEnd}
+              onDragCancel={() => setActiveApplicationId(null)}
+            >
+            <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
+              style={{ maxHeight: 'calc(100dvh - 280px)' }}
+            >
+              {assignmentColumns.map((column, index) => (
+                <div key={column.id} className={cn(
+                  'flex shrink-0',
+                  index < assignmentColumns.length - 1 ? 'border-r border-neutral-200/70' : '',
+                )}>
+                  <AssignmentColumn
+                    column={column}
+                    stage={workspace.stage}
+                    jobPostingId={workspace.jobPosting.id}
+                    onRemove={column.interviewer ? removeBoardInterviewer : undefined}
+                    onOpenCandidate={handleOpenCandidate}
+                    onStartInterview={handleStartInterview}
+                    onCompleteInterview={handleCompleteInterview}
+                  />
+                </div>
+              ))}
+            </div>
+            <DragOverlay zIndex={9999}>
+              {activeCandidate ? (
+                <AllocationCard
+                  candidate={activeCandidate}
+                  stage={workspace.stage}
+                  jobPostingId={workspace.jobPosting.id}
+                  disabled
                 />
-                <InterviewerSelectDialog
-                  open={addDialogOpen && addDialogMode === 'backup'}
-                  onOpenChange={(open) => setAddDialogOpen(open)}
-                  orgSlug={orgSlug}
-                  memberId={memberId}
-                  mode="backup"
-                  onSelect={addBackupMember}
-                  excludedMemberIds={excludedMemberIds}
-                />
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+          ) : (
+            <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
+              style={{ maxHeight: 'calc(100dvh - 280px)' }}
+            >
+              {assignmentColumns.map((column, index) => (
+                <div key={column.id} className={cn(
+                  'flex shrink-0',
+                  index < assignmentColumns.length - 1 ? 'border-r border-neutral-200/70' : '',
+                )}>
+                  <AssignmentColumn
+                    column={column}
+                    stage={workspace.stage}
+                    jobPostingId={workspace.jobPosting.id}
+                    onOpenCandidate={handleOpenCandidate}
+                    onStartInterview={handleStartInterview}
+                    onCompleteInterview={handleCompleteInterview}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Dialogs */}
+          <InterviewerSelectDialog
+            open={addDialogOpen && addDialogMode === 'interviewer'}
+            onOpenChange={(open) => setAddDialogOpen(open)}
+            orgSlug={orgSlug}
+            memberId={memberId}
+            mode="interviewer"
+            onSelect={addCustomTeamMember}
+            excludedMemberIds={excludedMemberIds}
+          />
+          <InterviewerSelectDialog
+            open={addDialogOpen && addDialogMode === 'backup'}
+            onOpenChange={(open) => setAddDialogOpen(open)}
+            orgSlug={orgSlug}
+            memberId={memberId}
+            mode="backup"
+            onSelect={addBackupMember}
+            excludedMemberIds={excludedMemberIds}
+          />
+        </div>
         <CandidateDrawer
           orgSlug={orgSlug}
           memberId={memberId}

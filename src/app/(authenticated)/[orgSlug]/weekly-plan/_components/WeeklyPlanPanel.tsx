@@ -2,7 +2,7 @@
 
 import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, User } from "lucide-react";
+import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -305,39 +305,23 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-5">
-        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background">
-              <User className="h-4 w-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">My Plan</h2>
-              <p className="text-[11px] font-medium text-muted-foreground/70">
-                Update your location for each day and save once finished.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 lg:items-end">
-            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-              <WeekNavigator
-                year={weekState.year}
-                week={weekState.week}
-                onPrevious={() => maybeChangeWeek(-1)}
-                onNext={() => maybeChangeWeek(1)}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 rounded-lg px-5 text-[13px] font-medium"
-                onClick={handleCopyPreviousWeek}
-                disabled={isWeekLoading || isLocationsLoading || saveMutation.isPending}
-              >
-                <Copy className="mr-2 h-3.5 w-3.5" />
-                Copy previous
-              </Button>
-            </div>
-          </div>
+        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 flex flex-wrap items-center justify-between gap-3">
+          <WeekNavigator
+            year={weekState.year}
+            week={weekState.week}
+            onPrevious={() => maybeChangeWeek(-1)}
+            onNext={() => maybeChangeWeek(1)}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 rounded-lg px-5 text-[13px] font-medium"
+            onClick={handleCopyPreviousWeek}
+            disabled={isWeekLoading || isLocationsLoading || saveMutation.isPending}
+          >
+            <Copy className="mr-2 h-3.5 w-3.5" />
+            Copy previous
+          </Button>
         </div>
 
         <WeeklyPlanGrid

@@ -1,7 +1,7 @@
 export interface KanbanIssue {
   id: string;
-  assetId: string;
-  title: string;
+  assetId: string | null;
+  title: string | null;
   ticketId: string;
   description: string;
   priority: 'low' | 'medium' | 'high';

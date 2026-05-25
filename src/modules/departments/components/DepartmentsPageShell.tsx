@@ -313,7 +313,7 @@ export function DepartmentsPageShell({
                 id="department-name"
                 value={departmentForm.name}
                 onChange={(event) => setDepartmentForm({ ...departmentForm, name: event.target.value })}
-                className="h-11 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                className="h-11 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-[3px] focus-visible:ring-primary/10"
               />
             </div>
 
@@ -341,14 +341,13 @@ export function DepartmentsPageShell({
           </div>
 
           <DialogFooter className="border-t border-[#e5e5ea] px-6 py-4">
-            <Button variant="ghost" onClick={() => setDepartmentDialogOpen(false)} className="rounded-full px-5">
+            <Button variant="ghost" onClick={() => setDepartmentDialogOpen(false)} className="rounded-lg px-5">
               Cancel
             </Button>
             <Button
               onClick={handleSaveDepartment}
               disabled={mutations.createDepartment.isPending}
-              style={{ backgroundColor: '#00874a' }}
-              className="rounded-full px-6 text-white"
+              className="rounded-lg px-6"
             >
               {mutations.createDepartment.isPending ? 'Creating...' : 'Create and open'}
             </Button>
@@ -375,7 +374,7 @@ export function DepartmentsPageShell({
                 id="team-name"
                 value={teamForm.name}
                 onChange={(event) => setTeamForm({ ...teamForm, name: event.target.value })}
-                className="h-11 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                className="h-11 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-[3px] focus-visible:ring-primary/10"
               />
             </div>
 
@@ -407,20 +406,19 @@ export function DepartmentsPageShell({
                 id="team-description"
                 value={teamForm.description || ''}
                 onChange={(event) => setTeamForm({ ...teamForm, description: event.target.value })}
-                className="min-h-28 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                className="min-h-28 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-[3px] focus-visible:ring-primary/10"
               />
             </div>
           </div>
 
           <DialogFooter className="border-t border-[#e5e5ea] px-6 py-4">
-            <Button variant="ghost" onClick={() => setTeamDialogOpen(false)} className="rounded-full px-5">
+            <Button variant="ghost" onClick={() => setTeamDialogOpen(false)} className="rounded-lg px-5">
               Cancel
             </Button>
             <Button
               onClick={handleSaveTeam}
               disabled={mutations.createTeam.isPending}
-              style={{ backgroundColor: '#00874a' }}
-              className="rounded-full px-6 text-white"
+              className="rounded-lg px-6"
             >
               {mutations.createTeam.isPending ? 'Creating...' : 'Create and open'}
             </Button>
@@ -440,10 +438,10 @@ export function DepartmentsPageShell({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="px-6 py-4">
-            <AlertDialogCancel className="rounded-full px-5">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-lg px-5">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteDepartment}
-              className="rounded-full px-6 bg-[#1d1d1f] text-white hover:bg-[#1d1d1f]"
+              className="rounded-lg px-6"
             >
               Remove
             </AlertDialogAction>

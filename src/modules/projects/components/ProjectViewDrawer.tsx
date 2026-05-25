@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -38,6 +38,45 @@ import type {
   ProjectTaskSummary,
   ProjectStatus,
 } from '@/modules/projects/types/projectTypes';
+
+function AnimatedTabBar({
+  tabs,
+  value,
+  onValueChange,
+}: {
+  tabs: { value: string; label: string; count?: number }[];
+  value: string;
+  onValueChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative flex rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-1">
+      <motion.div
+        layout
+        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+        className="absolute top-1 bottom-1 rounded-lg bg-white shadow-sm"
+        style={{
+          left: `${(tabs.findIndex((t) => t.value === value) / tabs.length) * 100}%`,
+          width: `${(1 / tabs.length) * 100}%`,
+        }}
+      />
+      {tabs.map((tab) => (
+        <button
+          key={tab.value}
+          type="button"
+          onClick={() => onValueChange(tab.value)}
+          className={`relative z-10 flex-1 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${
+            value === tab.value ? 'text-[#1d1d1f]' : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+          }`}
+        >
+          <span className="flex items-center justify-center gap-1.5">
+            {tab.label}
+            {tab.count !== undefined && <span className="text-[#86868b]">{tab.count}</span>}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const ACTION_GREEN = '#00874a';
 
@@ -85,6 +124,7 @@ export function ProjectViewDrawer({
   const mutations = useProjectMutations(orgSlug, memberId);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'tasks' | 'members'>('tasks');
+  const [memberTab, setMemberTab] = useState<'assigned' | 'unassigned'>('assigned');
 
   // Task state
   const [newTaskName, setNewTaskName] = useState('');
@@ -351,7 +391,7 @@ export function ProjectViewDrawer({
                           setIsEditing(false);
                           form.reset();
                         }}
-                        className="flex size-8 items-center justify-center rounded-full text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                        className="flex size-8 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                         aria-label="Cancel editing"
                       >
                         <X className="size-4" />
@@ -359,39 +399,31 @@ export function ProjectViewDrawer({
                     </div>
 
                     <div className="space-y-3">
-                      <div>
-                        <label htmlFor="edit-name" className="mb-1 block text-[12px] font-medium text-[#1d1d1f]">
-                          Project name
-                        </label>
-                        <Input
-                          id="edit-name"
-                          {...form.register('name')}
-                          className="h-9 text-[14px]"
-                        />
-                        {form.formState.errors.name && (
-                          <p className="mt-1 text-[11px] text-[#a12323]">{form.formState.errors.name.message}</p>
-                        )}
-                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="edit-name" className="mb-1 block text-[12px] font-medium text-[#1d1d1f]">
+                            Project name
+                          </label>
+                          <Input
+                            id="edit-name"
+                            {...form.register('name')}
+                            className="h-9 text-[14px]"
+                          />
+                          {form.formState.errors.name && (
+                            <p className="mt-1 text-[11px] text-[#a12323]">{form.formState.errors.name.message}</p>
+                          )}
+                        </div>
 
-                      <div>
-                        <label htmlFor="edit-status" className="mb-1 block text-[12px] font-medium text-[#1d1d1f]">
-                          Status
-                        </label>
-                        <Select
-                          value={watchedStatus}
-                          onValueChange={(value) => form.setValue('status', value as ProjectStatus)}
-                        >
-                          <SelectTrigger id="edit-status" className="h-9 text-[14px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {projectStatusOptions.map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {status.replaceAll('_', ' ')}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div>
+                          <label htmlFor="edit-client" className="mb-1 block text-[12px] font-medium text-[#1d1d1f]">
+                            Client name
+                          </label>
+                          <Input
+                            id="edit-client"
+                            {...form.register('clientName')}
+                            className="h-9 text-[14px]"
+                          />
+                        </div>
                       </div>
 
                       <div>
@@ -406,15 +438,27 @@ export function ProjectViewDrawer({
                         />
                       </div>
 
-                      <div>
-                        <label htmlFor="edit-client" className="mb-1 block text-[12px] font-medium text-[#1d1d1f]">
-                          Client name
-                        </label>
-                        <Input
-                          id="edit-client"
-                          {...form.register('clientName')}
-                          className="h-9 text-[14px]"
-                        />
+                      <div className="flex justify-end">
+                        <div className="w-1/2">
+                          <label htmlFor="edit-status" className="mb-1 block text-[12px] font-medium text-[#1d1d1f]">
+                            Status
+                          </label>
+                          <Select
+                            value={watchedStatus}
+                            onValueChange={(value) => form.setValue('status', value as ProjectStatus)}
+                          >
+                            <SelectTrigger id="edit-status" className="h-9 w-full text-[14px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {projectStatusOptions.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status.replaceAll('_', ' ')}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
 
@@ -426,14 +470,14 @@ export function ProjectViewDrawer({
                           setIsEditing(false);
                           form.reset();
                         }}
-                        className="flex-1 h-9 rounded-full text-[13px]"
+                        className="flex-1 h-9 rounded-xl text-[13px]"
                       >
                         Cancel
                       </Button>
                       <Button
                         type="submit"
                         disabled={mutations.updateProject.isPending}
-                        className="flex-1 h-9 rounded-full text-[13px] text-white"
+                        className="flex-1 h-9 rounded-xl text-[13px] text-white"
                         style={{ backgroundColor: ACTION_GREEN }}
                       >
                         {mutations.updateProject.isPending ? 'Saving…' : 'Save changes'}
@@ -462,7 +506,7 @@ export function ProjectViewDrawer({
                     <div className="flex shrink-0 items-center gap-2 pt-1">
                       <Badge
                         className={cn(
-                          'rounded-full px-3 py-1 text-[11px] font-medium',
+                          'rounded-xl px-3 py-1 text-[11px] font-medium',
                           statusBadge(project.status),
                         )}
                       >
@@ -470,7 +514,7 @@ export function ProjectViewDrawer({
                       </Badge>
                       <button
                         onClick={onClose}
-                        className="flex size-8 items-center justify-center rounded-full text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                        className="flex size-8 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                         aria-label="Close drawer"
                       >
                         <X className="size-4" />
@@ -505,30 +549,22 @@ export function ProjectViewDrawer({
             <div className="flex min-h-0 flex-1 flex-col">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'members')} className="flex min-h-0 flex-1 flex-col">
                 <div className="mx-6 mt-4 mb-0 flex shrink-0 items-center gap-2">
-                  <TabsList className="flex-1 rounded-full border border-[#e5e5ea] bg-[#f5f5f7] p-1">
-                    <TabsTrigger
-                      value="tasks"
-                      className="flex-1 rounded-full text-[13px] font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                    >
-                      <ListTodo className="mr-1.5 size-3.5" />
-                      Tasks
-                      <span className="ml-1.5 text-[#86868b]">{project.tasks.length}</span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="members"
-                      className="flex-1 rounded-full text-[13px] font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                    >
-                      <Users className="mr-1.5 size-3.5" />
-                      Members
-                      <span className="ml-1.5 text-[#86868b]">{project.memberCount}</span>
-                    </TabsTrigger>
-                  </TabsList>
+                  <div className="flex-1">
+                    <AnimatedTabBar
+                      tabs={[
+                        { value: 'tasks', label: 'Tasks', count: project.tasks.length },
+                        { value: 'members', label: 'Members', count: project.memberCount },
+                      ]}
+                      value={activeTab}
+                      onValueChange={(v) => setActiveTab(v as 'tasks' | 'members')}
+                    />
+                  </div>
 
                   {canManage && !isEditing && (
                     <div className="flex shrink-0 gap-1">
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="flex size-9 items-center justify-center rounded-full text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                        className="flex size-9 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                         aria-label="Edit project"
                       >
                         <Edit2 className="size-3.5" />
@@ -536,7 +572,7 @@ export function ProjectViewDrawer({
                       <button
                         onClick={() => void handleDelete()}
                         disabled={mutations.deleteProject.isPending}
-                        className="flex size-9 items-center justify-center rounded-full text-[#6e6e73] transition-colors hover:bg-[#fff0f0] hover:text-[#a12323] disabled:opacity-50"
+                        className="flex size-9 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#fff0f0] hover:text-[#a12323] disabled:opacity-50"
                         aria-label="Delete project"
                       >
                         <Trash2 className="size-3.5" />
@@ -560,12 +596,12 @@ export function ProjectViewDrawer({
                             }
                           }}
                           placeholder="Add a new task…"
-                          className="h-10 flex-1 rounded-full border-[#e5e5ea] text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                          className="h-10 flex-1 rounded-xl border-[#e5e5ea] text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
                         />
                         <Button
                           onClick={() => void handleCreateTask()}
                           disabled={!newTaskName.trim() || mutations.createTask.isPending}
-                          className="h-10 rounded-full px-4 text-white"
+                          className="h-10 rounded-xl px-4 text-white"
                           style={{ backgroundColor: ACTION_GREEN }}
                         >
                           <Plus className="size-4" />
@@ -611,25 +647,21 @@ export function ProjectViewDrawer({
 
                 {/* Members tab */}
                 <TabsContent value="members" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
-                  <Tabs defaultValue="assigned" className="flex min-h-0 flex-1 flex-col">
-                    <TabsList className="mb-3 shrink-0 rounded-full border border-[#e5e5ea] bg-[#f5f5f7] p-1">
-                      <TabsTrigger
-                        value="assigned"
-                        className="flex-1 rounded-full text-[13px] font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                      >
-                        Assigned
-                        <span className="ml-1.5 text-[#86868b]">{project.memberCount}</span>
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="unassigned"
-                        className="flex-1 rounded-full text-[13px] font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                      >
-                        Unassigned
-                        <span className="ml-1.5 text-[#86868b]">
-                          {allOrgMembers.filter((m) => !assignedMemberIds.has(m.id)).length}
-                        </span>
-                      </TabsTrigger>
-                    </TabsList>
+                  <Tabs value={memberTab} onValueChange={(v) => setMemberTab(v as 'assigned' | 'unassigned')} className="flex min-h-0 flex-1 flex-col">
+                    <div className="mb-3 shrink-0">
+                      <AnimatedTabBar
+                        tabs={[
+                          { value: 'assigned', label: 'Assigned', count: project.memberCount },
+                          {
+                            value: 'unassigned',
+                            label: 'Unassigned',
+                            count: allOrgMembers.filter((m) => !assignedMemberIds.has(m.id)).length,
+                          },
+                        ]}
+                        value={memberTab}
+                        onValueChange={(v) => setMemberTab(v as 'assigned' | 'unassigned')}
+                      />
+                    </div>
 
                     {/* Assigned sub-tab */}
                     <TabsContent value="assigned" className="mt-0 flex min-h-0 flex-1 flex-col">
@@ -639,7 +671,7 @@ export function ProjectViewDrawer({
                           value={assignedSearch}
                           onChange={(e) => setAssignedSearch(e.target.value)}
                           placeholder="Search assigned…"
-                          className="h-10 rounded-full border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                          className="h-10 rounded-xl border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
                         />
                       </div>
 
@@ -680,7 +712,7 @@ export function ProjectViewDrawer({
                           value={unassignedSearch}
                           onChange={(e) => setUnassignedSearch(e.target.value)}
                           placeholder="Search employees…"
-                          className="h-10 rounded-full border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                          className="h-10 rounded-xl border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
                         />
                       </div>
 
@@ -734,7 +766,7 @@ export function ProjectViewDrawer({
                           <Button
                             onClick={() => void handleBulkAssign()}
                             disabled={mutations.bulkAssignMembers.isPending}
-                            className="h-10 w-full rounded-full text-[14px] font-medium text-white"
+                            className="h-10 w-full rounded-xl text-[14px] font-medium text-white"
                             style={{ backgroundColor: ACTION_GREEN }}
                           >
                             <UserCheck className="mr-2 size-4" />
@@ -796,14 +828,14 @@ function TaskRow({
         />
         <button
           onClick={onEditSave}
-          className="shrink-0 rounded-full p-1.5 text-[#00874a] transition-colors hover:bg-[#eef9f1]"
+          className="shrink-0 rounded-xl p-1.5 text-[#00874a] transition-colors hover:bg-[#eef9f1]"
           aria-label="Save"
         >
           <CheckCircle2 className="size-3.5" />
         </button>
         <button
           onClick={onEditCancel}
-          className="shrink-0 rounded-full p-1.5 text-[#86868b] transition-colors hover:bg-[#f5f5f7]"
+          className="shrink-0 rounded-xl p-1.5 text-[#86868b] transition-colors hover:bg-[#f5f5f7]"
           aria-label="Cancel"
         >
           <X className="size-3.5" />
@@ -814,7 +846,7 @@ function TaskRow({
 
   return (
     <li className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f7]">
-      <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#eef9f1] text-[#156f3d]">
+      <div className="flex size-6 shrink-0 items-center justify-center rounded-xl bg-[#eef9f1] text-[#156f3d]">
         <CheckCircle2 className="size-3.5" />
       </div>
       <div className="min-w-0 flex-1">
@@ -824,14 +856,14 @@ function TaskRow({
         <div className="flex shrink-0 gap-1">
           <button
             onClick={onEditStart}
-            className="rounded-full p-1.5 text-[#86868b] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+            className="rounded-xl p-1.5 text-[#86868b] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
             aria-label="Edit task"
           >
             <Edit2 className="size-3.5" />
           </button>
           <button
             onClick={onDelete}
-            className="rounded-full p-1.5 text-[#86868b] transition-colors hover:bg-[#fff0f0] hover:text-[#a12323]"
+            className="rounded-xl p-1.5 text-[#86868b] transition-colors hover:bg-[#fff0f0] hover:text-[#a12323]"
             aria-label="Delete task"
           >
             <Trash2 className="size-3.5" />
@@ -855,7 +887,7 @@ function AssignedMemberRow({
 }) {
   return (
     <li className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f7]">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eef9f1] text-[12px] font-semibold text-[#156f3d]">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#eef9f1] text-[12px] font-semibold text-[#156f3d]">
         {(member.name ?? member.email ?? '?').charAt(0).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
@@ -870,7 +902,7 @@ function AssignedMemberRow({
         <button
           onClick={() => void onRemove(member.memberId)}
           disabled={isRemoving}
-          className="shrink-0 rounded-full p-1.5 text-[#86868b] transition-colors hover:bg-[#fff0f0] hover:text-[#a12323] disabled:opacity-50"
+          className="shrink-0 rounded-xl p-1.5 text-[#86868b] transition-colors hover:bg-[#fff0f0] hover:text-[#a12323] disabled:opacity-50"
           aria-label={`Remove ${member.name || member.email}`}
         >
           <UserMinus className="size-3.5" />

@@ -5,12 +5,14 @@ import { useMemo } from 'react';
 
 import { AtsKanbanBoard } from '@/modules/candidates/components/AtsKanbanBoard';
 import { usePipelineJobPostings } from '@/modules/candidates/hooks/useAtsPipeline';
+import type { RolePermissions } from '@/modules/roles/types/role';
 
 interface CandidatesJobPageClientProps {
   orgSlug: string;
   memberId: string;
   jobSlug: string;
   defaultView?: 'kanban' | 'table';
+  permissions?: RolePermissions | null;
 }
 
 export function CandidatesJobPageClient({
@@ -18,6 +20,7 @@ export function CandidatesJobPageClient({
   memberId,
   jobSlug,
   defaultView,
+  permissions,
 }: Readonly<CandidatesJobPageClientProps>) {
   const router = useRouter();
   const postingsQuery = usePipelineJobPostings(orgSlug, memberId);
@@ -44,6 +47,7 @@ export function CandidatesJobPageClient({
       showJobSelector={false}
       pipelineBasePath={`/${orgSlug}/stage`}
       defaultView={defaultView}
+      permissions={permissions}
     />
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import NeumorphButton from "@/components/ui/neumorph-button";
 import { Input } from "@/components/ui/input";
@@ -210,6 +211,13 @@ export function SignupForm() {
                     linkText="Sign in"
                     href="/login"
                 />
+            </div>
+
+            <div className="mt-3 text-center text-sm text-muted-foreground">
+                Applying for a job?{" "}
+                <Link href="/careers" className="font-medium text-primary underline-offset-4 hover:underline">
+                    View careers
+                </Link>
             </div>
         </div>
     );

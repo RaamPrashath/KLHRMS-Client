@@ -48,7 +48,6 @@ export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardP
         <div className="flex items-start justify-between gap-4 border-b border-black/4 px-6 py-5 dark:border-white/4">
           <div>
             <h2 className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">Open Internal Positions</h2>
-            <p className="mt-0.5 text-xs text-neutral-500">Explore open roles and project-based internal shifting tracks.</p>
           </div>
           {!isLoading && <span className="shrink-0 text-xs text-neutral-500">{openings.length} Active</span>}
         </div>

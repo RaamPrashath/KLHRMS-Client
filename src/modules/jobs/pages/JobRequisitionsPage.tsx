@@ -31,10 +31,6 @@ export function JobRequisitionsPage({
     memberId,
     effectiveViewScope,
   );
-  const visibleRequisitions =
-    effectiveViewScope === 'self'
-      ? data.filter((requisition) => requisition.raisedById === memberId)
-      : data;
 
   return (
     <div className="min-h-full bg-canvas">
@@ -45,11 +41,11 @@ export function JobRequisitionsPage({
           </h1>
         </div>
 
-        {!isLoading && !isError && visibleRequisitions.length === 0 ? (
+        {!isLoading && !isError && data.length === 0 ? (
           <EmptyRequisitionsState onCreate={() => router.push(`/${orgSlug}/jobs/new`)} />
         ) : (
           <JobRequisitionTable
-            data={visibleRequisitions}
+            data={data}
             isLoading={isLoading}
             isError={isError}
             error={error}

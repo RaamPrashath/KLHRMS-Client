@@ -68,11 +68,16 @@ export function useImportPipeline(orgSlug: string, memberId: string, requisition
   });
 }
 
-export function useImportOptionsQuery(orgSlug: string, memberId: string, requisitionId: string) {
+export function useImportOptionsQuery(
+  orgSlug: string,
+  memberId: string,
+  requisitionId: string,
+  enabled = true,
+) {
   return useQuery<ImportableJobPosting[], Error>({
     queryKey: importOptionsKey(orgSlug, requisitionId),
     queryFn: () => fetchImportOptionsAction({ orgSlug, memberId, requisitionId }),
-    enabled: !!orgSlug && !!memberId && !!requisitionId,
+    enabled: enabled && !!orgSlug && !!memberId && !!requisitionId,
     staleTime: 60_000,
   });
 }

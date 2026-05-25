@@ -62,6 +62,14 @@ function formatHiringReason(value: string | null) {
     .join(' ');
 }
 
+function toPlainText(html: string | null) {
+  if (!html) return '';
+  if (typeof DOMParser === 'undefined') return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const documentFragment = new DOMParser().parseFromString(html, 'text/html');
+  return documentFragment.body.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+}
+
 export function CareersPageShell() {
   const { data = [], isLoading, isError, error } = usePublicCareerPostingsQuery();
 
@@ -80,19 +88,39 @@ export function CareersPageShell() {
 
         {isLoading ? (
           <div className="grid gap-4">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Card key={`career-skeleton-${index}`}>
-                <CardHeader className="gap-3">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-6 w-56" />
-                  <Skeleton className="h-4 w-full max-w-3xl" />
-                </CardHeader>
-                <CardContent className="flex gap-2">
-                  <Skeleton className="h-8 w-24" />
-                  <Skeleton className="h-8 w-32" />
-                </CardContent>
-              </Card>
-            ))}
+            <Card>
+              <CardHeader className="gap-3">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 w-56" />
+                <Skeleton className="h-4 w-full max-w-3xl" />
+              </CardHeader>
+              <CardContent className="flex gap-2">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="gap-3">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 w-56" />
+                <Skeleton className="h-4 w-full max-w-3xl" />
+              </CardHeader>
+              <CardContent className="flex gap-2">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="gap-3">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 w-56" />
+                <Skeleton className="h-4 w-full max-w-3xl" />
+              </CardHeader>
+              <CardContent className="flex gap-2">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
+            </Card>
           </div>
         ) : null}
 
@@ -154,7 +182,7 @@ export function CareersPageShell() {
                     <div className="space-y-1">
                       <CardTitle className="text-xl">{posting.title}</CardTitle>
                       <CardDescription className="line-clamp-3">
-                        {posting.description}
+                        {toPlainText(posting.description)}
                       </CardDescription>
                     </div>
                     {posting.skills.length > 0 ? (

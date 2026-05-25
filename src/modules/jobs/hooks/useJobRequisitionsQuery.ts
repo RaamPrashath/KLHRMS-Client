@@ -13,7 +13,7 @@ export function useJobRequisitionsQuery(
 ) {
   return useQuery<JobRequisitionRecord[], Error>({
     queryKey: ['job-requisitions', orgSlug, memberId, viewScope],
-    queryFn: () => fetchJobRequisitionsAction({ orgSlug, memberId }),
+    queryFn: () => fetchJobRequisitionsAction({ orgSlug, memberId, viewScope }),
     enabled: !!orgSlug && !!memberId,
   });
 }

@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CalendarDays, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -62,19 +62,30 @@ export function SchedulingModal({
     if (!interview) return '';
     return `${interview.candidate.firstName} ${interview.candidate.lastName}`.trim();
   }, [interview]);
+  const isReschedule = interview?.status === 'SCHEDULED' || interview?.status === 'ONGOING';
+
+  const dueDate = interview?.stageDueDate ? new Date(interview.stageDueDate) : undefined;
+  const todayStart = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
+
+  const selectedDateObj = date ? new Date(date + 'T00:00:00') : undefined;
+  const isSelectedToday = selectedDateObj && selectedDateObj.getTime() === todayStart.getTime();
+
+  const minTime = isSelectedToday
+    ? { hour: new Date().getHours(), minute: new Date().getMinutes() }
+    : undefined;
 
   async function handleSubmit() {
     if (!date || !time) {
-      toast.error('Choose a date and time');
       return;
     }
     const scheduledStartAt = toIsoFromDateTime(date, time);
     if (new Date(scheduledStartAt).getTime() < Date.now()) {
-      toast.error('Interview cannot be scheduled in the past');
       return;
     }
     if (durationMinutes < 15 || durationMinutes > 240) {
-      toast.error('Duration must be between 15 and 240 minutes');
       return;
     }
     await onSubmit({ scheduledStartAt, durationMinutes });
@@ -82,10 +93,10 @@ export function SchedulingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-2xl bg-surface shadow-[var(--shadow-4)] sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="w-[min(92vw,760px)] sm:max-w-[760px] gap-0 rounded-2xl bg-surface p-0 shadow-[var(--shadow-4)]">
+        <DialogHeader className="px-8 pt-8 pb-6">
           <DialogTitle className="text-xl font-semibold text-neutral-900">
-            Schedule Interview
+            {isReschedule ? 'Reschedule Interview' : 'Schedule Interview'}
           </DialogTitle>
           <DialogDescription>
             Choose the final slot and duration before notifying the candidate.
@@ -97,48 +108,77 @@ export function SchedulingModal({
           ) : null}
         </DialogHeader>
 
-        <div className="grid gap-4">
-          <div className="rounded-lg border border-info-border bg-info-bg p-3 text-xs font-medium text-info-text">
-            <CalendarDays className="mr-2 inline size-4" />
-            Confirm the final interview slot before notifying the candidate.
+        <div className="grid gap-8 px-8 pb-8 md:grid-cols-2 md:items-start">
+          <div className="grid min-w-0 content-start gap-3">
+            <label className="text-sm font-medium text-neutral-700" id="schedule-date-label">
+              Date
+            </label>
+            <Calendar
+              className="w-fit p-0"
+              mode="single"
+              selected={selectedDateObj}
+              onSelect={(selected) => {
+                if (selected) {
+                  setDate(
+                    `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, '0')}-${String(selected.getDate()).padStart(2, '0')}`,
+                  );
+                } else {
+                  setDate('');
+                }
+              }}
+              disabled={[
+                { before: todayStart },
+                ...(dueDate ? [{ after: dueDate } as const] : []),
+              ]}
+              aria-labelledby="schedule-date-label"
+            />
+            {dueDate ? (
+              <p className="text-xs text-neutral-500">
+                Available until{' '}
+                {dueDate.toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  timeZone: 'Asia/Kolkata',
+                })}
+              </p>
+            ) : null}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-1.5">
-              <span className="block text-[13px] font-medium text-neutral-700">Date</span>
-              <Input
-                type="date"
-                value={date}
-                min={toDateInput(new Date().toISOString())}
-                onChange={(event) => setDate(event.target.value)}
-              />
-            </label>
-            <label className="space-y-1.5">
-              <span className="block text-[13px] font-medium text-neutral-700">Time</span>
+          <div className="grid min-w-0 content-start gap-8 md:pt-0.5">
+            <div className="grid gap-3">
+              <label className="text-sm font-medium text-neutral-700" id="schedule-time-label">
+                Time (IST)
+              </label>
               <Input
                 type="time"
                 value={time}
+                aria-labelledby="schedule-time-label"
                 onChange={(event) => setTime(event.target.value)}
+                min={minTime ? `${String(minTime.hour).padStart(2, '0')}:${String(minTime.minute).padStart(2, '0')}` : undefined}
               />
-            </label>
-          </div>
-
-          <label className="space-y-1.5">
-            <span className="block text-[13px] font-medium text-neutral-700">Duration</span>
-            <div className="flex items-center gap-3">
-              <Input
-                type="number"
-                min={15}
-                max={240}
-                value={durationMinutes}
-                onChange={(event) => setDurationMinutes(Number.parseInt(event.target.value, 10) || 30)}
-              />
-              <span className="text-sm text-neutral-500">minutes</span>
             </div>
-          </label>
+
+            <div className="grid gap-3">
+              <label className="text-sm font-medium text-neutral-700" id="schedule-duration-label">
+                Duration
+              </label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  min={15}
+                  max={240}
+                  value={durationMinutes}
+                  aria-labelledby="schedule-duration-label"
+                  onChange={(event) => setDurationMinutes(Number.parseInt(event.target.value, 10) || 30)}
+                />
+                <span className="text-sm text-neutral-500">minutes</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <DialogFooter className="border-t border-neutral-100 pt-4">
+        <DialogFooter className="border-t border-neutral-100 px-8 py-4">
           <Button
             type="button"
             variant="outline"
@@ -150,7 +190,7 @@ export function SchedulingModal({
           <Button
             type="button"
             className="bg-primary hover:bg-primary-hover"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !date || !time}
             onClick={handleSubmit}
           >
             {isSubmitting ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}

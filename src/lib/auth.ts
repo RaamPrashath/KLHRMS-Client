@@ -46,7 +46,44 @@ export const auth = betterAuth({
                     from: process.env.EMAIL_FROM || "onboarding@resend.dev",
                     to: email,
                     subject: "Verify your email",
-                    html: `<p>Your verification code is: <strong>${otp}</strong></p><p>This code will expire in 10 minutes.</p>`,
+                    html: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&display=swap');
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#f5f5f7;font-family:'Figtree','Inter','Segoe UI',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:32px 40px 0;">
+              <div style="font-size:22px;font-weight:700;color:#1d1d1f;letter-spacing:-0.5px;">Kovan Labs</div>
+              <hr style="border:none;border-top:1px solid #e5e5e7;margin:24px 0;" />
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px 32px;font-size:15px;line-height:1.6;color:#1d1d1f;font-weight:400;">
+              <p style="margin:0 0 16px;">Your verification code is:</p>
+              <p style="margin:0 0 20px;font-size:32px;font-weight:600;letter-spacing:8px;text-align:center;color:#1d1d1f;">${otp}</p>
+              <p style="margin:0;font-size:13px;color:#86868b;">This code will expire in 10 minutes.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f5f5f7;padding:24px 40px;font-size:13px;color:#86868b;text-align:center;">
+              <p style="margin:0 0 4px;font-weight:600;color:#6e6e73;">Kovan Labs</p>
+              <p style="margin:0;">&copy; 2026 Kovan Labs. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
                 });
             },
             otpLength: 6,

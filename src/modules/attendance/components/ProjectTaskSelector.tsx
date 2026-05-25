@@ -81,7 +81,7 @@ export function ProjectTaskSelector({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="project-select" className="text-[14px] font-semibold text-ink-muted-48">
+        <label htmlFor="project-select" className="text-[13px] font-medium text-neutral-700">
           Project <span className="font-bold text-destructive">*</span>
         </label>
         <Popover open={projectOpen} onOpenChange={setProjectOpen}>
@@ -94,7 +94,7 @@ export function ProjectTaskSelector({
               aria-expanded={projectOpen}
               disabled={disabled}
               className={cn(
-                'w-full justify-between border-hairline bg-canvas/30 hover:bg-canvas/50',
+                'w-full justify-between border-neutral-200 bg-surface text-sm text-neutral-900 hover:bg-neutral-50',
                 projectError && 'border-destructive',
               )}
             >
@@ -104,25 +104,23 @@ export function ProjectTaskSelector({
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-            <Command>
-              <CommandInput placeholder="Search projects..." />
+          <PopoverContent className="w-[--radix-popover-trigger-width] border border-neutral-100 bg-surface p-0 shadow-[var(--shadow-3)]" align="start">
+            <Command className="bg-surface text-neutral-900 [&_[data-slot=command-input-wrapper]]:p-2 [&_[data-slot=input-group]]:border [&_[data-slot=input-group]]:border-neutral-100 [&_[data-slot=input-group]]:bg-surface [&_[data-slot=input-group]]:text-neutral-900">
+              <CommandInput placeholder="Search projects..." className="placeholder:text-neutral-400" />
               <CommandList>
-                <CommandEmpty>No project found.</CommandEmpty>
-                <CommandGroup>
+                <CommandEmpty className="text-neutral-500">No project found.</CommandEmpty>
+                <CommandGroup className="bg-surface">
                   {projects.map((project) => (
                     <CommandItem
                       key={project.id}
                       value={`${project.name} ${project.tasks.map((task) => task.name).join(' ')}`}
                       onSelect={() => handleProjectSelect(project.id)}
+                      className="justify-between bg-surface px-3 py-2 text-neutral-900 aria-selected:bg-neutral-50 aria-selected:text-neutral-900"
                     >
-                      <Check
-                        className={cn(
-                          'mr-2 h-4 w-4',
-                          selectedProjectId === project.id ? 'opacity-100' : 'opacity-0',
-                        )}
-                      />
-                      {project.name}
+                      <span className="truncate">{project.name}</span>
+                      {selectedProjectId === project.id ? (
+                        <Check className="ml-2 h-4 w-4 shrink-0 text-primary" />
+                      ) : null}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -136,7 +134,7 @@ export function ProjectTaskSelector({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="task-select" className="text-[14px] font-semibold text-ink-muted-48">
+        <label htmlFor="task-select" className="text-[13px] font-medium text-neutral-700">
           Task <span className="font-bold text-destructive">*</span>
         </label>
         <Popover open={taskOpen} onOpenChange={setTaskOpen}>
@@ -149,7 +147,7 @@ export function ProjectTaskSelector({
               aria-expanded={taskOpen}
               disabled={disabled || !selectedProjectId}
               className={cn(
-                'w-full justify-between border-hairline bg-canvas/30 hover:bg-canvas/50',
+                'w-full justify-between border-neutral-200 bg-surface text-sm text-neutral-900 hover:bg-neutral-50 disabled:bg-neutral-50 disabled:text-neutral-400',
                 taskError && 'border-destructive',
               )}
             >
@@ -165,29 +163,27 @@ export function ProjectTaskSelector({
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-            <Command>
-              <CommandInput placeholder="Search tasks..." />
+          <PopoverContent className="w-[--radix-popover-trigger-width] border border-neutral-100 bg-surface p-0 shadow-[var(--shadow-3)]" align="start">
+            <Command className="bg-surface text-neutral-900 [&_[data-slot=command-input-wrapper]]:p-2 [&_[data-slot=input-group]]:border [&_[data-slot=input-group]]:border-neutral-100 [&_[data-slot=input-group]]:bg-surface [&_[data-slot=input-group]]:text-neutral-900">
+              <CommandInput placeholder="Search tasks..." className="placeholder:text-neutral-400" />
               <CommandList>
-                <CommandEmpty>
+                <CommandEmpty className="text-neutral-500">
                   {availableTasks.length === 0
                     ? 'This project has no tasks yet.'
                     : 'No task found.'}
                 </CommandEmpty>
-                <CommandGroup>
+                <CommandGroup className="bg-surface">
                   {availableTasks.map((task) => (
                     <CommandItem
                       key={task.id}
                       value={task.name}
                       onSelect={() => handleTaskSelect(task.id)}
+                      className="justify-between bg-surface px-3 py-2 text-neutral-900 aria-selected:bg-neutral-50 aria-selected:text-neutral-900"
                     >
-                      <Check
-                        className={cn(
-                          'mr-2 h-4 w-4',
-                          selectedTaskId === task.id ? 'opacity-100' : 'opacity-0',
-                        )}
-                      />
-                      {task.name}
+                      <span className="truncate">{task.name}</span>
+                      {selectedTaskId === task.id ? (
+                        <Check className="ml-2 h-4 w-4 shrink-0 text-primary" />
+                      ) : null}
                     </CommandItem>
                   ))}
                 </CommandGroup>

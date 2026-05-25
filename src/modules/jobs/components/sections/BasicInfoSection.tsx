@@ -124,13 +124,16 @@ export function BasicInfoSection({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="requisition-remote">Remote role</Label>
-          <Switch
-            id="requisition-remote"
-            checked={isRemote ?? false}
-            onCheckedChange={(checked) => form.setValue('isRemote', checked, { shouldDirty: true })}
-          />
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="requisition-remote">Remote</Label>
+          <div className="flex items-center justify-between rounded-lg bg-neutral-100/60 px-3 py-2">
+            <span className="text-sm text-neutral-600">{isRemote ? 'Remote available' : 'On-site'}</span>
+            <Switch
+              id="requisition-remote"
+              checked={isRemote ?? false}
+              onCheckedChange={(checked) => form.setValue('isRemote', checked, { shouldDirty: true })}
+            />
+          </div>
         </div>
 
         <div className="flex flex-col gap-1.5">

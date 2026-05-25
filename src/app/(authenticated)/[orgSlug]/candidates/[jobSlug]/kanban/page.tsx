@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
+import type { RolePermissions } from '@/modules/roles/types/role';
 import { CandidatesJobPageClient } from '../CandidatesJobPageClient';
 
 export default async function CandidatesKanbanPage({
@@ -28,6 +29,7 @@ export default async function CandidatesKanbanPage({
       memberId={member.id}
       jobSlug={jobSlug}
       defaultView="kanban"
+      permissions={(member.role?.permissions as RolePermissions) ?? null}
     />
   );
 }

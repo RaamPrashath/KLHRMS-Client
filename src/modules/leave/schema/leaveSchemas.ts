@@ -21,7 +21,7 @@ export const leaveRequestSchema = z
     memberId: z.string().optional(),
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be YYYY-MM-DD'),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be YYYY-MM-DD'),
-    days: z.coerce.number().positive('Days must be greater than 0'),
+    days: z.coerce.number().min(0, 'Days cannot be negative'),
     reason: z.string().trim().max(2000).optional().or(z.literal('')),
   })
   .refine((value) => value.endDate >= value.startDate, {

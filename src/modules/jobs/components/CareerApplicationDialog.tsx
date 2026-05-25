@@ -23,9 +23,7 @@ import {
   type PublicCareerApplicationFormValues,
 } from '@/modules/jobs/schema/publicCareerSchemas';
 import { usePublicCareerApplication } from '@/modules/jobs/hooks/usePublicCareerQueries';
-import { useSession } from '@/hooks/useSession';
 import type { PublicCareerApplicationInput } from '@/modules/jobs/schema/publicCareerSchemas';
-import Link from 'next/link';
 
 interface CareerApplicationDialogProps {
   open: boolean;
@@ -103,16 +101,13 @@ export function CareerApplicationDialog({
   organizationId,
   jobTitle,
 }: Readonly<CareerApplicationDialogProps>) {
-  const { data: session } = useSession();
-  const sessionEmail = session?.user?.email ?? '';
-  const isAuthenticated = !!session;
-
   const mutation = usePublicCareerApplication(jobId);
   const form = useForm<PublicCareerApplicationFormValues>({
     resolver: zodResolver(publicCareerApplicationSchema) as Resolver<PublicCareerApplicationFormValues>,
     defaultValues: {
       firstName: '',
       lastName: '',
+      email: '',
       phone: '',
       linkedinUrl: '',
       coverLetter: '',
@@ -148,7 +143,7 @@ export function CareerApplicationDialog({
       const payload: PublicCareerApplicationInput = {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
-        email: sessionEmail,
+        email: values.email.trim(),
         phone: values.phone.trim() || undefined,
         linkedinUrl: values.linkedinUrl.trim() || undefined,
         coverLetter: values.coverLetter.trim() || undefined,
@@ -171,97 +166,88 @@ export function CareerApplicationDialog({
         <DialogHeader>
           <DialogTitle>Apply for {jobTitle}</DialogTitle>
           <DialogDescription>
-            {isAuthenticated
-              ? 'Submit your details and resume to create your candidate application.'
-              : 'Sign in to submit your application.'}
+            Submit your details and resume to create your candidate application.
           </DialogDescription>
         </DialogHeader>
 
-        {isAuthenticated ? (
-          <>
-            <form
-              id="career-application-form"
-              className="flex flex-col gap-4"
-              onSubmit={form.handleSubmit(onSubmit)}
-            >
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field>
-                  <FieldLabel htmlFor="career-first-name">First name</FieldLabel>
-                  <Input id="career-first-name" {...form.register('firstName')} />
-                  <FieldError errors={[form.formState.errors.firstName]} />
-                </Field>
+        <form
+          id="career-application-form"
+          className="flex flex-col gap-4"
+          onSubmit={form.handleSubmit(onSubmit)}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="career-first-name">First name</FieldLabel>
+              <Input id="career-first-name" {...form.register('firstName')} />
+              <FieldError errors={[form.formState.errors.firstName]} />
+            </Field>
 
-                <Field>
-                  <FieldLabel htmlFor="career-last-name">Last name</FieldLabel>
-                  <Input id="career-last-name" {...form.register('lastName')} />
-                  <FieldError errors={[form.formState.errors.lastName]} />
-                </Field>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field>
-                  <FieldLabel htmlFor="career-email">Email</FieldLabel>
-                  <Input id="career-email" type="email" value={sessionEmail} readOnly className="bg-muted text-muted-foreground" />
-                </Field>
-
-                <Field>
-                  <FieldLabel htmlFor="career-phone">Phone</FieldLabel>
-                  <Input id="career-phone" {...form.register('phone')} />
-                  <FieldError errors={[form.formState.errors.phone]} />
-                </Field>
-              </div>
-
-              <Field>
-                <FieldLabel htmlFor="career-linkedin">LinkedIn URL</FieldLabel>
-                <Input id="career-linkedin" placeholder="https://linkedin.com/in/your-profile" {...form.register('linkedinUrl')} />
-                <FieldError errors={[form.formState.errors.linkedinUrl]} />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="career-resume">Resume upload</FieldLabel>
-                <Input
-                  id="career-resume"
-                  type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null;
-                    form.setValue('resumeFile', file, { shouldValidate: true, shouldDirty: true });
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">{resumeLabel}</p>
-                <FieldError errors={[form.formState.errors.resumeFile]} />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="career-cover-letter">Notes / cover letter</FieldLabel>
-                <Textarea id="career-cover-letter" rows={6} {...form.register('coverLetter')} />
-                <FieldError errors={[form.formState.errors.coverLetter]} />
-              </Field>
-            </form>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                form="career-application-form"
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending ? 'Submitting...' : 'Submit application'}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <p className="text-sm text-muted-foreground text-center">
-              You need to sign in to apply for this role.
-            </p>
-            <Button asChild>
-              <Link href={`/login?redirect=/careers/${jobId}`}>Sign in to apply</Link>
-            </Button>
+            <Field>
+              <FieldLabel htmlFor="career-last-name">Last name</FieldLabel>
+              <Input id="career-last-name" {...form.register('lastName')} />
+              <FieldError errors={[form.formState.errors.lastName]} />
+            </Field>
           </div>
-        )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="career-email">Email</FieldLabel>
+              <Input
+                id="career-email"
+                type="email"
+                autoComplete="email"
+                {...form.register('email')}
+              />
+              <FieldError errors={[form.formState.errors.email]} />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="career-phone">Phone</FieldLabel>
+              <Input id="career-phone" {...form.register('phone')} />
+              <FieldError errors={[form.formState.errors.phone]} />
+            </Field>
+          </div>
+
+          <Field>
+            <FieldLabel htmlFor="career-linkedin">LinkedIn URL</FieldLabel>
+            <Input id="career-linkedin" placeholder="https://linkedin.com/in/your-profile" {...form.register('linkedinUrl')} />
+            <FieldError errors={[form.formState.errors.linkedinUrl]} />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="career-resume">Resume upload</FieldLabel>
+            <Input
+              id="career-resume"
+              type="file"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                form.setValue('resumeFile', file, { shouldValidate: true, shouldDirty: true });
+              }}
+            />
+            <p className="text-xs text-muted-foreground">{resumeLabel}</p>
+            <FieldError errors={[form.formState.errors.resumeFile]} />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="career-cover-letter">Notes / cover letter</FieldLabel>
+            <Textarea id="career-cover-letter" rows={6} {...form.register('coverLetter')} />
+            <FieldError errors={[form.formState.errors.coverLetter]} />
+          </Field>
+        </form>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="career-application-form"
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending ? 'Submitting...' : 'Submit application'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

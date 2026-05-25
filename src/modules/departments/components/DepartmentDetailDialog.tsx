@@ -61,7 +61,7 @@ export function DepartmentDetailDialog({
                   </p>
                   <h2 className="mt-1.5 text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[#1d1d1f]">{department.name}</h2>
                 </div>
-                <Badge className={cn('mt-1 shrink-0 rounded-full px-3 py-1 text-[11px] font-medium', formatStatus(department.status))}>
+                <Badge className={cn('mt-1 shrink-0 rounded-lg px-3 py-1 text-[11px] font-medium', formatStatus(department.status))}>
                   {department.status}
                 </Badge>
               </div>
@@ -84,7 +84,7 @@ export function DepartmentDetailDialog({
             <div className="flex flex-wrap items-center gap-2 border-t border-[#e5e5ea] px-8 py-4">
               <Button
                 variant="outline"
-                className="rounded-full border-[#e5e5ea] px-5 text-[14px] font-medium text-[#1d1d1f]"
+                className="rounded-lg border-[#e5e5ea] px-5 text-[14px] font-medium text-[#1d1d1f]"
                 onClick={onViewTeams}
               >
                 View teams
@@ -93,8 +93,7 @@ export function DepartmentDetailDialog({
               {canManage && (
                 <>
                   <Button
-                    className="rounded-full px-5 text-[14px] font-medium text-white"
-                    style={{ backgroundColor: '#00874a' }}
+                    className="rounded-lg px-5 text-[14px] font-medium"
                     onClick={onCreateTeam}
                   >
                     Add team
@@ -102,7 +101,7 @@ export function DepartmentDetailDialog({
                   <div className="ml-auto">
                     <Button
                       variant="destructive"
-                      className="rounded-full text-red px-5 text-[14px] font-medium hover:text-[#1d1d1f]"
+                      className="rounded-lg px-5 text-[14px] font-medium"
                       onClick={onDelete}
                     >
                       Remove
