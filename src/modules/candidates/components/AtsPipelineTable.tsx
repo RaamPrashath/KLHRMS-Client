@@ -19,6 +19,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Loader2,
+  ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -65,6 +67,10 @@ interface PipelineTableRow {
   appliedDate: string;
   lastMovedAt: string | null;
   status: string;
+  aiScore: number | null;
+  aiAnalysisStatus: string | null;
+  aiEvaluationStatus: string | null;
+  isFlaggedForCheating: boolean;
   isInterviewOngoing: boolean;
   displayStatus: 'Scheduled' | 'Ongoing' | 'Completed' | null;
   application: PipelineApplication;
@@ -121,6 +127,10 @@ function buildRows(stages: PipelineStage[]): PipelineTableRow[] {
         appliedDate: application.appliedDate,
         lastMovedAt: application.lastMovedAt,
         status: application.status,
+        aiScore: application.aiScore,
+        aiAnalysisStatus: application.aiAnalysisStatus,
+        aiEvaluationStatus: application.aiEvaluationStatus,
+        isFlaggedForCheating: application.isFlaggedForCheating,
         isInterviewOngoing: meeting?.status === 'ONGOING',
         displayStatus,
         application,
@@ -278,6 +288,34 @@ export function AtsPipelineTable({
         ),
       },
       {
+        id: 'aiScore',
+        header: ({ column }) => (
+          <SortButton label="AI Score" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
+        ),
+        sortingFn: (rowA, rowB) => (rowA.original.aiScore ?? -1) - (rowB.original.aiScore ?? -1),
+        cell: ({ row }) => (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {row.original.aiScore !== null ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-ghost px-2 py-0.5 font-mono text-xs font-medium text-primary">
+                {row.original.aiScore}
+              </span>
+            ) : row.original.aiAnalysisStatus ? (
+              <span className="rounded-full bg-info-bg px-2 py-0.5 text-xs font-medium text-info-text">
+                {row.original.aiAnalysisStatus === 'FAILED' ? 'Failed' : 'Analyzing'}
+              </span>
+            ) : (
+              <span className="text-sm text-neutral-400">—</span>
+            )}
+            {(row.original.aiScore ?? 0) >= 70 && row.original.aiEvaluationStatus === 'QUALIFIED' ? (
+              <Sparkles className="size-3.5 text-success-text" />
+            ) : null}
+            {row.original.isFlaggedForCheating ? (
+              <ShieldAlert className="size-3.5 text-warning-text" />
+            ) : null}
+          </div>
+        ),
+      },
+      {
         accessorKey: 'lastMovedAt',
         header: ({ column }) => (
           <SortButton label="Last Moved" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
@@ -360,6 +398,9 @@ export function AtsPipelineTable({
         row.original.currentStage,
         row.original.lastMovedAt,
         row.original.displayStatus,
+        row.original.aiScore,
+        row.original.aiAnalysisStatus,
+        row.original.isFlaggedForCheating ? 'flagged suspicious hidden text' : null,
       ].some((value) => normalize(value).includes(query));
     },
     getCoreRowModel: getCoreRowModel(),

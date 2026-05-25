@@ -170,6 +170,11 @@ function workspaceCandidateToApplication(
     status: candidate.currentAssignment?.status ?? 'UNASSIGNED',
     currentAssignment: candidate.currentAssignment ?? null,
     resumeUrl: candidate.candidate.resumeUrl,
+    aiScore: null,
+    aiAnalysisStatus: null,
+    aiEvaluationStatus: null,
+    isFlaggedForCheating: false,
+    aiFailedKnockouts: [],
     interviewMeeting: assignmentToMeeting(candidate),
   };
 }

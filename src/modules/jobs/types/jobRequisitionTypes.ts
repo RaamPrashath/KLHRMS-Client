@@ -137,6 +137,63 @@ export interface RequisitionActivityEntry {
   createdAt: string;
 }
 
+export interface RequisitionKnockoutRules {
+  minYearsExperience: number | null;
+  requiredEducationKeywords: string[];
+  requiredCertificationKeywords: string[];
+}
+
+export interface RequisitionScoringWeights {
+  experiencePointsPerYear: number;
+  maxExperiencePoints: number;
+  maxSkillPoints: number;
+  skillWeights: Record<string, number>;
+  totalPossiblePoints: number;
+}
+
+export interface JobRequisitionRules {
+  id: string;
+  organizationId: string;
+  requisitionId: string;
+  jobPostingId: string | null;
+  rulesVersion: string;
+  knockoutRules: RequisitionKnockoutRules;
+  scoringWeights: RequisitionScoringWeights;
+  sourceSnapshot: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RequisitionAiAnalysisStats {
+  totalApplications: number;
+  analyzedApplications: number;
+  pendingApplications: number;
+  flaggedCandidates: number;
+  recommendedCandidates: number;
+  averageScore: number | null;
+}
+
+export interface RequisitionAiCandidate {
+  applicationId: string;
+  candidateId: string;
+  candidateName: string;
+  email: string;
+  aiScore: number | null;
+  aiAnalysisStatus: string | null;
+  evaluationStatus: string | null;
+  isFlaggedForCheating: boolean;
+  failedKnockouts: Array<Record<string, unknown>>;
+}
+
+export interface JobRequisitionAiAnalysis {
+  requisitionId: string;
+  jobPostingId: string | null;
+  rulesMissing: boolean;
+  rules: JobRequisitionRules | null;
+  stats: RequisitionAiAnalysisStats;
+  candidates: RequisitionAiCandidate[];
+}
+
 export interface OrgMemberOption {
   id: string;
   name: string;

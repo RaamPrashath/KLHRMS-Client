@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
+  AlertTriangle,
   BriefcaseBusiness,
   CalendarClock,
   CheckCircle2,
@@ -10,17 +11,23 @@ import {
   ExternalLink,
   FileDown,
   FileText,
+  Gauge,
   LinkIcon,
+  Loader2,
   Mail,
   MessageSquareText,
   Pencil,
   Phone,
+  RotateCcw,
   Save,
   Send,
+  ShieldAlert,
+  Sparkles,
   UserRound,
   UsersRound,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -37,12 +44,15 @@ import { cn } from '@/lib/utils';
 import {
   useCandidateApplicationDetail,
   useCreateCandidateApplicationNote,
+  useCandidateResumeAnalysis,
+  useRetryCandidateResumeAnalysis,
   useUpdateCandidateApplicationNote,
 } from '@/modules/candidates/hooks/useAtsPipeline';
 import type {
   ApplicationInterviewEvent,
   CandidateApplicationDetail,
   CandidateApplicationNote,
+  CandidateResumeAnalysis,
   StageHistoryItem,
 } from '@/modules/candidates/types/atsTypes';
 
@@ -69,14 +79,6 @@ function formatDate(value: string): string {
     year: 'numeric',
     timeZone: 'Asia/Kolkata',
   }).format(new Date(value));
-}
-
-function relativeAppliedDate(value: string): string {
-  const applied = new Date(value).getTime();
-  const diffDays = Math.max(0, Math.round((Date.now() - applied) / 86_400_000));
-  if (diffDays === 0) return 'Applied today';
-  if (diffDays === 1) return 'Applied 1 day ago';
-  return `Applied ${diffDays} days ago`;
 }
 
 function statusTone(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
@@ -235,6 +237,266 @@ function ProfileTab({ detail }: { readonly detail: CandidateApplicationDetail })
           <LinkRow label="Portfolio" href={detail.candidate.portfolioUrl} icon={FileText} />
         </div>
       </section>
+    </div>
+  );
+}
+
+function confidenceLabel(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatUnknown(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'Not found';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+function analysisStatusClass(status: string): string {
+  if (status === 'COMPLETED') return 'bg-success-bg text-success-text';
+  if (status === 'FAILED') return 'bg-destructive-bg text-destructive-text';
+  if (status === 'UNSUPPORTED') return 'bg-neutral-50 text-neutral-500';
+  return 'bg-info-bg text-info-text';
+}
+
+function AnalysisStatusPanel({
+  analysis,
+  onRetry,
+  retrying,
+}: {
+  readonly analysis: CandidateResumeAnalysis;
+  readonly onRetry: () => void;
+  readonly retrying: boolean;
+}) {
+  const isWorking = analysis.status === 'PENDING' || analysis.status === 'PROCESSING' || analysis.status === 'TEXT_EXTRACTED';
+  const isFailed = analysis.status === 'FAILED';
+
+  return (
+    <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', analysisStatusClass(analysis.status))}>
+              {isWorking ? 'Analyzing' : analysis.status}
+            </span>
+            {analysis.evaluationStatus ? (
+              <span className="rounded-full bg-neutral-50 px-2 py-0.5 text-xs font-medium text-neutral-500">
+                {analysis.evaluationStatus}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-2 text-sm text-neutral-500">
+            {isWorking
+              ? 'Resume analysis is queued or running in the background.'
+              : isFailed
+                ? analysis.lastError ?? 'Resume analysis failed.'
+                : 'AI facts and deterministic score are stored separately from manual recruiter scores.'}
+          </p>
+        </div>
+        {!isWorking ? (
+          <Button type="button" size="sm" variant="outline" onClick={onRetry} disabled={retrying}>
+            {retrying ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+            {isFailed ? 'Retry' : 'Re-analyze'}
+          </Button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function AtsScoreTab({
+  analysis,
+  isLoading,
+  error,
+  onRetry,
+  retrying,
+}: {
+  readonly analysis?: CandidateResumeAnalysis;
+  readonly isLoading: boolean;
+  readonly error: Error | null;
+  readonly onRetry: () => void;
+  readonly retrying: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-56 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="flex min-h-64 items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-canvas px-6 text-center">
+        <div>
+          <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-surface text-neutral-300 shadow-[var(--shadow-1)]">
+            <Gauge className="size-5" />
+          </div>
+          <p className="text-sm font-medium text-neutral-900">No ATS analysis yet</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            {error ? 'Analysis was not found for this application.' : 'The candidate remains visible while analysis runs.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const facts = analysis.extractedFacts;
+  const skills = facts?.skills ?? [];
+  const certifications = facts?.certifications ?? [];
+  const warnings = facts?.warnings ?? [];
+  const failedKnockouts = analysis.failedKnockouts ?? [];
+  const firewallFlags = analysis.firewallFlags ?? [];
+  const removedSuspiciousText = analysis.removedSuspiciousText ?? [];
+  const parserWarnings = analysis.parserWarnings ?? [];
+  const isRecommended = (analysis.compositeScore ?? 0) >= 70 && analysis.evaluationStatus === 'QUALIFIED';
+
+  return (
+    <div className="space-y-5">
+      <AnalysisStatusPanel analysis={analysis} onRetry={onRetry} retrying={retrying} />
+
+      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">AI ATS score</p>
+            <div className="mt-2 flex items-end gap-2">
+              <span className="font-mono text-3xl font-semibold text-neutral-900">
+                {analysis.compositeScore ?? '—'}
+              </span>
+              <span className="pb-1 text-sm text-neutral-500">/ 100</span>
+            </div>
+            <p className="mt-1 text-xs text-neutral-500">
+              Raw {analysis.rawScore ?? '—'} / {analysis.maxScore ?? '—'} · confidence {confidenceLabel(analysis.extractionConfidence)}
+            </p>
+          </div>
+          {isRecommended ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-success-bg px-2.5 py-1 text-xs font-medium text-success-text">
+              <Sparkles className="size-3.5" />
+              Recommended
+            </span>
+          ) : null}
+        </div>
+      </section>
+
+      {analysis.isFlaggedForCheating ? (
+        <section className="rounded-lg border border-warning-border bg-warning-bg p-4">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-0.5 size-5 shrink-0 text-warning-text" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-warning-text">Suspicious hidden resume text found</p>
+              <p className="mt-1 text-sm text-warning-text/90">
+                These snippets were removed before sending resume text to AI. This is a warning, not an automatic rejection.
+              </p>
+              <div className="mt-3 space-y-2">
+                {[...firewallFlags, ...removedSuspiciousText].slice(0, 6).map((item, index) => (
+                  <div key={`${formatUnknown(item)}-${index}`} className="rounded-md border border-warning-border bg-surface px-3 py-2 text-xs text-neutral-700">
+                    {formatUnknown(item)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {failedKnockouts.length > 0 ? (
+        <section className="rounded-lg border border-destructive-border bg-destructive-bg p-4">
+          <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-destructive-text">
+            <AlertTriangle className="size-4" />
+            Knockout rules failed
+          </p>
+          <div className="space-y-2">
+            {failedKnockouts.map((item, index) => (
+              <div key={`${item.type ?? 'knockout'}-${index}`} className="rounded-md bg-surface px-3 py-2 text-xs text-neutral-700">
+                <span className="font-semibold text-neutral-900">{item.type ?? 'Rule'}</span>
+                <span className="ml-2">Required {formatUnknown(item.required ?? item.missing)}, found {formatUnknown(item.found)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+        <p className="text-sm font-semibold text-neutral-900">Extracted facts</p>
+        <div className="mt-3 grid gap-3">
+          {facts?.targetRoleAlignment ? (
+            <div
+              className={cn(
+                'rounded-md px-3 py-2',
+                facts.targetRoleAlignment.matchesTargetRole ? 'bg-success-bg' : 'bg-destructive-bg',
+              )}
+            >
+              <p className="text-xs font-medium text-neutral-500">Target role alignment</p>
+              <p className="mt-1 text-sm text-neutral-900">
+                {facts.targetRoleAlignment.matchesTargetRole ? 'Matches target role' : 'Does not match target role'}
+              </p>
+              <p className="mt-1 text-xs text-neutral-500">
+                {facts.targetRoleAlignment.evidence} · {confidenceLabel(facts.targetRoleAlignment.confidence)}
+              </p>
+            </div>
+          ) : null}
+          <div className="rounded-md bg-neutral-50 px-3 py-2">
+            <p className="text-xs font-medium text-neutral-500">Relevant experience</p>
+            <p className="mt-1 text-sm text-neutral-900">
+              {facts?.yearsExperience ? `${facts.yearsExperience.value} years` : 'Not found'}
+            </p>
+            {facts?.yearsExperience ? (
+              <p className="mt-1 text-xs text-neutral-500">
+                {facts.yearsExperience.evidence} · {confidenceLabel(facts.yearsExperience.confidence)}
+              </p>
+            ) : null}
+          </div>
+          <div className="rounded-md bg-neutral-50 px-3 py-2">
+            <p className="text-xs font-medium text-neutral-500">Education</p>
+            <p className="mt-1 text-sm text-neutral-900">{facts?.degree?.value ?? 'Not found'}</p>
+            {facts?.degree ? (
+              <p className="mt-1 text-xs text-neutral-500">
+                {facts.degree.evidence} · {confidenceLabel(facts.degree.confidence)}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+        <p className="text-sm font-semibold text-neutral-900">Matched skills</p>
+        {skills.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {skills.map((skill) => (
+              <div key={`${skill.normalizedSkill}-${skill.evidence}`} className="rounded-md border border-neutral-100 px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-neutral-900">{skill.normalizedSkill}</p>
+                  <span className="font-mono text-xs text-neutral-500">{confidenceLabel(skill.confidence)}</span>
+                </div>
+                <p className="mt-1 text-xs text-neutral-500">{skill.evidence}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-neutral-500">No matched skills were extracted.</p>
+        )}
+      </section>
+
+      {certifications.length > 0 || warnings.length > 0 || parserWarnings.length > 0 ? (
+        <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+          <p className="text-sm font-semibold text-neutral-900">Review notes</p>
+          <div className="mt-3 space-y-2 text-xs text-neutral-600">
+            {certifications.map((certification) => (
+              <p key={`${certification.value}-${certification.evidence}`}>
+                Certification: {certification.value} · {confidenceLabel(certification.confidence)}
+              </p>
+            ))}
+            {warnings.map((warning) => <p key={warning}>{warning}</p>)}
+            {parserWarnings.map((warning, index) => (
+              <p key={`${formatUnknown(warning)}-${index}`}>{formatUnknown(warning)}</p>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -615,6 +877,8 @@ export function CandidateDrawer({
   readonly onOpenChange: (open: boolean) => void;
 }) {
   const detailQuery = useCandidateApplicationDetail(orgSlug, memberId, applicationId);
+  const resumeAnalysisQuery = useCandidateResumeAnalysis(orgSlug, memberId, applicationId);
+  const retryResumeAnalysis = useRetryCandidateResumeAnalysis(orgSlug, memberId);
   const createNote = useCreateCandidateApplicationNote(orgSlug, memberId);
   const updateNote = useUpdateCandidateApplicationNote(orgSlug, memberId);
   const detail = detailQuery.data;
@@ -624,11 +888,9 @@ export function CandidateDrawer({
   );
   const initials = candidateInitials(candidateName);
   const imageSrc = detail?.candidate.image?.trim() || null;
-  const [imageFailed, setImageFailed] = useState(false);
-  const [activeSection, setActiveSection] = useState<'profile' | 'history' | 'notes'>('profile');
-
-  // Reset image error state when switching candidates
-  useMemo(() => { setImageFailed(false); }, [imageSrc]);
+  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
+  const candidateImage = imageSrc && failedImageSrc !== imageSrc ? imageSrc : null;
+  const [activeSection, setActiveSection] = useState<'profile' | 'ats' | 'history' | 'notes'>('profile');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -638,10 +900,10 @@ export function CandidateDrawer({
             <Avatar className="size-14 shrink-0">
               <AvatarImage
                 key={imageSrc ?? 'fallback'}
-                src={imageFailed ? undefined : (imageSrc ?? undefined)}
+                src={candidateImage ?? undefined}
                 alt={candidateName}
                 referrerPolicy="no-referrer"
-                onError={() => setImageFailed(true)}
+                onError={() => setFailedImageSrc(imageSrc)}
               />
               <AvatarFallback className="bg-primary-ghost text-lg font-semibold text-primary">
                 {initials}
@@ -669,6 +931,7 @@ export function CandidateDrawer({
               <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
                 {([
                   { key: 'profile' as const, label: 'Profile' },
+                  { key: 'ats' as const, label: 'ATS Score' },
                   { key: 'history' as const, label: 'History' },
                   { key: 'notes' as const, label: 'Notes' },
                 ]).map((tab) => {
@@ -706,6 +969,32 @@ export function CandidateDrawer({
             {activeSection === 'profile' ? (
               <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
                 <ProfileTab detail={detail} />
+              </div>
+            ) : null}
+
+            {activeSection === 'ats' ? (
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                <AtsScoreTab
+                  analysis={resumeAnalysisQuery.data}
+                  isLoading={resumeAnalysisQuery.isLoading}
+                  error={resumeAnalysisQuery.error}
+                  retrying={retryResumeAnalysis.isPending}
+                  onRetry={() => {
+                    if (!applicationId) return;
+                    retryResumeAnalysis.mutate(
+                      { applicationId },
+                      {
+                        onSuccess: () => {
+                          toast.success('Resume analysis retry started');
+                          void resumeAnalysisQuery.refetch();
+                        },
+                        onError: (error) => {
+                          toast.error(error instanceof Error ? error.message : 'Could not retry analysis');
+                        },
+                      },
+                    );
+                  }}
+                />
               </div>
             ) : null}
 

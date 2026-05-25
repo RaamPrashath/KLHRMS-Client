@@ -5,6 +5,7 @@ import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
 import type {
+  JobRequisitionAiAnalysis,
   JobRequisitionRecord,
   RequisitionActivityEntry,
 } from '@/modules/jobs/types/jobRequisitionTypes';
@@ -75,4 +76,31 @@ export async function fetchRequisitionActivityAction(params: {
     cache: 'no-store',
   });
   return handleResponse<RequisitionActivityEntry[]>(res);
+}
+
+export async function fetchRequisitionAiAnalysisAction(params: {
+  orgSlug: string;
+  memberId: string;
+  requisitionId: string;
+}): Promise<JobRequisitionAiAnalysis> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const res = await fetch(`${getApiUrl()}/jobs/requisitions/${params.requisitionId}/ai-analysis`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, member.id),
+    cache: 'no-store',
+  });
+  return handleResponse<JobRequisitionAiAnalysis>(res);
+}
+
+export async function rebuildRequisitionAiAnalysisAction(params: {
+  orgSlug: string;
+  memberId: string;
+  requisitionId: string;
+}): Promise<JobRequisitionAiAnalysis> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const res = await fetch(`${getApiUrl()}/jobs/requisitions/${params.requisitionId}/ai-analysis/rebuild`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, member.id),
+  });
+  return handleResponse<JobRequisitionAiAnalysis>(res);
 }
