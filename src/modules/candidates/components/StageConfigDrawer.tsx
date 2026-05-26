@@ -21,12 +21,10 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Switch } from '@/components/ui/switch';
 import {
   createPipelineStageSchema,
   type CreatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
-import { StageEvaluationSection } from '@/modules/candidates/components/StageEvaluationSection';
 import type { PipelineStage } from '@/modules/candidates/types/atsTypes';
 
 interface StageConfigDrawerProps {
@@ -65,19 +63,7 @@ function getDefaults(jobPostingId: string, afterStageId: string | null, stage?: 
     name: stage?.name ?? '',
     afterStageId,
     stageType: (stage?.stageType as CreatePipelineStageInput['stageType'] | undefined) ?? 'DEFAULT',
-    evaluationEnabled: stage?.evaluationEnabled ?? false,
-    sheetEnabled: stage?.sheetEnabled ?? false,
-    evaluationType: stage?.evaluationType ?? 'NUMERIC',
-    evaluationIncludeTotal: stage?.evaluationIncludeTotal ?? true,
-    evaluationIncludeAnalysis: stage?.evaluationIncludeAnalysis ?? false,
     dueDate: stage?.dueDate ?? null,
-    evaluationCategories: stage?.evaluationCategories.map((item) => ({
-      id: item.id,
-      name: item.name,
-      type: item.type ?? 'NUMERIC',
-      maxScore: item.maxScore ?? undefined,
-      order: item.order,
-    })) ?? [],
   };
 }
 
@@ -101,7 +87,6 @@ export function StageConfigDrawer({
 
   const stageType = useWatch({ control: form.control, name: 'stageType' });
   const dueDate = useWatch({ control: form.control, name: 'dueDate' });
-  const evaluationEnabled = useWatch({ control: form.control, name: 'evaluationEnabled' });
   const showTerminalWarning = stageType === 'HIRED' || stageType === 'REJECTED';
   const calendarDate = dueDate ? new Date(`${toDateInputValue(dueDate)}T12:00:00+05:30`) : undefined;
 
@@ -198,33 +183,6 @@ export function StageConfigDrawer({
               </div>
             ) : null}
           </div>
-
-          {stageType === 'INTERVIEW' ? (
-            <div className="space-y-4 rounded-xl border border-neutral-100 bg-canvas p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-neutral-900">Enable Evaluation Support</p>
-                  <p className="text-xs text-neutral-500">Configure the feedback sheet created for this interview stage.</p>
-                </div>
-                <Switch
-                  checked={Boolean(evaluationEnabled)}
-                  onCheckedChange={(checked) => {
-                    form.setValue('evaluationEnabled', checked);
-                    if (checked && !form.getValues('evaluationType')) {
-                      form.setValue('evaluationType', 'NUMERIC');
-                    }
-                  }}
-                />
-              </div>
-              {evaluationEnabled ? (
-                <StageEvaluationSection
-                  control={form.control}
-                  register={form.register}
-                  setValue={form.setValue}
-                />
-              ) : null}
-            </div>
-          ) : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

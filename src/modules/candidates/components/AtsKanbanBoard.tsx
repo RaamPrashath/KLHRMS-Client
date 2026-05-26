@@ -12,7 +12,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { FileSpreadsheet, KanbanSquare, List, ShieldAlert, Sparkles } from 'lucide-react';
+import { CalendarPlus, KanbanSquare, List, ShieldAlert, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -72,7 +72,6 @@ import type { PipelineApplication, PipelineStage } from '@/modules/candidates/ty
 import type { CreatePipelineStageInput as SetupCreatePipelineStageInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import type { RolePermissions } from '@/modules/roles/types/role';
 
-const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
 const DRAG_EDGE_SCROLL_THRESHOLD = 40;
@@ -99,7 +98,6 @@ function matchesApplicationSearch(application: PipelineApplication, stageName: s
     application.source,
     application.currentStage,
     stageName,
-    application.score?.toString(),
     application.aiScore?.toString(),
     application.aiAnalysisStatus,
     application.isFlaggedForCheating ? 'flagged suspicious hidden text' : null,
@@ -139,25 +137,17 @@ function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineSt
   return {
     name: data.name,
     stageType: data.stageType,
-    evaluationEnabled: data.evaluationEnabled,
-    sheetEnabled: data.sheetEnabled,
-    evaluationType: data.evaluationType,
-    evaluationIncludeTotal: data.evaluationIncludeTotal,
-    evaluationIncludeAnalysis: data.evaluationIncludeAnalysis,
     dueDate: data.dueDate,
     dueDateEnabled: Boolean(data.dueDate),
-    evaluationCategories: data.evaluationCategories,
   };
 }
 
 function actionNeedsGoogle(action: PendingGoogleAction): boolean {
-  if (action.kind === 'create-interview' || action.kind === 'reschedule-interview') return true;
-  return action.data.evaluationEnabled === true;
+  return action.kind === 'create-interview' || action.kind === 'reschedule-interview';
 }
 
-function requiredGoogleScope(action: PendingGoogleAction): string {
-  if (action.kind === 'create-interview' || action.kind === 'reschedule-interview') return GOOGLE_CALENDAR_SCOPE;
-  return GOOGLE_SHEETS_SCOPE;
+function requiredGoogleScope(_action: PendingGoogleAction): string {
+  return GOOGLE_CALENDAR_SCOPE;
 }
 
 function permissionErrorForAction(action: PendingGoogleAction, permissions?: RolePermissions | null): string | null {
@@ -620,19 +610,7 @@ export function AtsKanbanBoard({
         name: data.name,
         afterStageId: stages[0]?.id ?? null,
         stageType: data.stageType ?? 'DEFAULT',
-        evaluationEnabled: data.evaluationEnabled ?? false,
-        sheetEnabled: data.sheetEnabled ?? false,
-        evaluationType: data.evaluationType ?? null,
-        evaluationIncludeTotal: data.evaluationIncludeTotal ?? false,
-        evaluationIncludeAnalysis: data.evaluationIncludeAnalysis ?? false,
         dueDate: data.dueDate ?? null,
-        evaluationCategories: (data.evaluationCategories ?? []).map((category, index) => ({
-          id: category.id ?? null,
-          name: category.name,
-          type: category.type ?? 'NUMERIC',
-          maxScore: category.maxScore ?? undefined,
-          order: category.order ?? index + 1,
-        })),
       },
     });
   }
@@ -782,7 +760,6 @@ export function AtsKanbanBoard({
   function markInterviewCompleted(
     application: PipelineApplication,
     data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) {
@@ -818,17 +795,6 @@ export function AtsKanbanBoard({
     if (blockedCount > 0) {
       toast.info(`${blockedCount} ongoing interview candidate${blockedCount === 1 ? '' : 's'} skipped`);
     }
-  }
-
-  function openEvaluationWorkspace(stage: PipelineStage) {
-    if (!stage.evaluationWorkspace?.googleSpreadsheetUrl) {
-      toast.error('Evaluation sheet is still being prepared');
-      return;
-    }
-    const url = stage.evaluationWorkspace.googleSheetId === null
-      ? stage.evaluationWorkspace.googleSpreadsheetUrl
-      : `${stage.evaluationWorkspace.googleSpreadsheetUrl}#gid=${stage.evaluationWorkspace.googleSheetId}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   function openStageWorkspace(stage: PipelineStage) {
@@ -1105,7 +1071,6 @@ export function AtsKanbanBoard({
               onMoveLeft={(item) => moveStage(item, -1)}
               onMoveRight={(item) => moveStage(item, 1)}
               onOpenStageWorkspace={openStageWorkspace}
-              onOpenEvaluationWorkspace={openEvaluationWorkspace}
               onScheduleInterview={openScheduleInterview}
               onCompleteInterview={markInterviewCompleted}
               onStartInterview={handleStartInterview}
@@ -1196,7 +1161,6 @@ export function AtsKanbanBoard({
                   onMoveLeft={(item) => moveStage(item, -1)}
                   onMoveRight={(item) => moveStage(item, 1)}
                   onOpenStageWorkspace={openStageWorkspace}
-                  onOpenEvaluationWorkspace={openEvaluationWorkspace}
                   onScheduleInterview={openScheduleInterview}
                   onCompleteInterview={markInterviewCompleted}
                   onStartInterview={handleStartInterview}
@@ -1258,17 +1222,11 @@ export function AtsKanbanBoard({
         <DialogContent>
           <DialogHeader>
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary-ghost text-primary">
-              <FileSpreadsheet className="size-5" />
+              <CalendarPlus className="size-5" />
             </div>
-            <DialogTitle>
-              {pendingGoogleAction?.kind === 'create-interview' || pendingGoogleAction?.kind === 'reschedule-interview'
-                ? 'Connect Google Calendar'
-                : 'Connect Google Sheets'}
-            </DialogTitle>
+            <DialogTitle>Connect Google Calendar</DialogTitle>
             <DialogDescription>
-              {pendingGoogleAction?.kind === 'create-interview' || pendingGoogleAction?.kind === 'reschedule-interview'
-                ? 'Interview meetings need Google Calendar access to create a Meet link and email the candidate.'
-                : 'Evaluation workspaces need Google Sheets access. After Google connects, this action will continue automatically.'}
+              Interview meetings need Google Calendar access to create a Meet link and email the candidate.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

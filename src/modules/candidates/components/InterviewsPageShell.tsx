@@ -16,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Tooltip,
@@ -36,7 +35,7 @@ import {
   useUpdateInterviewMeeting,
 } from '@/modules/candidates/hooks/useAtsPipeline';
 import { cn } from '@/lib/utils';
-import type { MyInterview, StageEvaluationCategory } from '@/modules/candidates/types/atsTypes';
+import type { MyInterview } from '@/modules/candidates/types/atsTypes';
 
 function candidateName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
@@ -145,37 +144,16 @@ function CompleteInterviewDialog({
   readonly onOpenChange: (open: boolean) => void;
   readonly onSubmit: (
     payload?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) => Promise<void>;
 }) {
-  const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [notes, setNotes] = useState('');
-  const categories = interview?.evaluationCategories ?? [];
 
-  function buildValues(categoriesToSubmit: StageEvaluationCategory[]) {
-    return categoriesToSubmit.map((category) => ({
-      categoryId: category.id,
-      value: values[category.id] ?? (category.type === 'CHECKBOX' ? false : ''),
-    }));
-  }
-
-  async function submitWithMarks() {
+  async function completeInterview() {
     await onSubmit({
-      values: buildValues(categories),
       notes: notes.trim() || null,
     });
-    setValues({});
-    setNotes('');
-  }
-
-  async function skipMarks() {
-    await onSubmit({
-      values: [],
-      notes: notes.trim() || null,
-    });
-    setValues({});
     setNotes('');
   }
 
@@ -188,7 +166,7 @@ function CompleteInterviewDialog({
           </div>
           <DialogTitle className="text-xl font-semibold text-neutral-900">Complete interview</DialogTitle>
           <DialogDescription>
-            Add marks now or skip and close the interview.
+            Add optional notes and close the interview.
           </DialogDescription>
         </DialogHeader>
 
@@ -202,55 +180,6 @@ function CompleteInterviewDialog({
             </div>
           ) : null}
 
-          {categories.length > 0 ? (
-            <div className="grid gap-3">
-              {categories.map((category) => (
-                <label key={category.id} className="grid gap-1.5 text-sm font-medium text-neutral-700">
-                  <span>
-                    {category.name}
-                    {category.type === 'NUMERIC' && category.maxScore ? (
-                      <span className="ml-1 font-normal text-neutral-400">out of {category.maxScore}</span>
-                    ) : null}
-                  </span>
-                  {category.type === 'CHECKBOX' ? (
-                    <input
-                      type="checkbox"
-                      className="size-4 rounded border-neutral-200 text-primary focus:ring-primary/20"
-                      checked={Boolean(values[category.id])}
-                      onChange={(event) =>
-                        setValues((current) => ({ ...current, [category.id]: event.target.checked }))
-                      }
-                    />
-                  ) : category.type === 'NUMERIC' ? (
-                    <Input
-                      type="number"
-                      min={0}
-                      max={category.maxScore ?? undefined}
-                      value={String(values[category.id] ?? '')}
-                      onChange={(event) =>
-                        setValues((current) => ({ ...current, [category.id]: event.target.value }))
-                      }
-                      className="w-32"
-                      placeholder="Mark"
-                    />
-                  ) : (
-                    <Input
-                      value={String(values[category.id] ?? '')}
-                      onChange={(event) =>
-                        setValues((current) => ({ ...current, [category.id]: event.target.value }))
-                      }
-                      placeholder="Feedback"
-                    />
-                  )}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">
-              No mark fields are configured for this stage.
-            </div>
-          )}
-
           <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
             Notes
             <Textarea
@@ -263,10 +192,10 @@ function CompleteInterviewDialog({
         </div>
 
         <DialogFooter className="border-t border-neutral-100 px-6 py-4">
-          <Button type="button" variant="outline" disabled={isSubmitting} onClick={skipMarks}>
-            Skip marks
+          <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
+            Cancel
           </Button>
-          <Button type="button" disabled={isSubmitting} onClick={submitWithMarks}>
+          <Button type="button" disabled={isSubmitting} onClick={completeInterview}>
             {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
             Complete
           </Button>
@@ -556,7 +485,6 @@ export function InterviewsPageShell({
 
   async function handleComplete(
     payload?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) {

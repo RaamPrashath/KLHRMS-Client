@@ -10,47 +10,15 @@ export const createPipelineStageSchema = z.object({
   name: z.string().trim().min(1, 'Stage name is required').max(50),
   afterStageId: z.string().min(1).optional().nullable(),
   stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).default('DEFAULT'),
-  evaluationEnabled: z.boolean().default(false),
-  sheetEnabled: z.boolean().default(false),
-  evaluationType: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).optional().nullable(),
-  evaluationIncludeTotal: z.boolean().default(false),
-  evaluationIncludeAnalysis: z.boolean().default(false),
   dueDate: z.string().datetime().optional().nullable(),
-  evaluationCategories: z
-    .array(
-      z.object({
-        id: z.string().min(1).optional().nullable(),
-        name: z.string().trim().min(1, 'Category name is required').max(120),
-        type: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).default('NUMERIC'),
-        maxScore: z.number().int().min(1).optional().nullable(),
-        order: z.number().int().min(1).optional(),
-      }),
-    )
-    .default([]),
 });
 
 export const updatePipelineStageSchema = z.object({
   name: z.string().trim().min(1, 'Stage name is required').max(50).optional(),
   order: z.number().optional(),
   stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).optional(),
-  evaluationEnabled: z.boolean().optional(),
-  sheetEnabled: z.boolean().optional(),
-  evaluationType: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).optional().nullable(),
-  evaluationIncludeTotal: z.boolean().optional(),
-  evaluationIncludeAnalysis: z.boolean().optional(),
   dueDate: z.string().datetime().optional().nullable(),
   dueDateEnabled: z.boolean().optional(),
-  evaluationCategories: z
-    .array(
-      z.object({
-        id: z.string().min(1).optional().nullable(),
-        name: z.string().trim().min(1, 'Category name is required').max(120),
-        type: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).default('NUMERIC'),
-        maxScore: z.number().int().min(1).optional().nullable(),
-        order: z.number().int().min(1).optional(),
-      }),
-    )
-    .optional(),
 });
 
 export const extendPipelineStageSchema = z.object({
@@ -110,40 +78,20 @@ export interface MoveApplicationStageInput {
   note?: string | null;
 }
 
-export interface StageEvaluationCategoryInput {
-  id?: string | null;
-  name: string;
-  type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
-  maxScore?: number | null;
-  order?: number;
-}
-
 export interface CreatePipelineStageInput {
   jobPostingId: string;
   name: string;
   afterStageId?: string | null;
   stageType: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
-  evaluationEnabled: boolean;
-  sheetEnabled?: boolean;
-  evaluationType?: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
-  evaluationIncludeTotal: boolean;
-  evaluationIncludeAnalysis: boolean;
   dueDate?: string | null;
-  evaluationCategories: StageEvaluationCategoryInput[];
 }
 
 export interface UpdatePipelineStageInput {
   name?: string;
   order?: number;
   stageType?: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
-  evaluationEnabled?: boolean;
-  sheetEnabled?: boolean;
-  evaluationType?: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
-  evaluationIncludeTotal?: boolean;
-  evaluationIncludeAnalysis?: boolean;
   dueDate?: string | null;
   dueDateEnabled?: boolean;
-  evaluationCategories?: StageEvaluationCategoryInput[];
 }
 
 export interface ExtendPipelineStageInput {

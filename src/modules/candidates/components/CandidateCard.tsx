@@ -10,15 +10,6 @@ import { useState, type CSSProperties } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -30,7 +21,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { PipelineApplication, StageEvaluationCategory } from '@/modules/candidates/types/atsTypes';
+import type { PipelineApplication } from '@/modules/candidates/types/atsTypes';
 
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat('en-IN', {
@@ -88,7 +79,6 @@ export function CandidateCard({
   onCompleteInterview,
   onAcceptInterview,
   onRejectInterview,
-  evaluationCategories = [],
   isOverlay = false,
   compact = false,
   draggable = true,
@@ -103,13 +93,11 @@ export function CandidateCard({
   onCompleteInterview?: (
     application: PipelineApplication,
     data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) => void;
   onAcceptInterview?: (applicationId: string, eventId: string) => void;
   onRejectInterview?: (applicationId: string, eventId: string) => void;
-  evaluationCategories?: StageEvaluationCategory[];
   isOverlay?: boolean;
   compact?: boolean;
   draggable?: boolean;
@@ -141,22 +129,8 @@ export function CandidateCard({
   const [scheduledOpen, setScheduledOpen] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [completionOpen, setCompletionOpen] = useState(false);
-  const [completionValues, setCompletionValues] = useState<Record<string, string | boolean>>({});
-  const [completionNotes, setCompletionNotes] = useState('');
   const aiStatus = aiStatusLabel(application.aiAnalysisStatus);
   const isAiRecommended = (application.aiScore ?? 0) >= 70 && application.aiEvaluationStatus === 'QUALIFIED';
-
-  function submitCompletion() {
-    onCompleteInterview?.(application, {
-      values: evaluationCategories.map((category) => ({
-        categoryId: category.id,
-        value: completionValues[category.id] ?? (category.type === 'CHECKBOX' ? false : ''),
-      })),
-      notes: completionNotes.trim() || null,
-    });
-    setCompletionOpen(false);
-  }
 
   return (
     <>
@@ -339,23 +313,6 @@ export function CandidateCard({
       ) : null}
 
       <AnimatePresence initial={false}>
-        {!compact && application.score !== null ? (
-          <motion.div
-            key="score"
-            layout
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-            className="flex justify-end overflow-hidden"
-          >
-            <span className="inline-flex items-center gap-1 font-mono text-xs text-neutral-700">
-              <Gauge className="size-3.5" />
-              {application.score}
-            </span>
-          </motion.div>
-        ) : null}
-
         {!compact && meetingEnabled && meeting && isPending ? (
           <motion.div
             key="meeting"
@@ -532,11 +489,7 @@ export function CandidateCard({
                 className="h-8 text-xs"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (evaluationCategories.length > 0) {
-                    setCompletionOpen(true);
-                  } else {
-                    onCompleteInterview?.(application);
-                  }
+                  onCompleteInterview?.(application);
                 }}
               >
                 <Check className="size-3.5" />
@@ -547,76 +500,6 @@ export function CandidateCard({
         ) : null}
       </AnimatePresence>
     </motion.div>
-    <Dialog open={completionOpen} onOpenChange={setCompletionOpen}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Complete interview</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          {evaluationCategories.map((category) => (
-            <label key={category.id} className="grid gap-1.5 text-sm font-medium text-neutral-700">
-              <span>
-                {category.name}
-                {category.type === 'NUMERIC' && category.maxScore ? (
-                  <span className="ml-1 text-neutral-400 font-normal">(out of {category.maxScore})</span>
-                ) : null}
-              </span>
-              {category.type === 'CHECKBOX' ? (
-                <input
-                  type="checkbox"
-                  className="size-4"
-                  checked={Boolean(completionValues[category.id])}
-                  onChange={(event) =>
-                    setCompletionValues((current) => ({ ...current, [category.id]: event.target.checked }))
-                  }
-                />
-              ) : category.type === 'NUMERIC' ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={category.maxScore ?? undefined}
-                    value={String(completionValues[category.id] ?? '')}
-                    onChange={(event) =>
-                      setCompletionValues((current) => ({ ...current, [category.id]: event.target.value }))
-                    }
-                    className="w-28"
-                  />
-                  {category.maxScore ? (
-                    <span className="text-sm text-neutral-400 select-none">/ {category.maxScore}</span>
-                  ) : null}
-                </div>
-              ) : (
-                <Input
-                  type="text"
-                  value={String(completionValues[category.id] ?? '')}
-                  onChange={(event) =>
-                    setCompletionValues((current) => ({ ...current, [category.id]: event.target.value }))
-                  }
-                />
-              )}
-            </label>
-          ))}
-          <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
-            Notes
-            <Textarea
-              value={completionNotes}
-              onChange={(event) => setCompletionNotes(event.target.value)}
-              placeholder="Optional completion notes"
-              className="min-h-24 resize-none"
-            />
-          </label>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setCompletionOpen(false)}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={submitCompletion}>
-            Mark complete
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
     </>
   );
 }

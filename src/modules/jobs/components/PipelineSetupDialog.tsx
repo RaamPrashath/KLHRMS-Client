@@ -4,17 +4,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CalendarDays,
   Check,
-  ChevronsUpDown,
   Loader2,
   Plus,
   Search,
   Settings2,
-  Trash2,
   X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { useFieldArray, useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -28,15 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -79,15 +69,10 @@ interface StagePreview {
   stageType: PipelineStageRecord['stageType'];
   meetingEnabled: boolean;
   offerLetterEnabled: boolean;
-  evaluationEnabled: boolean;
-  evaluationType: PipelineStageRecord['evaluationType'];
-  evaluationIncludeTotal: boolean;
-  evaluationIncludeAnalysis: boolean;
   dueDate: string | null;
   extendToNextWorkingDay: boolean;
   isDefault: boolean;
   isFinal: boolean;
-  evaluationCategories: PipelineStageRecord['evaluationCategories'];
 }
 
 const STAGE_TYPE_LABELS: Record<(typeof PIPELINE_STAGE_TYPES)[number], string> = {
@@ -105,15 +90,10 @@ const DEFAULT_STAGE_PREVIEWS: StagePreview[] = [
     stageType: 'DEFAULT',
     meetingEnabled: false,
     offerLetterEnabled: false,
-    evaluationEnabled: false,
-    evaluationType: null,
-    evaluationIncludeTotal: false,
-    evaluationIncludeAnalysis: false,
     dueDate: null,
     extendToNextWorkingDay: false,
     isDefault: true,
     isFinal: false,
-    evaluationCategories: [],
   },
   {
     id: 'default-interview',
@@ -121,15 +101,10 @@ const DEFAULT_STAGE_PREVIEWS: StagePreview[] = [
     stageType: 'INTERVIEW',
     meetingEnabled: true,
     offerLetterEnabled: false,
-    evaluationEnabled: false,
-    evaluationType: null,
-    evaluationIncludeTotal: false,
-    evaluationIncludeAnalysis: false,
     dueDate: null,
     extendToNextWorkingDay: false,
     isDefault: true,
     isFinal: false,
-    evaluationCategories: [],
   },
   {
     id: 'default-offer',
@@ -137,15 +112,10 @@ const DEFAULT_STAGE_PREVIEWS: StagePreview[] = [
     stageType: 'OFFER',
     meetingEnabled: false,
     offerLetterEnabled: true,
-    evaluationEnabled: false,
-    evaluationType: null,
-    evaluationIncludeTotal: false,
-    evaluationIncludeAnalysis: false,
     dueDate: null,
     extendToNextWorkingDay: false,
     isDefault: true,
     isFinal: false,
-    evaluationCategories: [],
   },
   {
     id: 'default-hired',
@@ -153,15 +123,10 @@ const DEFAULT_STAGE_PREVIEWS: StagePreview[] = [
     stageType: 'HIRED',
     meetingEnabled: false,
     offerLetterEnabled: false,
-    evaluationEnabled: false,
-    evaluationType: null,
-    evaluationIncludeTotal: false,
-    evaluationIncludeAnalysis: false,
     dueDate: null,
     extendToNextWorkingDay: false,
     isDefault: true,
     isFinal: true,
-    evaluationCategories: [],
   },
   {
     id: 'default-rejected',
@@ -169,15 +134,10 @@ const DEFAULT_STAGE_PREVIEWS: StagePreview[] = [
     stageType: 'REJECTED',
     meetingEnabled: false,
     offerLetterEnabled: false,
-    evaluationEnabled: false,
-    evaluationType: null,
-    evaluationIncludeTotal: false,
-    evaluationIncludeAnalysis: false,
     dueDate: null,
     extendToNextWorkingDay: false,
     isDefault: true,
     isFinal: true,
-    evaluationCategories: [],
   },
 ];
 
@@ -185,14 +145,8 @@ function newStageDefaults(): CreatePipelineStageInput {
   return {
     name: '',
     stageType: 'DEFAULT',
-    evaluationEnabled: false,
-    sheetEnabled: false,
-    evaluationType: 'NUMERIC',
-    evaluationIncludeTotal: true,
-    evaluationIncludeAnalysis: false,
     dueDate: null,
     extendToNextWorkingDay: false,
-    evaluationCategories: [],
   };
 }
 
@@ -213,10 +167,6 @@ function formatDateLabel(value: string | null | undefined): string {
     year: 'numeric',
     timeZone: 'Asia/Kolkata',
   }).format(new Date(value));
-}
-
-function formatBoolean(value: boolean): string {
-  return value ? 'Yes' : 'No';
 }
 
 function ConfigPill({ children }: Readonly<{ children: ReactNode }>) {
@@ -254,9 +204,6 @@ function StageConfigTable({
               Type
             </TableHead>
             <TableHead className="px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Evaluation
-            </TableHead>
-            <TableHead className="px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
               Capabilities
             </TableHead>
             <TableHead className="px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
@@ -277,17 +224,6 @@ function StageConfigTable({
               </TableCell>
               <TableCell className="px-4 py-3 text-sm text-neutral-700">
                 {STAGE_TYPE_LABELS[stage.stageType]}
-              </TableCell>
-              <TableCell className="px-4 py-3">
-                <div className="flex flex-wrap gap-1.5">
-                  <ConfigPill>{formatBoolean(stage.evaluationEnabled)}</ConfigPill>
-                  {stage.evaluationEnabled ? (
-                    <>
-                      <ConfigPill>{stage.evaluationType ?? 'Numeric'}</ConfigPill>
-                      <ConfigPill>{stage.evaluationCategories.length} fields</ConfigPill>
-                    </>
-                  ) : null}
-                </div>
               </TableCell>
               <TableCell className="px-4 py-3">
                 <div className="flex flex-wrap gap-1.5">
@@ -330,33 +266,13 @@ function NewColumnForm({
   });
   const stageType = useWatch({ control: form.control, name: 'stageType' });
   const dueDate = useWatch({ control: form.control, name: 'dueDate' });
-  const evaluationEnabled = useWatch({ control: form.control, name: 'evaluationEnabled' });
-  const evaluationType = useWatch({ control: form.control, name: 'evaluationType' });
-  const evaluationIncludeTotal = useWatch({ control: form.control, name: 'evaluationIncludeTotal' });
-  const evaluationIncludeAnalysis = useWatch({ control: form.control, name: 'evaluationIncludeAnalysis' });
-  const evaluationCategories = useWatch({ control: form.control, name: 'evaluationCategories' });
-  const sheetEnabled = useWatch({ control: form.control, name: 'sheetEnabled' });
   const calendarDate = dueDate ? new Date(`${toDateInputValue(dueDate)}T12:00:00+05:30`) : undefined;
-  const { fields, append, remove, move } = useFieldArray({
-    control: form.control,
-    name: 'evaluationCategories',
-  });
 
   return (
     <form
       id="pipeline-new-column-form"
       className="space-y-6"
-      onSubmit={form.handleSubmit((values) => {
-        const nextValues =
-          values.stageType === 'INTERVIEW'
-            ? values
-            : {
-                ...values,
-                evaluationEnabled: false,
-                evaluationCategories: [],
-              };
-        onSubmit(nextValues);
-      })}
+      onSubmit={form.handleSubmit(onSubmit)}
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
         <label className="block">
@@ -435,191 +351,6 @@ function NewColumnForm({
           ))}
         </RadioGroup>
       </div>
-
-      {stageType === 'INTERVIEW' ? (
-        <section className="space-y-4 rounded-xl border border-neutral-100 bg-canvas p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-semibold text-neutral-900">Evaluation configuration</h3>
-              <p className="mt-1 text-xs text-neutral-500">
-                Configure the feedback fields interviewers fill before completing this stage.
-              </p>
-            </div>
-            <Switch
-              checked={Boolean(evaluationEnabled)}
-              disabled={submitting}
-              onCheckedChange={(checked) => {
-                form.setValue('evaluationEnabled', checked);
-                if (checked && !form.getValues('evaluationType')) {
-                  form.setValue('evaluationType', 'NUMERIC');
-                }
-              }}
-            />
-          </div>
-
-          {evaluationEnabled ? (
-            <div className="space-y-4 rounded-xl border border-neutral-100 bg-neutral-50/60 p-4">
-              <div className="grid gap-3 lg:grid-cols-3">
-                <label className="block">
-                  <span className="mb-1.5 block text-[13px] font-medium text-neutral-700">Evaluation type</span>
-                  <Select
-                    value={evaluationType ?? 'NUMERIC'}
-                    onValueChange={(value) =>
-                      form.setValue('evaluationType', value as CreatePipelineStageInput['evaluationType'])
-                    }
-                  >
-                    <SelectTrigger className="bg-surface">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NUMERIC">Numeric</SelectItem>
-                      <SelectItem value="TEXT">Text</SelectItem>
-                      <SelectItem value="CHECKBOX">Checkbox</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-lg border border-neutral-100 bg-surface px-3 py-2">
-                  <span className="text-sm text-neutral-700">Include total</span>
-                  <Switch
-                    checked={Boolean(evaluationIncludeTotal)}
-                    disabled={evaluationType !== 'NUMERIC'}
-                    onCheckedChange={(checked) => form.setValue('evaluationIncludeTotal', checked)}
-                  />
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-lg border border-neutral-100 bg-surface px-3 py-2">
-                  <span className="text-sm text-neutral-700">Include analysis</span>
-                  <Switch
-                    checked={Boolean(evaluationIncludeAnalysis)}
-                    onCheckedChange={(checked) => form.setValue('evaluationIncludeAnalysis', checked)}
-                  />
-                </label>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-[13px] font-medium text-neutral-700">Subcategories</p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => append({ name: '', type: 'NUMERIC', maxScore: undefined, order: fields.length + 1 })}
-                  >
-                    <Plus className="size-4" />
-                    Add
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {fields.map((field, index) => {
-                    const catType = evaluationCategories?.[index]?.type ?? 'NUMERIC';
-                    const isNumeric = catType === 'NUMERIC';
-
-                    return (
-                      <div
-                        key={field.id}
-                        className="grid grid-cols-[1fr_120px_28px_28px_28px] items-center gap-2"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Input
-                            {...form.register(`evaluationCategories.${index}.name`)}
-                            placeholder="Category name"
-                            className="h-9 flex-1 min-w-0"
-                          />
-                          {isNumeric ? (
-                            <Input
-                              type="number"
-                              min={1}
-                              placeholder="Total"
-                              className="h-9 w-20 text-center shrink-0"
-                              {...form.register(`evaluationCategories.${index}.maxScore`, {
-                                setValueAs: (value) => {
-                                  if (value === '' || value === undefined || value === null) return undefined;
-                                  const num = Number(value);
-                                  return Number.isNaN(num) ? undefined : num;
-                                },
-                              })}
-                            />
-                          ) : null}
-                        </div>
-                        <Select
-                          value={catType}
-                          onValueChange={(value) => {
-                            form.setValue(
-                              `evaluationCategories.${index}.type`,
-                              value as 'NUMERIC' | 'TEXT' | 'CHECKBOX',
-                            );
-                            if (value !== 'NUMERIC') {
-                              form.setValue(`evaluationCategories.${index}.maxScore`, undefined);
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="h-9 bg-surface">
-                            <SelectValue placeholder="Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="NUMERIC">Numeric</SelectItem>
-                            <SelectItem value="TEXT">Text</SelectItem>
-                            <SelectItem value="CHECKBOX">Checkbox</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          type="button"
-                          size="icon-sm"
-                          variant="ghost"
-                          disabled={index === 0}
-                          aria-label="Move category up"
-                          className="size-7"
-                          onClick={() => move(index, index - 1)}
-                        >
-                          <ChevronsUpDown className="size-4 rotate-90" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon-sm"
-                          variant="ghost"
-                          disabled={index === fields.length - 1}
-                          aria-label="Move category down"
-                          className="size-7"
-                          onClick={() => move(index, index + 1)}
-                        >
-                          <ChevronsUpDown className="size-4 -rotate-90" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon-sm"
-                          variant="ghost"
-                          aria-label="Delete category"
-                          className="size-7"
-                          onClick={() => remove(index)}
-                        >
-                          <Trash2 className="size-4 text-destructive-text" />
-                        </Button>
-                      </div>
-                    );
-                  })}
-                  {fields.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-neutral-200 bg-surface p-3 text-xs text-neutral-500">
-                      No evaluation subcategories yet.
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-neutral-100 bg-surface p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-neutral-900">Google Sheets integration</p>
-                  <p className="text-xs text-neutral-500">
-                    Automatically write feedback values to a Google Sheet for this stage.
-                  </p>
-                </div>
-                <Switch
-                  checked={Boolean(sheetEnabled)}
-                  onCheckedChange={(checked) => form.setValue('sheetEnabled', checked)}
-                />
-              </div>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
     </form>
   );
 }

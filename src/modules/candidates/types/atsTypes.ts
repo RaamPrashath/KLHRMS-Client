@@ -120,8 +120,6 @@ export interface PipelineApplication {
   pipelineStageId: string;
   currentStage: string;
   candidate: CandidateSummary;
-  score: number | null;
-  rating: number | null;
   source: string;
   appliedDate: string;
   lastMovedAt: string | null;
@@ -134,26 +132,6 @@ export interface PipelineApplication {
   aiFailedKnockouts: AiFailedKnockout[];
   interviewMeeting: ApplicationInterviewMeeting | null;
   currentAssignment: StageWorkspaceAssignment | null;
-}
-
-export interface StageEvaluationCategory {
-  id: string;
-  stageId: string;
-  name: string;
-  type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
-  maxScore?: number | null;
-  order: number;
-}
-
-export interface StageEvaluationWorkspace {
-  id: string;
-  stageId: string;
-  googleSpreadsheetId: string;
-  googleSpreadsheetUrl: string;
-  googleSheetId: number | null;
-  googleSheetTitle: string;
-  createdByMemberId: string | null;
-  createdAt: string;
 }
 
 export interface PipelineStage {
@@ -169,16 +147,9 @@ export interface PipelineStage {
   stageType: string;
   meetingEnabled: boolean;
   offerLetterEnabled: boolean;
-  evaluationEnabled: boolean;
-  sheetEnabled?: boolean;
-  evaluationType: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
-  evaluationIncludeTotal: boolean;
-  evaluationIncludeAnalysis: boolean;
   dueDate: string | null;
   completedAt: string | null;
   extendToNextWorkingDay: boolean;
-  evaluationCategories: StageEvaluationCategory[];
-  evaluationWorkspace: StageEvaluationWorkspace | null;
   applications: PipelineApplication[];
 }
 
@@ -218,21 +189,12 @@ export interface InterviewParticipant {
   isBackup: boolean;
 }
 
-export interface InterviewFeedbackValue {
-  categoryId: string;
-  categoryName: string;
-  categoryType: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
-  value: string | number | boolean | null;
-}
-
 export interface InterviewFeedback {
   id: string;
   memberId: string;
   memberName: string;
   outcome: string;
-  score: number | null;
   notes: string | null;
-  values: InterviewFeedbackValue[];
   createdAt: string;
 }
 
@@ -278,8 +240,6 @@ export interface CandidateApplicationDetail {
   currentStage: string;
   candidate: CandidateSummary;
   source: string;
-  score: number | null;
-  rating: number | null;
   coverLetter: string | null;
   internalNotes: string | null;
   status: string;
@@ -313,8 +273,6 @@ export interface StageWorkspaceCandidate {
   candidate: CandidateSummary;
   jobTitle: string;
   source: string;
-  score: number | null;
-  rating: number | null;
   appliedAt: string;
   currentAssignment: StageWorkspaceAssignment | null;
 }
@@ -428,7 +386,6 @@ export interface MyInterview {
   isBackup: boolean;
   meetingUrl: string | null;
   stageDueDate: string | null;
-  evaluationCategories: StageEvaluationCategory[];
 }
 
 export interface MyInterviewListResponse {

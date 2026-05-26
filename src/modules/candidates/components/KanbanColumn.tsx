@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
-  ExternalLink,
   Inbox,
   LoaderCircle,
   MoreVertical,
@@ -117,7 +116,6 @@ export function KanbanColumn({
   onMoveLeft,
   onMoveRight,
   onOpenStageWorkspace,
-  onOpenEvaluationWorkspace,
   onScheduleInterview,
   onCompleteInterview,
   onStartInterview,
@@ -138,13 +136,11 @@ export function KanbanColumn({
   readonly onMoveLeft: (stage: PipelineStage) => void;
   readonly onMoveRight: (stage: PipelineStage) => void;
   readonly onOpenStageWorkspace: (stage: PipelineStage) => void;
-  readonly onOpenEvaluationWorkspace: (stage: PipelineStage) => void;
   readonly onScheduleInterview: (application: PipelineApplication) => void;
   readonly onStartInterview: (application: PipelineApplication) => void;
   readonly onCompleteInterview: (
     application: PipelineApplication,
     data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) => void;
@@ -186,7 +182,6 @@ export function KanbanColumn({
         application={application}
         onOpen={onOpenCandidate}
         meetingEnabled={stage.meetingEnabled}
-        evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
         onScheduleInterview={onScheduleInterview}
         onCompleteInterview={onCompleteInterview}
         onStartInterview={onStartInterview}
@@ -217,16 +212,6 @@ export function KanbanColumn({
               >
                 {stage.name}
               </button>
-              {stage.evaluationEnabled ? (
-                <button
-                  type="button"
-                  onClick={() => onOpenEvaluationWorkspace(stage)}
-                  className="flex shrink-0 items-center text-neutral-400 hover:text-primary"
-                  aria-label={`Open ${stage.name} evaluation workspace`}
-                >
-                  <ExternalLink className="size-3.5 shrink-0 text-neutral-400" />
-                </button>
-              ) : null}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="text-xs text-neutral-500">
@@ -333,7 +318,6 @@ export function KanbanColumn({
                   key={`preview-${previewApplication.id}-${stage.id}`}
                   application={previewApplication}
                   meetingEnabled={stage.meetingEnabled}
-                  evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
                   onScheduleInterview={onScheduleInterview}
                   onCompleteInterview={onCompleteInterview}
                   onStartInterview={onStartInterview}

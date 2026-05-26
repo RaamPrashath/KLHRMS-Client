@@ -162,8 +162,6 @@ function workspaceCandidateToApplication(
     pipelineStageId: stage.id,
     currentStage: stage.name,
     candidate: candidate.candidate,
-    score: candidate.score,
-    rating: candidate.rating,
     source: candidate.source,
     appliedDate: candidate.appliedAt,
     lastMovedAt: null,
@@ -196,7 +194,6 @@ function AllocationCard({
   readonly onCompleteInterview?: (
     application: PipelineApplication,
     data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) => void;
@@ -210,7 +207,6 @@ function AllocationCard({
       application={application}
       onOpen={onOpenCandidate}
       meetingEnabled={Boolean(stage.meetingEnabled && application.interviewMeeting)}
-      evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
       onStartInterview={onStartInterview}
       onCompleteInterview={onCompleteInterview}
       draggable
@@ -237,7 +233,6 @@ function AssignmentColumn({
   readonly onCompleteInterview: (
     application: PipelineApplication,
     data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) => void;
@@ -1025,7 +1020,6 @@ export function StageWorkspacePageShell({
   function handleCompleteInterview(
     application: PipelineApplication,
     data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) {

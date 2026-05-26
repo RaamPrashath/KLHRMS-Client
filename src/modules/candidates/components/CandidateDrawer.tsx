@@ -292,7 +292,7 @@ function AnalysisStatusPanel({
               ? 'Resume analysis is queued or running in the background.'
               : isFailed
                 ? analysis.lastError ?? 'Resume analysis failed.'
-                : 'AI facts and deterministic score are stored separately from manual recruiter scores.'}
+                : 'AI facts and deterministic score are stored with this application.'}
           </p>
         </div>
         {!isWorking ? (
@@ -555,18 +555,10 @@ function FeedbackTable({ event }: { readonly event: ApplicationInterviewEvent })
   if (feedbacks.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-neutral-200 bg-canvas px-3 py-3 text-sm text-neutral-500">
-        No marks submitted for this interview yet.
+        No feedback notes submitted for this interview yet.
       </div>
     );
   }
-
-  const categories = Array.from(
-    new Map(
-      feedbacks
-        .flatMap((feedback) => feedback.values)
-        .map((value) => [value.categoryId, value]),
-    ).values(),
-  );
 
   return (
     <div className="overflow-hidden rounded-md border border-neutral-100 bg-surface">
@@ -576,10 +568,6 @@ function FeedbackTable({ event }: { readonly event: ApplicationInterviewEvent })
             <tr>
               <th className="px-3 py-2 whitespace-nowrap">Assigned by</th>
               <th className="px-3 py-2 whitespace-nowrap">Status</th>
-              {categories.map((category) => (
-                <th key={category.categoryId} className="px-3 py-2 whitespace-nowrap">{category.categoryName}</th>
-              ))}
-              <th className="px-3 py-2 whitespace-nowrap">Total</th>
               <th className="px-3 py-2 whitespace-nowrap">Notes</th>
             </tr>
           </thead>
@@ -590,15 +578,6 @@ function FeedbackTable({ event }: { readonly event: ApplicationInterviewEvent })
                 <td className="px-3 py-2">
                   <Badge variant={statusTone(feedback.outcome)} className="text-xs">{feedback.outcome}</Badge>
                 </td>
-                {categories.map((category) => {
-                  const value = feedback.values.find((item) => item.categoryId === category.categoryId)?.value;
-                  return (
-                    <td key={category.categoryId} className="px-3 py-2 text-neutral-700 text-xs">
-                      {value === null || value === undefined || value === '' ? '-' : String(value)}
-                    </td>
-                  );
-                })}
-                <td className="px-3 py-2 font-mono text-[12px] text-neutral-900 font-semibold">{feedback.score ?? '-'}</td>
                 <td className="max-w-[12.5rem] px-3 py-2 text-neutral-600 text-xs">{feedback.notes ?? '-'}</td>
               </tr>
             ))}

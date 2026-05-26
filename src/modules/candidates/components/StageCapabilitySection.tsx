@@ -1,25 +1,21 @@
 'use client';
 
-import { FileText, Monitor, Table2 } from 'lucide-react';
+import { FileText, Monitor } from 'lucide-react';
 
 import { Switch } from '@/components/ui/switch';
 
 interface StageCapabilitySectionProps {
   meetingEnabled: boolean;
   offerLetterEnabled: boolean;
-  evaluationEnabled: boolean;
   onMeetingChange: (value: boolean) => void;
   onOfferLetterChange: (value: boolean) => void;
-  onEvaluationChange: (value: boolean) => void;
 }
 
 export function StageCapabilitySection({
   meetingEnabled,
   offerLetterEnabled,
-  evaluationEnabled,
   onMeetingChange,
   onOfferLetterChange,
-  onEvaluationChange,
 }: StageCapabilitySectionProps) {
   const capabilities = [
     {
@@ -35,13 +31,6 @@ export function StageCapabilitySection({
       icon: FileText,
       checked: offerLetterEnabled,
       onChange: onOfferLetterChange,
-    },
-    {
-      id: 'stage-capability-evaluation',
-      label: 'Evaluation support',
-      icon: Table2,
-      checked: evaluationEnabled,
-      onChange: onEvaluationChange,
     },
   ];
 
