@@ -686,6 +686,23 @@ export function StageWorkspacePageShell({
 
   const isStageCompleted = Boolean(workspace?.stage.completedAt);
 
+  function handleBackToPipeline() {
+    if (!jobSlug) {
+      router.back();
+      return;
+    }
+
+    const storageKey = `ats-stage-return:${orgSlug}:${jobSlug}:${stageSlug}`;
+    const storedReturnPath = window.sessionStorage.getItem(storageKey);
+    const jobBasePath = `/${orgSlug}/candidates/${jobSlug}`;
+    const isPipelinePath =
+      storedReturnPath === jobBasePath ||
+      storedReturnPath === `${jobBasePath}/kanban` ||
+      storedReturnPath === `${jobBasePath}/table`;
+
+    router.push(isPipelinePath ? storedReturnPath : `${jobBasePath}/kanban`);
+  }
+
   const excludedMemberIds = useMemo(() => {
     const ids = new Set<string>();
     for (const member of resolvedTeamMembers) ids.add(member.memberId);
@@ -970,6 +987,15 @@ export function StageWorkspacePageShell({
   }
 
   function handleOpenCandidate(applicationId: string) {
+    if (jobSlug) {
+      window.sessionStorage.setItem(
+        `ats-candidate-return:${orgSlug}:${jobSlug}:${applicationId}`,
+        `${window.location.pathname}${window.location.search}`,
+      );
+      router.push(`/${orgSlug}/candidates/${jobSlug}/${applicationId}`);
+      return;
+    }
+
     setSelectedApplicationId(applicationId);
   }
 
@@ -1043,7 +1069,7 @@ export function StageWorkspacePageShell({
       <div className="mb-6">
           <div className="flex items-center justify-between mt-7">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900" onClick={() => router.back()}>
+              <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900" onClick={handleBackToPipeline}>
                 <ChevronLeft className="size-5" />
               </Button>
               <div>

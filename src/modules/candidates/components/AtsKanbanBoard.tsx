@@ -832,16 +832,23 @@ export function AtsKanbanBoard({
   }
 
   function openStageWorkspace(stage: PipelineStage) {
-    const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/candidates/${currentPosting.slug}` : `/${orgSlug}/candidates`);
-    const jobContext = basePath.endsWith('/stage') && currentPosting?.slug
-      ? `?jobSlug=${encodeURIComponent(currentPosting.slug)}`
-      : '';
-    router.push(`${basePath}/${stage.slug}${jobContext}`);
+    const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/candidates/${currentPosting.slug}/stage` : `/${orgSlug}/candidates/stage`);
+    if (currentPosting?.slug) {
+      window.sessionStorage.setItem(
+        `ats-stage-return:${orgSlug}:${currentPosting.slug}:${stage.slug}`,
+        `${window.location.pathname}${window.location.search}`,
+      );
+    }
+    router.push(`${basePath}/${stage.slug}`);
   }
 
   function handleOpenCandidate(applicationId: string) {
     const slug = currentPosting?.slug;
     if (slug) {
+      window.sessionStorage.setItem(
+        `ats-candidate-return:${orgSlug}:${slug}:${applicationId}`,
+        `${window.location.pathname}${window.location.search}`,
+      );
       router.push(`/${orgSlug}/candidates/${slug}/${applicationId}`);
     }
   }

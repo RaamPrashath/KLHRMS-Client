@@ -45,7 +45,7 @@ export function CandidatesJobPageClient({
       }}
       isLoadingPostings={postingsQuery.isLoading}
       showJobSelector={false}
-      pipelineBasePath={`/${orgSlug}/stage`}
+      pipelineBasePath={`/${orgSlug}/candidates/${jobSlug}/stage`}
       defaultView={defaultView}
       permissions={permissions}
     />

@@ -935,6 +935,20 @@ export function CandidateDetailPage({
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
   const candidateImage = imageSrc && failedImageSrc !== imageSrc ? imageSrc : null;
   const [activeSection, setActiveSection] = useState<'profile' | 'ats' | 'history' | 'notes'>('profile');
+  const fallbackReturnPath = `/${orgSlug}/candidates/${jobSlug}/kanban`;
+
+  function handleBackToPipeline() {
+    const storageKey = `ats-candidate-return:${orgSlug}:${jobSlug}:${applicationId}`;
+    const storedReturnPath = window.sessionStorage.getItem(storageKey);
+    const jobBasePath = `/${orgSlug}/candidates/${jobSlug}`;
+    const isPipelinePath =
+      storedReturnPath === jobBasePath ||
+      storedReturnPath === `${jobBasePath}/kanban` ||
+      storedReturnPath === `${jobBasePath}/table` ||
+      Boolean(storedReturnPath?.startsWith(`${jobBasePath}/stage/`));
+
+    router.push(isPipelinePath && storedReturnPath ? storedReturnPath : fallbackReturnPath);
+  }
 
   return (
     <div className="min-h-dvh bg-canvas">
@@ -943,7 +957,7 @@ export function CandidateDetailPage({
         <div className="flex items-center gap-4 px-6 py-4">
           <button
             type="button"
-            onClick={() => router.push(`/${orgSlug}/candidates/${jobSlug}`)}
+            onClick={handleBackToPipeline}
             className="flex size-10 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
             aria-label="Back to candidates"
           >

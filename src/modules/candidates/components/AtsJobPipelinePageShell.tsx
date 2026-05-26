@@ -44,7 +44,7 @@ export function AtsJobPipelinePageShell({
       }}
       isLoadingPostings={postingsQuery.isLoading}
       showJobSelector={true}
-      pipelineBasePath={`/${orgSlug}/candidates/${jobSlug}`}
+      pipelineBasePath={`/${orgSlug}/candidates/${jobSlug}/stage`}
       permissions={permissions}
     />
   );

@@ -3,18 +3,17 @@ import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
-import type { RolePermissions } from '@/modules/roles/types/role';
-import { CandidatesJobPageClient } from '../CandidatesJobPageClient';
+import { StageWorkspacePageShell } from '@/modules/candidates/components/StageWorkspacePageShell';
 
-export default async function CandidatesKanbanPage({
+export default async function CandidateJobStageWorkspacePage({
   params,
 }: Readonly<{
-  params: Promise<{ orgSlug: string; jobSlug: string }>;
+  params: Promise<{ orgSlug: string; jobSlug: string; stageSlug: string }>;
 }>) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) redirect('/login');
 
-  const { orgSlug, jobSlug } = await params;
+  const { orgSlug, jobSlug, stageSlug } = await params;
   let member: Awaited<ReturnType<typeof requireOrgMembership>>['member'];
 
   try {
@@ -24,12 +23,11 @@ export default async function CandidatesKanbanPage({
   }
 
   return (
-    <CandidatesJobPageClient
+    <StageWorkspacePageShell
       orgSlug={orgSlug}
       memberId={member.id}
       jobSlug={jobSlug}
-      defaultView="kanban"
-      permissions={(member.role?.permissions as RolePermissions) ?? null}
+      stageSlug={stageSlug}
     />
   );
 }
