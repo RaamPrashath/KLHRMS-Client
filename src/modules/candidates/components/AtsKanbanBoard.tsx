@@ -12,7 +12,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { FileSpreadsheet, KanbanSquare, List } from 'lucide-react';
+import { FileSpreadsheet, KanbanSquare, List, ShieldAlert, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -39,7 +39,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
-import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer';
 import { AtsPipelineTable } from '@/modules/candidates/components/AtsPipelineTable';
 import { KanbanColumn } from '@/modules/candidates/components/KanbanColumn';
 import { StageConfigDrawer } from '@/modules/candidates/components/StageConfigDrawer';
@@ -78,12 +77,15 @@ const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
 const DRAG_EDGE_SCROLL_THRESHOLD = 40;
 const DRAG_EDGE_SCROLL_SPEED = 18;
+const EMPTY_STAGES: PipelineStage[] = [];
 
 type PendingGoogleAction =
   | { kind: 'create-stage'; data: CreatePipelineStageInput }
   | { kind: 'update-stage'; stageId: string; data: UpdatePipelineStageInput }
   | { kind: 'create-interview'; applicationId: string; data: CreateInterviewMeetingInput }
   | { kind: 'reschedule-interview'; applicationId: string; eventId: string; data: UpdateInterviewMeetingInput };
+
+type AiCandidateFilter = 'all' | 'recommended' | 'flagged' | 'failed';
 
 function matchesApplicationSearch(application: PipelineApplication, stageName: string, query: string): boolean {
   const normalized = query.trim().toLowerCase();
@@ -98,11 +100,21 @@ function matchesApplicationSearch(application: PipelineApplication, stageName: s
     application.currentStage,
     stageName,
     application.score?.toString(),
+    application.aiScore?.toString(),
+    application.aiAnalysisStatus,
+    application.isFlaggedForCheating ? 'flagged suspicious hidden text' : null,
   ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
   return haystack.includes(normalized);
+}
+
+function matchesAiFilter(application: PipelineApplication, filter: AiCandidateFilter): boolean {
+  if (filter === 'recommended') return (application.aiScore ?? 0) >= 70 && application.aiEvaluationStatus === 'QUALIFIED';
+  if (filter === 'flagged') return application.isFlaggedForCheating;
+  if (filter === 'failed') return application.aiAnalysisStatus === 'FAILED';
+  return true;
 }
 
 function readActionError(error: unknown, fallback: string): string {
@@ -310,7 +322,6 @@ export function AtsKanbanBoard({
   readonly permissions?: RolePermissions | null;
 }) {
   const router = useRouter();
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [activeApplication, setActiveApplication] = useState<PipelineApplication | null>(null);
   const [hoverStageId, setHoverStageId] = useState<string | null>(null);
   const [addAfterStageId, setAddAfterStageId] = useState<string | null>(null);
@@ -323,6 +334,7 @@ export function AtsKanbanBoard({
     const stored = window.localStorage.getItem('pipeline-view-preference');
     return stored === 'table' ? 'table' : 'kanban';
   });
+  const [aiFilter, setAiFilter] = useState<AiCandidateFilter>('all');
   const resolvedViewMode = defaultView ?? viewMode;
   const { searchQuery, addStageSignal, consumeAddStageSignal } = useCandidatesJobContext();
   const deferredGlobalSearch = useDeferredValue(searchQuery);
@@ -828,7 +840,10 @@ export function AtsKanbanBoard({
   }
 
   function handleOpenCandidate(applicationId: string) {
-    setSelectedApplicationId(applicationId);
+    const slug = currentPosting?.slug;
+    if (slug) {
+      router.push(`/${orgSlug}/candidates/${slug}/${applicationId}`);
+    }
   }
 
   function handleStartInterview(application: PipelineApplication) {
@@ -884,12 +899,29 @@ export function AtsKanbanBoard({
     );
   }
 
-  const stages = boardQuery.data?.stages ?? [];
+  const stages = boardQuery.data?.stages ?? EMPTY_STAGES;
+  const aiFilteredStages = useMemo(
+    () =>
+      stages.map((stage) => ({
+        ...stage,
+        applications: stage.applications.filter((application) => matchesAiFilter(application, aiFilter)),
+      })),
+    [aiFilter, stages],
+  );
+  const allApplications = useMemo(
+    () => stages.flatMap((stage) => stage.applications),
+    [stages],
+  );
+  const aiRecommendedCount = allApplications.filter(
+    (application) => (application.aiScore ?? 0) >= 70 && application.aiEvaluationStatus === 'QUALIFIED',
+  ).length;
+  const aiFlaggedCount = allApplications.filter((application) => application.isFlaggedForCheating).length;
+  const aiFailedCount = allApplications.filter((application) => application.aiAnalysisStatus === 'FAILED').length;
   const onlyAppliedSetup =
     resolvedViewMode === 'kanban' &&
-    stages.length === 1 &&
-    stages[0]?.name.trim().toLowerCase() === 'applied' &&
-    stages[0]?.order === 1;
+    aiFilteredStages.length === 1 &&
+    aiFilteredStages[0]?.name.trim().toLowerCase() === 'applied' &&
+    aiFilteredStages[0]?.order === 1;
 
   useEffect(() => {
     if (!boardQuery.isSuccess || !onlyAppliedSetup || autoOpenedSetupRef.current || !setupRequisitionId) return;
@@ -914,13 +946,13 @@ export function AtsKanbanBoard({
   }
 
   const setupApplications = onlyAppliedSetup
-    ? [...(stages[0]?.applications ?? [])]
+    ? [...(aiFilteredStages[0]?.applications ?? [])]
         .sort((left, right) => {
           const leftTime = new Date(left.lastMovedAt ?? left.appliedDate).getTime();
           const rightTime = new Date(right.lastMovedAt ?? right.appliedDate).getTime();
           return rightTime - leftTime;
         })
-        .filter((application) => matchesApplicationSearch(application, stages[0].name, deferredGlobalSearch))
+        .filter((application) => matchesApplicationSearch(application, aiFilteredStages[0].name, deferredGlobalSearch))
     : [];
 
   const scheduleFormValid = selectedDate !== undefined && selectedHour !== '' && selectedMinute !== '';
@@ -979,11 +1011,71 @@ export function AtsKanbanBoard({
               </button>
             </div>
           ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAiFilter('all')}
+              aria-pressed={aiFilter === 'all'}
+              className={cn(
+                'inline-flex h-8 items-center rounded-md border px-3 text-xs font-medium transition-colors',
+                aiFilter === 'all'
+                  ? 'border-primary bg-primary-ghost text-primary'
+                  : 'border-neutral-200 bg-surface text-neutral-500 hover:text-neutral-900',
+              )}
+            >
+              All AI
+            </button>
+            <button
+              type="button"
+              onClick={() => setAiFilter((current) => current === 'recommended' ? 'all' : 'recommended')}
+              aria-pressed={aiFilter === 'recommended'}
+              className={cn(
+                'inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors',
+                aiFilter === 'recommended'
+                  ? 'border-success-border bg-success-bg text-success-text'
+                  : 'border-neutral-200 bg-surface text-neutral-500 hover:text-neutral-900',
+              )}
+            >
+              <Sparkles className="size-3.5" />
+              Recommended
+              <span className="font-mono">{aiRecommendedCount}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAiFilter((current) => current === 'flagged' ? 'all' : 'flagged')}
+              aria-pressed={aiFilter === 'flagged'}
+              className={cn(
+                'inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors',
+                aiFilter === 'flagged'
+                  ? 'border-warning-border bg-warning-bg text-warning-text'
+                  : 'border-neutral-200 bg-surface text-neutral-500 hover:text-neutral-900',
+              )}
+            >
+              <ShieldAlert className="size-3.5" />
+              Flagged
+              <span className="font-mono">{aiFlaggedCount}</span>
+            </button>
+            {aiFailedCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setAiFilter((current) => current === 'failed' ? 'all' : 'failed')}
+                aria-pressed={aiFilter === 'failed'}
+                className={cn(
+                  'inline-flex h-8 items-center rounded-md border px-3 text-xs font-medium transition-colors',
+                  aiFilter === 'failed'
+                    ? 'border-destructive-border bg-destructive-bg text-destructive-text'
+                    : 'border-neutral-200 bg-surface text-neutral-500 hover:text-neutral-900',
+                )}
+              >
+                Failed <span className="ml-1 font-mono">{aiFailedCount}</span>
+              </button>
+            ) : null}
+          </div>
         </div>
       )}
       {resolvedViewMode === 'table' ? (
         <AtsPipelineTable
-          stages={stages}
+          stages={aiFilteredStages}
           globalSearch={deferredGlobalSearch}
           isMoving={moveApplication.isPending}
           onOpenCandidate={handleOpenCandidate}
@@ -1053,7 +1145,7 @@ export function AtsKanbanBoard({
               lockedScrollLeftRef.current = container.scrollLeft;
             }}
           >
-            {stages.map((stage, index) => {
+            {aiFilteredStages.map((stage, index) => {
               const activeStageId = activeApplication?.pipelineStageId ?? null;
               const sortedApplications = [...stage.applications].sort((left, right) => {
                 const leftTime = new Date(left.lastMovedAt ?? left.appliedDate).getTime();
@@ -1070,6 +1162,7 @@ export function AtsKanbanBoard({
                 activeApplication &&
                 hoverStageId === stage.id &&
                 stage.id !== activeStageId &&
+                matchesAiFilter(activeApplication, aiFilter) &&
                 matchesApplicationSearch(activeApplication, stage.name, deferredGlobalSearch)
                   ? activeApplication
                   : null;
@@ -1153,15 +1246,6 @@ export function AtsKanbanBoard({
         onCreateStage={handleSetupCreateStage}
         onCreateDefault={createSetupDefaultPipeline}
         onImport={importSetupPipeline}
-      />
-      <CandidateDrawer
-        orgSlug={orgSlug}
-        memberId={memberId}
-        applicationId={selectedApplicationId}
-        open={selectedApplicationId !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedApplicationId(null);
-        }}
       />
       <Dialog open={googleConnectOpen} onOpenChange={setGoogleConnectOpen}>
         <DialogContent>

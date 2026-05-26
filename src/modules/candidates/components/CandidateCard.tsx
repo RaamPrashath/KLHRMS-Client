@@ -4,7 +4,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { AnimatePresence, motion } from 'framer-motion';
 import { isSameDay } from 'date-fns';
-import { CalendarDays, Check, CheckCircle2, Clock, Copy, Gauge, Play, X } from 'lucide-react';
+import { CalendarDays, Check, CheckCircle2, Clock, Copy, Gauge, Play, ShieldAlert, Sparkles, X } from 'lucide-react';
 import { useState, type CSSProperties } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -63,6 +63,20 @@ function formatDuration(startStr: string, endStr: string): string {
     return `${hours}h ${minutes}min`;
   }
   return `${minutes}min`;
+}
+
+function aiStatusLabel(status: string | null): string | null {
+  if (!status) return null;
+  if (status === 'PENDING' || status === 'PROCESSING' || status === 'TEXT_EXTRACTED') return 'Analyzing';
+  if (status === 'UNSUPPORTED') return 'Unsupported';
+  if (status === 'FAILED') return 'AI failed';
+  return null;
+}
+
+function aiStatusClass(status: string | null): string {
+  if (status === 'FAILED') return 'bg-destructive-bg text-destructive-text';
+  if (status === 'UNSUPPORTED') return 'bg-neutral-50 text-neutral-500';
+  return 'bg-info-bg text-info-text';
 }
 
 export function CandidateCard({
@@ -130,6 +144,8 @@ export function CandidateCard({
   const [completionOpen, setCompletionOpen] = useState(false);
   const [completionValues, setCompletionValues] = useState<Record<string, string | boolean>>({});
   const [completionNotes, setCompletionNotes] = useState('');
+  const aiStatus = aiStatusLabel(application.aiAnalysisStatus);
+  const isAiRecommended = (application.aiScore ?? 0) >= 70 && application.aiEvaluationStatus === 'QUALIFIED';
 
   function submitCompletion() {
     onCompleteInterview?.(application, {
@@ -293,6 +309,34 @@ export function CandidateCard({
           </div>
         ) : null}
       </div>
+
+      {!compact && (application.aiScore !== null || aiStatus || application.isFlaggedForCheating) ? (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {application.aiScore !== null ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary-ghost px-2 py-0.5 font-mono text-xs font-medium text-primary">
+              <Gauge className="size-3.5" />
+              AI {application.aiScore}
+            </span>
+          ) : null}
+          {isAiRecommended ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-success-bg px-2 py-0.5 text-xs font-medium text-success-text">
+              <Sparkles className="size-3.5" />
+              Recommended
+            </span>
+          ) : null}
+          {application.isFlaggedForCheating ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text">
+              <ShieldAlert className="size-3.5" />
+              Suspicious text
+            </span>
+          ) : null}
+          {aiStatus ? (
+            <span className={cn('inline-flex rounded-full px-2 py-0.5 text-xs font-medium', aiStatusClass(application.aiAnalysisStatus))}>
+              {aiStatus}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <AnimatePresence initial={false}>
         {!compact && application.score !== null ? (

@@ -35,6 +35,85 @@ export interface ApplicationInterviewMeeting {
   completedAt?: string | null;
 }
 
+export interface AiFailedKnockout {
+  type?: string;
+  required?: unknown;
+  found?: unknown;
+  missing?: unknown;
+  evidence?: string | null;
+}
+
+export interface ResumeEvidenceFact {
+  value: string;
+  evidence: string;
+  confidence: number;
+}
+
+export interface ResumeYearsExperienceFact {
+  value: number;
+  evidence: string;
+  confidence: number;
+}
+
+export interface ResumeSkillEvidence {
+  skill: string;
+  normalizedSkill: string | null;
+  evidence: string;
+  confidence: number;
+}
+
+export interface ExtractedResumeFacts {
+  candidateName?: ResumeEvidenceFact | null;
+  targetRoleAlignment?: {
+    matchesTargetRole: boolean;
+    evidence: string;
+    confidence: number;
+  } | null;
+  explicitKnockoutAssessment?: {
+    passed: boolean;
+    evidence: string;
+    confidence: number;
+  } | null;
+  explicitKnockoutRule?: string | null;
+  yearsExperience?: ResumeYearsExperienceFact | null;
+  skills?: ResumeSkillEvidence[];
+  degree?: ResumeEvidenceFact | null;
+  certifications?: ResumeEvidenceFact[];
+  warnings?: string[];
+  overallConfidence?: number;
+  rulesVersion?: string;
+  rulesId?: string;
+}
+
+export interface CandidateResumeAnalysis {
+  id: string;
+  organizationId: string;
+  applicationId: string;
+  status: string;
+  resumeUrl: string | null;
+  resumeContentType: string | null;
+  resumeFileType: string | null;
+  resumeSizeBytes: number | null;
+  firewallFlags: Array<Record<string, unknown>> | null;
+  removedSuspiciousText: Array<Record<string, unknown>> | null;
+  isFlaggedForCheating: boolean;
+  parserWarnings: Array<Record<string, unknown>> | null;
+  extractedFacts: ExtractedResumeFacts | null;
+  compositeScore: number | null;
+  rawScore: number | null;
+  maxScore: number | null;
+  evaluationStatus: string | null;
+  failedKnockouts: AiFailedKnockout[] | null;
+  scoreBreakdown: Record<string, unknown> | null;
+  extractionConfidence: number | null;
+  analysisVersion: string;
+  attemptCount: number;
+  lastError: string | null;
+  analyzedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PipelineApplication {
   id: string;
   jobPostingId: string;
@@ -48,6 +127,11 @@ export interface PipelineApplication {
   lastMovedAt: string | null;
   status: string;
   resumeUrl: string | null;
+  aiScore: number | null;
+  aiAnalysisStatus: string | null;
+  aiEvaluationStatus: string | null;
+  isFlaggedForCheating: boolean;
+  aiFailedKnockouts: AiFailedKnockout[];
   interviewMeeting: ApplicationInterviewMeeting | null;
   currentAssignment: StageWorkspaceAssignment | null;
 }

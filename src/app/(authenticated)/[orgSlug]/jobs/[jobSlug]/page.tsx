@@ -8,6 +8,23 @@ import { requireOrgMembership } from '@/lib/organizations';
 import { fetchDepartmentMetaAction } from '@/modules/departments/api/departmentServerActions';
 import { JobRequisitionDetailPage } from '@/modules/jobs/pages/JobRequisitionDetailPage';
 
+async function fetchOptionalDepartmentMeta(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<Awaited<ReturnType<typeof fetchDepartmentMetaAction>> | null> {
+  try {
+    return await fetchDepartmentMetaAction(params);
+  } catch (error) {
+    try {
+      const parsed = JSON.parse(error instanceof Error ? error.message : '{}');
+      if (parsed.status === 403) return null;
+    } catch {
+      // Re-throw the original error below.
+    }
+    throw error;
+  }
+}
+
 export default async function JobRequisitionPage({
   params,
 }: Readonly<{
@@ -25,18 +42,18 @@ export default async function JobRequisitionPage({
     redirect('/organizations');
   }
 
-  const meta = await fetchDepartmentMetaAction({ orgSlug, memberId: member.id });
+  const meta = await fetchOptionalDepartmentMeta({ orgSlug, memberId: member.id });
 
   return (
     <JobRequisitionDetailPage
       orgSlug={orgSlug}
       memberId={member.id}
       requisitionId={jobSlug}
-      departments={meta.departments.map((department) => ({
+      departments={(meta?.departments ?? []).map((department) => ({
         id: department.id,
         name: department.label,
       }))}
-      orgMembers={meta.members.map((orgMember) => ({
+      orgMembers={(meta?.members ?? []).map((orgMember) => ({
         id: orgMember.id,
         name: orgMember.label,
         email: orgMember.email ?? '',

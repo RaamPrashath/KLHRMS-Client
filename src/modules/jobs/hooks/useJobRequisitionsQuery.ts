@@ -9,7 +9,7 @@ import type { PermissionScope } from '@/lib/hrms-roles';
 export function useJobRequisitionsQuery(
   orgSlug: string,
   memberId: string,
-  viewScope: PermissionScope,
+  viewScope?: PermissionScope,
 ) {
   return useQuery<JobRequisitionRecord[], Error>({
     queryKey: ['job-requisitions', orgSlug, memberId, viewScope],
