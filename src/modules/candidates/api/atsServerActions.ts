@@ -20,6 +20,7 @@ import {
 } from '@/modules/candidates/schema/atsSchemas';
 import type {
   CandidateApplicationDetail,
+  CandidateResumeAnalysis,
   HiringTeam,
   InterviewMeeting,
   MyInterviewListResponse,
@@ -227,6 +228,31 @@ export async function fetchCandidateApplicationDetailAction(params: {
     cache: 'no-store',
   });
   return handleResponse<CandidateApplicationDetail>(res);
+}
+
+export async function fetchCandidateResumeAnalysisAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+}): Promise<CandidateResumeAnalysis> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/resume-analysis`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<CandidateResumeAnalysis>(res);
+}
+
+export async function retryCandidateResumeAnalysisAction(params: {
+  orgSlug: string;
+  memberId: string;
+  applicationId: string;
+}): Promise<CandidateResumeAnalysis> {
+  const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/resume-analysis/retry`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<CandidateResumeAnalysis>(res);
 }
 
 export async function updateCandidateApplicationDetailAction(params: {

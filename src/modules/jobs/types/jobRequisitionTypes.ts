@@ -112,6 +112,7 @@ export interface JobRequisitionRecord {
   minExperience: number | null;
   education: string | null;
   certifications: string[];
+  knockoutRule: string | null;
   roleSummary: string | null;
   responsibilities: string | null;
   requirementsRich: string | null;
@@ -135,6 +136,64 @@ export interface RequisitionActivityEntry {
   fieldChanges: Record<string, unknown> | null;
   comment: string | null;
   createdAt: string;
+}
+
+export interface RequisitionKnockoutRules {
+  explicitRule: string | null;
+}
+
+export interface RequisitionScoringWeights {
+  experiencePointsPerYear: number;
+  maxExperiencePoints: number;
+  maxSkillPoints: number;
+  skillWeights: Record<string, number>;
+  educationPoints?: number;
+  educationKeywords?: string[];
+  certificationWeights?: Record<string, number>;
+  totalPossiblePoints: number;
+}
+
+export interface JobRequisitionRules {
+  id: string;
+  organizationId: string;
+  requisitionId: string;
+  jobPostingId: string | null;
+  rulesVersion: string;
+  knockoutRules: RequisitionKnockoutRules;
+  scoringWeights: RequisitionScoringWeights;
+  sourceSnapshot: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RequisitionAiAnalysisStats {
+  totalApplications: number;
+  analyzedApplications: number;
+  pendingApplications: number;
+  flaggedCandidates: number;
+  recommendedCandidates: number;
+  averageScore: number | null;
+}
+
+export interface RequisitionAiCandidate {
+  applicationId: string;
+  candidateId: string;
+  candidateName: string;
+  email: string;
+  aiScore: number | null;
+  aiAnalysisStatus: string | null;
+  evaluationStatus: string | null;
+  isFlaggedForCheating: boolean;
+  failedKnockouts: Array<Record<string, unknown>>;
+}
+
+export interface JobRequisitionAiAnalysis {
+  requisitionId: string;
+  jobPostingId: string | null;
+  rulesMissing: boolean;
+  rules: JobRequisitionRules | null;
+  stats: RequisitionAiAnalysisStats;
+  candidates: RequisitionAiCandidate[];
 }
 
 export interface OrgMemberOption {

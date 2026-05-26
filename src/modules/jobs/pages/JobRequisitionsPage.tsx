@@ -24,7 +24,9 @@ export function JobRequisitionsPage({
   const effectiveViewScope =
     jobsViewScope === 'organization' || jobsApproveScope === 'organization'
       ? 'organization'
-      : jobsViewScope;
+      : jobsViewScope === 'none'
+        ? undefined
+        : jobsViewScope;
   const showRaisedBy = effectiveViewScope === 'organization';
   const { data = [], isError, error, isLoading, refetch } = useJobRequisitionsQuery(
     orgSlug,

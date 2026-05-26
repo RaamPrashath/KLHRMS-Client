@@ -1,7 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, ArrowLeft, CheckCircle2, Save, Send, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Brain, CheckCircle2, Save, Send, XCircle } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -13,6 +14,7 @@ import { BasicInfoSection } from '@/modules/jobs/components/sections/BasicInfoSe
 import { CandidateRequirementsSection } from '@/modules/jobs/components/sections/CandidateRequirementsSection';
 import { CompensationSection } from '@/modules/jobs/components/sections/CompensationSection';
 import { HiringContextSection } from '@/modules/jobs/components/sections/HiringContextSection';
+import { KnockoutRuleSection } from '@/modules/jobs/components/sections/KnockoutRuleSection';
 import { PostingContentSection } from '@/modules/jobs/components/sections/PostingContentSection';
 import { StickySummaryPanel } from '@/modules/jobs/components/StickySummaryPanel';
 import { useAutoSaveDraft } from '@/modules/jobs/hooks/useAutoSaveDraft';
@@ -76,6 +78,7 @@ function buildDefaultValues(initialData?: JobRequisitionRecord | null): CreateJo
     minExperience: initialData?.minExperience ?? null,
     education: initialData?.education ?? '',
     certifications: initialData?.certifications ?? [],
+    knockoutRule: initialData?.knockoutRule ?? '',
     roleSummary: initialData?.roleSummary ?? '',
     responsibilities: initialData?.responsibilities ?? '',
     requirementsRich: initialData?.requirementsRich ?? '',
@@ -111,6 +114,9 @@ export function CreateJobRequisitionPage({
   const isReview = pageMode === 'review';
   const isReadOnly = pageMode === 'readonly';
   const canUsePage = canCreate || isReview || isReadOnly;
+  const canViewAiScreening =
+    !!initialData &&
+    ['APPROVED', 'PUBLISHED', 'ACTIVE_HIRING', 'FILLED', 'CLOSED'].includes(initialData.status);
 
   const form = useForm<CreateJobRequisitionInput>({
     resolver: zodResolver(createJobRequisitionSchema),
@@ -250,6 +256,14 @@ export function CreateJobRequisitionPage({
 
         <div className="flex items-center gap-2">
           {error ? <span className="text-xs text-destructive-text">Autosave failed</span> : null}
+          {canViewAiScreening ? (
+            <Button type="button" variant="outline" asChild>
+              <Link href={`/${orgSlug}/jobs/${initialData.id}/ai-analyzed`}>
+                <Brain className="size-4" />
+                AI Screening
+              </Link>
+            </Button>
+          ) : null}
           {isReview ? (
             <>
               <Button type="button" variant="destructive" onClick={onReject} disabled={approveLoading || rejectLoading}>
@@ -288,6 +302,7 @@ export function CreateJobRequisitionPage({
             <CompensationSection form={form} />
             <CandidateRequirementsSection form={form} />
             <PostingContentSection form={form} readOnly={isReadOnly} />
+            <KnockoutRuleSection form={form} />
           </fieldset>
         </form>
 

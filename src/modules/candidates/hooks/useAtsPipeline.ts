@@ -22,6 +22,7 @@ import {
   distributeStageInterviewsAction,
   extendPipelineStageAction,
   fetchCandidateApplicationDetailAction,
+  fetchCandidateResumeAnalysisAction,
   fetchEvaluationWorkspaceAction,
   fetchHiringTeamsAction,
   fetchMyInterviewsAction,
@@ -36,6 +37,7 @@ import {
   previewStageInterviewWarningsAction,
   removeHiringTeamMemberAction,
   rejectInterviewAction,
+  retryCandidateResumeAnalysisAction,
   reshuffleInterviewAssignmentAction,
   searchInterviewersAction,
   updateCandidateApplicationDetailAction,
@@ -44,6 +46,7 @@ import {
 } from '@/modules/candidates/api/atsServerActions';
 import type {
   CandidateApplicationDetail,
+  CandidateResumeAnalysis,
   AcceptInterviewResponse,
   MyInterviewListResponse,
   PipelineApplication,
@@ -171,6 +174,46 @@ export function useCandidateApplicationDetail(
         applicationId: applicationId ?? '',
       }),
     enabled: !!orgSlug && !!memberId && !!applicationId,
+  });
+}
+
+export function useCandidateResumeAnalysis(
+  orgSlug: string,
+  memberId: string,
+  applicationId: string | null,
+) {
+  return useQuery<CandidateResumeAnalysis, Error>({
+    queryKey: ['ats-resume-analysis', orgSlug, applicationId],
+    queryFn: () =>
+      fetchCandidateResumeAnalysisAction({
+        orgSlug,
+        memberId,
+        applicationId: applicationId ?? '',
+      }),
+    enabled: !!orgSlug && !!memberId && !!applicationId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'PENDING' || status === 'PROCESSING' || status === 'TEXT_EXTRACTED'
+        ? 10_000
+        : false;
+    },
+  });
+}
+
+export function useRetryCandidateResumeAnalysis(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { applicationId: string }) =>
+      retryCandidateResumeAnalysisAction({
+        orgSlug,
+        memberId,
+        applicationId: params.applicationId,
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['ats-resume-analysis', orgSlug, data.applicationId], data);
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
+    },
   });
 }
 

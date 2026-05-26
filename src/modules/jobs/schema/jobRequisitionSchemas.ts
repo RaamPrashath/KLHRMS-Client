@@ -27,6 +27,7 @@ export const createJobRequisitionSchema = z.object({
   minExperience: z.number().int().nonnegative().optional().nullable(),
   education: z.string().optional().nullable(),
   certifications: z.array(z.string()).default([]),
+  knockoutRule: z.string().max(2000, 'Knockout rule is too long').optional().nullable(),
   roleSummary: z.string().optional().nullable(),
   responsibilities: z.string().optional().nullable(),
   requirementsRich: z.string().optional().nullable(),
@@ -66,6 +67,7 @@ export const updateJobRequisitionSchema = z.object({
   minExperience: z.number().int().nonnegative().optional().nullable(),
   education: z.string().optional().nullable(),
   certifications: z.array(z.string()).optional(),
+  knockoutRule: z.string().max(2000, 'Knockout rule is too long').optional().nullable(),
   roleSummary: z.string().optional().nullable(),
   responsibilities: z.string().optional().nullable(),
   requirementsRich: z.string().optional().nullable(),
@@ -114,6 +116,7 @@ export const jobRequisitionDecisionSchema = z.object({
   minExperience: z.number().int().nonnegative().optional().nullable(),
   education: z.string().optional().nullable(),
   certifications: z.array(z.string()).optional(),
+  knockoutRule: z.string().max(2000, 'Knockout rule is too long').optional().nullable(),
 }).refine(
   (value) => {
     if (value.salaryMin == null || value.salaryMax == null) return true;
