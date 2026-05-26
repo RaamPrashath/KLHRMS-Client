@@ -27,8 +27,9 @@ const KEYBOARD_HINTS = ['keyboard', 'keyboards', 'mechanical keyboard', 'wireles
 
 const STATUS_THEME: Record<string, { dot: string; text: string; bg: string; border: string }> = {
   AVAILABLE: { dot: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50/60', border: 'border-emerald-100/60' },
-  PROVIDED: { dot: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50/60', border: 'border-blue-100/60' },
-  UNDER_MAINTENANCE: { dot: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50/60', border: 'border-amber-100/60' },
+  ASSIGNED: { dot: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50/60', border: 'border-blue-100/60' },
+  IN_MAINTENANCE: { dot: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50/60', border: 'border-amber-100/60' },
+  PENDING_RETURN: { dot: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50/60', border: 'border-orange-100/60' },
   DAMAGED: { dot: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50/60', border: 'border-rose-100/60' },
   LOST: { dot: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50/60', border: 'border-orange-100/60' },
   RETIRED: { dot: 'bg-neutral-500', text: 'text-neutral-700', bg: 'bg-neutral-50/60', border: 'border-neutral-100/60' },

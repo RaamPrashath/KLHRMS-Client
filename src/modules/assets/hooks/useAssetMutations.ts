@@ -12,6 +12,7 @@ import {
   deleteAssetCategoryAction,
   deleteAssetCategoryFieldAction,
   issueAssetsAction,
+  revokeAndSwapAssetAction,
   returnAssetAction,
   updateAssetAction,
   updateAssetCategoryAction,
@@ -29,6 +30,11 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     await queryClient.invalidateQueries({ queryKey: ['asset-available-groups', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['my-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['maintenance-tickets', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['assets-dashboard', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['assets-brand-model-analytics', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['assets-os-distribution', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['assets-warranty-feed', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['asset-swap-preview', orgSlug] });
     if (assetId) {
       await queryClient.invalidateQueries({ queryKey: ['asset', orgSlug, assetId] });
     }
@@ -83,6 +89,19 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
         data: Parameters<typeof updateAssetMaintenanceAction>[0]['data'];
       }) => updateAssetMaintenanceAction({ orgSlug, memberId, assetId, data }),
       onSuccess: async (_asset, variables) => invalidateAll(variables.assetId ?? undefined),
+    }),
+    revokeAndSwap: useMutation({
+      mutationFn: ({
+        maintenanceId,
+        data,
+      }: {
+        maintenanceId: string;
+        data: Parameters<typeof revokeAndSwapAssetAction>[0]['data'];
+      }) => revokeAndSwapAssetAction({ orgSlug, memberId, maintenanceId, data }),
+      onSuccess: async (result) => {
+        await invalidateAll(result.revokedAssetId);
+        await invalidateAll(result.replacementAssetId);
+      },
     }),
     createCategory: useMutation({
       mutationFn: (data: { name: string; description?: string; assetCode?: string | null }) =>

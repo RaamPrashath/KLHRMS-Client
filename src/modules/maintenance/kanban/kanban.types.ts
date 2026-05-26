@@ -1,3 +1,5 @@
+import type { AssetSwapPreview } from '@/modules/assets/types/assetTypes';
+
 export interface KanbanIssue {
   id: string;
   assetId: string | null;
@@ -11,6 +13,7 @@ export interface KanbanIssue {
   createdAt: string;
   commentCount: number;
   attachmentCount: number;
+  swapPreview?: AssetSwapPreview | null;
 }
 
 export interface KanbanColumnData {

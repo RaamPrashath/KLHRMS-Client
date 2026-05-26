@@ -87,6 +87,7 @@ function mapTicketsToIssues(tickets: MaintenanceTicket[]): KanbanIssue[] {
     createdAt: t.createdAt,
     commentCount: 0,
     attachmentCount: 0,
+    swapPreview: t.swapPreview,
   }));
 }
 
@@ -106,12 +107,14 @@ export function KanbanBoard({
   collapsed,
   onToggleColumn,
   onUpdateMaintenance,
+  onOpenSwap,
 }: {
   tickets: MaintenanceTicket[];
   search: string;
   collapsed: Record<string, boolean>;
   onToggleColumn: (columnId: ColumnId) => void;
   onUpdateMaintenance: (params: { assetId: string | null; data: AssetMaintenanceUpdateInput }) => Promise<unknown>;
+  onOpenSwap: (ticketId: string) => void;
 }) {
   const [activeIssue, setActiveIssue] = useState<KanbanIssue | null>(null);
   const [grouped, setGrouped] = useState<Record<ColumnId, KanbanIssue[]> | null>(null);
@@ -258,6 +261,7 @@ export function KanbanBoard({
               issues={filteredGrouped[column.id]}
               isCollapsed={collapsed[column.id]}
               onToggleCollapse={() => onToggleColumn(column.id)}
+              onOpenSwap={onOpenSwap}
             />
           ))}
         </div>

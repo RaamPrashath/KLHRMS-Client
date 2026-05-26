@@ -23,7 +23,7 @@ import { formatDate } from '@/modules/assets/lib/assetUtils';
 import type { RecentActivityItem } from './dashboard.types';
 
 const activityConfig: Record<string, { icon: typeof UserCheck; color: string; label: string }> = {
-  PROVIDED: { icon: UserCheck, color: '#2563eb', label: 'Issued' },
+  ASSIGNED: { icon: UserCheck, color: '#2563eb', label: 'Assigned' },
   RETURNED: { icon: ArrowLeftRight, color: '#7c3aed', label: 'Returned' },
   MAINTENANCE: { icon: Hammer, color: '#d97706', label: 'Maintenance' },
 };

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   fetchAssetDetailAction,
   fetchAssetMetaAction,
+  fetchAssetSwapPreviewAction,
   fetchAssetsAction,
   fetchAssetCategoriesAction,
   fetchAvailableAssetGroupsAction,
@@ -14,6 +15,7 @@ import type {
   AssetFiltersState,
   AssetListResponse,
   AssetMetaResponse,
+  AssetSwapPreview,
   AvailableAssetGroup,
 } from '@/modules/assets/types/assetTypes';
 
@@ -55,5 +57,17 @@ export function useAvailableAssetGroupsQuery(orgSlug: string, memberId: string) 
     queryKey: ['asset-available-groups', orgSlug],
     queryFn: () => fetchAvailableAssetGroupsAction({ orgSlug, memberId }),
     enabled: !!orgSlug && !!memberId,
+  });
+}
+
+export function useAssetSwapPreviewQuery(
+  orgSlug: string,
+  memberId: string,
+  maintenanceId: string | null,
+) {
+  return useQuery<AssetSwapPreview, Error>({
+    queryKey: ['asset-swap-preview', orgSlug, maintenanceId],
+    queryFn: () => fetchAssetSwapPreviewAction({ orgSlug, memberId, maintenanceId: maintenanceId! }),
+    enabled: !!orgSlug && !!memberId && !!maintenanceId,
   });
 }

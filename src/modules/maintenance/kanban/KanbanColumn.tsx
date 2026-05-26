@@ -11,11 +11,13 @@ export function KanbanColumn({
   issues,
   isCollapsed,
   onToggleCollapse,
+  onOpenSwap,
 }: {
   column: ColumnConfig;
   issues: KanbanIssue[];
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onOpenSwap: (ticketId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -64,7 +66,7 @@ export function KanbanColumn({
           ) : (
             <SortableContext items={issues.map((i) => i.id)} strategy={verticalListSortingStrategy}>
               {issues.map((issue) => (
-                <KanbanCard key={issue.id} issue={issue} />
+                <KanbanCard key={issue.id} issue={issue} onOpenSwap={onOpenSwap} />
               ))}
             </SortableContext>
           )}

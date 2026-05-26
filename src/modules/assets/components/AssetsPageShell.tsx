@@ -25,6 +25,7 @@ import { ReportsTab } from '@/modules/assets/components/ReportsTab';
 import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog';
 import { AssetFormDialog } from '@/modules/assets/components/AssetFormDialog';
 import { AssetSettingsDialog } from '@/modules/assets/components/AssetSettingsDialog';
+import { RevokeAndSwapDialog } from '@/modules/assets/components/RevokeAndSwapDialog';
 import {
   ACTION_GREEN,
   defaultAssetForm,
@@ -72,6 +73,7 @@ export function AssetsPageShell({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'create' | 'manage'>('manage');
   const [employeeAssetsView, setEmployeeAssetsView] = useState<'carousel' | 'table'>('carousel');
+  const [swapDialogOpen, setSwapDialogOpen] = useState(false);
 
   const router = useRouter();
   const tabOptions = useMemo(() => getAssetTabOptions(canManageAssets), [canManageAssets]);
@@ -84,9 +86,18 @@ export function AssetsPageShell({
   const mutations = useAssetMutations(orgSlug, memberId);
 
   const allFetchedAssets = useMemo(() => registerQuery.data?.items ?? [], [registerQuery.data?.items]);
+  const employeeVisibleAssets = useMemo(
+    () =>
+      canManageAssets
+        ? allFetchedAssets
+        : allFetchedAssets.filter(
+            (asset) => asset.status === 'ASSIGNED' && asset.currentHolderMemberId === memberId,
+          ),
+    [allFetchedAssets, canManageAssets, memberId],
+  );
 
   const filteredAssets = useMemo(() => {
-    let result = allFetchedAssets;
+    let result = employeeVisibleAssets;
     const q = search.toLowerCase().trim();
     if (q) {
       result = result.filter(
@@ -105,7 +116,7 @@ export function AssetsPageShell({
       result = result.filter((a) => a.status === statusFilter);
     }
     return result;
-  }, [allFetchedAssets, search, categoryFilter, statusFilter]);
+  }, [employeeVisibleAssets, search, categoryFilter, statusFilter]);
 
   const members = useMemo(() => metaQuery.data?.members ?? [], [metaQuery.data?.members]);
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
@@ -113,10 +124,10 @@ export function AssetsPageShell({
   const selectedAsset = detailQuery.data ?? detailSnapshot;
   const categoryOptions = useMemo(() => {
     const values = new Set<string>();
-    for (const asset of allFetchedAssets) values.add(asset.category);
+    for (const asset of employeeVisibleAssets) values.add(asset.category);
     for (const category of categories) values.add(category.name.toUpperCase().replaceAll(' ', '_'));
     return Array.from(values).sort((a, b) => a.localeCompare(b));
-  }, [allFetchedAssets, categories]);
+  }, [employeeVisibleAssets, categories]);
 
   function openCreateAssetDialog() {
     setAssetFormOpen(true);
@@ -134,6 +145,10 @@ export function AssetsPageShell({
 
   function seedMaintenanceForm() {
     router.push(`/${orgSlug}/maintenance`);
+  }
+
+  function openSwapDialog() {
+    setSwapDialogOpen(true);
   }
 
   async function handleSaveBulkAsset(data: BulkAssetCreateSchemaInput) {
@@ -326,6 +341,7 @@ export function AssetsPageShell({
           onProvide={() => {}}
           onReturn={() => {}}
           onMaintenance={seedMaintenanceForm}
+          onRevokeSwap={undefined}
         />
       </div>
     );
@@ -379,7 +395,7 @@ export function AssetsPageShell({
         </div>
 
         <TabsContent value="dashboard" className="mt-0">
-          <DashboardTab orgSlug={orgSlug} memberId={memberId} />
+          <DashboardTab orgSlug={orgSlug} memberId={memberId} canManageAssets={canManageAssets} />
         </TabsContent>
 
         <TabsContent value="register" className="mt-0">
@@ -511,6 +527,27 @@ export function AssetsPageShell({
         onProvide={seedProvideForm}
         onReturn={() => router.push(`/${orgSlug}/assets`)}
         onMaintenance={seedMaintenanceForm}
+        onRevokeSwap={openSwapDialog}
+      />
+
+      <RevokeAndSwapDialog
+        key={`${selectedAsset?.id ?? 'asset-swap'}:${selectedAsset?.maintenanceHistory.find((log) => ['OPEN', 'IN_PROGRESS'].includes(log.status))?.id ?? 'none'}`}
+        open={swapDialogOpen}
+        onOpenChange={setSwapDialogOpen}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        defaultMaintenanceId={
+          selectedAsset?.maintenanceHistory.find((log) => ['OPEN', 'IN_PROGRESS'].includes(log.status))?.id ?? null
+        }
+        maintenanceOptions={(selectedAsset?.maintenanceHistory ?? [])
+          .filter((log) => ['OPEN', 'IN_PROGRESS'].includes(log.status))
+          .map((log) => ({
+            id: log.id,
+            ticketId: log.ticketId,
+            maintenanceType: log.maintenanceType,
+            status: log.status,
+            issueDescription: log.issueDescription,
+          }))}
       />
 
       <AssetSettingsDialog

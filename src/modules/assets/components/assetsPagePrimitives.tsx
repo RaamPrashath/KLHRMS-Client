@@ -93,9 +93,9 @@ export function FieldSelect({
   children: ReactNode;
 }) {
   return (
-    <div className="grid gap-2">
-      <Label>{label}</Label>
-      <SelectTrigger className="h-11 rounded-2xl border-[#e5e7eb] shadow-none">
+    <div className="grid gap-1.5">
+      <Label className="text-[13px] font-medium text-[#4b5563]">{label}</Label>
+      <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
         {children}
       </SelectTrigger>
     </div>
@@ -112,13 +112,13 @@ export function DateField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="grid gap-2">
-      <Label>{label}</Label>
+    <div className="grid gap-1.5">
+      <Label className="text-[13px] font-medium text-[#4b5563]">{label}</Label>
       <Input
         type="date"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-2xl border-[#e5e7eb] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+        className="h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
       />
     </div>
   );
@@ -134,14 +134,14 @@ export function NumberField({
   onChange: (value: number | null) => void;
 }) {
   return (
-    <div className="grid gap-2">
-      <Label>{label}</Label>
+    <div className="grid gap-1.5">
+      <Label className="text-[13px] font-medium text-[#4b5563]">{label}</Label>
       <Input
         type="number"
         min={0}
         value={value ?? ''}
         onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
-        className="h-11 rounded-2xl border-[#e5e7eb] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+        className="h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
       />
     </div>
   );
@@ -157,12 +157,12 @@ export function TextAreaField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="grid gap-2 md:col-span-2">
-      <Label>{label}</Label>
+    <div className="grid gap-1.5 md:col-span-2">
+      <Label className="text-[13px] font-medium text-[#4b5563]">{label}</Label>
       <Textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-24 rounded-2xl border-[#e5e7eb] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+        className="min-h-24 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
       />
     </div>
   );
@@ -269,12 +269,12 @@ export function InputField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="grid gap-2">
-      <Label>{label}</Label>
+    <div className="grid gap-1.5">
+      <Label className="text-[13px] font-medium text-[#4b5563]">{label}</Label>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-2xl border-[#e5e7eb] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+        className="h-9 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
       />
     </div>
   );

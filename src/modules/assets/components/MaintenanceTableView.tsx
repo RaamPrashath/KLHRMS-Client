@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useMemo, useState } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -12,12 +12,10 @@ import {
 } from '@tanstack/react-table';
 import {
   BadgeCheck,
-  Calendar,
   ChevronDown,
   ChevronUp,
   Hammer,
-  User,
-  Wrench,
+  RefreshCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -187,6 +185,14 @@ function TicketDetailPanel({ ticket }: { ticket: MaintenanceTicket }) {
           <DetailRow label="Type" value={ticket.maintenanceType ? humanize(ticket.maintenanceType) : null} />
           <DetailRow label="Reported By" value={ticket.loggedByName} />
           <DetailRow label="Date" value={ticket.createdAt ? formatDate(ticket.createdAt) : null} />
+          <DetailRow
+            label="Swap Path"
+            value={
+              ticket.swapPreview
+                ? `${ticket.swapPreview.options[0]?.availableCount ?? 0} exact model / ${ticket.swapPreview.options[1]?.availableCount ?? 0} temporary backup`
+                : null
+            }
+          />
         </div>
 
         {ticket.issueDescription && (
@@ -203,9 +209,11 @@ function TicketDetailPanel({ ticket }: { ticket: MaintenanceTicket }) {
 function TableInner({
   tickets,
   className,
+  onOpenSwap,
 }: {
   tickets: MaintenanceTicket[];
   className?: string;
+  onOpenSwap: (ticketId: string) => void;
 }) {
   const { openFloatingPanel, setTitle } = useFloatingPanel();
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
@@ -227,7 +235,7 @@ function TableInner({
 
   const { rows } = table.getRowModel();
 
-  function handleRowClick(ticket: MaintenanceTicket, e: MouseEvent<HTMLTableRowElement>) {
+  function handleRowClick(ticket: MaintenanceTicket) {
     setSelectedTicket(ticket);
     setTitle(ticket.ticketId);
     openFloatingPanel(new DOMRect(window.innerWidth / 2, window.innerHeight / 2, 0, 0));
@@ -262,13 +270,16 @@ function TableInner({
                     )}
                   </TableHead>
                 ))}
+                <TableHead className="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
+                  Availability
+                </TableHead>
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={COLUMNS.length} className="py-12 text-center text-[13px] text-[#6e6e73]">
+                <TableCell colSpan={COLUMNS.length + 1} className="py-12 text-center text-[13px] text-[#6e6e73]">
                   No matching tickets
                 </TableCell>
               </TableRow>
@@ -277,13 +288,43 @@ function TableInner({
                 <TableRow
                   key={row.id}
                   className="cursor-pointer border-b border-[#f0f0f2] transition-colors hover:bg-[#f9fafb]"
-                  onClick={(e) => handleRowClick(row.original, e)}
+                  onClick={() => handleRowClick(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="py-2.5 px-3">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
+                  <TableCell className="py-2.5 px-3">
+                    <div className="flex items-center gap-2">
+                      {row.original.swapPreview?.options.map((option) => (
+                        <span
+                          key={option.mode}
+                          className={cn(
+                            'rounded-full px-2 py-0.5 text-[10px] font-medium',
+                            option.available ? 'bg-[#eff6ff] text-[#2454a6]' : 'bg-[#fff1f1] text-[#b3261e]',
+                          )}
+                        >
+                          {option.mode === 'PERMANENT_REPLACEMENT' ? 'Exact' : 'Temp'} {option.availableCount}
+                        </span>
+                      ))}
+                      {row.original.swapPreview?.requiresReplacementValidation && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 rounded-full border-[#d1d5db] px-2.5 text-[11px]"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onOpenSwap(row.original.id);
+                          }}
+                        >
+                          <RefreshCcw className="mr-1 size-3" />
+                          Swap
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -343,9 +384,11 @@ function TableInner({
 export function MaintenanceTableView({
   tickets,
   className,
+  onOpenSwap,
 }: {
   tickets: MaintenanceTicket[];
   className?: string;
+  onOpenSwap: (ticketId: string) => void;
 }) {
   const data = useMemo(() => tickets, [tickets]);
 
@@ -363,7 +406,7 @@ export function MaintenanceTableView({
 
   return (
     <FloatingPanelRoot>
-      <TableInner tickets={data} />
+      <TableInner tickets={data} onOpenSwap={onOpenSwap} />
     </FloatingPanelRoot>
   );
 }
