@@ -284,7 +284,7 @@ export function AssetsPageShell({
                     : 'text-neutral-500 hover:text-neutral-900',
                 )}
               >
-                Carousel
+                Cards
               </button>
               <button
                 type="button"
@@ -302,7 +302,11 @@ export function AssetsPageShell({
           </div>
         </div>
         {employeeAssetsView === 'carousel' ? (
-          <EmployeeAssetGallery assets={filteredAssets} isLoading={registerQuery.isLoading} />
+          <EmployeeAssetGallery
+            assets={filteredAssets}
+            isLoading={registerQuery.isLoading}
+            onOpenDetail={openDetail}
+          />
         ) : (
           <EmployeeAssetTable
             assets={filteredAssets}
