@@ -139,8 +139,8 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
     labelColor = 'text-red-500';
     dateColor = 'text-red-500';
   } else {
-    labelColor = 'text-neutral-400';
-    dateColor = 'text-neutral-900';
+    labelColor = 'text-muted-foreground';
+    dateColor = 'text-foreground';
   }
 
   const headerContent = (
@@ -158,16 +158,14 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
 
       {/* Total time row — flush to the bottom of the header */}
       <div
-        className="flex flex-col items-center justify-center h-9 border-t"
-        style={{
-          borderTopColor: 'rgba(0, 0, 0, 0.03)',
-          backgroundColor: isToday ? 'rgba(0, 135, 74, 0.04)' : 'var(--color-canvas)',
-        }}
+        className={`flex flex-col items-center justify-center h-9 border-t border-border/30 ${
+          isToday ? 'bg-primary/5' : 'bg-background'
+        }`}
       >
         <span
           className={[
             'font-mono text-[13px] font-semibold leading-none',
-            hasLogs ? 'text-primary' : 'text-neutral-300',
+            hasLogs ? 'text-primary' : 'text-muted-foreground/30',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -195,7 +193,7 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
             e.stopPropagation();
             onAddLog(dateStr);
           }}
-          className="pointer-events-auto inline-flex h-7 items-center justify-center rounded-md border border-input bg-white/95 px-3 text-[11px] font-semibold shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-primary hover:text-white"
+          className="pointer-events-auto inline-flex h-7 items-center justify-center rounded-md border border-input bg-background/95 px-3 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-primary hover:text-primary-foreground hover:border-primary"
           aria-label={`Add worklog for ${format(date, 'EEEE, MMMM d')}`}
         >
           <Plus className="size-3 mr-1.5" strokeWidth={2.5} />
@@ -232,19 +230,16 @@ interface GutterHeaderProps {
 function TimeGutterHeader({ totalWeekLabel }: Readonly<GutterHeaderProps>) {
   return (
     <div
-      className="flex flex-col h-full"
-      style={{ backgroundColor: 'var(--color-canvas)' }}
+      className="flex flex-col h-full bg-background"
     >
       {/* Spacer that matches the date + day-name area */}
       <div className="flex-1" />
       {/* Week total — aligns with the per-day total row */}
       <div
-        className="flex flex-col items-center justify-center h-9 border-t"
-        style={{ borderTopColor: 'rgba(0, 0, 0, 0.03)' }}
+        className="flex flex-col items-center justify-center h-9 border-t border-border/30"
       >
         <span
-          className="font-mono text-[13px] font-semibold"
-          style={{ color: 'var(--color-primary)' }}
+          className="font-mono text-[13px] font-semibold text-primary"
         >
           {totalWeekLabel}
         </span>
@@ -383,19 +378,18 @@ export function BulkAttendanceCalendar({
 
   return (
     <div
-      className="h-full"
-      style={{ backgroundColor: 'var(--color-surface)' }}
+      className="h-full bg-card text-foreground"
     >
       <style>{`
         /* ── Reset & base ── */
         .rbc-calendar {
           font-family: var(--font-sans) !important;
           background: transparent !important;
-          color: var(--color-neutral-900) !important;
+          color: var(--foreground) !important;
           min-height: 100% !important;
           height: auto !important;
         }
-
+ 
         /* ── Time view shell ── */
         .rbc-time-view {
           border: none !important;
@@ -404,11 +398,11 @@ export function BulkAttendanceCalendar({
           min-height: 100% !important;
           height: auto !important;
         }
-
+ 
         /* ── Header area ── */
         .rbc-time-header {
-          border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
-          background: var(--color-canvas) !important;
+          border-bottom: 1px solid var(--border) !important;
+          background: var(--background) !important;
           flex-shrink: 0 !important;
           position: sticky !important;
           top: 0 !important;
@@ -418,8 +412,8 @@ export function BulkAttendanceCalendar({
           border-right: none !important;
         }
         .rbc-time-header-gutter {
-          background: var(--color-canvas) !important;
-          border-right: 1px solid rgba(0, 0, 0, 0.03) !important;
+          background: var(--background) !important;
+          border-right: 1px solid var(--border) !important;
         }
         .rbc-time-header-content {
           border-left: none !important;
@@ -431,34 +425,34 @@ export function BulkAttendanceCalendar({
         .rbc-time-header .rbc-header {
           overflow: visible !important;
         }
-
+ 
         /* ── Column headers ── */
         .rbc-header {
           border-bottom: none !important;
           padding: 0 !important;
-          background: var(--color-canvas) !important;
+          background: var(--background) !important;
           overflow: visible !important;
         }
         .rbc-header + .rbc-header {
-          border-left: 1px solid rgba(0, 0, 0, 0.03) !important;
+          border-left: 1px solid var(--border) !important;
         }
         .rbc-header > * {
           display: block !important;
           width: 100% !important;
           height: 100% !important;
         }
-
+ 
         /* ── All-day row ── */
         .rbc-allday-cell { display: none !important; }
         .rbc-time-header-content > .rbc-row.rbc-row-resource { display: none !important; }
-
+ 
         /* ── Time body ── */
         .rbc-time-content {
           border-top: none !important;
           flex: 0 0 auto !important;
           overflow: visible !important;
         }
-
+ 
         /* ── Day columns with sticky button ── */
         .rbc-day-slot {
           position: relative !important;
@@ -466,42 +460,43 @@ export function BulkAttendanceCalendar({
         .rbc-time-column {
           position: relative !important;
         }
-
+ 
         /* ── Time gutter ── */
         .rbc-time-gutter {
-          background: var(--color-canvas) !important;
-          border-right: 1px solid rgba(0, 0, 0, 0.03) !important;
+          background: var(--background) !important;
+          border-right: 1px solid var(--border) !important;
         }
         .rbc-label {
           font-size: 11px !important;
           font-family: var(--font-mono) !important;
-          color: var(--color-neutral-400) !important;
+          color: var(--muted-foreground) !important;
           padding: 0 10px 0 4px !important;
           line-height: 1 !important;
         }
-
+ 
         /* ── Slot rows ── */
         .rbc-timeslot-group {
-          border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
+          border-bottom: 1px solid var(--border) !important;
           min-height: 48px !important;
         }
         .rbc-time-slot {
-          border-top: 1px solid rgba(0, 0, 0, 0.015) !important;
+          border-top: 1px solid var(--border) !important;
+          opacity: 0.3;
         }
-
+ 
         /* ── Column dividers ── */
         .rbc-time-content > * + * > * {
-          border-left: 1px solid rgba(0, 0, 0, 0.03) !important;
+          border-left: 1px solid var(--border) !important;
         }
-
+ 
         /* ── Today column ── */
         .rbc-today { 
-          background: rgba(0, 135, 74, 0.02) !important; 
+          background: color-mix(in srgb, var(--primary) 4%, transparent) !important; 
         }
-
+ 
         /* ── Current time indicator ── */
         .rbc-current-time-indicator {
-          background-color: #00874A !important;
+          background-color: var(--primary) !important;
           height: 2px !important;
           border-radius: 9999px !important;
           opacity: 0.6 !important;
@@ -514,10 +509,10 @@ export function BulkAttendanceCalendar({
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #00874A;
+          background: var(--primary);
           opacity: 1;
         }
-
+ 
         /* ── Events ── */
         .rbc-event {
           background: transparent !important;
@@ -539,14 +534,14 @@ export function BulkAttendanceCalendar({
           background: transparent !important;
           box-shadow: none !important;
         }
-
+ 
         /* ── Slot selection ── */
         .rbc-slot-selection {
-          background: rgba(0, 135, 74, 0.08) !important;
-          border: 1px dashed rgba(0, 135, 74, 0.3) !important;
+          background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+          border: 1px dashed color-mix(in srgb, var(--primary) 30%, transparent) !important;
           border-radius: 4px !important;
         }
-
+ 
         /* ── DnD ── */
         .rbc-addons-dnd .rbc-addons-dnd-drag-preview { opacity: 0.75; }
         .rbc-addons-dnd-resizable {
@@ -568,16 +563,16 @@ export function BulkAttendanceCalendar({
           display: block;
           width: 20px;
           height: 2px;
-          background: #00874A;
+          background: var(--primary);
           border-radius: 2px;
           opacity: 0.5;
         }
-
+ 
         /* ── Kill default toolbar ── */
         .rbc-toolbar { display: none !important; }
-
+ 
         /* ── Off-range ── */
-        .rbc-off-range-bg { background: var(--color-canvas) !important; }
+        .rbc-off-range-bg { background: var(--background) !important; }
       `}</style>
 
       <DnDCalendar

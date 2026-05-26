@@ -15,6 +15,7 @@ export const clockInSchema = z.object({
 export const clockOutSchema = z.object({
   target_member_id: z.string().optional(),
   clock_out: z.iso.datetime().optional(),
+  work_log_text: z.string().trim().min(20, 'Work log must be at least 20 characters').max(1000),
 });
 
 export const manualEntrySchema = z

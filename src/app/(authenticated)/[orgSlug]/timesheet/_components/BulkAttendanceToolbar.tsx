@@ -33,12 +33,12 @@ export function BulkAttendanceToolbar({
   return (
     <div className="flex items-center gap-3">
       {/* iOS-style segmented control navigation */}
-      <div className="inline-flex items-center gap-0 bg-neutral-50 rounded-lg p-1">
+      <div className="inline-flex items-center gap-0 bg-secondary/40 border border-border p-0.5 rounded-lg">
         <button
           type="button"
           onClick={onPrev}
           aria-label="Previous week"
-          className="size-8 flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-900 transition-colors duration-150"
+          className="size-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors duration-150"
         >
           <ChevronLeft className="size-4" strokeWidth={2} />
         </button>
@@ -51,8 +51,8 @@ export function BulkAttendanceToolbar({
           className={[
             'h-8 px-4 text-xs font-medium rounded-md transition-all duration-150 flex items-center gap-1.5',
             isCurrentWeek
-              ? 'bg-white text-primary shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-default'
-              : 'text-neutral-700 hover:text-neutral-900',
+              ? 'bg-card text-primary shadow-sm cursor-default border border-border/50'
+              : 'text-muted-foreground hover:text-foreground',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -64,7 +64,7 @@ export function BulkAttendanceToolbar({
           type="button"
           onClick={onNext}
           aria-label="Next week"
-          className="size-8 flex items-center justify-center rounded-md text-neutral-500 hover:text-neutral-900 transition-colors duration-150"
+          className="size-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors duration-150"
         >
           <ChevronRight className="size-4" strokeWidth={2} />
         </button>
@@ -72,20 +72,20 @@ export function BulkAttendanceToolbar({
 
       {/* Save state */}
       {saveState === 'saving' && (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-400 bg-canvas px-2 py-1 rounded-md">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted border border-border/50 px-2 py-1 rounded-md">
           <Loader2 className="size-3 animate-spin" />
           Saving
         </span>
       )}
       {saveState === 'saved' && (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success-text bg-success-bg px-2 py-1 rounded-md">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-md">
           <CheckCircle2 className="size-3" />
           Saved
         </span>
       )}
       {saveState === 'error' && (
         <span
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive-text bg-destructive-bg px-2 py-1 rounded-md"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 px-2 py-1 rounded-md"
           title={saveError ?? undefined}
         >
           <AlertCircle className="size-3" />

@@ -78,7 +78,7 @@ export function OrgSidebarShell({
                 organizations={organizations}
                 user={user}
             />
-            <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <main className={cn("min-h-0 flex-1 overscroll-contain", isTimesheetRoute ? "overflow-hidden" : "overflow-y-auto")}>
                 <div
                     className={cn(
                         "w-full",
