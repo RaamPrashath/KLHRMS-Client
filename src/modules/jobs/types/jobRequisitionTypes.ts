@@ -112,6 +112,7 @@ export interface JobRequisitionRecord {
   minExperience: number | null;
   education: string | null;
   certifications: string[];
+  knockoutRule: string | null;
   roleSummary: string | null;
   responsibilities: string | null;
   requirementsRich: string | null;
@@ -138,9 +139,7 @@ export interface RequisitionActivityEntry {
 }
 
 export interface RequisitionKnockoutRules {
-  minYearsExperience: number | null;
-  requiredEducationKeywords: string[];
-  requiredCertificationKeywords: string[];
+  explicitRule: string | null;
 }
 
 export interface RequisitionScoringWeights {
@@ -148,6 +147,9 @@ export interface RequisitionScoringWeights {
   maxExperiencePoints: number;
   maxSkillPoints: number;
   skillWeights: Record<string, number>;
+  educationPoints?: number;
+  educationKeywords?: string[];
+  certificationWeights?: Record<string, number>;
   totalPossiblePoints: number;
 }
 

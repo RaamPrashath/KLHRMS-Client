@@ -74,6 +74,9 @@ export function AiScreeningPage({ orgSlug, memberId, requisitionId }: Readonly<A
   const analysis = analysisQuery.data;
   const rules = analysis?.rules ?? null;
   const candidates = analysis?.candidates ?? [];
+  const minExperienceTarget = typeof rules?.sourceSnapshot.minExperience === 'number'
+    ? rules.sourceSnapshot.minExperience
+    : null;
   const recommendedCandidates = candidates.filter(
     (candidate) => (candidate.aiScore ?? 0) >= 70 && candidate.evaluationStatus === 'QUALIFIED',
   );
@@ -174,9 +177,9 @@ export function AiScreeningPage({ orgSlug, memberId, requisitionId }: Readonly<A
                   <div className="rounded-lg border border-neutral-100 bg-canvas p-3">
                     <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">Experience</p>
                     <p className="mt-2 font-mono text-xl font-semibold text-neutral-900">
-                      {rules.knockoutRules.minYearsExperience ?? 0}y
+                      {minExperienceTarget ?? 0}y
                     </p>
-                    <p className="mt-1 text-xs text-neutral-500">minimum required</p>
+                    <p className="mt-1 text-xs text-neutral-500">target experience</p>
                   </div>
                   <div className="rounded-lg border border-neutral-100 bg-canvas p-3">
                     <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">Skills</p>
@@ -236,40 +239,14 @@ export function AiScreeningPage({ orgSlug, memberId, requisitionId }: Readonly<A
               </div>
 
               <div className="rounded-xl border border-neutral-100 bg-surface p-5 shadow-[var(--shadow-1)]">
-                <h2 className="text-[17px] font-semibold text-neutral-900">Knockouts</h2>
-                <div className="mt-4 grid gap-3">
-                  <div className="flex items-start gap-3 rounded-lg bg-canvas p-3">
-                    <CheckCircle2 className="mt-0.5 size-4 text-success-text" />
-                    <div>
-                      <p className="text-sm font-medium text-neutral-900">Minimum experience</p>
-                      <p className="text-sm text-neutral-500">
-                        {rules.knockoutRules.minYearsExperience
-                          ? `${rules.knockoutRules.minYearsExperience} years required`
-                          : 'No minimum experience knockout'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 rounded-lg bg-canvas p-3">
-                    <CheckCircle2 className="mt-0.5 size-4 text-success-text" />
-                    <div>
-                      <p className="text-sm font-medium text-neutral-900">Education</p>
-                      <p className="text-sm text-neutral-500">
-                        {rules.knockoutRules.requiredEducationKeywords.length
-                          ? rules.knockoutRules.requiredEducationKeywords.join(', ')
-                          : 'No education knockout'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 rounded-lg bg-canvas p-3">
-                    <CheckCircle2 className="mt-0.5 size-4 text-success-text" />
-                    <div>
-                      <p className="text-sm font-medium text-neutral-900">Certifications</p>
-                      <p className="text-sm text-neutral-500">
-                        {rules.knockoutRules.requiredCertificationKeywords.length
-                          ? rules.knockoutRules.requiredCertificationKeywords.join(', ')
-                          : 'No certification anchors'}
-                      </p>
-                    </div>
+                <h2 className="text-[17px] font-semibold text-neutral-900">Knockout Rule</h2>
+                <div className="mt-4 flex items-start gap-3 rounded-lg bg-canvas p-3">
+                  <CheckCircle2 className="mt-0.5 size-4 text-success-text" />
+                  <div>
+                    <p className="text-sm font-medium text-neutral-900">Explicit recruiter rule</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-500">
+                      {rules.knockoutRules.explicitRule ?? 'No knockout rule configured.'}
+                    </p>
                   </div>
                 </div>
               </div>

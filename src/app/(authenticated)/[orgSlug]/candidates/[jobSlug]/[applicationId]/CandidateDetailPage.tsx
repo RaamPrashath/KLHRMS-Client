@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import {
+  ArrowLeft,
   ArrowRight,
   AlertTriangle,
   BriefcaseBusiness,
@@ -28,16 +29,11 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -242,7 +238,7 @@ function ProfileTab({ detail }: { readonly detail: CandidateApplicationDetail })
 }
 
 function confidenceLabel(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '—';
+  if (value === null || value === undefined) return '\u2014';
   return `${Math.round(value * 100)}%`;
 }
 
@@ -365,12 +361,12 @@ function AtsScoreTab({
             <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">AI ATS score</p>
             <div className="mt-2 flex items-end gap-2">
               <span className="font-mono text-3xl font-semibold text-neutral-900">
-                {analysis.compositeScore ?? '—'}
+                {analysis.compositeScore ?? '\u2014'}
               </span>
               <span className="pb-1 text-sm text-neutral-500">/ 100</span>
             </div>
             <p className="mt-1 text-xs text-neutral-500">
-              Raw {analysis.rawScore ?? '—'} / {analysis.maxScore ?? '—'} · confidence {confidenceLabel(analysis.extractionConfidence)}
+              Raw {analysis.rawScore ?? '\u2014'} / {analysis.maxScore ?? '\u2014'} \u00b7 confidence {confidenceLabel(analysis.extractionConfidence)}
             </p>
           </div>
           {isRecommended ? (
@@ -413,7 +409,7 @@ function AtsScoreTab({
                       ) : null}
                       {text ? (
                         <p className="mt-1 font-mono text-warning-text">
-                          <span className="font-semibold">Text:</span> &ldquo;{text}&rdquo;
+                          <span className="font-semibold">Text:</span> \u201c{text}\u201d
                         </p>
                       ) : null}
                     </div>
@@ -457,7 +453,7 @@ function AtsScoreTab({
                 {facts.explicitKnockoutAssessment.passed ? 'Passed' : 'Failed'}
               </p>
               <p className="mt-1 text-xs text-neutral-500">
-                {facts.explicitKnockoutAssessment.evidence} · {confidenceLabel(facts.explicitKnockoutAssessment.confidence)}
+                {facts.explicitKnockoutAssessment.evidence} \u00b7 {confidenceLabel(facts.explicitKnockoutAssessment.confidence)}
               </p>
             </div>
           ) : (
@@ -481,7 +477,7 @@ function AtsScoreTab({
                 {facts.targetRoleAlignment.matchesTargetRole ? 'Matches target role' : 'Does not match target role'}
               </p>
               <p className="mt-1 text-xs text-neutral-500">
-                {facts.targetRoleAlignment.evidence} · {confidenceLabel(facts.targetRoleAlignment.confidence)}
+                {facts.targetRoleAlignment.evidence} \u00b7 {confidenceLabel(facts.targetRoleAlignment.confidence)}
               </p>
             </div>
           ) : null}
@@ -492,7 +488,7 @@ function AtsScoreTab({
             </p>
             {facts?.yearsExperience ? (
               <p className="mt-1 text-xs text-neutral-500">
-                {facts.yearsExperience.evidence} · {confidenceLabel(facts.yearsExperience.confidence)}
+                {facts.yearsExperience.evidence} \u00b7 {confidenceLabel(facts.yearsExperience.confidence)}
               </p>
             ) : null}
           </div>
@@ -501,7 +497,7 @@ function AtsScoreTab({
             <p className="mt-1 text-sm text-neutral-900">{facts?.degree?.value ?? 'Not found'}</p>
             {facts?.degree ? (
               <p className="mt-1 text-xs text-neutral-500">
-                {facts.degree.evidence} · {confidenceLabel(facts.degree.confidence)}
+                {facts.degree.evidence} \u00b7 {confidenceLabel(facts.degree.confidence)}
               </p>
             ) : null}
           </div>
@@ -536,7 +532,7 @@ function AtsScoreTab({
           <div className="mt-3 space-y-2 text-xs text-neutral-600">
             {certifications.map((certification) => (
               <p key={`${certification.value}-${certification.evidence}`}>
-                Certification: {certification.value} · {confidenceLabel(certification.confidence)}
+                Certification: {certification.value} \u00b7 {confidenceLabel(certification.confidence)}
               </p>
             ))}
             {warnings.map((warning) => <p key={warning}>{warning}</p>)}
@@ -912,19 +908,18 @@ function NotesTab({
   );
 }
 
-export function CandidateDrawer({
+export function CandidateDetailPage({
   orgSlug,
   memberId,
+  jobSlug,
   applicationId,
-  open,
-  onOpenChange,
 }: {
   readonly orgSlug: string;
   readonly memberId: string;
-  readonly applicationId: string | null;
-  readonly open: boolean;
-  readonly onOpenChange: (open: boolean) => void;
+  readonly jobSlug: string;
+  readonly applicationId: string;
 }) {
+  const router = useRouter();
   const detailQuery = useCandidateApplicationDetail(orgSlug, memberId, applicationId);
   const resumeAnalysisQuery = useCandidateResumeAnalysis(orgSlug, memberId, applicationId);
   const retryResumeAnalysis = useRetryCandidateResumeAnalysis(orgSlug, memberId);
@@ -942,31 +937,93 @@ export function CandidateDrawer({
   const [activeSection, setActiveSection] = useState<'profile' | 'ats' | 'history' | 'notes'>('profile');
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!fixed !bottom-0 !right-0 !left-auto !top-0 z-50 flex h-dvh max-h-dvh w-full !max-w-none !translate-x-0 !translate-y-0 flex-col overflow-hidden rounded-none border-0 border-l border-neutral-100 bg-surface p-0 shadow-[var(--shadow-4)] duration-200 data-open:slide-in-from-right-full data-open:zoom-in-100 data-closed:slide-out-to-right-full data-closed:zoom-out-100 sm:w-[40vw]">
-        <DialogHeader className="bg-surface px-5 py-5">
-          <div className="flex items-center gap-4">
-            <Avatar className="size-14 shrink-0">
-              <AvatarImage
-                key={imageSrc ?? 'fallback'}
-                src={candidateImage ?? undefined}
-                alt={candidateName}
-                referrerPolicy="no-referrer"
-                onError={() => setFailedImageSrc(imageSrc)}
-              />
-              <AvatarFallback className="bg-primary-ghost text-lg font-semibold text-primary">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <DialogTitle className="truncate text-2xl font-semibold text-neutral-900">{candidateName}</DialogTitle>
-              <p className="mt-1 truncate text-sm text-neutral-500">{detail?.candidate.email ?? '—'}</p>
+    <div className="min-h-dvh bg-canvas">
+      {/* Header */}
+      <div className="sticky top-0 z-20 bg-surface/95 backdrop-blur border-b border-neutral-100">
+        <div className="flex items-center gap-4 px-6 py-4">
+          <button
+            type="button"
+            onClick={() => router.push(`/${orgSlug}/candidates/${jobSlug}`)}
+            className="flex size-10 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+            aria-label="Back to candidates"
+          >
+            <ArrowLeft className="size-5" />
+          </button>
+          {detailQuery.isLoading ? (
+            <div className="flex items-center gap-4">
+              <Skeleton className="size-14 shrink-0 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-48 rounded-md" />
+                <Skeleton className="h-4 w-32 rounded-md" />
+              </div>
             </div>
-          </div>
-        </DialogHeader>
+          ) : (
+            <div className="flex items-center gap-4">
+              <Avatar className="size-14 shrink-0">
+                <AvatarImage
+                  key={imageSrc ?? 'fallback'}
+                  src={candidateImage ?? undefined}
+                  alt={candidateName}
+                  referrerPolicy="no-referrer"
+                  onError={() => setFailedImageSrc(imageSrc)}
+                />
+                <AvatarFallback className="bg-primary-ghost text-lg font-semibold text-primary">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-2xl font-semibold text-neutral-900">{candidateName}</h1>
+                <p className="text-sm text-neutral-500">{detail?.candidate.email ?? '\u2014'}</p>
+              </div>
+            </div>
+          )}
+        </div>
 
+        {/* Pill-style tab bar */}
+        <div className="px-6 pb-3">
+          <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
+            {([
+              { key: 'profile' as const, label: 'Profile' },
+              { key: 'ats' as const, label: 'ATS Score' },
+              { key: 'history' as const, label: 'History' },
+              { key: 'notes' as const, label: 'Notes' },
+            ]).map((tab) => {
+              const isActive = tab.key === activeSection;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveSection(tab.key)}
+                  aria-pressed={isActive}
+                  className={cn(
+                    'relative inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
+                    isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
+                  )}
+                >
+                  {isActive ? (
+                    <motion.span
+                      layoutId="candidate-detail-tab-pill"
+                      className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                      transition={{
+                        type: 'spring',
+                        stiffness: 520,
+                        damping: 36,
+                        mass: 0.65,
+                      }}
+                    />
+                  ) : null}
+                  <span className="relative z-10">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="mx-auto max-w-4xl px-6 py-6">
         {detailQuery.isLoading ? (
-          <div className="grid gap-4 p-5">
+          <div className="grid gap-4">
             <Skeleton className="h-12 rounded-xl" />
             <Skeleton className="h-36 rounded-xl" />
             <Skeleton className="h-52 rounded-xl" />
@@ -974,93 +1031,57 @@ export function CandidateDrawer({
         ) : null}
 
         {detail ? (
-          <div className="flex min-h-0 flex-1 flex-col">
-            {/* Pill-style tab bar — matches AtsPipelineSectionLayout design */}
-            <div className="bg-surface px-5 py-3">
-              <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
-                {([
-                  { key: 'profile' as const, label: 'Profile' },
-                  { key: 'ats' as const, label: 'ATS Score' },
-                  { key: 'history' as const, label: 'History' },
-                  { key: 'notes' as const, label: 'Notes' },
-                ]).map((tab) => {
-                  const isActive = tab.key === activeSection;
-                  return (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => setActiveSection(tab.key)}
-                      aria-pressed={isActive}
-                      className={cn(
-                        'relative inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
-                        isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
-                      )}
-                    >
-                      {isActive ? (
-                        <motion.span
-                          layoutId="candidate-drawer-tab-pill"
-                          className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
-                          transition={{
-                            type: 'spring',
-                            stiffness: 520,
-                            damping: 36,
-                            mass: 0.65,
-                          }}
-                        />
-                      ) : null}
-                      <span className="relative z-10">{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
+          <>
             {activeSection === 'profile' ? (
-              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-                <ProfileTab detail={detail} />
-              </div>
+              <ProfileTab detail={detail} />
             ) : null}
 
             {activeSection === 'ats' ? (
-              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-                <AtsScoreTab
-                  analysis={resumeAnalysisQuery.data}
-                  isLoading={resumeAnalysisQuery.isLoading}
-                  error={resumeAnalysisQuery.error}
-                  retrying={retryResumeAnalysis.isPending}
-                  onRetry={() => {
-                    if (!applicationId) return;
-                    retryResumeAnalysis.mutate(
-                      { applicationId },
-                      {
-                        onSuccess: () => {
-                          toast.success('Resume analysis retry started');
-                          void resumeAnalysisQuery.refetch();
-                        },
-                        onError: (error) => {
-                          toast.error(error instanceof Error ? error.message : 'Could not retry analysis');
-                        },
+              <AtsScoreTab
+                analysis={resumeAnalysisQuery.data}
+                isLoading={resumeAnalysisQuery.isLoading}
+                error={resumeAnalysisQuery.error}
+                retrying={retryResumeAnalysis.isPending}
+                onRetry={() => {
+                  retryResumeAnalysis.mutate(
+                    { applicationId },
+                    {
+                      onSuccess: () => {
+                        toast.success('Resume analysis retry started');
+                        void resumeAnalysisQuery.refetch();
                       },
-                    );
-                  }}
-                />
-              </div>
+                      onError: (error) => {
+                        toast.error(error instanceof Error ? error.message : 'Could not retry analysis');
+                      },
+                    },
+                  );
+                }}
+              />
             ) : null}
 
             {activeSection === 'history' ? (
-              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-                <HistoryTab detail={detail} />
-              </div>
+              <HistoryTab detail={detail} />
             ) : null}
 
             {activeSection === 'notes' ? (
-              <div className="min-h-0 flex-1 overflow-hidden">
+              <div className="min-h-0">
                 <NotesTab detail={detail} createNote={createNote} updateNote={updateNote} />
               </div>
             ) : null}
+          </>
+        ) : null}
+
+        {!detailQuery.isLoading && !detail ? (
+          <div className="flex min-h-64 items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-canvas px-6 text-center">
+            <div>
+              <p className="text-sm font-medium text-neutral-900">Candidate not found</p>
+              <p className="mt-1 text-xs text-neutral-500">
+                The requested candidate application could not be loaded.
+              </p>
+            </div>
           </div>
         ) : null}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

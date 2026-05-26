@@ -6,6 +6,7 @@ import {
   fetchJobRequisitionDetailAction,
   fetchRequisitionAiAnalysisAction,
   fetchRequisitionActivityAction,
+  reEvaluateRequisitionAction,
   rebuildRequisitionAiAnalysisAction,
 } from '@/modules/jobs/api/jobRequisitionDetailActions';
 import type {
@@ -66,6 +67,22 @@ export function useRebuildRequisitionAiAnalysis(
     onSuccess: (analysis) => {
       queryClient.setQueryData(requisitionAiAnalysisKey(orgSlug, requisitionId), analysis);
       queryClient.invalidateQueries({ queryKey: ['job-requisition-detail', orgSlug, requisitionId] });
+    },
+  });
+}
+
+export function useReEvaluateRequisition(
+  orgSlug: string,
+  memberId: string,
+  requisitionId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation<JobRequisitionAiAnalysis, Error>({
+    mutationFn: () => reEvaluateRequisitionAction({ orgSlug, memberId, requisitionId }),
+    onSuccess: (analysis) => {
+      queryClient.setQueryData(requisitionAiAnalysisKey(orgSlug, requisitionId), analysis);
+      queryClient.invalidateQueries({ queryKey: ['job-requisition-detail', orgSlug, requisitionId] });
+      queryClient.invalidateQueries({ queryKey: ['job-requisition-ai-analysis', orgSlug, requisitionId] });
     },
   });
 }

@@ -12,7 +12,10 @@ import {
   useApproveJobRequisition,
   useRejectJobRequisition,
 } from '@/modules/jobs/hooks/useJobRequisitionMutations';
-import { useJobRequisitionDetailQuery } from '@/modules/jobs/hooks/useJobRequisitionDetailQuery';
+import {
+  useJobRequisitionDetailQuery,
+  useReEvaluateRequisition,
+} from '@/modules/jobs/hooks/useJobRequisitionDetailQuery';
 import { CreateJobRequisitionPage } from '@/modules/jobs/pages/CreateJobRequisitionPage';
 import type { JobRequisitionDecisionInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import type {
@@ -57,6 +60,7 @@ export function JobRequisitionDetailPage({
   } = useJobRequisitionDetailQuery(orgSlug, memberId, requisitionId);
   const approveMutation = useApproveJobRequisition(orgSlug, memberId);
   const rejectMutation = useRejectJobRequisition(orgSlug, memberId);
+  const reEvaluateMutation = useReEvaluateRequisition(orgSlug, memberId, requisitionId);
   const approveScope = getScope(permissions, 'jobs', 'approve');
 
   async function handleApprove(values: JobRequisitionDecisionInput) {
@@ -66,6 +70,16 @@ export function JobRequisitionDetailPage({
       await refetch();
     } catch (approveError) {
       toast.error(getErrorMessage(approveError, 'Failed to approve requisition'));
+    }
+  }
+
+  async function handleReEvaluate() {
+    try {
+      await reEvaluateMutation.mutateAsync();
+      toast.success('Re-evaluation started — results will update as candidates are analyzed');
+      await refetch();
+    } catch (reevaluateError) {
+      toast.error(getErrorMessage(reevaluateError, 'Failed to re-evaluate requisition'));
     }
   }
 
@@ -174,9 +188,24 @@ export function JobRequisitionDetailPage({
     requisition.currentUserCanApprove &&
     (requisition.status === 'PENDING_APPROVAL' || requisition.status === 'PARTIALLY_APPROVED');
   const formMode = canReview ? 'review' : requisition.canEdit ? 'edit' : 'readonly';
+  const canReEvaluate = ['APPROVED', 'PUBLISHED', 'ACTIVE_HIRING', 'FILLED', 'CLOSED'].includes(requisition.status);
 
   return (
     <>
+      {canReEvaluate ? (
+        <div className="mx-auto flex max-w-7xl items-center justify-end gap-2 px-4 pb-2 pt-2 sm:px-6 lg:px-8">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleReEvaluate}
+            disabled={reEvaluateMutation.isPending}
+          >
+            <RefreshCw className={`size-4 ${reEvaluateMutation.isPending ? 'animate-spin' : ''}`} />
+            {reEvaluateMutation.isPending ? 'Re-evaluating...' : 'Re-evaluate AI'}
+          </Button>
+        </div>
+      ) : null}
       <CreateJobRequisitionPage
         key={`${requisition.id}-${formMode}`}
         orgSlug={orgSlug}

@@ -14,6 +14,7 @@ import { BasicInfoSection } from '@/modules/jobs/components/sections/BasicInfoSe
 import { CandidateRequirementsSection } from '@/modules/jobs/components/sections/CandidateRequirementsSection';
 import { CompensationSection } from '@/modules/jobs/components/sections/CompensationSection';
 import { HiringContextSection } from '@/modules/jobs/components/sections/HiringContextSection';
+import { KnockoutRuleSection } from '@/modules/jobs/components/sections/KnockoutRuleSection';
 import { PostingContentSection } from '@/modules/jobs/components/sections/PostingContentSection';
 import { StickySummaryPanel } from '@/modules/jobs/components/StickySummaryPanel';
 import { useAutoSaveDraft } from '@/modules/jobs/hooks/useAutoSaveDraft';
@@ -77,6 +78,7 @@ function buildDefaultValues(initialData?: JobRequisitionRecord | null): CreateJo
     minExperience: initialData?.minExperience ?? null,
     education: initialData?.education ?? '',
     certifications: initialData?.certifications ?? [],
+    knockoutRule: initialData?.knockoutRule ?? '',
     roleSummary: initialData?.roleSummary ?? '',
     responsibilities: initialData?.responsibilities ?? '',
     requirementsRich: initialData?.requirementsRich ?? '',
@@ -300,6 +302,7 @@ export function CreateJobRequisitionPage({
             <CompensationSection form={form} />
             <CandidateRequirementsSection form={form} />
             <PostingContentSection form={form} readOnly={isReadOnly} />
+            <KnockoutRuleSection form={form} />
           </fieldset>
         </form>
 

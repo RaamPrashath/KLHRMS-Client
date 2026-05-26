@@ -104,3 +104,16 @@ export async function rebuildRequisitionAiAnalysisAction(params: {
   });
   return handleResponse<JobRequisitionAiAnalysis>(res);
 }
+
+export async function reEvaluateRequisitionAction(params: {
+  orgSlug: string;
+  memberId: string;
+  requisitionId: string;
+}): Promise<JobRequisitionAiAnalysis> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const res = await fetch(`${getApiUrl()}/jobs/requisitions/${params.requisitionId}/re-evaluate`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, member.id),
+  });
+  return handleResponse<JobRequisitionAiAnalysis>(res);
+}

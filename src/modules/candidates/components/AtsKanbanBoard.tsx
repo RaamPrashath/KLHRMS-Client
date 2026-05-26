@@ -39,7 +39,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
-import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer';
 import { AtsPipelineTable } from '@/modules/candidates/components/AtsPipelineTable';
 import { KanbanColumn } from '@/modules/candidates/components/KanbanColumn';
 import { StageConfigDrawer } from '@/modules/candidates/components/StageConfigDrawer';
@@ -323,7 +322,6 @@ export function AtsKanbanBoard({
   readonly permissions?: RolePermissions | null;
 }) {
   const router = useRouter();
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [activeApplication, setActiveApplication] = useState<PipelineApplication | null>(null);
   const [hoverStageId, setHoverStageId] = useState<string | null>(null);
   const [addAfterStageId, setAddAfterStageId] = useState<string | null>(null);
@@ -842,7 +840,10 @@ export function AtsKanbanBoard({
   }
 
   function handleOpenCandidate(applicationId: string) {
-    setSelectedApplicationId(applicationId);
+    const slug = currentPosting?.slug;
+    if (slug) {
+      router.push(`/${orgSlug}/candidates/${slug}/${applicationId}`);
+    }
   }
 
   function handleStartInterview(application: PipelineApplication) {
@@ -1245,15 +1246,6 @@ export function AtsKanbanBoard({
         onCreateStage={handleSetupCreateStage}
         onCreateDefault={createSetupDefaultPipeline}
         onImport={importSetupPipeline}
-      />
-      <CandidateDrawer
-        orgSlug={orgSlug}
-        memberId={memberId}
-        applicationId={selectedApplicationId}
-        open={selectedApplicationId !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedApplicationId(null);
-        }}
       />
       <Dialog open={googleConnectOpen} onOpenChange={setGoogleConnectOpen}>
         <DialogContent>

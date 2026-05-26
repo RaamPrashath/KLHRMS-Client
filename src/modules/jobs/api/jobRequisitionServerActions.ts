@@ -3,7 +3,6 @@
 import { headers } from 'next/headers';
 
 import { auth } from '@/lib/auth';
-import { getScope, type RolePermissions } from '@/lib/hrms-roles';
 import { requireOrgMembership } from '@/lib/organizations';
 import {
   createJobRequisitionSchema,
@@ -61,26 +60,13 @@ export async function fetchJobRequisitionsAction(params: {
   viewScope?: string;
 }): Promise<JobRequisitionRecord[]> {
   const { member } = await getCurrentOrgMember(params.orgSlug);
-  const permissions = (member.role?.permissions as RolePermissions | null) ?? null;
-  const jobsViewScope = getScope(permissions, 'jobs', 'view');
-  const jobsApproveScope = getScope(permissions, 'jobs', 'approve');
-
   const queryParams = params.viewScope ? `?view_scope=${encodeURIComponent(params.viewScope)}` : '';
   const res = await fetch(`${getApiUrl()}/jobs/requisitions${queryParams}`, {
     method: 'GET',
     headers: buildHeaders(params.orgSlug, member.id),
     cache: 'no-store',
   });
-  const requisitions = await handleResponse<JobRequisitionRecord[]>(res);
-
-  if (params.viewScope || jobsViewScope === 'organization' || jobsApproveScope === 'organization') {
-    return requisitions;
-  }
-  if (jobsViewScope === 'team' || jobsViewScope === 'department') {
-    return requisitions;
-  }
-
-  throw new Error(JSON.stringify({ status: 403, message: 'you dont have permission' }));
+  return handleResponse<JobRequisitionRecord[]>(res);
 }
 
 export async function createJobRequisitionAction(params: {
@@ -109,6 +95,7 @@ export async function createJobRequisitionAction(params: {
     benefits: parsed.data.benefits || null,
     aboutTeam: parsed.data.aboutTeam || null,
     education: parsed.data.education || null,
+    knockoutRule: parsed.data.knockoutRule?.trim() || null,
   };
 
   const res = await fetch(`${getApiUrl()}/jobs/requisitions`, {
@@ -186,6 +173,7 @@ async function decideJobRequisition(
       hiringReason: parsed.data.hiringReason || null,
       businessJustification: parsed.data.businessJustification || null,
       education: parsed.data.education || null,
+      knockoutRule: parsed.data.knockoutRule?.trim() || null,
     }),
   });
   return handleResponse<JobRequisitionRecord>(res);

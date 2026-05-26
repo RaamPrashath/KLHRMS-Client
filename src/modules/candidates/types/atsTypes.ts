@@ -57,7 +57,7 @@ export interface ResumeYearsExperienceFact {
 
 export interface ResumeSkillEvidence {
   skill: string;
-  normalizedSkill: string;
+  normalizedSkill: string | null;
   evidence: string;
   confidence: number;
 }
@@ -69,6 +69,12 @@ export interface ExtractedResumeFacts {
     evidence: string;
     confidence: number;
   } | null;
+  explicitKnockoutAssessment?: {
+    passed: boolean;
+    evidence: string;
+    confidence: number;
+  } | null;
+  explicitKnockoutRule?: string | null;
   yearsExperience?: ResumeYearsExperienceFact | null;
   skills?: ResumeSkillEvidence[];
   degree?: ResumeEvidenceFact | null;
