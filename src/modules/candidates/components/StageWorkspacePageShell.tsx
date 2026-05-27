@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, ChevronLeft, Inbox, Loader2, Plus, Search, Send, Shuffle, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -19,6 +19,14 @@ import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
@@ -33,6 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer';
@@ -44,7 +53,6 @@ import {
   useCompleteStage,
   useCreateHiringTeam,
   useDistributeStageInterviews,
-  useFetchHiringTeams,
   useInterviewersSearch,
   useMoveInterviewAssignment,
   useReopenStage,
@@ -55,7 +63,6 @@ import {
 } from '@/modules/candidates/hooks/useAtsPipeline';
 import type {
   ApplicationInterviewMeeting,
-  HiringTeam,
   PipelineApplication,
   PipelineStage,
   StageInterviewAssignment,
@@ -77,7 +84,6 @@ interface AssignmentColumnModel {
   title: string;
   interviewer: StageWorkspaceInterviewer | null;
   candidates: StageWorkspaceCandidate[];
-  isBackup?: boolean;
 }
 
 function initials(value: string): string {
@@ -110,15 +116,6 @@ function readActionError(error: unknown, fallback: string): string {
 function isLockedAssignment(candidate: StageWorkspaceCandidate): boolean {
   const status = candidate.currentAssignment?.status;
   return status === 'ACCEPTED' || status === 'SCHEDULED' || status === 'COMPLETED';
-}
-
-function teamMemberToInterviewer(team: HiringTeam): StageWorkspaceInterviewer[] {
-  return team.members.map((member) => ({
-    memberId: member.memberId,
-    name: member.name ?? member.email ?? 'Team member',
-    email: member.email ?? '',
-    department: member.role ?? null,
-  }));
 }
 
 function allocationColumnId(memberId: string): string {
@@ -162,8 +159,6 @@ function workspaceCandidateToApplication(
     pipelineStageId: stage.id,
     currentStage: stage.name,
     candidate: candidate.candidate,
-    score: candidate.score,
-    rating: candidate.rating,
     source: candidate.source,
     appliedDate: candidate.appliedAt,
     lastMovedAt: null,
@@ -196,7 +191,6 @@ function AllocationCard({
   readonly onCompleteInterview?: (
     application: PipelineApplication,
     data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) => void;
@@ -210,7 +204,6 @@ function AllocationCard({
       application={application}
       onOpen={onOpenCandidate}
       meetingEnabled={Boolean(stage.meetingEnabled && application.interviewMeeting)}
-      evaluationCategories={stage.evaluationEnabled ? stage.evaluationCategories : []}
       onStartInterview={onStartInterview}
       onCompleteInterview={onCompleteInterview}
       draggable
@@ -237,7 +230,6 @@ function AssignmentColumn({
   readonly onCompleteInterview: (
     application: PipelineApplication,
     data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     },
   ) => void;
@@ -268,8 +260,8 @@ function AssignmentColumn({
                 <div
                   className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
                   style={{
-                    backgroundColor: column.isBackup ? '#F0F5FF' : '#EEEDFE',
-                    color: column.isBackup ? '#185FA5' : '#534AB7',
+                    backgroundColor: '#EEEDFE',
+                    color: '#534AB7',
                   }}
                 >
                   {initials(column.interviewer.name)}
@@ -280,11 +272,6 @@ function AssignmentColumn({
                   <h3 className="truncate text-sm font-semibold text-neutral-900">
                     {column.title}
                   </h3>
-                  {column.isBackup ? (
-                    <span className="shrink-0 rounded border border-info-border bg-info-bg px-1.5 py-0.5 text-[10px] font-medium text-info-text leading-none">
-                      Backup
-                    </span>
-                  ) : null}
                 </div>
               </div>
             </div>
@@ -430,15 +417,7 @@ export function StageWorkspacePageShell({
   const workspaceQuery = jobSlug ? jobStageWorkspaceQuery : stageWorkspaceQuery;
   const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug, workspaceQuery.data?.jobPosting.id ?? null);
   const distributeInterviews = useDistributeStageInterviews(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
-  const hiringTeamsQuery = useFetchHiringTeams(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null, workspaceQuery.data?.stage.id ?? null);
   const createHiringTeam = useCreateHiringTeam(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
-
-
-
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-  const [customTeamName, setCustomTeamName] = useState('');
-  const [customTeamMembers, setCustomTeamMembers] = useState<StageWorkspaceInterviewer[]>([]);
-  const [backupMembers, setBackupMembers] = useState<StageWorkspaceInterviewer[]>([]);
   const [teamScheduledLocal, setTeamScheduledLocal] = useState('');
   const [teamDurationMinutes, setTeamDurationMinutes] = useState(30);
   const [teamWarnings, setTeamWarnings] = useState<StageInterviewWarning[]>([]);
@@ -450,10 +429,10 @@ export function StageWorkspacePageShell({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'unassigned' | 'assigned'>('all');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [addDialogMode, setAddDialogMode] = useState<'interviewer' | 'backup'>('interviewer');
   const [assignmentTeamId, setAssignmentTeamId] = useState<string | null>(null);
-  const [backupTeamId, setBackupTeamId] = useState<string | null>(null);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+  const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
+  const [completionNote, setCompletionNote] = useState('');
 
   const addTeamMember = useAddHiringTeamMember(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
   const removeTeamMember = useRemoveHiringTeamMember(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);
@@ -467,14 +446,6 @@ export function StageWorkspacePageShell({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const workspace = workspaceQuery.data;
-  const hiringTeams = useMemo(
-    () => hiringTeamsQuery.data?.items ?? [],
-    [hiringTeamsQuery.data?.items],
-  );
-  const selectedTeam = useMemo(
-    () => hiringTeams.find((team) => team.id === selectedTeamId) ?? null,
-    [hiringTeams, selectedTeamId],
-  );
   const selectedApplicationIds = useMemo(
     () => workspace?.candidates
       .filter((candidate) => !isLockedAssignment(candidate))
@@ -482,58 +453,17 @@ export function StageWorkspacePageShell({
     [workspace],
   );
 
-  // On workspace load, populate customTeamMembers / backupMembers from existing workspace teams.
-  // Track which stage we've initialized for so we reset on stage change.
-  const initializedStageRef = useRef<string | null>(null);
-
-  // Reset team-local state whenever the stageId changes
-  const prevStageIdRef = useRef<string | null>(null);
+  // Sync assignmentTeamId from workspace response
   useEffect(() => {
-    const currentStageId = workspace?.stage.id ?? null;
-    if (currentStageId !== prevStageIdRef.current) {
-      prevStageIdRef.current = currentStageId;
-      initializedStageRef.current = null;
-      setAssignmentTeamId('');
-      setBackupTeamId(null);
-      setCustomTeamMembers([]);
-      setBackupMembers([]);
-      setSelectedTeamId('');
+    if (workspace?.assignmentTeamId) {
+      setAssignmentTeamId(workspace.assignmentTeamId);
     }
-  }, [workspace?.stage.id]);
+  }, [workspace?.assignmentTeamId]);
 
-  useEffect(() => {
-    const stageId = workspace?.stage.id;
-    if (!stageId) return;
-    if (initializedStageRef.current === stageId) return;
-
-    const primaryTeam = hiringTeams.find(
-      (team) => team.name === `Workspace-Primary-${stageId}`,
-    );
-    const backupTeam = hiringTeams.find(
-      (team) => team.name === `Workspace-Backup-${stageId}`,
-    );
-
-    if (primaryTeam || backupTeam) {
-      initializedStageRef.current = stageId;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      if (primaryTeam) {
-        setAssignmentTeamId(primaryTeam.id);
-        setCustomTeamMembers(teamMemberToInterviewer(primaryTeam));
-      }
-      if (backupTeam) {
-        setBackupTeamId(backupTeam.id);
-        setBackupMembers(teamMemberToInterviewer(backupTeam));
-      }
-    }, 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [hiringTeams, workspace?.stage.id]);
-
-  const resolvedTeamMembers = useMemo(() => {
-    if (selectedTeam) return teamMemberToInterviewer(selectedTeam);
-    return customTeamMembers;
-  }, [customTeamMembers, selectedTeam]);
+  const teamMembers = useMemo(
+    () => workspace?.teamMembers ?? [],
+    [workspace?.teamMembers],
+  );
 
   const activeCandidate = useMemo(
     () => workspace?.candidates.find((candidate) => candidate.applicationId === activeApplicationId) ?? null,
@@ -563,20 +493,19 @@ export function StageWorkspacePageShell({
     if (!workspace) return [];
 
     // Build primary interviewer columns (in order)
-    const primaryIds = new Set(resolvedTeamMembers.map((m) => m.memberId));
-    const backupIds = new Set(backupMembers.map((m) => m.memberId));
+    const primaryIds = new Set(teamMembers.map((m) => m.memberId));
 
     // Collect any extra interviewers from existing assignments
     const extraInterviewers = new Map<string, StageWorkspaceInterviewer>();
     for (const candidate of workspace.candidates) {
       const memberId = candidate.currentAssignment?.interviewer?.memberId;
       const interviewer = candidate.currentAssignment?.interviewer;
-      if (memberId && interviewer && !primaryIds.has(memberId) && !backupIds.has(memberId)) {
+      if (memberId && interviewer && !primaryIds.has(memberId)) {
         extraInterviewers.set(memberId, interviewer);
       }
     }
 
-    // Column order: Unassigned → Primary interviewers → Extra interviewers → Backups
+    // Column order: Unassigned → Primary interviewers → Extra interviewers
     const columns: AssignmentColumnModel[] = [
       {
         id: 'unassigned',
@@ -584,7 +513,7 @@ export function StageWorkspacePageShell({
         interviewer: null,
         candidates: [],
       },
-      ...resolvedTeamMembers.map((interviewer) => ({
+      ...teamMembers.map((interviewer) => ({
         id: allocationColumnId(interviewer.memberId),
         title: interviewer.name,
         interviewer,
@@ -596,15 +525,6 @@ export function StageWorkspacePageShell({
         interviewer,
         candidates: [],
       })),
-      ...backupMembers
-        .filter((member) => !primaryIds.has(member.memberId))
-        .map((interviewer) => ({
-          id: allocationColumnId(interviewer.memberId),
-          title: interviewer.name,
-          interviewer,
-          isBackup: true,
-          candidates: [],
-        })),
     ];
     const columnsById = new Map(columns.map((column) => [column.id, column]));
 
@@ -656,7 +576,7 @@ export function StageWorkspacePageShell({
     }
 
     return columns;
-  }, [boardAssignments, resolvedTeamMembers, workspace, backupMembers, searchQuery, filterMode]);
+  }, [boardAssignments, teamMembers, workspace, searchQuery, filterMode]);
 
   const warningMap = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -680,21 +600,36 @@ export function StageWorkspacePageShell({
       total,
       assigned: assignedSet.size,
       unassigned: total - assignedSet.size,
-      interviewers: resolvedTeamMembers.length,
+      interviewers: teamMembers.length,
     };
-  }, [boardAssignments, resolvedTeamMembers, workspace]);
+  }, [boardAssignments, teamMembers, workspace]);
 
   const isStageCompleted = Boolean(workspace?.stage.completedAt);
 
+  function handleBackToPipeline() {
+    if (!jobSlug) {
+      router.back();
+      return;
+    }
+
+    const storageKey = `ats-stage-return:${orgSlug}:${jobSlug}:${stageSlug}`;
+    const storedReturnPath = window.sessionStorage.getItem(storageKey);
+    const jobBasePath = `/${orgSlug}/candidates/${jobSlug}`;
+    const isPipelinePath =
+      storedReturnPath === jobBasePath ||
+      storedReturnPath === `${jobBasePath}/kanban` ||
+      storedReturnPath === `${jobBasePath}/table`;
+
+    router.push(isPipelinePath ? storedReturnPath : `${jobBasePath}/kanban`);
+  }
+
   const excludedMemberIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const member of resolvedTeamMembers) ids.add(member.memberId);
-    for (const member of backupMembers) ids.add(member.memberId);
+    for (const member of teamMembers) ids.add(member.memberId);
     return ids;
-  }, [resolvedTeamMembers, backupMembers]);
+  }, [teamMembers]);
 
   async function addCustomTeamMember(interviewer: StageWorkspaceInterviewer) {
-    setSelectedTeamId('');
     setTeamWarnings([]);
     setTeamWarningsReviewed(false);
 
@@ -723,70 +658,13 @@ export function StageWorkspacePageShell({
       return;
     }
 
-    setCustomTeamMembers((current) => (
-      current.some((member) => member.memberId === interviewer.memberId)
-        ? current
-        : [...current, interviewer]
-    ));
-  }
-
-  async function addBackupMember(interviewer: StageWorkspaceInterviewer) {
-    setTeamWarnings([]);
-    setTeamWarningsReviewed(false);
-
-    // Persist to server
-    const stageId = workspace?.stage.id;
-    const jobPostingId = workspace?.jobPosting.id;
-    try {
-      if (!backupTeamId && jobPostingId && stageId) {
-        const created = await createHiringTeam.mutateAsync({
-          jobPostingId,
-          name: `Workspace-Backup-${stageId}`,
-          description: null,
-          stageId,
-          members: [{ memberId: interviewer.memberId }],
-        });
-        setBackupTeamId(created.id);
-      } else if (backupTeamId) {
-        await addTeamMember.mutateAsync({
-          teamId: backupTeamId,
-          data: { memberId: interviewer.memberId },
-        });
-      }
-    } catch {
-      toast.error('Failed to add backup. Please try again.');
-      return;
-    }
-
-    setBackupMembers((current) => (
-      current.some((member) => member.memberId === interviewer.memberId)
-        ? current
-        : [...current, interviewer]
-    ));
-  }
-
-  async function removeBackupMember(memberId: string) {
-    setTeamWarnings([]);
-    setTeamWarningsReviewed(false);
-
-    // Remove from server
-    if (backupTeamId) {
-      try {
-        await removeTeamMember.mutateAsync({ teamId: backupTeamId, memberToRemoveId: memberId });
-      } catch {
-        toast.error('Failed to remove backup. Please try again.');
-        return;
-      }
-    }
-
-    setBackupMembers((current) => current.filter((member) => member.memberId !== memberId));
+    void workspaceQuery.refetch();
   }
 
   async function removeBoardInterviewer(memberId: string) {
     if (!memberId) return;
-    setSelectedTeamId('');
 
-    // Remove from server — try both teams
+    // Remove from server
     if (assignmentTeamId) {
       try {
         await removeTeamMember.mutateAsync({ teamId: assignmentTeamId, memberToRemoveId: memberId });
@@ -795,16 +673,8 @@ export function StageWorkspacePageShell({
         return;
       }
     }
-    if (backupTeamId) {
-      try {
-        await removeTeamMember.mutateAsync({ teamId: backupTeamId, memberToRemoveId: memberId });
-      } catch {
-        // Non-critical — backup removal failure is not blocking
-      }
-    }
 
-    setCustomTeamMembers((current) => current.filter((member) => member.memberId !== memberId));
-    setBackupMembers((current) => current.filter((member) => member.memberId !== memberId));
+    // Remove from local state
     setBoardAssignments((current) => {
       const next = { ...current };
       for (const [applicationId, assignedMemberId] of Object.entries(next)) {
@@ -812,6 +682,8 @@ export function StageWorkspacePageShell({
       }
       return next;
     });
+
+    void workspaceQuery.refetch();
   }
 
   function handleBoardDragStart(event: DragStartEvent) {
@@ -832,7 +704,7 @@ export function StageWorkspacePageShell({
   }
 
   function handleAutoDistributeDraft() {
-    if (!workspace || resolvedTeamMembers.length === 0) {
+    if (!workspace || teamMembers.length === 0) {
       toast.error('Add at least one interviewer first');
       return;
     }
@@ -845,7 +717,7 @@ export function StageWorkspacePageShell({
           ?? candidate.currentAssignment?.interviewer?.memberId
           ?? null;
         if (assignedMemberId) continue;
-        next[candidate.applicationId] = resolvedTeamMembers[index % resolvedTeamMembers.length]?.memberId ?? null;
+        next[candidate.applicationId] = teamMembers[index % teamMembers.length]?.memberId ?? null;
         index += 1;
       }
       return next;
@@ -884,13 +756,11 @@ export function StageWorkspacePageShell({
           interviewerMemberId: newMemberId,
           scheduledStartAt: null,
           durationMinutes: teamDurationMinutes,
-          backupInterviewers: backupMembers.map((member) => member.memberId),
         });
       }
     }
 
     if (newAssignments.length === 0 && moves.length === 0) {
-      toast.error('Assign at least one candidate to an interviewer');
       return;
     }
 
@@ -909,7 +779,6 @@ export function StageWorkspacePageShell({
         totalCount += 1;
       }
       toast.success(`${totalCount} assignment${totalCount === 1 ? '' : 's'} saved`);
-      setBackupMembers([]);
       setBoardAssignments({});
     } catch (error) {
       toast.error(readActionError(error, 'Failed to save assignments'));
@@ -917,24 +786,24 @@ export function StageWorkspacePageShell({
   }
 
   async function handleDistributeTeam() {
-    if (resolvedTeamMembers.length === 0 || !teamScheduledLocal) {
+    if (teamMembers.length === 0 || !teamScheduledLocal) {
       toast.error('Select a date first, then choose interviewers for the shuffle');
       return;
     }
 
     try {
-      let hiringTeamId = selectedTeam?.id ?? '';
+      let hiringTeamId = assignmentTeamId ?? '';
 
       if (!hiringTeamId) {
         const created = await createHiringTeam.mutateAsync({
           jobPostingId: workspace?.jobPosting.id ?? '',
-          name: customTeamName.trim() || `${workspace?.stage.name ?? 'Interview'} shuffle team`,
+          name: `${workspace?.stage.name ?? 'Interview'} shuffle team`,
           description: null,
           stageId: workspace?.stage.id ?? null,
-          members: resolvedTeamMembers.map((member) => ({ memberId: member.memberId })),
+          members: teamMembers.map((member) => ({ memberId: member.memberId })),
         });
         hiringTeamId = created.id;
-        setSelectedTeamId(created.id);
+        setAssignmentTeamId(created.id);
       }
 
       const payload: TeamDistributionRequest = {
@@ -943,7 +812,6 @@ export function StageWorkspacePageShell({
         applicationIds: selectedApplicationIds,
         scheduledStartAt: toIsoFromLocal(teamScheduledLocal),
         durationMinutes: teamDurationMinutes,
-        backupInterviewers: backupMembers.map((member) => member.memberId),
         ignoreWarnings: teamWarningsReviewed,
       };
 
@@ -957,9 +825,6 @@ export function StageWorkspacePageShell({
       }
 
       toast.success(`${result.assignedCount} interview${result.assignedCount === 1 ? '' : 's'} distributed`);
-      setCustomTeamName('');
-      setCustomTeamMembers([]);
-      setBackupMembers([]);
       setTeamScheduledLocal('');
       setTeamDurationMinutes(30);
       setTeamWarnings([]);
@@ -970,6 +835,15 @@ export function StageWorkspacePageShell({
   }
 
   function handleOpenCandidate(applicationId: string) {
+    if (jobSlug) {
+      window.sessionStorage.setItem(
+        `ats-candidate-return:${orgSlug}:${jobSlug}:${applicationId}`,
+        `${window.location.pathname}${window.location.search}`,
+      );
+      router.push(`/${orgSlug}/candidates/${jobSlug}/${applicationId}`);
+      return;
+    }
+
     setSelectedApplicationId(applicationId);
   }
 
@@ -996,20 +870,28 @@ export function StageWorkspacePageShell({
     );
   }
 
-  function handleCompleteInterview(
-    application: PipelineApplication,
-    data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
-      notes?: string | null;
-    },
-  ) {
+  function openCompleteInterviewDialog(application: PipelineApplication) {
+    setCompletingApplication(application);
+    setCompletionNote('');
+  }
+
+  function handleCompleteInterview() {
+    const application = completingApplication;
+    if (!application) return;
     const meeting = application.interviewMeeting;
     if (!meeting?.id) return;
+    const note = completionNote.trim();
 
     completeInterviewMeeting.mutate(
-      { applicationId: application.id, eventId: meeting.id, data },
+      {
+        applicationId: application.id,
+        eventId: meeting.id,
+        data: { notes: note },
+      },
       {
         onSuccess: () => {
+          setCompletingApplication(null);
+          setCompletionNote('');
           void workspaceQuery.refetch();
           toast.success('Interview marked completed');
         },
@@ -1043,7 +925,7 @@ export function StageWorkspacePageShell({
       <div className="mb-6">
           <div className="flex items-center justify-between mt-7">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900" onClick={() => router.back()}>
+              <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900" onClick={handleBackToPipeline}>
                 <ChevronLeft className="size-5" />
               </Button>
               <div>
@@ -1212,27 +1094,11 @@ export function StageWorkspacePageShell({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setAddDialogMode('interviewer');
-                  setAddDialogOpen(true);
-                }}
+                onClick={() => setAddDialogOpen(true)}
                 disabled={isStageCompleted}
               >
                 <Plus className="mr-1.5 size-3.5" />
                 Add Interviewer
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setAddDialogMode('backup');
-                  setAddDialogOpen(true);
-                }}
-                disabled={isStageCompleted}
-              >
-                <Plus className="mr-1.5 size-3.5" />
-                Add Backup
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -1241,7 +1107,7 @@ export function StageWorkspacePageShell({
                 variant="outline"
                 size="sm"
                 onClick={handleAutoDistributeDraft}
-                disabled={resolvedTeamMembers.length === 0 || isStageCompleted}
+                disabled={teamMembers.length === 0 || isStageCompleted}
               >
                 <Shuffle className="mr-1.5 size-3.5" />
                 Auto-distribute
@@ -1287,7 +1153,7 @@ export function StageWorkspacePageShell({
                     onRemove={column.interviewer ? removeBoardInterviewer : undefined}
                     onOpenCandidate={handleOpenCandidate}
                     onStartInterview={handleStartInterview}
-                    onCompleteInterview={handleCompleteInterview}
+                    onCompleteInterview={openCompleteInterviewDialog}
                   />
                 </div>
               ))}
@@ -1318,7 +1184,7 @@ export function StageWorkspacePageShell({
                     jobPostingId={workspace.jobPosting.id}
                     onOpenCandidate={handleOpenCandidate}
                     onStartInterview={handleStartInterview}
-                    onCompleteInterview={handleCompleteInterview}
+                    onCompleteInterview={openCompleteInterviewDialog}
                   />
                 </div>
               ))}
@@ -1327,24 +1193,72 @@ export function StageWorkspacePageShell({
 
           {/* Dialogs */}
           <InterviewerSelectDialog
-            open={addDialogOpen && addDialogMode === 'interviewer'}
+            open={addDialogOpen}
             onOpenChange={(open) => setAddDialogOpen(open)}
             orgSlug={orgSlug}
             memberId={memberId}
-            mode="interviewer"
             onSelect={addCustomTeamMember}
             excludedMemberIds={excludedMemberIds}
           />
-          <InterviewerSelectDialog
-            open={addDialogOpen && addDialogMode === 'backup'}
-            onOpenChange={(open) => setAddDialogOpen(open)}
-            orgSlug={orgSlug}
-            memberId={memberId}
-            mode="backup"
-            onSelect={addBackupMember}
-            excludedMemberIds={excludedMemberIds}
-          />
         </div>
+        <Dialog
+          open={completingApplication !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setCompletingApplication(null);
+              setCompletionNote('');
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-lg rounded-2xl bg-surface p-0 shadow-[var(--shadow-4)]">
+            <DialogHeader className="px-6 pt-6">
+              <DialogTitle className="text-xl font-semibold text-neutral-900">Complete interview</DialogTitle>
+              <DialogDescription>
+                Add a note for this candidate before closing the interview.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 px-6 py-5">
+              {completingApplication ? (
+                <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
+                  <p className="text-sm font-medium text-neutral-900">
+                    {`${completingApplication.candidate.firstName} ${completingApplication.candidate.lastName}`.trim()}
+                  </p>
+                  <p className="text-xs text-neutral-500">{completingApplication.currentStage}</p>
+                </div>
+              ) : null}
+              <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
+                Note
+                <Textarea
+                  value={completionNote}
+                  onChange={(event) => setCompletionNote(event.target.value)}
+                  placeholder="Add a candidate note"
+                  className="min-h-24 resize-none"
+                  maxLength={1000}
+                />
+              </label>
+            </div>
+            <DialogFooter className="border-t border-neutral-100 px-6 py-4">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={completeInterviewMeeting.isPending}
+                onClick={() => {
+                  setCompletingApplication(null);
+                  setCompletionNote('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={completeInterviewMeeting.isPending || completionNote.trim().length === 0}
+                onClick={handleCompleteInterview}
+              >
+                {completeInterviewMeeting.isPending ? 'Completing' : 'Complete'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <CandidateDrawer
           orgSlug={orgSlug}
           memberId={memberId}

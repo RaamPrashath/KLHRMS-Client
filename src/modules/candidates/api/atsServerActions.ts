@@ -35,7 +35,6 @@ import type {
   InterviewerSearchResponse,
   StageInterviewAssignmentResponse,
   StageInterviewWarningResponse,
-  StageEvaluationWorkspace,
   StageWorkspace,
   AcceptInterviewResponse,
   RejectInterviewResponse,
@@ -261,7 +260,6 @@ export async function updateCandidateApplicationDetailAction(params: {
   applicationId: string;
   data: {
     internalNotes?: string | null;
-    rating?: number | null;
     resumeUrl?: string | null;
   };
 }): Promise<CandidateApplicationDetail> {
@@ -356,14 +354,13 @@ export async function completeInterviewMeetingAction(params: {
   applicationId: string;
   eventId: string;
   data?: {
-    values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
     notes?: string | null;
   };
 }): Promise<InterviewMeeting> {
   const res = await fetch(`${getApiUrl()}/candidates/applications/${params.applicationId}/interview-meetings/${params.eventId}/complete`, {
     method: 'POST',
     headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify(params.data ?? { values: [] }),
+    body: JSON.stringify(params.data ?? {}),
   });
   return handleResponse<InterviewMeeting>(res);
 }
@@ -420,31 +417,6 @@ export async function extendPipelineStageAction(params: {
     headers: buildHeaders(params.orgSlug, params.memberId),
   });
   return handleResponse<PipelineStage>(res);
-}
-
-export async function fetchEvaluationWorkspaceAction(params: {
-  orgSlug: string;
-  memberId: string;
-  stageId: string;
-}): Promise<StageEvaluationWorkspace> {
-  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/${params.stageId}/evaluation-workspace`, {
-    method: 'GET',
-    headers: buildHeaders(params.orgSlug, params.memberId),
-    cache: 'no-store',
-  });
-  return handleResponse<StageEvaluationWorkspace>(res);
-}
-
-export async function generateEvaluationWorkspaceAction(params: {
-  orgSlug: string;
-  memberId: string;
-  stageId: string;
-}): Promise<StageEvaluationWorkspace> {
-  const res = await fetch(`${getApiUrl()}/candidates/pipeline/stages/${params.stageId}/evaluation-workspace`, {
-    method: 'POST',
-    headers: buildHeaders(params.orgSlug, params.memberId),
-  });
-  return handleResponse<StageEvaluationWorkspace>(res);
 }
 
 export async function deletePipelineStageAction(params: {

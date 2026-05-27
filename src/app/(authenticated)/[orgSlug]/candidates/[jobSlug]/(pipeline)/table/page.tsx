@@ -3,25 +3,18 @@ import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
-import { StageWorkspacePageShell } from '@/modules/candidates/components/StageWorkspacePageShell';
+import type { RolePermissions } from '@/modules/roles/types/role';
+import { CandidatesJobPageClient } from '../../CandidatesJobPageClient';
 
-export default async function StageWorkspacePage({
+export default async function CandidatesTablePage({
   params,
-  searchParams,
 }: Readonly<{
-  params: Promise<{ orgSlug: string; stageSlug: string }>;
-  searchParams?: Promise<{ jobSlug?: string }>;
+  params: Promise<{ orgSlug: string; jobSlug: string }>;
 }>) {
-  const { orgSlug, stageSlug } = await params;
-  const resolvedSearchParams = await searchParams;
-
-  if (resolvedSearchParams?.jobSlug) {
-    redirect(`/${orgSlug}/candidates/${resolvedSearchParams.jobSlug}/stage/${stageSlug}`);
-  }
-
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) redirect('/login');
 
+  const { orgSlug, jobSlug } = await params;
   let member: Awaited<ReturnType<typeof requireOrgMembership>>['member'];
 
   try {
@@ -31,10 +24,12 @@ export default async function StageWorkspacePage({
   }
 
   return (
-    <StageWorkspacePageShell
+    <CandidatesJobPageClient
       orgSlug={orgSlug}
       memberId={member.id}
-      stageSlug={stageSlug}
+      jobSlug={jobSlug}
+      defaultView="table"
+      permissions={(member.role?.permissions as RolePermissions) ?? null}
     />
   );
 }

@@ -4,9 +4,9 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
 import type { RolePermissions } from '@/modules/roles/types/role';
-import { CandidatesJobPageClient } from '../CandidatesJobPageClient';
+import { CandidatesJobPageClient } from '../../CandidatesJobPageClient';
 
-export default async function CandidatesTablePage({
+export default async function CandidatesKanbanPage({
   params,
 }: Readonly<{
   params: Promise<{ orgSlug: string; jobSlug: string }>;
@@ -28,7 +28,7 @@ export default async function CandidatesTablePage({
       orgSlug={orgSlug}
       memberId={member.id}
       jobSlug={jobSlug}
-      defaultView="table"
+      defaultView="kanban"
       permissions={(member.role?.permissions as RolePermissions) ?? null}
     />
   );

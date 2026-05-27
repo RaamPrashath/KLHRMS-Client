@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,16 +26,17 @@ import {
   UserRound,
   UsersRound,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { CandidateMergedProfile } from '@/modules/candidates/components/CandidateMergedProfile';
 import {
   useCandidateApplicationDetail,
   useCreateCandidateApplicationNote,
@@ -192,48 +192,30 @@ function LinkRow({
   );
 }
 
-function ProfileTab({ detail }: { readonly detail: CandidateApplicationDetail }) {
+function ProfileTab({
+  detail,
+  analysis,
+  isAnalysisLoading,
+  analysisError,
+  retrying,
+  onRetry,
+}: {
+  readonly detail: CandidateApplicationDetail;
+  readonly analysis?: CandidateResumeAnalysis;
+  readonly isAnalysisLoading: boolean;
+  readonly analysisError: Error | null;
+  readonly retrying: boolean;
+  readonly onRetry: () => void;
+}) {
   return (
-    <div className="space-y-7">
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-neutral-900">Candidate dossier</p>
-          <Badge variant={statusTone(detail.status)} className="text-xs">{detail.status}</Badge>
-        </div>
-        <div className="rounded-lg border border-neutral-100 bg-surface px-4">
-          <ProfileField label="Email" icon={Mail} value={detail.candidate.email} />
-          <ProfileField label="Phone" icon={Phone} value={detail.candidate.phone ?? 'Not provided'} />
-          <ProfileField label="Applied" icon={CalendarClock} value={formatDateTime(detail.appliedAt)} />
-          <ProfileField label="Company" icon={BriefcaseBusiness} value={detail.candidate.currentCompany ?? 'Not provided'} />
-          <ProfileField label="Title" icon={UserRound} value={detail.candidate.currentTitle ?? 'Not provided'} />
-          <ProfileField label="Experience" icon={Clock3} value={detail.candidate.totalExperience ?? 'Not provided'} />
-        </div>
-      </section>
-
-      <section>
-        <p className="mb-3 text-sm font-semibold text-neutral-900">Documents and links</p>
-        <div className="rounded-lg border border-neutral-100 bg-surface px-4">
-          <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <FileDown className="size-4 shrink-0 text-neutral-400" />
-              <span className="truncate text-sm font-medium text-neutral-900">Resume</span>
-            </div>
-            {detail.resumeUrl ? (
-              <Button asChild size="sm" variant="ghost" className="h-8 shrink-0 px-2 text-primary">
-                <a href={detail.resumeUrl} target="_blank" rel="noreferrer">
-                  Open
-                  <ExternalLink className="size-3.5" />
-                </a>
-              </Button>
-            ) : (
-              <span className="shrink-0 text-xs text-neutral-500">Not uploaded</span>
-            )}
-          </div>
-          <LinkRow label="LinkedIn" href={detail.candidate.linkedinUrl} icon={LinkIcon} />
-          <LinkRow label="Portfolio" href={detail.candidate.portfolioUrl} icon={FileText} />
-        </div>
-      </section>
-    </div>
+    <CandidateMergedProfile
+      detail={detail}
+      analysis={analysis}
+      isAnalysisLoading={isAnalysisLoading}
+      analysisError={analysisError}
+      retryingAnalysis={retrying}
+      onRetryAnalysis={onRetry}
+    />
   );
 }
 
@@ -288,7 +270,7 @@ function AnalysisStatusPanel({
               ? 'Resume analysis is queued or running in the background.'
               : isFailed
                 ? analysis.lastError ?? 'Resume analysis failed.'
-                : 'AI facts and deterministic score are stored separately from manual recruiter scores.'}
+                : 'AI facts and deterministic score are stored with this application.'}
           </p>
         </div>
         {!isWorking ? (
@@ -551,18 +533,10 @@ function FeedbackTable({ event }: { readonly event: ApplicationInterviewEvent })
   if (feedbacks.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-neutral-200 bg-canvas px-3 py-3 text-sm text-neutral-500">
-        No marks submitted for this interview yet.
+        No feedback notes submitted for this interview yet.
       </div>
     );
   }
-
-  const categories = Array.from(
-    new Map(
-      feedbacks
-        .flatMap((feedback) => feedback.values)
-        .map((value) => [value.categoryId, value]),
-    ).values(),
-  );
 
   return (
     <div className="overflow-hidden rounded-md border border-neutral-100 bg-surface">
@@ -572,10 +546,6 @@ function FeedbackTable({ event }: { readonly event: ApplicationInterviewEvent })
             <tr>
               <th className="px-3 py-2 whitespace-nowrap">Assigned by</th>
               <th className="px-3 py-2 whitespace-nowrap">Status</th>
-              {categories.map((category) => (
-                <th key={category.categoryId} className="px-3 py-2 whitespace-nowrap">{category.categoryName}</th>
-              ))}
-              <th className="px-3 py-2 whitespace-nowrap">Total</th>
               <th className="px-3 py-2 whitespace-nowrap">Notes</th>
             </tr>
           </thead>
@@ -586,15 +556,6 @@ function FeedbackTable({ event }: { readonly event: ApplicationInterviewEvent })
                 <td className="px-3 py-2">
                   <Badge variant={statusTone(feedback.outcome)} className="text-xs">{feedback.outcome}</Badge>
                 </td>
-                {categories.map((category) => {
-                  const value = feedback.values.find((item) => item.categoryId === category.categoryId)?.value;
-                  return (
-                    <td key={category.categoryId} className="px-3 py-2 text-neutral-700 text-xs">
-                      {value === null || value === undefined || value === '' ? '-' : String(value)}
-                    </td>
-                  );
-                })}
-                <td className="px-3 py-2 font-mono text-[12px] text-neutral-900 font-semibold">{feedback.score ?? '-'}</td>
                 <td className="max-w-[12.5rem] px-3 py-2 text-neutral-600 text-xs">{feedback.notes ?? '-'}</td>
               </tr>
             ))}
@@ -786,7 +747,7 @@ function NoteCard({
               </div>
             </div>
           ) : (
-            <p className="whitespace-pre-wrap text-sm leading-6 text-neutral-700">{note.body}</p>
+            <div className="prose prose-sm prose-neutral max-w-none text-sm leading-6 text-neutral-700 [&_p]:my-0 [&_p]:leading-6" dangerouslySetInnerHTML={{ __html: note.body }} />
           )}
         </div>
       </div>
@@ -930,98 +891,135 @@ export function CandidateDetailPage({
     () => detail ? `${detail.candidate.firstName} ${detail.candidate.lastName}`.trim() : 'Candidate',
     [detail],
   );
-  const initials = candidateInitials(candidateName);
-  const imageSrc = detail?.candidate.image?.trim() || null;
-  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
-  const candidateImage = imageSrc && failedImageSrc !== imageSrc ? imageSrc : null;
-  const [activeSection, setActiveSection] = useState<'profile' | 'ats' | 'history' | 'notes'>('profile');
+  const [activeSection, setActiveSection] = useState<'profile' | 'notes' | 'history'>('profile');
+  const fallbackReturnPath = `/${orgSlug}/candidates/${jobSlug}/kanban`;
+  const analysisStatus = resumeAnalysisQuery.data?.status;
+  const analysisIsWorking = analysisStatus === 'PENDING' || analysisStatus === 'PROCESSING' || analysisStatus === 'TEXT_EXTRACTED';
+
+  function handleBackToPipeline() {
+    const storageKey = `ats-candidate-return:${orgSlug}:${jobSlug}:${applicationId}`;
+    const storedReturnPath = window.sessionStorage.getItem(storageKey);
+    const jobBasePath = `/${orgSlug}/candidates/${jobSlug}`;
+    const isPipelinePath =
+      storedReturnPath === jobBasePath ||
+      storedReturnPath === `${jobBasePath}/kanban` ||
+      storedReturnPath === `${jobBasePath}/table` ||
+      Boolean(storedReturnPath?.startsWith(`${jobBasePath}/stage/`));
+
+    router.push(isPipelinePath && storedReturnPath ? storedReturnPath : fallbackReturnPath);
+  }
+
+  function handleRetryResumeAnalysis() {
+    retryResumeAnalysis.mutate(
+      { applicationId },
+      {
+        onSuccess: () => {
+          toast.success('Resume analysis retry started');
+          void resumeAnalysisQuery.refetch();
+        },
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : 'Could not retry analysis');
+        },
+      },
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-canvas">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-surface/95 backdrop-blur border-b border-neutral-100">
-        <div className="flex items-center gap-4 px-6 py-4">
+      <div className="sticky top-0 z-20 border-b border-neutral-100 bg-canvas/95 backdrop-blur">
+        <div className="flex flex-wrap items-center gap-4 px-6 py-4">
           <button
             type="button"
-            onClick={() => router.push(`/${orgSlug}/candidates/${jobSlug}`)}
-            className="flex size-10 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+            onClick={handleBackToPipeline}
+            className="flex size-9 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
             aria-label="Back to candidates"
           >
             <ArrowLeft className="size-5" />
           </button>
           {detailQuery.isLoading ? (
-            <div className="flex items-center gap-4">
-              <Skeleton className="size-14 shrink-0 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-6 w-48 rounded-md" />
-                <Skeleton className="h-4 w-32 rounded-md" />
-              </div>
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-48 rounded-md" />
+              <Skeleton className="h-4 w-32 rounded-md" />
             </div>
           ) : (
-            <div className="flex items-center gap-4">
-              <Avatar className="size-14 shrink-0">
-                <AvatarImage
-                  key={imageSrc ?? 'fallback'}
-                  src={candidateImage ?? undefined}
-                  alt={candidateName}
-                  referrerPolicy="no-referrer"
-                  onError={() => setFailedImageSrc(imageSrc)}
-                />
-                <AvatarFallback className="bg-primary-ghost text-lg font-semibold text-primary">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-2xl font-semibold text-neutral-900">{candidateName}</h1>
-                <p className="text-sm text-neutral-500">{detail?.candidate.email ?? '\u2014'}</p>
-              </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-semibold text-neutral-900">{candidateName}</h1>
+              <p className="truncate text-sm text-neutral-500">{detail?.candidate.email ?? '\u2014'}</p>
             </div>
           )}
         </div>
 
-        {/* Pill-style tab bar */}
-        <div className="px-6 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-3">
           <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
             {([
-              { key: 'profile' as const, label: 'Profile' },
-              { key: 'ats' as const, label: 'ATS Score' },
-              { key: 'history' as const, label: 'History' },
-              { key: 'notes' as const, label: 'Notes' },
-            ]).map((tab) => {
-              const isActive = tab.key === activeSection;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveSection(tab.key)}
-                  aria-pressed={isActive}
-                  className={cn(
-                    'relative inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
-                    isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
-                  )}
-                >
-                  {isActive ? (
-                    <motion.span
-                      layoutId="candidate-detail-tab-pill"
-                      className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
-                      transition={{
-                        type: 'spring',
-                        stiffness: 520,
-                        damping: 36,
-                        mass: 0.65,
-                      }}
-                    />
-                  ) : null}
-                  <span className="relative z-10">{tab.label}</span>
-                </button>
-              );
-            })}
+                { key: 'profile' as const, label: 'Profile' },
+                { key: 'notes' as const, label: 'Notes' },
+                { key: 'history' as const, label: 'History' },
+              ]).map((tab) => {
+                const isActive = tab.key === activeSection;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveSection(tab.key)}
+                    aria-pressed={isActive}
+                    className={cn(
+                      'relative inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-[color,transform] duration-150 ease-out',
+                      isActive ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
+                    )}
+                  >
+                    {isActive ? (
+                      <motion.span
+                        layoutId="candidate-detail-tab-pill"
+                        className="absolute inset-0 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                        transition={{
+                          type: 'spring',
+                          stiffness: 520,
+                          damping: 36,
+                          mass: 0.65,
+                        }}
+                      />
+                    ) : null}
+                    <span className="relative z-10">{tab.label}</span>
+                  </button>
+                );
+              })}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleRetryResumeAnalysis}
+              disabled={!detail || retryResumeAnalysis.isPending || analysisIsWorking}
+            >
+              {retryResumeAnalysis.isPending || analysisIsWorking ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RotateCcw className="size-4" />
+              )}
+              Re-analyze
+            </Button>
+            <Button asChild size="sm" variant="outline" disabled={!detail?.resumeUrl}>
+              <a
+                href={detail?.resumeUrl ?? '#'}
+                target="_blank"
+                rel="noreferrer"
+                aria-disabled={!detail?.resumeUrl}
+              >
+                <FileDown className="size-4" />
+                Resume
+                <ExternalLink className="size-3.5" />
+              </a>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="mx-auto max-w-4xl px-6 py-6">
+      <div className="mx-auto max-w-7xl px-6 py-6">
         {detailQuery.isLoading ? (
           <div className="grid gap-4">
             <Skeleton className="h-12 rounded-xl" />
@@ -1033,29 +1031,13 @@ export function CandidateDetailPage({
         {detail ? (
           <>
             {activeSection === 'profile' ? (
-              <ProfileTab detail={detail} />
-            ) : null}
-
-            {activeSection === 'ats' ? (
-              <AtsScoreTab
+              <ProfileTab
+                detail={detail}
                 analysis={resumeAnalysisQuery.data}
-                isLoading={resumeAnalysisQuery.isLoading}
-                error={resumeAnalysisQuery.error}
+                isAnalysisLoading={resumeAnalysisQuery.isLoading}
+                analysisError={resumeAnalysisQuery.error}
                 retrying={retryResumeAnalysis.isPending}
-                onRetry={() => {
-                  retryResumeAnalysis.mutate(
-                    { applicationId },
-                    {
-                      onSuccess: () => {
-                        toast.success('Resume analysis retry started');
-                        void resumeAnalysisQuery.refetch();
-                      },
-                      onError: (error) => {
-                        toast.error(error instanceof Error ? error.message : 'Could not retry analysis');
-                      },
-                    },
-                  );
-                }}
+                onRetry={handleRetryResumeAnalysis}
               />
             ) : null}
 

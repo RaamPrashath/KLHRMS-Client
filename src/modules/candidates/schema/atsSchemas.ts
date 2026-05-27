@@ -10,47 +10,15 @@ export const createPipelineStageSchema = z.object({
   name: z.string().trim().min(1, 'Stage name is required').max(50),
   afterStageId: z.string().min(1).optional().nullable(),
   stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).default('DEFAULT'),
-  evaluationEnabled: z.boolean().default(false),
-  sheetEnabled: z.boolean().default(false),
-  evaluationType: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).optional().nullable(),
-  evaluationIncludeTotal: z.boolean().default(false),
-  evaluationIncludeAnalysis: z.boolean().default(false),
   dueDate: z.string().datetime().optional().nullable(),
-  evaluationCategories: z
-    .array(
-      z.object({
-        id: z.string().min(1).optional().nullable(),
-        name: z.string().trim().min(1, 'Category name is required').max(120),
-        type: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).default('NUMERIC'),
-        maxScore: z.number().int().min(1).optional().nullable(),
-        order: z.number().int().min(1).optional(),
-      }),
-    )
-    .default([]),
 });
 
 export const updatePipelineStageSchema = z.object({
   name: z.string().trim().min(1, 'Stage name is required').max(50).optional(),
   order: z.number().optional(),
   stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).optional(),
-  evaluationEnabled: z.boolean().optional(),
-  sheetEnabled: z.boolean().optional(),
-  evaluationType: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).optional().nullable(),
-  evaluationIncludeTotal: z.boolean().optional(),
-  evaluationIncludeAnalysis: z.boolean().optional(),
   dueDate: z.string().datetime().optional().nullable(),
   dueDateEnabled: z.boolean().optional(),
-  evaluationCategories: z
-    .array(
-      z.object({
-        id: z.string().min(1).optional().nullable(),
-        name: z.string().trim().min(1, 'Category name is required').max(120),
-        type: z.enum(['NUMERIC', 'TEXT', 'CHECKBOX']).default('NUMERIC'),
-        maxScore: z.number().int().min(1).optional().nullable(),
-        order: z.number().int().min(1).optional(),
-      }),
-    )
-    .optional(),
 });
 
 export const extendPipelineStageSchema = z.object({
@@ -79,7 +47,6 @@ export const stageInterviewAssignmentSchema = z.object({
   scheduledStartAt: z.string().datetime().optional().nullable(),
   durationMinutes: z.number().int().min(15).max(240).default(30),
   meetLink: z.string().url().max(2048).optional().nullable(),
-  backupInterviewers: z.array(z.string().min(1)).default([]),
 });
 
 export const stageInterviewAssignmentRequestSchema = z.object({
@@ -92,17 +59,14 @@ export const stageInterviewWarningRequestSchema = z.object({
   jobPostingId: z.string().optional(),
 });
 
+export const proposedSlotSchema = z.object({
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime(),
+});
+
 export const acceptInterviewSchema = z.object({
-  scheduledStartAt: z.string().datetime().optional().nullable(),
+  proposedSlots: z.array(proposedSlotSchema).min(1, 'At least one slot is required'),
   durationMinutes: z.number().int().min(15).max(240).default(30),
-}).superRefine((value, ctx) => {
-  if (value.scheduledStartAt && new Date(value.scheduledStartAt).getTime() < Date.now()) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['scheduledStartAt'],
-      message: 'Interview cannot be scheduled in the past',
-    });
-  }
 });
 
 export interface MoveApplicationStageInput {
@@ -110,40 +74,20 @@ export interface MoveApplicationStageInput {
   note?: string | null;
 }
 
-export interface StageEvaluationCategoryInput {
-  id?: string | null;
-  name: string;
-  type: 'NUMERIC' | 'TEXT' | 'CHECKBOX';
-  maxScore?: number | null;
-  order?: number;
-}
-
 export interface CreatePipelineStageInput {
   jobPostingId: string;
   name: string;
   afterStageId?: string | null;
   stageType: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
-  evaluationEnabled: boolean;
-  sheetEnabled?: boolean;
-  evaluationType?: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
-  evaluationIncludeTotal: boolean;
-  evaluationIncludeAnalysis: boolean;
   dueDate?: string | null;
-  evaluationCategories: StageEvaluationCategoryInput[];
 }
 
 export interface UpdatePipelineStageInput {
   name?: string;
   order?: number;
   stageType?: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
-  evaluationEnabled?: boolean;
-  sheetEnabled?: boolean;
-  evaluationType?: 'NUMERIC' | 'TEXT' | 'CHECKBOX' | null;
-  evaluationIncludeTotal?: boolean;
-  evaluationIncludeAnalysis?: boolean;
   dueDate?: string | null;
   dueDateEnabled?: boolean;
-  evaluationCategories?: StageEvaluationCategoryInput[];
 }
 
 export interface ExtendPipelineStageInput {
@@ -171,10 +115,15 @@ export interface StageInterviewAssignmentInput {
   scheduledStartAt?: string | null;
   durationMinutes: number;
   meetLink?: string | null;
-  backupInterviewers?: string[];
+
+}
+
+export interface ProposedSlotInput {
+  startTime: string;
+  endTime: string;
 }
 
 export interface AcceptInterviewInput {
-  scheduledStartAt?: string | null;
+  proposedSlots: ProposedSlotInput[];
   durationMinutes: number;
 }

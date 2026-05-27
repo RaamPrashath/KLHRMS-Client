@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, CalendarDays, ChevronLeft, FileSpreadsheet, Loader2, Search } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CalendarPlus, ChevronLeft, Loader2, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -435,7 +435,7 @@ export function AtsInterviewWorkspacePage({
                     <p className="text-xs text-neutral-500">Paste a meeting link or connect Google Calendar to auto-create.</p>
                   </div>
                   <Button type="button" variant="outline" size="sm" disabled={isConnectingGoogle} onClick={connectGoogle}>
-                    <FileSpreadsheet className="mr-1.5 size-4" />
+                    <CalendarPlus className="mr-1.5 size-4" />
                     {isConnectingGoogle ? 'Connecting…' : 'Connect Google'}
                   </Button>
                 </div>

@@ -6,7 +6,7 @@ import { requireOrgMembership } from '@/lib/organizations';
 import { AtsPipelineSectionLayout } from '@/modules/candidates/components/AtsPipelineSectionLayout';
 import type { RolePermissions } from '@/modules/roles/types/role';
 
-export default async function CandidatesJobLayout({
+export default async function CandidatesPipelineLayout({
   children,
   params,
 }: Readonly<{

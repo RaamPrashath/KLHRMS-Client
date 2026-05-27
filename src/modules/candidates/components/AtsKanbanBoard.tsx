@@ -12,7 +12,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { FileSpreadsheet, KanbanSquare, List, ShieldAlert, Sparkles } from 'lucide-react';
+import { CalendarPlus, KanbanSquare, List, ShieldAlert, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import { AtsPipelineTable } from '@/modules/candidates/components/AtsPipelineTable';
@@ -72,7 +73,6 @@ import type { PipelineApplication, PipelineStage } from '@/modules/candidates/ty
 import type { CreatePipelineStageInput as SetupCreatePipelineStageInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import type { RolePermissions } from '@/modules/roles/types/role';
 
-const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
 const DRAG_EDGE_SCROLL_THRESHOLD = 40;
@@ -99,7 +99,6 @@ function matchesApplicationSearch(application: PipelineApplication, stageName: s
     application.source,
     application.currentStage,
     stageName,
-    application.score?.toString(),
     application.aiScore?.toString(),
     application.aiAnalysisStatus,
     application.isFlaggedForCheating ? 'flagged suspicious hidden text' : null,
@@ -139,25 +138,17 @@ function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineSt
   return {
     name: data.name,
     stageType: data.stageType,
-    evaluationEnabled: data.evaluationEnabled,
-    sheetEnabled: data.sheetEnabled,
-    evaluationType: data.evaluationType,
-    evaluationIncludeTotal: data.evaluationIncludeTotal,
-    evaluationIncludeAnalysis: data.evaluationIncludeAnalysis,
     dueDate: data.dueDate,
     dueDateEnabled: Boolean(data.dueDate),
-    evaluationCategories: data.evaluationCategories,
   };
 }
 
 function actionNeedsGoogle(action: PendingGoogleAction): boolean {
-  if (action.kind === 'create-interview' || action.kind === 'reschedule-interview') return true;
-  return action.data.evaluationEnabled === true;
+  return action.kind === 'create-interview' || action.kind === 'reschedule-interview';
 }
 
-function requiredGoogleScope(action: PendingGoogleAction): string {
-  if (action.kind === 'create-interview' || action.kind === 'reschedule-interview') return GOOGLE_CALENDAR_SCOPE;
-  return GOOGLE_SHEETS_SCOPE;
+function requiredGoogleScope(_action: PendingGoogleAction): string {
+  return GOOGLE_CALENDAR_SCOPE;
 }
 
 function permissionErrorForAction(action: PendingGoogleAction, permissions?: RolePermissions | null): string | null {
@@ -375,6 +366,8 @@ export function AtsKanbanBoard({
   const [selectedHour, setSelectedHour] = useState<string>('');
   const [selectedMinute, setSelectedMinute] = useState<string>('');
   const [durationMinutes, setDurationMinutes] = useState<number>(30);
+  const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
+  const [completionNote, setCompletionNote] = useState('');
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const dragPointerXRef = useRef<number | null>(null);
   const dragEdgeDirectionRef = useRef<-1 | 0 | 1>(0);
@@ -620,19 +613,7 @@ export function AtsKanbanBoard({
         name: data.name,
         afterStageId: stages[0]?.id ?? null,
         stageType: data.stageType ?? 'DEFAULT',
-        evaluationEnabled: data.evaluationEnabled ?? false,
-        sheetEnabled: data.sheetEnabled ?? false,
-        evaluationType: data.evaluationType ?? null,
-        evaluationIncludeTotal: data.evaluationIncludeTotal ?? false,
-        evaluationIncludeAnalysis: data.evaluationIncludeAnalysis ?? false,
         dueDate: data.dueDate ?? null,
-        evaluationCategories: (data.evaluationCategories ?? []).map((category, index) => ({
-          id: category.id ?? null,
-          name: category.name,
-          type: category.type ?? 'NUMERIC',
-          maxScore: category.maxScore ?? undefined,
-          order: category.order ?? index + 1,
-        })),
       },
     });
   }
@@ -779,18 +760,28 @@ export function AtsKanbanBoard({
     }
   }
 
-  function markInterviewCompleted(
-    application: PipelineApplication,
-    data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
-      notes?: string | null;
-    },
-  ) {
+  function openCompleteInterviewDialog(application: PipelineApplication) {
+    setCompletingApplication(application);
+    setCompletionNote('');
+  }
+
+  function markInterviewCompleted() {
+    const application = completingApplication;
+    if (!application) return;
     if (!application.interviewMeeting?.id) return;
+    const note = completionNote.trim();
     completeInterviewMeeting.mutate(
-      { applicationId: application.id, eventId: application.interviewMeeting.id, data },
       {
-        onSuccess: () => toast.success('Interview marked completed'),
+        applicationId: application.id,
+        eventId: application.interviewMeeting.id,
+        data: { notes: note },
+      },
+      {
+        onSuccess: () => {
+          setCompletingApplication(null);
+          setCompletionNote('');
+          toast.success('Interview marked completed');
+        },
         onError: (error) => toast.error(readActionError(error, 'Failed to complete interview')),
       },
     );
@@ -820,28 +811,24 @@ export function AtsKanbanBoard({
     }
   }
 
-  function openEvaluationWorkspace(stage: PipelineStage) {
-    if (!stage.evaluationWorkspace?.googleSpreadsheetUrl) {
-      toast.error('Evaluation sheet is still being prepared');
-      return;
-    }
-    const url = stage.evaluationWorkspace.googleSheetId === null
-      ? stage.evaluationWorkspace.googleSpreadsheetUrl
-      : `${stage.evaluationWorkspace.googleSpreadsheetUrl}#gid=${stage.evaluationWorkspace.googleSheetId}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }
-
   function openStageWorkspace(stage: PipelineStage) {
-    const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/candidates/${currentPosting.slug}` : `/${orgSlug}/candidates`);
-    const jobContext = basePath.endsWith('/stage') && currentPosting?.slug
-      ? `?jobSlug=${encodeURIComponent(currentPosting.slug)}`
-      : '';
-    router.push(`${basePath}/${stage.slug}${jobContext}`);
+    const basePath = pipelineBasePath ?? (currentPosting?.slug ? `/${orgSlug}/candidates/${currentPosting.slug}/stage` : `/${orgSlug}/candidates/stage`);
+    if (currentPosting?.slug) {
+      window.sessionStorage.setItem(
+        `ats-stage-return:${orgSlug}:${currentPosting.slug}:${stage.slug}`,
+        `${window.location.pathname}${window.location.search}`,
+      );
+    }
+    router.push(`${basePath}/${stage.slug}`);
   }
 
   function handleOpenCandidate(applicationId: string) {
     const slug = currentPosting?.slug;
     if (slug) {
+      window.sessionStorage.setItem(
+        `ats-candidate-return:${orgSlug}:${slug}:${applicationId}`,
+        `${window.location.pathname}${window.location.search}`,
+      );
       router.push(`/${orgSlug}/candidates/${slug}/${applicationId}`);
     }
   }
@@ -869,9 +856,25 @@ export function AtsKanbanBoard({
     );
   }
 
-  function handleAcceptInterview(_applicationId: string, eventId: string) {
+  function handleAcceptInterview(applicationId: string, eventId: string) {
+    const application = boardQuery.data?.stages
+      .flatMap((stage) => stage.applications)
+      .find((item) => item.id === applicationId);
+    const start = application?.currentAssignment?.scheduledStartAt
+      ? new Date(application.currentAssignment.scheduledStartAt)
+      : new Date(Date.now() + 60 * 60 * 1000);
+    const end = application?.currentAssignment?.scheduledEndAt
+      ? new Date(application.currentAssignment.scheduledEndAt)
+      : new Date(start.getTime() + 30 * 60_000);
+
     acceptInterview.mutate(
-      { eventId, data: { scheduledStartAt: undefined, durationMinutes: 30 } },
+      {
+        eventId,
+        data: {
+          proposedSlots: [{ startTime: start.toISOString(), endTime: end.toISOString() }],
+          durationMinutes: Math.max(15, Math.round((end.getTime() - start.getTime()) / 60_000)),
+        },
+      },
       {
         onSuccess: () => {
           toast.success('Interview accepted');
@@ -1098,9 +1101,8 @@ export function AtsKanbanBoard({
               onMoveLeft={(item) => moveStage(item, -1)}
               onMoveRight={(item) => moveStage(item, 1)}
               onOpenStageWorkspace={openStageWorkspace}
-              onOpenEvaluationWorkspace={openEvaluationWorkspace}
               onScheduleInterview={openScheduleInterview}
-              onCompleteInterview={markInterviewCompleted}
+              onCompleteInterview={openCompleteInterviewDialog}
               onStartInterview={handleStartInterview}
               onAcceptInterview={handleAcceptInterview}
               onRejectInterview={handleRejectInterview}
@@ -1189,9 +1191,8 @@ export function AtsKanbanBoard({
                   onMoveLeft={(item) => moveStage(item, -1)}
                   onMoveRight={(item) => moveStage(item, 1)}
                   onOpenStageWorkspace={openStageWorkspace}
-                  onOpenEvaluationWorkspace={openEvaluationWorkspace}
                   onScheduleInterview={openScheduleInterview}
-                  onCompleteInterview={markInterviewCompleted}
+                  onCompleteInterview={openCompleteInterviewDialog}
                   onStartInterview={handleStartInterview}
                   onAcceptInterview={handleAcceptInterview}
                   onRejectInterview={handleRejectInterview}
@@ -1251,17 +1252,11 @@ export function AtsKanbanBoard({
         <DialogContent>
           <DialogHeader>
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary-ghost text-primary">
-              <FileSpreadsheet className="size-5" />
+              <CalendarPlus className="size-5" />
             </div>
-            <DialogTitle>
-              {pendingGoogleAction?.kind === 'create-interview' || pendingGoogleAction?.kind === 'reschedule-interview'
-                ? 'Connect Google Calendar'
-                : 'Connect Google Sheets'}
-            </DialogTitle>
+            <DialogTitle>Connect Google Calendar</DialogTitle>
             <DialogDescription>
-              {pendingGoogleAction?.kind === 'create-interview' || pendingGoogleAction?.kind === 'reschedule-interview'
-                ? 'Interview meetings need Google Calendar access to create a Meet link and email the candidate.'
-                : 'Evaluation workspaces need Google Sheets access. After Google connects, this action will continue automatically.'}
+              Interview meetings need Google Calendar access to create a Meet link and email the candidate.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1429,6 +1424,64 @@ export function AtsKanbanBoard({
               </DialogFooter>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={completingApplication !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCompletingApplication(null);
+            setCompletionNote('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg rounded-2xl bg-surface p-0 shadow-[var(--shadow-4)]">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle className="text-xl font-semibold text-neutral-900">Complete interview</DialogTitle>
+            <DialogDescription>
+              Add a note for this candidate before closing the interview.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 px-6 py-5">
+            {completingApplication ? (
+              <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
+                <p className="text-sm font-medium text-neutral-900">
+                  {`${completingApplication.candidate.firstName} ${completingApplication.candidate.lastName}`.trim()}
+                </p>
+                <p className="text-xs text-neutral-500">{completingApplication.currentStage}</p>
+              </div>
+            ) : null}
+            <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
+              Note
+              <Textarea
+                value={completionNote}
+                onChange={(event) => setCompletionNote(event.target.value)}
+                placeholder="Add a candidate note"
+                className="min-h-24 resize-none"
+                maxLength={1000}
+              />
+            </label>
+          </div>
+          <DialogFooter className="border-t border-neutral-100 px-6 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={completeInterviewMeeting.isPending}
+              onClick={() => {
+                setCompletingApplication(null);
+                setCompletionNote('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={completeInterviewMeeting.isPending || completionNote.trim().length === 0}
+              onClick={markInterviewCompleted}
+            >
+              {completeInterviewMeeting.isPending ? 'Completing' : 'Complete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

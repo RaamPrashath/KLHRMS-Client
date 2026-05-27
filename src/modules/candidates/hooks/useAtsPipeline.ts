@@ -23,7 +23,6 @@ import {
   extendPipelineStageAction,
   fetchCandidateApplicationDetailAction,
   fetchCandidateResumeAnalysisAction,
-  fetchEvaluationWorkspaceAction,
   fetchHiringTeamsAction,
   fetchMyInterviewsAction,
   fetchPipelineBoardAction,
@@ -32,7 +31,6 @@ import {
   fetchStageWorkspaceAction,
   fetchStageWorkspaceByJobSlugAction,
   createHiringTeamAction,
-  generateEvaluationWorkspaceAction,
   moveApplicationStageAction,
   previewStageInterviewWarningsAction,
   removeHiringTeamMemberAction,
@@ -53,7 +51,6 @@ import type {
   PipelineBoard,
   PipelineJobPosting,
   PipelineStage,
-  StageEvaluationWorkspace,
   InterviewMeeting,
   InterviewerSearchResponse,
   ReshuffleRequest,
@@ -222,7 +219,7 @@ export function useUpdateCandidateApplicationDetail(orgSlug: string, memberId: s
   return useMutation({
     mutationFn: (params: {
       applicationId: string;
-      data: { internalNotes?: string | null; rating?: number | null; resumeUrl?: string | null };
+      data: { internalNotes?: string | null; resumeUrl?: string | null };
     }) =>
       updateCandidateApplicationDetailAction({
         orgSlug,
@@ -421,7 +418,6 @@ export function useCompleteInterviewMeeting(
     applicationId: string;
     eventId: string;
     data?: {
-      values?: Array<{ categoryId: string; value: string | number | boolean | null }>;
       notes?: string | null;
     };
   };
@@ -555,45 +551,6 @@ export function useExtendPipelineStage(orgSlug: string, memberId: string, jobPos
   });
 }
 
-export function useEvaluationWorkspace(
-  orgSlug: string,
-  memberId: string,
-  stageId: string | null,
-) {
-  return useQuery<StageEvaluationWorkspace, Error>({
-    queryKey: ['ats-evaluation-workspace', orgSlug, stageId],
-    queryFn: () =>
-      fetchEvaluationWorkspaceAction({
-        orgSlug,
-        memberId,
-        stageId: stageId ?? '',
-      }),
-    enabled: !!orgSlug && !!memberId && !!stageId,
-    retry: false,
-  });
-}
-
-export function useGenerateEvaluationWorkspace(
-  orgSlug: string,
-  memberId: string,
-  jobPostingId: string | null,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (stageId: string) =>
-      generateEvaluationWorkspaceAction({ orgSlug, memberId, stageId }),
-    onSuccess: (workspace) => {
-      queryClient.setQueryData(
-        ['ats-evaluation-workspace', orgSlug, workspace.stageId],
-        workspace,
-      );
-      if (jobPostingId) {
-        queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, jobPostingId) });
-      }
-    },
-  });
-}
-
 export function useDeletePipelineStage(orgSlug: string, memberId: string, jobPostingId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -687,10 +644,10 @@ export function useRejectInterview(orgSlug: string, memberId: string) {
     mutationFn: (args) => rejectInterviewAction({ orgSlug, memberId, ...args }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
-      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
-      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug'] });
-      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
-      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'], refetchType: 'all' });
     },
   });
 }
