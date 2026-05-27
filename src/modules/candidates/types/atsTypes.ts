@@ -62,6 +62,11 @@ export interface ResumeSkillEvidence {
   confidence: number;
 }
 
+export interface ResumeProfileSection {
+  title: string;
+  bullets: string[];
+}
+
 export interface ExtractedResumeFacts {
   candidateName?: ResumeEvidenceFact | null;
   targetRoleAlignment?: {
@@ -79,6 +84,13 @@ export interface ExtractedResumeFacts {
   skills?: ResumeSkillEvidence[];
   degree?: ResumeEvidenceFact | null;
   certifications?: ResumeEvidenceFact[];
+  recommendationSummary?: string | null;
+  professionalExperience?: ResumeProfileSection[];
+  projects?: ResumeProfileSection[];
+  achievements?: string[];
+  educationDetails?: ResumeProfileSection[];
+  certificationDetails?: string[];
+  additionalSections?: ResumeProfileSection[];
   warnings?: string[];
   overallConfidence?: number;
   rulesVersion?: string;
@@ -357,10 +369,17 @@ export interface ReshuffleResponse {
   warnings: StageInterviewWarning[];
 }
 
+export interface ProposedSlot {
+  id: string;
+  startTime: string;
+  endTime: string;
+}
+
 export interface AcceptInterviewResponse {
   eventId: string;
   status: string;
   meeting: InterviewMeeting | null;
+  candidateToken: string | null;
 }
 
 export interface RejectInterviewResponse {
@@ -386,6 +405,7 @@ export interface MyInterview {
   isBackup: boolean;
   meetingUrl: string | null;
   stageDueDate: string | null;
+  proposedSlots: ProposedSlot[];
 }
 
 export interface MyInterviewListResponse {

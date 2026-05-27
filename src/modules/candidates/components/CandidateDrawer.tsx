@@ -41,6 +41,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { CandidateMergedProfile } from '@/modules/candidates/components/CandidateMergedProfile';
 import {
   useCandidateApplicationDetail,
   useCreateCandidateApplicationNote,
@@ -196,48 +197,30 @@ function LinkRow({
   );
 }
 
-function ProfileTab({ detail }: { readonly detail: CandidateApplicationDetail }) {
+function ProfileTab({
+  detail,
+  analysis,
+  isAnalysisLoading,
+  analysisError,
+  retrying,
+  onRetry,
+}: {
+  readonly detail: CandidateApplicationDetail;
+  readonly analysis?: CandidateResumeAnalysis;
+  readonly isAnalysisLoading: boolean;
+  readonly analysisError: Error | null;
+  readonly retrying: boolean;
+  readonly onRetry: () => void;
+}) {
   return (
-    <div className="space-y-7">
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-neutral-900">Candidate dossier</p>
-          <Badge variant={statusTone(detail.status)} className="text-xs">{detail.status}</Badge>
-        </div>
-        <div className="rounded-lg border border-neutral-100 bg-surface px-4">
-          <ProfileField label="Email" icon={Mail} value={detail.candidate.email} />
-          <ProfileField label="Phone" icon={Phone} value={detail.candidate.phone ?? 'Not provided'} />
-          <ProfileField label="Applied" icon={CalendarClock} value={formatDateTime(detail.appliedAt)} />
-          <ProfileField label="Company" icon={BriefcaseBusiness} value={detail.candidate.currentCompany ?? 'Not provided'} />
-          <ProfileField label="Title" icon={UserRound} value={detail.candidate.currentTitle ?? 'Not provided'} />
-          <ProfileField label="Experience" icon={Clock3} value={detail.candidate.totalExperience ?? 'Not provided'} />
-        </div>
-      </section>
-
-      <section>
-        <p className="mb-3 text-sm font-semibold text-neutral-900">Documents and links</p>
-        <div className="rounded-lg border border-neutral-100 bg-surface px-4">
-          <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <FileDown className="size-4 shrink-0 text-neutral-400" />
-              <span className="truncate text-sm font-medium text-neutral-900">Resume</span>
-            </div>
-            {detail.resumeUrl ? (
-              <Button asChild size="sm" variant="ghost" className="h-8 shrink-0 px-2 text-primary">
-                <a href={detail.resumeUrl} target="_blank" rel="noreferrer">
-                  Open
-                  <ExternalLink className="size-3.5" />
-                </a>
-              </Button>
-            ) : (
-              <span className="shrink-0 text-xs text-neutral-500">Not uploaded</span>
-            )}
-          </div>
-          <LinkRow label="LinkedIn" href={detail.candidate.linkedinUrl} icon={LinkIcon} />
-          <LinkRow label="Portfolio" href={detail.candidate.portfolioUrl} icon={FileText} />
-        </div>
-      </section>
-    </div>
+    <CandidateMergedProfile
+      detail={detail}
+      analysis={analysis}
+      isAnalysisLoading={isAnalysisLoading}
+      analysisError={analysisError}
+      retryingAnalysis={retrying}
+      onRetryAnalysis={onRetry}
+    />
   );
 }
 
@@ -769,7 +752,7 @@ function NoteCard({
               </div>
             </div>
           ) : (
-            <p className="whitespace-pre-wrap text-sm leading-6 text-neutral-700">{note.body}</p>
+            <div className="prose prose-sm prose-neutral max-w-none text-sm leading-6 text-neutral-700 [&_p]:my-0 [&_p]:leading-6" dangerouslySetInnerHTML={{ __html: note.body }} />
           )}
         </div>
       </div>
@@ -918,7 +901,7 @@ export function CandidateDrawer({
   const imageSrc = detail?.candidate.image?.trim() || null;
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
   const candidateImage = imageSrc && failedImageSrc !== imageSrc ? imageSrc : null;
-  const [activeSection, setActiveSection] = useState<'profile' | 'ats' | 'history' | 'notes'>('profile');
+  const [activeSection, setActiveSection] = useState<'profile' | 'notes' | 'history'>('profile');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -959,9 +942,8 @@ export function CandidateDrawer({
               <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
                 {([
                   { key: 'profile' as const, label: 'Profile' },
-                  { key: 'ats' as const, label: 'ATS Score' },
-                  { key: 'history' as const, label: 'History' },
                   { key: 'notes' as const, label: 'Notes' },
+                  { key: 'history' as const, label: 'History' },
                 ]).map((tab) => {
                   const isActive = tab.key === activeSection;
                   return (
@@ -996,16 +978,11 @@ export function CandidateDrawer({
 
             {activeSection === 'profile' ? (
               <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-                <ProfileTab detail={detail} />
-              </div>
-            ) : null}
-
-            {activeSection === 'ats' ? (
-              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-                <AtsScoreTab
+                <ProfileTab
+                  detail={detail}
                   analysis={resumeAnalysisQuery.data}
-                  isLoading={resumeAnalysisQuery.isLoading}
-                  error={resumeAnalysisQuery.error}
+                  isAnalysisLoading={resumeAnalysisQuery.isLoading}
+                  analysisError={resumeAnalysisQuery.error}
                   retrying={retryResumeAnalysis.isPending}
                   onRetry={() => {
                     if (!applicationId) return;

@@ -59,17 +59,14 @@ export const stageInterviewWarningRequestSchema = z.object({
   jobPostingId: z.string().optional(),
 });
 
+export const proposedSlotSchema = z.object({
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime(),
+});
+
 export const acceptInterviewSchema = z.object({
-  scheduledStartAt: z.string().datetime().optional().nullable(),
+  proposedSlots: z.array(proposedSlotSchema).min(1, 'At least one slot is required'),
   durationMinutes: z.number().int().min(15).max(240).default(30),
-}).superRefine((value, ctx) => {
-  if (value.scheduledStartAt && new Date(value.scheduledStartAt).getTime() < Date.now()) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['scheduledStartAt'],
-      message: 'Interview cannot be scheduled in the past',
-    });
-  }
 });
 
 export interface MoveApplicationStageInput {
@@ -121,7 +118,12 @@ export interface StageInterviewAssignmentInput {
 
 }
 
+export interface ProposedSlotInput {
+  startTime: string;
+  endTime: string;
+}
+
 export interface AcceptInterviewInput {
-  scheduledStartAt?: string | null;
+  proposedSlots: ProposedSlotInput[];
   durationMinutes: number;
 }

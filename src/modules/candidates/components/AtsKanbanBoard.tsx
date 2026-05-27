@@ -856,9 +856,25 @@ export function AtsKanbanBoard({
     );
   }
 
-  function handleAcceptInterview(_applicationId: string, eventId: string) {
+  function handleAcceptInterview(applicationId: string, eventId: string) {
+    const application = boardQuery.data?.stages
+      .flatMap((stage) => stage.applications)
+      .find((item) => item.id === applicationId);
+    const start = application?.currentAssignment?.scheduledStartAt
+      ? new Date(application.currentAssignment.scheduledStartAt)
+      : new Date(Date.now() + 60 * 60 * 1000);
+    const end = application?.currentAssignment?.scheduledEndAt
+      ? new Date(application.currentAssignment.scheduledEndAt)
+      : new Date(start.getTime() + 30 * 60_000);
+
     acceptInterview.mutate(
-      { eventId, data: { scheduledStartAt: undefined, durationMinutes: 30 } },
+      {
+        eventId,
+        data: {
+          proposedSlots: [{ startTime: start.toISOString(), endTime: end.toISOString() }],
+          durationMinutes: Math.max(15, Math.round((end.getTime() - start.getTime()) / 60_000)),
+        },
+      },
       {
         onSuccess: () => {
           toast.success('Interview accepted');
