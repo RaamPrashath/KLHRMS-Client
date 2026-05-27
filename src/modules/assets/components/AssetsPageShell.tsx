@@ -15,13 +15,17 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { AccessControlTab } from '@/modules/assets/components/AccessControlTab';
+import { InventoryTab } from '@/modules/assets/components/InventoryTab';
 import { AssetRegisterTab } from '@/modules/assets/components/AssetRegisterTab';
 import { CategoryTab } from '@/modules/assets/components/CategoryTab';
 import { DashboardTab } from '@/modules/assets/components/dashboard/DashboardTab';
 import { EmployeeAssetGallery } from '@/modules/assets/components/EmployeeAssetGallery';
 import { EmployeeAssetTable } from '@/modules/assets/components/EmployeeAssetTable';
 import { IssueAssetTab } from '@/modules/assets/components/IssueAssetTab';
+import { RaiseTicketDialog } from '@/modules/assets/components/RaiseTicketDialog';
 import { ReportsTab } from '@/modules/assets/components/ReportsTab';
+import { ReturnedAssetsTab } from '@/modules/assets/components/ReturnedAssetsTab';
 import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog';
 import { AssetFormDialog } from '@/modules/assets/components/AssetFormDialog';
 import { AssetSettingsDialog } from '@/modules/assets/components/AssetSettingsDialog';
@@ -49,6 +53,8 @@ import {
 import type {
   AssetCategory,
   AssetDetail,
+  AssetMaintenanceType,
+  AssetSummary,
   BulkAssetCreateInput as BulkAssetCreateMutationInput,
   AssetStatus,
 } from '@/modules/assets/types/assetTypes';
@@ -73,12 +79,19 @@ export function AssetsPageShell({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'create' | 'manage'>('manage');
   const [employeeAssetsView, setEmployeeAssetsView] = useState<'carousel' | 'table'>('carousel');
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const [ticketDialogMode, setTicketDialogMode] = useState<'issue' | 'return'>('issue');
+  const [ticketDialogAssetId, setTicketDialogAssetId] = useState<string | null>(null);
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
 
   const router = useRouter();
   const tabOptions = useMemo(() => getAssetTabOptions(canManageAssets), [canManageAssets]);
 
-  const registerQuery = useAssetsQuery(orgSlug, memberId, { page: 1, pageSize: 100 });
+  const registerQuery = useAssetsQuery(orgSlug, memberId, {
+    page: 1,
+    pageSize: 100,
+    currentHolderMemberId: canManageAssets ? undefined : memberId,
+  });
   const metaQuery = useAssetMetaQuery(orgSlug, memberId);
   const categoriesQuery = useAssetCategoriesQuery(orgSlug, memberId);
   const availableGroupsQuery = useAvailableAssetGroupsQuery(orgSlug, memberId);
@@ -86,18 +99,17 @@ export function AssetsPageShell({
   const mutations = useAssetMutations(orgSlug, memberId);
 
   const allFetchedAssets = useMemo(() => registerQuery.data?.items ?? [], [registerQuery.data?.items]);
-  const employeeVisibleAssets = useMemo(
+  const issuedEmployeeAssets = useMemo<AssetSummary[]>(
     () =>
-      canManageAssets
-        ? allFetchedAssets
-        : allFetchedAssets.filter(
-            (asset) => asset.status === 'ASSIGNED' && asset.currentHolderMemberId === memberId,
-          ),
-    [allFetchedAssets, canManageAssets, memberId],
+      allFetchedAssets.filter(
+        (asset) => asset.currentHolderMemberId === memberId && asset.status === 'ASSIGNED',
+      ),
+    [allFetchedAssets, memberId],
   );
+  const managedVisibleAssets = useMemo(() => allFetchedAssets, [allFetchedAssets]);
 
   const filteredAssets = useMemo(() => {
-    let result = employeeVisibleAssets;
+    let result = managedVisibleAssets;
     const q = search.toLowerCase().trim();
     if (q) {
       result = result.filter(
@@ -116,7 +128,20 @@ export function AssetsPageShell({
       result = result.filter((a) => a.status === statusFilter);
     }
     return result;
-  }, [employeeVisibleAssets, search, categoryFilter, statusFilter]);
+  }, [managedVisibleAssets, search, categoryFilter, statusFilter]);
+
+  const filteredEmployeeAssets = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return issuedEmployeeAssets;
+    return issuedEmployeeAssets.filter(
+      (asset) =>
+        asset.name.toLowerCase().includes(q) ||
+        asset.assetCode.toLowerCase().includes(q) ||
+        (asset.serialNumber ?? '').toLowerCase().includes(q) ||
+        (asset.model ?? '').toLowerCase().includes(q) ||
+        (asset.location ?? '').toLowerCase().includes(q),
+    );
+  }, [issuedEmployeeAssets, search]);
 
   const members = useMemo(() => metaQuery.data?.members ?? [], [metaQuery.data?.members]);
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
@@ -124,10 +149,10 @@ export function AssetsPageShell({
   const selectedAsset = detailQuery.data ?? detailSnapshot;
   const categoryOptions = useMemo(() => {
     const values = new Set<string>();
-    for (const asset of employeeVisibleAssets) values.add(asset.category);
+    for (const asset of managedVisibleAssets) values.add(asset.category);
     for (const category of categories) values.add(category.name.toUpperCase().replaceAll(' ', '_'));
     return Array.from(values).sort((a, b) => a.localeCompare(b));
-  }, [employeeVisibleAssets, categories]);
+  }, [managedVisibleAssets, categories]);
 
   function openCreateAssetDialog() {
     setAssetFormOpen(true);
@@ -145,6 +170,18 @@ export function AssetsPageShell({
 
   function seedMaintenanceForm() {
     router.push(`/${orgSlug}/maintenance`);
+  }
+
+  function openEmployeeIssueDialog(asset?: AssetSummary | null) {
+    setTicketDialogMode('issue');
+    setTicketDialogAssetId(asset?.id ?? null);
+    setTicketDialogOpen(true);
+  }
+
+  function openEmployeeReturnDialog(asset?: AssetSummary | null) {
+    setTicketDialogMode('return');
+    setTicketDialogAssetId(asset?.id ?? null);
+    setTicketDialogOpen(true);
   }
 
   function openSwapDialog() {
@@ -231,6 +268,33 @@ export function AssetsPageShell({
     }
   }
 
+  async function handleEmployeeTicketSubmit(data: {
+    assetId: string;
+    maintenanceType: string;
+    issueDescription: string;
+  }) {
+    const selectedEmployeeAsset = issuedEmployeeAssets.find((asset) => asset.id === data.assetId);
+    const isReturnRequest = ticketDialogMode === 'return';
+    await mutations.createHelpdeskTicket.mutateAsync({
+      ticketMode: 'ASSET_ISSUE',
+      assetId: data.assetId,
+      assetUnitId: null,
+      category: 'IT_SUPPORT',
+      subject: isReturnRequest ? 'Asset Return Request' : 'Asset Issue Report',
+      issueDescription: data.issueDescription,
+      attachmentsMetadata: [],
+      maintenanceType: isReturnRequest ? 'SERVICE' : (data.maintenanceType as AssetMaintenanceType),
+      serviceDate: new Date().toISOString().split('T')[0],
+      expectedCompletionDate: '',
+      estimatedDowntimeHours: null,
+      operationalCriticalityTier: 'STANDARD',
+      conditionBeforeMaintenance: selectedEmployeeAsset?.condition ?? null,
+      notes: isReturnRequest ? 'Employee requested asset return pickup.' : '',
+    });
+    setTicketDialogOpen(false);
+    setTicketDialogAssetId(null);
+  }
+
   if (!canManageAssets) {
     return (
       <div className="w-full" suppressHydrationWarning>
@@ -252,40 +316,6 @@ export function AssetsPageShell({
               placeholder="Search assets..."
               className="h-auto border-0 bg-transparent px-0 py-0 text-[13px] shadow-none focus-visible:ring-0 placeholder:text-[#9ca3af]"
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <Select
-              value={categoryFilter}
-              onValueChange={(value) => setCategoryFilter(value as AssetCategory | 'ALL')}
-            >
-              <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
-                <SelectValue placeholder="All categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All categories</SelectItem>
-                {categoryOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {humanize(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as AssetStatus | 'ALL')}
-            >
-              <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
-                {assetStatusOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {humanize(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <div className="overflow-x-auto pb-1 sm:ml-auto">
             <div className="inline-flex min-w-fit items-center rounded-xl border border-black/4 bg-neutral-50 p-1">
@@ -318,13 +348,13 @@ export function AssetsPageShell({
         </div>
         {employeeAssetsView === 'carousel' ? (
           <EmployeeAssetGallery
-            assets={filteredAssets}
+            assets={filteredEmployeeAssets}
             isLoading={registerQuery.isLoading}
             onOpenDetail={openDetail}
           />
         ) : (
           <EmployeeAssetTable
-            assets={filteredAssets}
+            assets={filteredEmployeeAssets}
             isLoading={registerQuery.isLoading}
             onOpenDetail={openDetail}
           />
@@ -339,9 +369,34 @@ export function AssetsPageShell({
           onEdit={() => {}}
           onArchive={() => {}}
           onProvide={() => {}}
-          onReturn={() => {}}
-          onMaintenance={seedMaintenanceForm}
+          onReturn={(asset) => openEmployeeReturnDialog(asset)}
+          onMaintenance={(asset) => openEmployeeIssueDialog(asset)}
           onRevokeSwap={undefined}
+        />
+
+        <RaiseTicketDialog
+          key={`${ticketDialogMode}:${ticketDialogAssetId ?? 'none'}`}
+          open={ticketDialogOpen}
+          onOpenChange={setTicketDialogOpen}
+          assets={issuedEmployeeAssets}
+          memberId={memberId}
+          title={ticketDialogMode === 'return' ? 'Request Asset Return' : 'Report an Issue'}
+          descriptionText={
+            ticketDialogMode === 'return'
+              ? 'Confirm the asset you want to hand over and tell admin about the return.'
+              : 'Select an assigned asset and describe the issue for admin review.'
+          }
+          assetPlaceholder="Search your current assets..."
+          descriptionPlaceholder={
+            ticketDialogMode === 'return'
+              ? 'Add return notes, handover details, or anything admin should know...'
+              : 'Describe the problem so admin can review and replace or repair it.'
+          }
+          submitLabel={ticketDialogMode === 'return' ? 'Send Return Request' : 'Raise Ticket'}
+          initialAssetId={ticketDialogAssetId}
+          lockAssetSelection={ticketDialogMode === 'return' && !!ticketDialogAssetId}
+          defaultMaintenanceType={ticketDialogMode === 'return' ? 'SERVICE' : 'REPAIR'}
+          onSubmit={handleEmployeeTicketSubmit}
         />
       </div>
     );
@@ -494,9 +549,23 @@ export function AssetsPageShell({
             availableGroups={availableGroups}
             canManageAssets={canManageAssets}
             memberId={memberId}
+            orgSlug={orgSlug}
             onIssue={handleIssueGroupAsset}
             isGroupsLoading={availableGroupsQuery.isLoading}
+            assignedAssets={allFetchedAssets}
           />
+        </TabsContent>
+
+        <TabsContent value="returned" className="mt-0">
+          <ReturnedAssetsTab orgSlug={orgSlug} memberId={memberId} />
+        </TabsContent>
+
+        <TabsContent value="access-control" className="mt-0">
+          <AccessControlTab orgSlug={orgSlug} memberId={memberId} />
+        </TabsContent>
+
+        <TabsContent value="inventory" className="mt-0">
+          <InventoryTab orgSlug={orgSlug} memberId={memberId} />
         </TabsContent>
 
         <TabsContent value="reports" className="mt-0">
@@ -525,7 +594,7 @@ export function AssetsPageShell({
         onEdit={() => {}}
         onArchive={(assetId) => void handleArchiveAsset(assetId)}
         onProvide={seedProvideForm}
-        onReturn={() => router.push(`/${orgSlug}/assets`)}
+        onReturn={() => router.push(`/${orgSlug}/maintenance`)}
         onMaintenance={seedMaintenanceForm}
         onRevokeSwap={openSwapDialog}
       />

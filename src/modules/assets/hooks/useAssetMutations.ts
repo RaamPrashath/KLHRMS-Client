@@ -12,12 +12,14 @@ import {
   deleteAssetCategoryAction,
   deleteAssetCategoryFieldAction,
   issueAssetsAction,
+  requestAssetReturnAction,
   revokeAndSwapAssetAction,
   returnAssetAction,
   updateAssetAction,
   updateAssetCategoryAction,
   updateAssetCategoryFieldAction,
   updateAssetMaintenanceAction,
+  withdrawMyTicketAction,
 } from '@/modules/assets/api/assetServerActions';
 
 export function useAssetMutations(orgSlug: string, memberId: string) {
@@ -28,6 +30,7 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     await queryClient.invalidateQueries({ queryKey: ['assets-meta', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['asset-categories', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['asset-available-groups', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['asset-employee-view', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['my-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['maintenance-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-dashboard', orgSlug] });
@@ -70,6 +73,11 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
         returnAssetAction({ orgSlug, memberId, data }),
       onSuccess: async (asset) => invalidateAll(asset.id),
     }),
+    requestReturn: useMutation({
+      mutationFn: (assetId: string) =>
+        requestAssetReturnAction({ orgSlug, memberId, assetId }),
+      onSuccess: async () => invalidateAll(),
+    }),
     createMaintenance: useMutation({
       mutationFn: (data: Parameters<typeof createAssetMaintenanceAction>[0]['data']) =>
         createAssetMaintenanceAction({ orgSlug, memberId, data }),
@@ -78,6 +86,10 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     createHelpdeskTicket: useMutation({
       mutationFn: (data: Parameters<typeof createHelpdeskTicketAction>[0]['data']) =>
         createHelpdeskTicketAction({ orgSlug, memberId, data }),
+      onSuccess: async (ticket) => invalidateAll(ticket.assetId ?? undefined),
+    }),
+    withdrawMyTicket: useMutation({
+      mutationFn: (ticketId: string) => withdrawMyTicketAction({ orgSlug, memberId, ticketId }),
       onSuccess: async (ticket) => invalidateAll(ticket.assetId ?? undefined),
     }),
     updateMaintenance: useMutation({

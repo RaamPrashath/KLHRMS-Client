@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 import { type RolePermissions } from '@/lib/hrms-roles';
 import { requireOrgMembership } from '@/lib/organizations';
 
-import { fetchDepartmentMetaAction } from '@/modules/departments/api/departmentServerActions';
+import { fetchOptionalDepartmentMeta } from '@/modules/jobs/lib/fetchOptionalDepartmentMeta';
 import { CreateJobRequisitionPage } from '@/modules/jobs/pages/CreateJobRequisitionPage';
 
 export default async function NewJobPage({
@@ -25,17 +25,10 @@ export default async function NewJobPage({
     redirect('/organizations');
   }
 
-  const meta = await fetchDepartmentMetaAction({ orgSlug, memberId: member.id });
+  const meta = await fetchOptionalDepartmentMeta({ orgSlug, memberId: member.id });
 
-  const departments = meta.departments.map((department) => ({
-    id: department.id,
-    name: department.label,
-  }));
-  const orgMembers = meta.members.map((orgMember) => ({
-    id: orgMember.id,
-    name: orgMember.label,
-    email: orgMember.email ?? '',
-  }));
+  const departments = meta?.departments ?? [];
+  const orgMembers = meta?.members ?? [];
 
   return (
     <CreateJobRequisitionPage

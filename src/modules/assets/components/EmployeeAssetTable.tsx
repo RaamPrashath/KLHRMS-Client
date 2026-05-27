@@ -38,11 +38,11 @@ const STATUS_DOT: Record<string, string> = {
   DISPOSED: 'bg-[#6b7280]',
 };
 
-function StatusDot({ status }: { status: string }) {
+function StatusDot({ status, label }: { status: string; label?: string }) {
   return (
     <span className="flex items-center gap-1.5">
       <span className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[status] || 'bg-[#9ca3af]')} />
-      <span className="text-[13px] text-[#374151]">{humanize(status)}</span>
+      <span className="text-[13px] text-[#374151]">{label ?? humanize(status)}</span>
     </span>
   );
 }
@@ -227,7 +227,7 @@ export function EmployeeAssetTable({
                 <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-[#f9fafb]">
                   <PackageOpen className="size-5 text-[#9ca3af]" />
                 </div>
-                <p className="mt-3 text-[15px] font-medium text-[#111827]">No issued assets found</p>
+                <p className="mt-3 text-[15px] font-medium text-[#111827]">No assets found</p>
                 <p className="mt-0.5 text-[13px] text-[#6b7280]">Try adjusting your search or filters</p>
               </TableCell>
             </TableRow>

@@ -203,6 +203,37 @@ export interface AssetProvideRecordSummary {
   receivedByMemberId: string | null;
   receivedByName: string | null;
   returnNotes: string | null;
+  replacementAssignmentId: string | null;
+  handoverRequestedAt: string | null;
+  handoverCompletedAt: string | null;
+  handoverConditionNotes: string | null;
+}
+
+export type EmployeeAssetState =
+  | 'CURRENT_ASSIGNED'
+  | 'RETURN_PENDING'
+  | 'RETURNED_IN_REPAIR'
+  | 'RETURNED';
+
+export interface EmployeeAssetViewRecord extends AssetSummary {
+  assignmentId: string;
+  assetId: string;
+  assetUnitId: string | null;
+  providedDate: string;
+  returnDate: string | null;
+  returnedCondition: AssetCondition | null;
+  returnNotes: string | null;
+  handoverRequestedAt: string | null;
+  handoverCompletedAt: string | null;
+  handoverConditionNotes: string | null;
+  replacementAssignmentId: string | null;
+  employeeState: EmployeeAssetState;
+  employeeStatusLabel: string;
+}
+
+export interface EmployeeAssetViewResponse {
+  current: EmployeeAssetViewRecord[];
+  previous: EmployeeAssetViewRecord[];
 }
 
 export interface AssetMaintenanceSummary {

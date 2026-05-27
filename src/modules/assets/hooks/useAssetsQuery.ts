@@ -8,6 +8,7 @@ import {
   fetchAssetsAction,
   fetchAssetCategoriesAction,
   fetchAvailableAssetGroupsAction,
+  fetchEmployeeAssetViewAction,
 } from '@/modules/assets/api/assetServerActions';
 import type {
   AssetCategoryDefinition,
@@ -17,6 +18,7 @@ import type {
   AssetMetaResponse,
   AssetSwapPreview,
   AvailableAssetGroup,
+  EmployeeAssetViewResponse,
 } from '@/modules/assets/types/assetTypes';
 
 export function useAssetsQuery(orgSlug: string, memberId: string, filters: AssetFiltersState) {
@@ -32,6 +34,14 @@ export function useAssetMetaQuery(orgSlug: string, memberId: string) {
   return useQuery<AssetMetaResponse, Error>({
     queryKey: ['assets-meta', orgSlug],
     queryFn: () => fetchAssetMetaAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
+  });
+}
+
+export function useEmployeeAssetViewQuery(orgSlug: string, memberId: string) {
+  return useQuery<EmployeeAssetViewResponse, Error>({
+    queryKey: ['asset-employee-view', orgSlug, memberId],
+    queryFn: () => fetchEmployeeAssetViewAction({ orgSlug, memberId }),
     enabled: !!orgSlug && !!memberId,
   });
 }

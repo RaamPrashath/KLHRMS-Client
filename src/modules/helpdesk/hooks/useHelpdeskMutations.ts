@@ -2,7 +2,10 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createAssetMaintenanceAction } from '@/modules/assets/api/assetServerActions';
-import { createGeneralHelpTicketAction } from '@/modules/helpdesk/api/helpdeskServerActions';
+import {
+  createGeneralHelpTicketAction,
+  withdrawHelpdeskTicketAction,
+} from '@/modules/helpdesk/api/helpdeskServerActions';
 import type { AssetMaintenanceCreateInput } from '@/modules/assets/schema/assetSchemas';
 import type { GeneralHelpRequestInput } from '@/modules/helpdesk/types/helpdeskTypes';
 
@@ -25,6 +28,11 @@ export function useHelpdeskMutations(orgSlug: string, memberId: string) {
     createGeneralHelp: useMutation({
       mutationFn: (data: GeneralHelpRequestInput) =>
         createGeneralHelpTicketAction({ orgSlug, memberId, data }),
+      onSuccess: async () => invalidateHelpdesk(),
+    }),
+    withdrawTicket: useMutation({
+      mutationFn: (ticketId: string) =>
+        withdrawHelpdeskTicketAction({ orgSlug, memberId, ticketId }),
       onSuccess: async () => invalidateHelpdesk(),
     }),
   };

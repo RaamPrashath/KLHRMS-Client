@@ -23,6 +23,7 @@ import {
 } from '@/modules/maintenance/kanban';
 import { MaintenanceTableView } from '@/modules/assets/components/MaintenanceTableView';
 import { humanize } from '@/modules/assets/lib/assetUtils';
+import type { AssetMaintenanceStatus, AssetMaintenanceType } from '@/modules/assets/types/assetTypes';
 import {
   assetMaintenanceStatusOptions,
   assetMaintenanceTypeOptions,
@@ -55,12 +56,13 @@ export function MaintenancePageShell({
     let result = tickets;
     if (search.trim()) {
       const q = search.toLowerCase().trim();
-      result = result.filter(
-        (t) =>
-          (t.ticketId ?? '').toLowerCase().includes(q) ||
-          (t.assetName ?? '').toLowerCase().includes(q) ||
-          (t.issueDescription ?? '').toLowerCase().includes(q) ||
-          (t.loggedByName ?? '').toLowerCase().includes(q),
+        result = result.filter(
+          (t) =>
+            (t.ticketId ?? '').toLowerCase().includes(q) ||
+            (t.assetName ?? '').toLowerCase().includes(q) ||
+            (t.issueDescription ?? '').toLowerCase().includes(q) ||
+            (t.loggedByName ?? '').toLowerCase().includes(q) ||
+            (t.assetLifecycleStatusLabel ?? '').toLowerCase().includes(q),
       );
     }
     if (statusFilter !== 'ALL') {
@@ -253,8 +255,8 @@ export function MaintenancePageShell({
         maintenanceOptions={filteredTickets.map((ticket) => ({
           id: ticket.id,
           ticketId: ticket.ticketId,
-          maintenanceType: ticket.maintenanceType,
-          status: ticket.status,
+          maintenanceType: ticket.maintenanceType as AssetMaintenanceType,
+          status: ticket.status as AssetMaintenanceStatus,
           issueDescription: ticket.issueDescription,
         }))}
       />

@@ -7,7 +7,6 @@ import {
   Keyboard,
   Mouse,
   Headphones,
-  BadgeCheck,
   PackageOpen,
   ArrowRight,
 } from 'lucide-react';
@@ -110,9 +109,9 @@ export function EmployeeAssetGallery({
         <div className="flex size-14 items-center justify-center rounded-full bg-neutral-50 border border-border">
           <PackageOpen className="size-6 text-neutral-400" />
         </div>
-        <p className="mt-4 text-[16px] font-semibold text-foreground">No assigned assets found</p>
+        <p className="mt-4 text-[16px] font-semibold text-foreground">No assets found</p>
         <p className="mt-1 max-w-sm text-[13px] leading-5 text-muted-foreground">
-          Any equipment issued to you will appear here.
+          Your current and previous hardware history will appear here.
         </p>
       </div>
     );

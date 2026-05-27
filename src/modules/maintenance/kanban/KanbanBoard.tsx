@@ -80,6 +80,8 @@ function mapTicketsToIssues(tickets: MaintenanceTicket[]): KanbanIssue[] {
     title: t.assetName ?? t.subject ?? '',
     ticketId: t.ticketId,
     description: t.issueDescription,
+    assetLifecycleStatus: t.assetLifecycleStatus,
+    assetLifecycleStatusLabel: t.assetLifecycleStatusLabel,
     priority: resolvePriority(t),
     status: MAINTENANCE_TICKET_STATUS_TO_COLUMN[t.status] || 'open',
     assignees: t.loggedByName ? [{ name: t.loggedByName }] : [],

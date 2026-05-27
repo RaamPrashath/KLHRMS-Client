@@ -10,6 +10,7 @@ export type {
   DashboardData,
   OsDistributionAnalytics,
   OsDistributionRow,
+  ReturnedAssetItem,
   StatusCount,
   MonthlyTrend,
   RecentActivityItem,

@@ -101,7 +101,7 @@ export function ActivityTable({ items }: { items: RecentActivityItem[] }) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 6 } },
+    initialState: { pagination: { pageSize: 8 } },
   });
 
   if (!items.length) {

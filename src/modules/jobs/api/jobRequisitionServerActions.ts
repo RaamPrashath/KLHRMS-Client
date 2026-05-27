@@ -12,7 +12,11 @@ import {
   type JobRequisitionDecisionInput,
   type UpdateJobRequisitionInput,
 } from '@/modules/jobs/schema/jobRequisitionSchemas';
-import type { JobRequisitionRecord } from '@/modules/jobs/types/jobRequisitionTypes';
+import type {
+  JobDepartmentOption,
+  JobRequisitionRecord,
+  OrgMemberOption,
+} from '@/modules/jobs/types/jobRequisitionTypes';
 
 function getApiUrl(): string {
   const url = process.env.HRMS_API_URL;
@@ -67,6 +71,33 @@ export async function fetchJobRequisitionsAction(params: {
     cache: 'no-store',
   });
   return handleResponse<JobRequisitionRecord[]>(res);
+}
+
+export async function fetchJobFormMetaAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<{ departments: JobDepartmentOption[]; members: OrgMemberOption[] }> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const res = await fetch(`${getApiUrl()}/jobs/meta`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, member.id),
+    cache: 'no-store',
+  });
+  const data = await handleResponse<{
+    departments: Array<{ id: string; label: string }>;
+    members: Array<{ id: string; label: string; email?: string | null }>;
+  }>(res);
+  return {
+    departments: data.departments.map((department) => ({
+      id: department.id,
+      name: department.label,
+    })),
+    members: data.members.map((orgMember) => ({
+      id: orgMember.id,
+      name: orgMember.label,
+      email: orgMember.email ?? '',
+    })),
+  };
 }
 
 export async function createJobRequisitionAction(params: {

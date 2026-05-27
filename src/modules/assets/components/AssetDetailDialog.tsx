@@ -166,7 +166,7 @@ function AssetDetailDialogContent({
           {asset && (
             <div className="flex border-b border-[#eef0f3] bg-neutral-50/50 px-6 shrink-0">
               <div className="flex gap-6">
-                {DETAIL_TABS.map((tab) => {
+                {DETAIL_TABS.filter((tab) => canManageAssets || tab.id !== 'history').map((tab) => {
                   const isActive = activeTab === tab.id;
                   return (
                     <button
@@ -214,12 +214,16 @@ function AssetDetailDialogContent({
                         <DetailField label="Category" value={humanize(asset.category)} />
                         <DetailField label="Condition" value={humanize(asset.condition)} />
                         <DetailField label="Model" value={asset.model || 'Not recorded'} />
-                        <DetailField label="Purchase Date" value={formatDate(asset.purchaseDate)} />
-                        <DetailField label="Purchase Price" value={formatCurrency(asset.purchasePrice)} />
-                        <DetailField label="Warranty Expiry" value={formatDate(asset.warrantyExpiryDate)} />
                         <DetailField label="Location" value={asset.location || 'Not recorded'} />
                         <DetailField label="Current Holder" value={asset.currentHolderName || 'In register'} />
-                        {asset.unitSummary && (
+                        {canManageAssets && (
+                          <>
+                            <DetailField label="Purchase Date" value={formatDate(asset.purchaseDate)} />
+                            <DetailField label="Purchase Price" value={formatCurrency(asset.purchasePrice)} />
+                            <DetailField label="Warranty Expiry" value={formatDate(asset.warrantyExpiryDate)} />
+                          </>
+                        )}
+                        {canManageAssets && asset.unitSummary && (
                           <DetailField
                             label="Units"
                             value={`${asset.unitSummary.available} available / ${asset.unitSummary.provided} issued / ${asset.unitSummary.total} total`}
@@ -228,7 +232,7 @@ function AssetDetailDialogContent({
                       </div>
                     </div>
 
-                    {asset.units.length > 0 && (
+                    {canManageAssets && asset.units.length > 0 && (
                       <div className="rounded-[20px] border border-[#e5e7eb] bg-[#fbfcfb] p-5 shadow-xs">
                         <p className="text-[16px] font-semibold text-[#111827]">Units ({asset.units.length})</p>
                         <div className="mt-4 space-y-2">
@@ -265,7 +269,7 @@ function AssetDetailDialogContent({
                             .filter((action) => action !== 'View' && action !== 'Retire')
                             .filter((action) => {
                               if (canManageAssets) return true;
-                              return action === 'Log Maintenance';
+                              return action === 'Log Maintenance' || action === 'Return Asset';
                             })
                             .map((action) => (
                               <ActionButton

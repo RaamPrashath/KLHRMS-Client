@@ -80,6 +80,30 @@ export interface WarrantyExpirationFeedData {
   total: number;
 }
 
+export interface ReturnedAssetItem {
+  id: string;
+  assetId: string;
+  assetName: string;
+  assetCode: string;
+  serialNumber: string | null;
+  category: string;
+  condition: string | null;
+  employeeMemberId: string;
+  employeeName: string | null;
+  employeeEmail: string | null;
+  providedDate: string;
+  returnDate: string;
+  returnedCondition: string | null;
+  returnNotes: string | null;
+  isTemporaryReplacement: boolean;
+  replacementAssetName: string | null;
+  hasTicket: boolean;
+  ticketId: string | null;
+  maintenanceType: string | null;
+  maintenanceStatus: string | null;
+  issueDescription: string | null;
+}
+
 export interface DashboardData {
   totalAssets: number;
   availableCount: number;

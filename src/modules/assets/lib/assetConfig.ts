@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   BarChart3,
   ClipboardList,
+  DoorOpen,
   Hammer,
   LaptopMinimal,
   LayoutDashboard,
@@ -12,6 +13,7 @@ import {
   PackageCheck,
   PackagePlus,
   RotateCcw,
+  RotateCw,
   UserCircle,
   Users,
   Wrench,
@@ -27,7 +29,7 @@ import type { AssetMaintenanceSummary, AssetReportType } from '@/modules/assets/
 
 export const ACTION_GREEN = '#00874a';
 
-export type AssetTabValue = 'dashboard' | 'register' | 'categories' | 'provide' | 'reports';
+export type AssetTabValue = 'dashboard' | 'register' | 'categories' | 'provide' | 'returned' | 'access-control' | 'inventory' | 'reports';
 
 const ASSET_TABS: Array<{
   value: AssetTabValue;
@@ -38,6 +40,9 @@ const ASSET_TABS: Array<{
   { value: 'register', label: 'Asset Register', icon: LaptopMinimal },
   { value: 'categories', label: 'Categories', icon: LayoutGrid },
   { value: 'provide', label: 'Issue Asset', icon: PackagePlus },
+  { value: 'returned', label: 'Returned Assets', icon: RotateCw },
+  { value: 'access-control', label: 'Access Control', icon: DoorOpen },
+  { value: 'inventory', label: 'Inventory', icon: ClipboardList },
   { value: 'reports', label: 'Reports', icon: BarChart3 },
 ];
 
@@ -133,6 +138,7 @@ export function createMaintenanceForm(): AssetMaintenanceCreateInput {
     cost: null,
     status: 'OPEN',
     conditionBeforeMaintenance: 'GOOD',
+    operationalCriticalityTier: 'STANDARD',
     notes: '',
   };
 }

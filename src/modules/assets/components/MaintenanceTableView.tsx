@@ -44,6 +44,15 @@ const statusStyle: Record<string, { dot: string; label: string; bg: string; text
   CANCELLED: { dot: '#6b7280', label: 'Cancelled', bg: 'bg-neutral-100', text: 'text-neutral-600' },
 };
 
+const lifecycleStyle: Record<string, { bg: string; text: string }> = {
+  ASSIGNED: { bg: 'bg-blue-50', text: 'text-blue-700' },
+  PENDING_RETURN: { bg: 'bg-amber-50', text: 'text-amber-700' },
+  RETURNED_IN_REPAIR: { bg: 'bg-orange-50', text: 'text-orange-700' },
+  RETURNED_READY: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  AVAILABLE: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  IN_MAINTENANCE: { bg: 'bg-orange-50', text: 'text-orange-700' },
+};
+
 const priorityStyle: Record<string, { dot: string; label: string }> = {
   high: { dot: '#dc2626', label: 'High' },
   medium: { dot: '#d97706', label: 'Medium' },
@@ -134,6 +143,19 @@ const COLUMNS = [
     },
   },
   {
+    id: 'assetLifecycle',
+    header: 'Asset State',
+    accessorFn: (row: MaintenanceTicket) => row.assetLifecycleStatusLabel ?? '—',
+    cell: ({ row, getValue }: { row: { original: MaintenanceTicket }; getValue: () => string }) => {
+      const tone = lifecycleStyle[row.original.assetLifecycleStatus ?? ''] ?? { bg: 'bg-neutral-100', text: 'text-neutral-600' };
+      return (
+        <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold', tone.bg, tone.text)}>
+          {getValue()}
+        </span>
+      );
+    },
+  },
+  {
     id: 'createdAt',
     header: 'Date',
     accessorFn: (row: MaintenanceTicket) => row.createdAt,
@@ -184,6 +206,7 @@ function TicketDetailPanel({ ticket }: { ticket: MaintenanceTicket }) {
           <DetailRow label="Code" value={ticket.assetCode} />
           <DetailRow label="Type" value={ticket.maintenanceType ? humanize(ticket.maintenanceType) : null} />
           <DetailRow label="Reported By" value={ticket.loggedByName} />
+          <DetailRow label="Asset State" value={ticket.assetLifecycleStatusLabel} />
           <DetailRow label="Date" value={ticket.createdAt ? formatDate(ticket.createdAt) : null} />
           <DetailRow
             label="Swap Path"

@@ -20,6 +20,7 @@ import type {
   AssetCategoryDefinition,
   AssetCategoryFieldDefinition,
   AssetDetail,
+  EmployeeAssetViewResponse,
   AssetRevokeSwapInput as AssetRevokeSwapPayload,
   AssetSwapExecutionResult,
   AssetSwapPreview,
@@ -137,6 +138,18 @@ export async function fetchAssetsAction(params: {
   return handleResponse<AssetListResponse>(res);
 }
 
+export async function fetchEmployeeAssetViewAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<EmployeeAssetViewResponse> {
+  const res = await fetch(`${getApiUrl()}/assets/employee-view`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<EmployeeAssetViewResponse>(res);
+}
+
 export async function fetchAssetMetaAction(params: {
   orgSlug: string;
   memberId: string;
@@ -235,6 +248,19 @@ export async function returnAssetAction(params: {
     }),
   });
   return handleResponse<AssetDetail>(res);
+}
+
+export async function requestAssetReturnAction(params: {
+  orgSlug: string;
+  memberId: string;
+  assetId: string;
+}): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${getApiUrl()}/assets/${params.assetId}/request-return`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<{ success: boolean; message: string }>(res);
 }
 
 export async function createAssetMaintenanceAction(params: {
@@ -359,6 +385,18 @@ export async function createHelpdeskTicketAction(params: {
       conditionBeforeMaintenance: parsed.data.conditionBeforeMaintenance || null,
       notes: parsed.data.notes || null,
     }),
+  });
+  return handleResponse<MyTicket>(res);
+}
+
+export async function withdrawMyTicketAction(params: {
+  orgSlug: string;
+  memberId: string;
+  ticketId: string;
+}): Promise<MyTicket> {
+  const res = await fetch(`${getApiUrl()}/assets/tickets/mine/${params.ticketId}/withdraw`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
   });
   return handleResponse<MyTicket>(res);
 }
@@ -539,6 +577,8 @@ export interface MaintenanceTicket {
   createdAt: string;
   loggedByMemberId: string | null;
   loggedByName: string | null;
+  assetLifecycleStatus: string | null;
+  assetLifecycleStatusLabel: string | null;
   swapPreview: AssetSwapPreview | null;
 }
 
@@ -625,6 +665,20 @@ export async function fetchAssetDashboardAction(params: {
     cache: 'no-store',
   });
   return handleResponse<import('@/modules/assets/components/dashboard/dashboard.types').DashboardData>(res);
+}
+
+export async function fetchReturnedAssetsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<import('@/modules/assets/components/dashboard/dashboard.types').ReturnedAssetItem[]> {
+  const res = await fetch(`${getApiUrl()}/assets/returned`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<
+    import('@/modules/assets/components/dashboard/dashboard.types').ReturnedAssetItem[]
+  >(res);
 }
 
 // ── Asset ID CRUD Actions ────────────────────────────────────────────────────

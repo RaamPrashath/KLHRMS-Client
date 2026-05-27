@@ -159,6 +159,7 @@ export function DashboardTab({
   const [selectedBreakdown, setSelectedBreakdown] = useState<AssetDetail | null>(null);
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const [loadingRowKey, setLoadingRowKey] = useState<string | null>(null);
+  const [activityTab, setActivityTab] = useState<'assigned' | 'maintenance'>('assigned');
 
   useEffect(() => {
     if (brandModelQuery.data) {
@@ -261,6 +262,12 @@ export function DashboardTab({
 
   const d = data!;
 
+  const assignedActivity = d.recentActivity.filter(
+    (item) => item.type === 'ASSIGNED' || item.type === 'RETURNED',
+  );
+  const maintenanceActivity = d.recentActivity.filter((item) => item.type === 'MAINTENANCE');
+  const filteredActivity = activityTab === 'assigned' ? assignedActivity : maintenanceActivity;
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -278,18 +285,11 @@ export function DashboardTab({
           </h3>
           <StatusDonutChart data={d.statusDistribution} />
         </div>
-        <div className="grid grid-cols-1 gap-5">
-          <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-            <h3 className="mb-4 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-              Monthly Additions
-            </h3>
-            <MonthlyTrendChart data={d.monthlyTrends} />
-          </div>
-          <OsDistributionCard
-            data={osDistributionQuery.data}
-            isLoading={osDistributionQuery.isLoading}
-            isError={osDistributionQuery.isError}
-          />
+        <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
+          <h3 className="mb-4 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+            Monthly Additions
+          </h3>
+          <MonthlyTrendChart data={d.monthlyTrends} />
         </div>
       </div>
 
@@ -300,24 +300,58 @@ export function DashboardTab({
         onRowClick={handleBreakdownRowClick}
       />
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <div className="xl:col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-          <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-            Recent Activity
-          </h3>
-          <ActivityTable items={d.recentActivity} />
-        </div>
-        <div className="space-y-5">
-          <UpcomingExpirationsFeed
-            data={warrantyFeedQuery.data}
-            isLoading={warrantyFeedQuery.isLoading}
-          />
-          <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-            <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-              Open Tickets
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <OsDistributionCard
+          data={osDistributionQuery.data}
+          isLoading={osDistributionQuery.isLoading}
+          isError={osDistributionQuery.isError}
+        />
+        <UpcomingExpirationsFeed
+          data={warrantyFeedQuery.data}
+          isLoading={warrantyFeedQuery.isLoading}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="lg:col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+              Recent Activity
             </h3>
-            <OpenTicketList tickets={d.recentTickets} />
+            <div className="flex items-center gap-0.5 rounded-lg bg-[#f5f5f7] p-0.5">
+              <button
+                type="button"
+                onClick={() => setActivityTab('assigned')}
+                className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                  activityTab === 'assigned'
+                    ? 'bg-white text-[#1d1d1f] shadow-sm'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                }`}
+              >
+                Assigned
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivityTab('maintenance')}
+                className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                  activityTab === 'maintenance'
+                    ? 'bg-white text-[#1d1d1f] shadow-sm'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                }`}
+              >
+                Maintenance
+              </button>
+            </div>
           </div>
+          <div className="max-h-[380px] overflow-y-auto">
+            <ActivityTable items={filteredActivity} />
+          </div>
+        </div>
+        <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
+          <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+            Open Tickets
+          </h3>
+          <OpenTicketList tickets={d.recentTickets} />
         </div>
       </div>
 

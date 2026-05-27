@@ -13,6 +13,15 @@ const priorityStyles: Record<string, string> = {
   low: 'bg-secondary text-secondary-foreground border-border',
 };
 
+const lifecycleStyles: Record<string, string> = {
+  ASSIGNED: 'bg-blue-50 text-blue-700 border-blue-100',
+  PENDING_RETURN: 'bg-amber-50 text-amber-700 border-amber-100',
+  RETURNED_IN_REPAIR: 'bg-orange-50 text-orange-700 border-orange-100',
+  RETURNED_READY: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  AVAILABLE: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  IN_MAINTENANCE: 'bg-orange-50 text-orange-700 border-orange-100',
+};
+
 function daysAgo(dateStr: string): string {
   const d = new Date(dateStr);
   const now = new Date();
@@ -78,6 +87,19 @@ export function KanbanCard({
         <p className="mt-1.5 line-clamp-1 text-[12px] leading-4 text-muted-foreground">
           {issue.description}
         </p>
+      )}
+
+      {issue.assetLifecycleStatusLabel && (
+        <div className="mt-2">
+          <span
+            className={cn(
+              'inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium',
+              lifecycleStyles[issue.assetLifecycleStatus ?? ''] ?? 'bg-neutral-100 text-neutral-600 border-neutral-200',
+            )}
+          >
+            {issue.assetLifecycleStatusLabel}
+          </span>
+        </div>
       )}
 
       {issue.swapPreview && (

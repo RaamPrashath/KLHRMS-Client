@@ -113,3 +113,15 @@ export async function createGeneralHelpTicketAction(params: {
   const ticket = await handleResponse<ServerTicket>(res);
   return normalizeGeneralTicket(ticket);
 }
+
+export async function withdrawHelpdeskTicketAction(params: {
+  orgSlug: string;
+  memberId: string;
+  ticketId: string;
+}): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/assets/tickets/mine/${params.ticketId}/withdraw`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  await handleResponse<ServerTicket>(res);
+}

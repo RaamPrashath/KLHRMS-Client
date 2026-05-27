@@ -21,6 +21,15 @@ function normalizeEmail(input: string) {
   return input.trim().toLowerCase();
 }
 
+function deriveDisplayNameFromEmail(email: string) {
+  const localPart = normalizeEmail(email).split("@")[0] ?? "";
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
 async function generateUniqueSlug(base: string) {
   const baseSlug = normalizeSlug(base) || "org";
 
@@ -370,6 +379,22 @@ export async function resolvePostAuthDestination(params: {
   email?: string | null;
 }) {
   if (params.email) {
+    const currentUser = await prisma.user.findUnique({
+      where: { id: params.userId },
+      select: { name: true },
+    });
+
+    if (!currentUser?.name?.trim()) {
+      await prisma.user.update({
+        where: { id: params.userId },
+        data: {
+          name: deriveDisplayNameFromEmail(params.email),
+        },
+      });
+    }
+  }
+
+  if (params.email) {
     await acceptPendingOrganizationInvitesForUser({
       userId: params.userId,
       email: params.email,
@@ -572,6 +597,7 @@ export async function addOrganizationMemberWithAccount(params: {
     const user = await tx.user.create({
       data: {
         email,
+        name: deriveDisplayNameFromEmail(email),
         emailVerified: true,
         onboarded: true,
         accounts: {

@@ -29,16 +29,16 @@ export function StatusDonutChart({ data }: { data: StatusCount[] }) {
   const total = data.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="flex h-full items-center justify-center gap-10 pt-1 pb-9">
-      <div className="w-44 shrink-0">
-        <ResponsiveContainer width="100%" height={160}>
+    <div className="flex h-full items-center justify-center gap-6 pt-1 pb-1">
+      <div className="w-48 shrink-0">
+        <ResponsiveContainer width="100%" height={176}>
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={48}
-              outerRadius={72}
+              innerRadius={50}
+              outerRadius={74}
               paddingAngle={2.5}
               dataKey="value"
               strokeWidth={0}

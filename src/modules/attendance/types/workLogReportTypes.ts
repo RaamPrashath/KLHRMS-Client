@@ -32,6 +32,7 @@ export interface WorkLogReportDetailResponse {
   attendanceRecordId: string;
   employeeId: string;
   employeeName: string;
+  employeeEmail: string | null;
   date: string;
   clockIn: string | null;
   clockOut: string | null;
