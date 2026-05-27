@@ -166,7 +166,7 @@ function CompleteInterviewDialog({
           </div>
           <DialogTitle className="text-xl font-semibold text-neutral-900">Complete interview</DialogTitle>
           <DialogDescription>
-            Add optional notes and close the interview.
+            Add a note for this candidate before closing the interview.
           </DialogDescription>
         </DialogHeader>
 
@@ -185,8 +185,9 @@ function CompleteInterviewDialog({
             <Textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder="Optional notes"
+              placeholder="Add a candidate note"
               className="min-h-24 resize-none"
+              maxLength={1000}
             />
           </label>
         </div>
@@ -195,7 +196,7 @@ function CompleteInterviewDialog({
           <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={isSubmitting} onClick={completeInterview}>
+          <Button type="button" disabled={isSubmitting || notes.trim().length === 0} onClick={completeInterview}>
             {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
             Complete
           </Button>
@@ -227,13 +228,6 @@ function InterviewActionsCell({
   readonly isStarting: boolean;
 }) {
   const status = normalizeInterviewStatus(interview.status);
-  if (interview.isBackup) {
-    return (
-      <span className="block text-right text-xs text-neutral-400">
-        No action
-      </span>
-    );
-  }
   const canJoinToday = isScheduledToday(interview);
 
   if (status === 'PENDING' || status === 'PENDING_ACCEPTANCE') {
@@ -450,7 +444,7 @@ export function InterviewsPageShell({
       {
         onSuccess: (result) => {
           if (result.status === 'ESCALATED') {
-            toast.success('Interview rejected. A backup interviewer has been notified.');
+            toast.success('Interview rejected. Assigning to the next available interviewer.');
           } else {
             toast.success('Interview rejected. The candidate is back in the unassigned pool.');
           }
@@ -578,7 +572,7 @@ export function InterviewsPageShell({
                     </div>
 
                     <div className="min-w-0">
-                      <StatusBadge status={interview.isBackup ? 'REJECTED' : interview.status} />
+                      <StatusBadge status={interview.status} />
                     </div>
 
                     <div className="min-w-0">

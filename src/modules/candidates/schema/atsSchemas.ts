@@ -47,7 +47,6 @@ export const stageInterviewAssignmentSchema = z.object({
   scheduledStartAt: z.string().datetime().optional().nullable(),
   durationMinutes: z.number().int().min(15).max(240).default(30),
   meetLink: z.string().url().max(2048).optional().nullable(),
-  backupInterviewers: z.array(z.string().min(1)).default([]),
 });
 
 export const stageInterviewAssignmentRequestSchema = z.object({
@@ -119,7 +118,7 @@ export interface StageInterviewAssignmentInput {
   scheduledStartAt?: string | null;
   durationMinutes: number;
   meetLink?: string | null;
-  backupInterviewers?: string[];
+
 }
 
 export interface AcceptInterviewInput {

@@ -644,10 +644,10 @@ export function useRejectInterview(orgSlug: string, memberId: string) {
     mutationFn: (args) => rejectInterviewAction({ orgSlug, memberId, ...args }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
-      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
-      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug'] });
-      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
-      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'], refetchType: 'all' });
     },
   });
 }

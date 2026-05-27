@@ -282,6 +282,8 @@ export interface StageWorkspace {
   jobPosting: PipelineJobPosting;
   candidateCount: number;
   candidates: StageWorkspaceCandidate[];
+  teamMembers: StageWorkspaceInterviewer[];
+  assignmentTeamId: string | null;
 }
 
 export interface InterviewerSearchResponse {
@@ -294,7 +296,6 @@ export interface StageInterviewAssignment {
   scheduledStartAt?: string | null;
   durationMinutes: number;
   meetLink?: string | null;
-  backupInterviewers?: string[];
 }
 
 export interface StageInterviewWarning {
@@ -338,7 +339,6 @@ export interface TeamDistributionRequest {
   applicationIds: string[];
   scheduledStartAt?: string | null;
   durationMinutes: number;
-  backupInterviewers?: string[];
   ignoreWarnings?: boolean;
 }
 
@@ -382,7 +382,7 @@ export interface MyInterview {
   scheduledStartAt: string | null;
   scheduledEndAt: string | null;
   status: string;
-  role: 'INTERVIEWER' | 'BACKUP';
+  role: 'INTERVIEWER';
   isBackup: boolean;
   meetingUrl: string | null;
   stageDueDate: string | null;

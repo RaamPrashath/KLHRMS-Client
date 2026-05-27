@@ -35,7 +35,7 @@ interface InterviewerSelectDialogProps {
   readonly onOpenChange: (open: boolean) => void;
   readonly orgSlug: string;
   readonly memberId: string;
-  readonly mode: 'interviewer' | 'backup';
+  readonly mode?: 'interviewer';
   readonly onSelect: (interviewer: StageWorkspaceInterviewer) => void;
   readonly excludedMemberIds: ReadonlySet<string>;
 }
@@ -54,7 +54,6 @@ export function InterviewerSelectDialog({
   onOpenChange,
   orgSlug,
   memberId,
-  mode,
   onSelect,
   excludedMemberIds,
 }: InterviewerSelectDialogProps) {
@@ -83,7 +82,7 @@ export function InterviewerSelectDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {mode === 'interviewer' ? 'Add Interviewer' : 'Add Backup Interviewer'}
+            Add Interviewer
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">

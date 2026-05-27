@@ -589,7 +589,7 @@ function FeedbackTable({ event }: { readonly event: ApplicationInterviewEvent })
 }
 
 function InterviewBlock({ event, index }: { readonly event: ApplicationInterviewEvent; readonly index: number }) {
-  const lead = event.participants.find((participant) => !participant.isBackup) ?? event.participants[0];
+  const lead = event.participants[0];
   const guests = event.participants.filter((participant) => participant.memberId !== lead?.memberId);
 
   return (

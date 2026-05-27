@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import { AtsPipelineTable } from '@/modules/candidates/components/AtsPipelineTable';
@@ -365,6 +366,8 @@ export function AtsKanbanBoard({
   const [selectedHour, setSelectedHour] = useState<string>('');
   const [selectedMinute, setSelectedMinute] = useState<string>('');
   const [durationMinutes, setDurationMinutes] = useState<number>(30);
+  const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
+  const [completionNote, setCompletionNote] = useState('');
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const dragPointerXRef = useRef<number | null>(null);
   const dragEdgeDirectionRef = useRef<-1 | 0 | 1>(0);
@@ -757,17 +760,28 @@ export function AtsKanbanBoard({
     }
   }
 
-  function markInterviewCompleted(
-    application: PipelineApplication,
-    data?: {
-      notes?: string | null;
-    },
-  ) {
+  function openCompleteInterviewDialog(application: PipelineApplication) {
+    setCompletingApplication(application);
+    setCompletionNote('');
+  }
+
+  function markInterviewCompleted() {
+    const application = completingApplication;
+    if (!application) return;
     if (!application.interviewMeeting?.id) return;
+    const note = completionNote.trim();
     completeInterviewMeeting.mutate(
-      { applicationId: application.id, eventId: application.interviewMeeting.id, data },
       {
-        onSuccess: () => toast.success('Interview marked completed'),
+        applicationId: application.id,
+        eventId: application.interviewMeeting.id,
+        data: { notes: note },
+      },
+      {
+        onSuccess: () => {
+          setCompletingApplication(null);
+          setCompletionNote('');
+          toast.success('Interview marked completed');
+        },
         onError: (error) => toast.error(readActionError(error, 'Failed to complete interview')),
       },
     );
@@ -1072,7 +1086,7 @@ export function AtsKanbanBoard({
               onMoveRight={(item) => moveStage(item, 1)}
               onOpenStageWorkspace={openStageWorkspace}
               onScheduleInterview={openScheduleInterview}
-              onCompleteInterview={markInterviewCompleted}
+              onCompleteInterview={openCompleteInterviewDialog}
               onStartInterview={handleStartInterview}
               onAcceptInterview={handleAcceptInterview}
               onRejectInterview={handleRejectInterview}
@@ -1162,7 +1176,7 @@ export function AtsKanbanBoard({
                   onMoveRight={(item) => moveStage(item, 1)}
                   onOpenStageWorkspace={openStageWorkspace}
                   onScheduleInterview={openScheduleInterview}
-                  onCompleteInterview={markInterviewCompleted}
+                  onCompleteInterview={openCompleteInterviewDialog}
                   onStartInterview={handleStartInterview}
                   onAcceptInterview={handleAcceptInterview}
                   onRejectInterview={handleRejectInterview}
@@ -1394,6 +1408,64 @@ export function AtsKanbanBoard({
               </DialogFooter>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={completingApplication !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCompletingApplication(null);
+            setCompletionNote('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg rounded-2xl bg-surface p-0 shadow-[var(--shadow-4)]">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle className="text-xl font-semibold text-neutral-900">Complete interview</DialogTitle>
+            <DialogDescription>
+              Add a note for this candidate before closing the interview.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 px-6 py-5">
+            {completingApplication ? (
+              <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
+                <p className="text-sm font-medium text-neutral-900">
+                  {`${completingApplication.candidate.firstName} ${completingApplication.candidate.lastName}`.trim()}
+                </p>
+                <p className="text-xs text-neutral-500">{completingApplication.currentStage}</p>
+              </div>
+            ) : null}
+            <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
+              Note
+              <Textarea
+                value={completionNote}
+                onChange={(event) => setCompletionNote(event.target.value)}
+                placeholder="Add a candidate note"
+                className="min-h-24 resize-none"
+                maxLength={1000}
+              />
+            </label>
+          </div>
+          <DialogFooter className="border-t border-neutral-100 px-6 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={completeInterviewMeeting.isPending}
+              onClick={() => {
+                setCompletingApplication(null);
+                setCompletionNote('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={completeInterviewMeeting.isPending || completionNote.trim().length === 0}
+              onClick={markInterviewCompleted}
+            >
+              {completeInterviewMeeting.isPending ? 'Completing' : 'Complete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
