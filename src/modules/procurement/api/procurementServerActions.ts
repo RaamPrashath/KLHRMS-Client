@@ -7,16 +7,24 @@ import {
   bulkProcurementSchema,
   procurementDecisionSchema,
   procurementPurchaseOrderSchema,
+  procurementPurchaseOrderTemplateSchema,
   replacementProcurementSchema,
   type BulkProcurementInput,
   type ProcurementDecisionInput,
   type ProcurementPurchaseOrderInput,
+  type ProcurementPurchaseOrderTemplateInput,
   type ReplacementProcurementInput,
 } from '@/modules/procurement/schema/procurementSchemas';
 import type {
   ProcurementAdminRecipientsResponse,
   ProcurementListResponse,
   ProcurementMetaResponse,
+  ProcurementPdfPreviewResponse,
+  ProcurementPurchaseOrderDownloadResponse,
+  ProcurementPurchaseOrderDraftResponse,
+  ProcurementPurchaseOrderIssueResponse,
+  ProcurementPurchaseOrderListResponse,
+  ProcurementPurchaseOrderTemplateRecord,
   ProcurementRequisitionRecord,
 } from '@/modules/procurement/types/procurementTypes';
 
@@ -84,6 +92,19 @@ export async function fetchProcurementListAction(params: {
     cache: 'no-store',
   });
   return handleResponse<ProcurementListResponse>(res);
+}
+
+export async function fetchProcurementPurchaseOrdersAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<ProcurementPurchaseOrderListResponse> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const res = await fetch(`${getApiUrl()}/procurement/purchase-orders`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, member.id),
+    cache: 'no-store',
+  });
+  return handleResponse<ProcurementPurchaseOrderListResponse>(res);
 }
 
 export async function fetchProcurementAdminRecipientsAction(params: {
@@ -218,7 +239,7 @@ export async function issueProcurementPurchaseOrderAction(params: {
   memberId: string;
   requisitionId: string;
   data: ProcurementPurchaseOrderInput;
-}): Promise<ProcurementRequisitionRecord> {
+}): Promise<ProcurementPurchaseOrderIssueResponse> {
   const { member } = await getCurrentOrgMember(params.orgSlug);
   const parsed = procurementPurchaseOrderSchema.safeParse(params.data);
   if (!parsed.success) {
@@ -230,10 +251,97 @@ export async function issueProcurementPurchaseOrderAction(params: {
     headers: buildHeaders(params.orgSlug, member.id),
     body: JSON.stringify({
       formatKey: parsed.data.formatKey,
-      recipientMemberId: parsed.data.recipientMemberId,
-      recipientEmail: parsed.data.recipientEmail,
+      template: parsed.data.template,
+      document: parsed.data.document,
+      recipientMemberId: parsed.data.recipientMemberId || null,
+      recipientEmail: parsed.data.recipientEmail || null,
       message: parsed.data.message || null,
+      sendToAdmin: parsed.data.sendToAdmin,
     }),
   });
-  return handleResponse<ProcurementRequisitionRecord>(res);
+  return handleResponse<ProcurementPurchaseOrderIssueResponse>(res);
+}
+
+export async function fetchProcurementPurchaseOrderDraftAction(params: {
+  orgSlug: string;
+  memberId: string;
+  requisitionId: string;
+}): Promise<ProcurementPurchaseOrderDraftResponse> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const res = await fetch(`${getApiUrl()}/procurement/${params.requisitionId}/purchase-order-draft`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, member.id),
+    cache: 'no-store',
+  });
+  return handleResponse<ProcurementPurchaseOrderDraftResponse>(res);
+}
+
+export async function previewProcurementPurchaseOrderAction(params: {
+  orgSlug: string;
+  memberId: string;
+  requisitionId: string;
+  data: ProcurementPurchaseOrderInput;
+}): Promise<ProcurementPdfPreviewResponse> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const parsed = procurementPurchaseOrderSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+
+  const res = await fetch(`${getApiUrl()}/procurement/${params.requisitionId}/purchase-order-preview`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, member.id),
+    body: JSON.stringify({
+      formatKey: parsed.data.formatKey,
+      template: parsed.data.template,
+      document: parsed.data.document,
+    }),
+  });
+  return handleResponse<ProcurementPdfPreviewResponse>(res);
+}
+
+export async function fetchProcurementPurchaseOrderTemplateAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<ProcurementPurchaseOrderTemplateRecord> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const res = await fetch(`${getApiUrl()}/procurement/purchase-order-template`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, member.id),
+    cache: 'no-store',
+  });
+  return handleResponse<ProcurementPurchaseOrderTemplateRecord>(res);
+}
+
+export async function saveProcurementPurchaseOrderTemplateAction(params: {
+  orgSlug: string;
+  memberId: string;
+  template: ProcurementPurchaseOrderTemplateInput;
+}): Promise<ProcurementPurchaseOrderTemplateRecord> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const parsed = procurementPurchaseOrderTemplateSchema.safeParse(params.template);
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+
+  const res = await fetch(`${getApiUrl()}/procurement/purchase-order-template`, {
+    method: 'PUT',
+    headers: buildHeaders(params.orgSlug, member.id),
+    body: JSON.stringify({ template: parsed.data }),
+  });
+  return handleResponse<ProcurementPurchaseOrderTemplateRecord>(res);
+}
+
+export async function fetchProcurementPurchaseOrderDownloadAction(params: {
+  orgSlug: string;
+  memberId: string;
+  purchaseOrderId: string;
+}): Promise<ProcurementPurchaseOrderDownloadResponse> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const res = await fetch(`${getApiUrl()}/procurement/purchase-orders/${params.purchaseOrderId}/download`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, member.id),
+    cache: 'no-store',
+  });
+  return handleResponse<ProcurementPurchaseOrderDownloadResponse>(res);
 }

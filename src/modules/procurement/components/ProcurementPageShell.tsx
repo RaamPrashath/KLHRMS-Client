@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState, type ComponentProps, type ReactNode } from 'react';
 import {
   createColumnHelper,
@@ -10,7 +12,7 @@ import {
   type SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { CheckCircle2, ChevronDown, ChevronUp, FileText, MoreHorizontal, Search, Send, ShoppingCart, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Download, FileText, MoreHorizontal, Search, Send, ShoppingCart, XCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +33,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -43,22 +53,21 @@ import { cn } from '@/lib/utils';
 import { formatDate, humanize, readError } from '@/modules/assets/lib/assetUtils';
 import { useProcurementMutations } from '@/modules/procurement/hooks/useProcurementMutations';
 import {
-  useProcurementAdminRecipientsQuery,
   useProcurementListQuery,
   useProcurementMetaQuery,
+  useProcurementPurchaseOrdersQuery,
 } from '@/modules/procurement/hooks/useProcurementQueries';
 import type {
   BulkProcurementInput,
-  ProcurementPurchaseOrderInput,
   ReplacementProcurementInput,
 } from '@/modules/procurement/schema/procurementSchemas';
 import type {
-  ProcurementAdminRecipientOption,
+  ProcurementPurchaseOrderListItem,
   ProcurementRequisitionRecord,
   ProcurementReplacementTicketOption,
 } from '@/modules/procurement/types/procurementTypes';
 
-type PageTab = 'bulk' | 'replacement' | 'mine' | 'pending' | 'history';
+type PageTab = 'bulk' | 'replacement' | 'mine' | 'pending' | 'history' | 'purchaseOrders';
 
 const STATUS_STYLES: Record<string, string> = {
   DRAFT: 'border-[#d1d5db] bg-[#f3f4f6] text-[#4b5563]',
@@ -98,6 +107,9 @@ const PROCUREMENT_TEXTAREA_CLASSNAME =
 const REQUISITION_TABLE_SKELETON_IDS = Array.from({ length: 6 }, (_, index) => `procurement-skeleton-${index}`);
 const REQUISITION_COLUMN_WIDTHS = ['26%', '12%', '15%', '12%', '14%', '11%', '10%', '6%'] as const;
 const requisitionColumnHelper = createColumnHelper<ProcurementRequisitionRecord>();
+const PURCHASE_ORDER_TABLE_SKELETON_IDS = Array.from({ length: 6 }, (_, index) => `procurement-po-skeleton-${index}`);
+const PURCHASE_ORDER_COLUMN_WIDTHS = ['16%', '14%', '18%', '11%', '13%', '14%', '10%', '4%'] as const;
+const purchaseOrderColumnHelper = createColumnHelper<ProcurementPurchaseOrderListItem>();
 
 function formatProcurementCurrency(value: number | null) {
   if (value == null) return '—';
@@ -225,9 +237,10 @@ export function ProcurementPageShell({
   canApproveProcurement: boolean;
   initialRequisitionId?: string | null;
 }) {
+  const router = useRouter();
   const metaQuery = useProcurementMetaQuery(orgSlug, memberId);
   const listQuery = useProcurementListQuery(orgSlug, memberId);
-  const adminRecipientsQuery = useProcurementAdminRecipientsQuery(orgSlug, memberId, canApproveProcurement);
+  const purchaseOrderListQuery = useProcurementPurchaseOrdersQuery(orgSlug, memberId, canApproveProcurement);
   const mutations = useProcurementMutations(orgSlug, memberId);
 
   const [activeTab, setActiveTab] = useState<PageTab>(
@@ -239,14 +252,14 @@ export function ProcurementPageShell({
   const [selectedRequisition, setSelectedRequisition] = useState<ProcurementRequisitionRecord | null>(null);
   const [initialLinkAcknowledged, setInitialLinkAcknowledged] = useState(false);
   const [decisionComment, setDecisionComment] = useState('');
-  const [purchaseOrderForm, setPurchaseOrderForm] = useState<ProcurementPurchaseOrderInput>({
-    formatKey: 'STANDARD',
-    recipientMemberId: '',
-    recipientEmail: '',
-    message: '',
-  });
+  const [isComposerDialogOpen, setIsComposerDialogOpen] = useState(false);
+  const [selectedComposerRequisitionId, setSelectedComposerRequisitionId] = useState('');
 
   const requisitions = useMemo(() => listQuery.data?.items ?? [], [listQuery.data?.items]);
+  const purchaseOrders = useMemo(
+    () => purchaseOrderListQuery.data?.items ?? [],
+    [purchaseOrderListQuery.data?.items],
+  );
   const meta = metaQuery.data;
   const selectedTicket = useMemo<ProcurementReplacementTicketOption | null>(
     () => meta?.replacementTickets.find((ticket) => ticket.id === replacementForm.maintenanceTicketId) ?? null,
@@ -287,6 +300,14 @@ export function ProcurementPageShell({
     () => filtered.filter((item) => item.status !== 'PENDING_FINANCE_APPROVAL'),
     [filtered],
   );
+  const approvedRequisitions = useMemo(
+    () => requisitions.filter((item) => item.status === 'APPROVED'),
+    [requisitions],
+  );
+  const selectedComposerRequisition = useMemo(
+    () => approvedRequisitions.find((item) => item.id === selectedComposerRequisitionId) ?? null,
+    [approvedRequisitions, selectedComposerRequisitionId],
+  );
   const deepLinkedRequisition = useMemo(
     () => (!initialLinkAcknowledged && initialRequisitionId
       ? requisitions.find((item) => item.id === initialRequisitionId) ?? null
@@ -294,7 +315,23 @@ export function ProcurementPageShell({
     [initialLinkAcknowledged, initialRequisitionId, requisitions],
   );
   const dialogRequisition = selectedRequisition ?? deepLinkedRequisition;
-  const adminRecipients = adminRecipientsQuery.data?.items ?? [];
+  const filteredPurchaseOrders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return purchaseOrders;
+    return purchaseOrders.filter((item) =>
+      [
+        item.poNumber,
+        item.requestLabel,
+        item.assetName,
+        item.generatedByName,
+        item.recipientName,
+        item.recipientEmail,
+        item.status,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(q)),
+    );
+  }, [purchaseOrders, search]);
 
   const bulkComputedTotal =
     bulkForm.estimatedQuantity && bulkForm.estimatedUnitCost != null
@@ -311,6 +348,7 @@ export function ProcurementPageShell({
       : []),
     ['pending', 'Pending Approval'],
     ['history', 'Approved / Rejected History'],
+    ...(canApproveProcurement ? ([['purchaseOrders', 'Generated Purchase Orders']] as const) : []),
   ] as const;
 
   async function createBulk(saveDraft: boolean) {
@@ -394,22 +432,30 @@ export function ProcurementPageShell({
     }
   }
 
-  async function handleIssuePurchaseOrder() {
-    if (!dialogRequisition) return;
+  function openComposerDialog() {
+    if (approvedRequisitions.length === 0) {
+      toast.error('Approve a requisition before opening the PO composer');
+      return;
+    }
+    setSelectedComposerRequisitionId((current) => current || approvedRequisitions[0]?.id || '');
+    setIsComposerDialogOpen(true);
+  }
+
+  function handleOpenComposerWorkspace() {
+    if (!selectedComposerRequisitionId) {
+      toast.error('Select an approved requisition to continue');
+      return;
+    }
+    setIsComposerDialogOpen(false);
+    router.push(`/${orgSlug}/procurement/purchase-orders/${selectedComposerRequisitionId}`);
+  }
+
+  async function handleDownloadPurchaseOrder(purchaseOrderId: string) {
     try {
-      await mutations.issuePurchaseOrder.mutateAsync({
-        requisitionId: dialogRequisition.id,
-        data: purchaseOrderForm,
-      });
-      toast.success('Purchase order generated and sent to admin');
-      setPurchaseOrderForm({
-        formatKey: 'STANDARD',
-        recipientMemberId: '',
-        recipientEmail: '',
-        message: '',
-      });
+      const response = await mutations.downloadPurchaseOrder.mutateAsync(purchaseOrderId);
+      window.open(response.downloadUrl, '_blank', 'noopener,noreferrer');
     } catch (error) {
-      toast.error(readError(error, 'Failed to send purchase order'));
+      toast.error(readError(error, 'Failed to prepare purchase order download'));
     }
   }
 
@@ -429,7 +475,7 @@ export function ProcurementPageShell({
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search requisitions..."
+              placeholder="Search procurement records..."
               className="h-auto border-0 bg-transparent px-0 py-0 text-[14px] shadow-none focus-visible:ring-0"
             />
           </div>
@@ -437,25 +483,38 @@ export function ProcurementPageShell({
       </div>
 
       <div className="space-y-6">
-        <div className="overflow-x-auto pb-1">
-          <div className="inline-flex min-w-fit items-center gap-1 rounded-2xl border border-black/4 bg-neutral-50 p-1">
-            {tabOptions.map(([value, label]) => {
-              const isActive = activeTab === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setActiveTab(value)}
-                  className={cn(
-                    PROCUREMENT_TAB_STYLES,
-                    isActive ? PROCUREMENT_TAB_ACTIVE_STYLES : '',
-                  )}
-                >
-                  {label}
-                </button>
-              );
-            })}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="overflow-x-auto pb-1">
+            <div className="inline-flex min-w-fit items-center gap-1 rounded-2xl border border-black/4 bg-neutral-50 p-1">
+              {tabOptions.map(([value, label]) => {
+                const isActive = activeTab === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setActiveTab(value)}
+                    className={cn(
+                      PROCUREMENT_TAB_STYLES,
+                      isActive ? PROCUREMENT_TAB_ACTIVE_STYLES : '',
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+          {canApproveProcurement ? (
+            <Button
+              type="button"
+              onClick={openComposerDialog}
+              disabled={approvedRequisitions.length === 0}
+              className="h-11 rounded-full bg-[#0066cc] px-5 text-[13px] font-medium text-white hover:bg-[#0057ad] disabled:bg-[#c7d2e5] disabled:text-white"
+            >
+              <FileText className="mr-2 size-4" />
+              Open PO Composer
+            </Button>
+          ) : null}
         </div>
 
         {activeTab === 'bulk' && canCreateProcurement ? (
@@ -715,7 +774,7 @@ export function ProcurementPageShell({
               <div className="mt-5 grid gap-4">
                 <DetailField label="Ticket" value={selectedTicket?.ticketId ?? 'Not selected'} />
                 <DetailField label="Employee" value={selectedTicket?.affectedEmployeeName ?? 'Not selected'} />
-                  <DetailField label="Projected Spend" value={formatProcurementCurrency(replacementForm.estimatedTotalCost ?? replacementComputedTotal ?? null)} />
+                <DetailField label="Projected Spend" value={formatProcurementCurrency(replacementForm.estimatedTotalCost ?? replacementComputedTotal ?? null)} />
                 <DetailField label="Warranty" value={selectedTicket?.warrantyStatus ? humanize(selectedTicket.warrantyStatus) : 'Unknown'} />
                 <DetailField label="Required By" value={formatDate(replacementForm.requiredByDate)} />
               </div>
@@ -725,6 +784,7 @@ export function ProcurementPageShell({
 
         {activeTab === 'mine' && canCreateProcurement ? (
           <RequisitionTable
+            orgSlug={orgSlug}
             rows={myRequisitions}
             isLoading={listQuery.isLoading}
             onOpen={setSelectedRequisition}
@@ -734,6 +794,7 @@ export function ProcurementPageShell({
 
         {activeTab === 'pending' ? (
           <RequisitionTable
+            orgSlug={orgSlug}
             rows={pendingRequisitions}
             isLoading={listQuery.isLoading}
             onOpen={setSelectedRequisition}
@@ -742,12 +803,91 @@ export function ProcurementPageShell({
 
         {activeTab === 'history' ? (
           <RequisitionTable
+            orgSlug={orgSlug}
             rows={historyRequisitions}
             isLoading={listQuery.isLoading}
             onOpen={setSelectedRequisition}
           />
         ) : null}
+
+        {activeTab === 'purchaseOrders' && canApproveProcurement ? (
+          <PurchaseOrderTable
+            rows={filteredPurchaseOrders}
+            isLoading={purchaseOrderListQuery.isLoading}
+            onDownload={handleDownloadPurchaseOrder}
+            isDownloading={mutations.downloadPurchaseOrder.isPending}
+          />
+        ) : null}
       </div>
+
+      <Dialog open={isComposerDialogOpen} onOpenChange={setIsComposerDialogOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Open Purchase Order Composer</DialogTitle>
+            <DialogDescription>
+              Select an approved requisition to continue into the purchase order workspace.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-5 py-2">
+            <FormField label="Approved Requisition">
+              <FormSelect
+                value={selectedComposerRequisitionId}
+                onValueChange={setSelectedComposerRequisitionId}
+                placeholder="Select an approved requisition"
+              >
+                {approvedRequisitions.map((requisition) => (
+                  <SelectItem key={requisition.id} value={requisition.id}>
+                    {(requisition.requestLabel ?? requisition.id)} - {requisition.assetName ?? requisition.requestType}
+                  </SelectItem>
+                ))}
+              </FormSelect>
+            </FormField>
+
+            {selectedComposerRequisition ? (
+              <div className="rounded-[24px] border border-[#e5e7eb] bg-[#f8fafc] p-4">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <DetailField
+                    label="Requester"
+                    value={selectedComposerRequisition.raisedByName ?? 'Unknown'}
+                  />
+                  <DetailField
+                    label="Request"
+                    value={selectedComposerRequisition.requestLabel ?? selectedComposerRequisition.id}
+                  />
+                  <DetailField
+                    label="Asset"
+                    value={selectedComposerRequisition.assetName ?? selectedComposerRequisition.assetCode ?? 'Asset Purchase'}
+                  />
+                  <DetailField
+                    label="Status"
+                    value={humanize(selectedComposerRequisition.status)}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setIsComposerDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-full bg-[#0066cc] text-white hover:bg-[#0057ad]"
+              onClick={handleOpenComposerWorkspace}
+            >
+              <FileText className="mr-2 size-4" />
+              Open Composer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <RequisitionDetailDialog
         open={!!dialogRequisition}
@@ -756,12 +896,6 @@ export function ProcurementPageShell({
             setSelectedRequisition(null);
             setInitialLinkAcknowledged(true);
             setDecisionComment('');
-            setPurchaseOrderForm({
-              formatKey: 'STANDARD',
-              recipientMemberId: '',
-              recipientEmail: '',
-              message: '',
-            });
           }
         }}
         requisition={dialogRequisition}
@@ -771,11 +905,7 @@ export function ProcurementPageShell({
         onReject={() => handleReject()}
         isApproving={mutations.approve.isPending}
         isRejecting={mutations.reject.isPending}
-        adminRecipients={adminRecipients}
-        purchaseOrderForm={purchaseOrderForm}
-        onPurchaseOrderFormChange={setPurchaseOrderForm}
-        onIssuePurchaseOrder={() => handleIssuePurchaseOrder()}
-        isIssuingPurchaseOrder={mutations.issuePurchaseOrder.isPending}
+        orgSlug={orgSlug}
       />
     </div>
   );
@@ -798,11 +928,7 @@ function RequisitionDetailDialog({
   onReject,
   isApproving,
   isRejecting,
-  adminRecipients,
-  purchaseOrderForm,
-  onPurchaseOrderFormChange,
-  onIssuePurchaseOrder,
-  isIssuingPurchaseOrder,
+  orgSlug,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -813,11 +939,7 @@ function RequisitionDetailDialog({
   onReject: () => void;
   isApproving: boolean;
   isRejecting: boolean;
-  adminRecipients: ProcurementAdminRecipientOption[];
-  purchaseOrderForm: ProcurementPurchaseOrderInput;
-  onPurchaseOrderFormChange: (value: ProcurementPurchaseOrderInput) => void;
-  onIssuePurchaseOrder: () => void;
-  isIssuingPurchaseOrder: boolean;
+  orgSlug: string;
 }) {
   const [activeTab, setActiveTab] = useState<RequisitionDetailTab>('details');
   const titleId = useId();
@@ -950,7 +1072,9 @@ function RequisitionDetailDialog({
                               <div>
                                 <p className="text-[15px] font-semibold text-[#111827]">{purchaseOrder.poNumber}</p>
                                 <p className="mt-1 text-[13px] text-[#6b7280]">
-                                  Sent to {purchaseOrder.recipientName ?? purchaseOrder.recipientEmail}
+                                  {purchaseOrder.recipientName || purchaseOrder.recipientEmail
+                                    ? `Recipient: ${purchaseOrder.recipientName ?? purchaseOrder.recipientEmail}`
+                                    : 'Saved for audit without email delivery'}
                                 </p>
                               </div>
                               <Badge className={cn('border', PURCHASE_ORDER_STATUS_STYLES[purchaseOrder.status] ?? STATUS_STYLES.DRAFT)}>
@@ -958,7 +1082,7 @@ function RequisitionDetailDialog({
                               </Badge>
                             </div>
                             <div className="mt-3 grid gap-3 md:grid-cols-2">
-                              <DetailField label="Recipient Email" value={purchaseOrder.recipientEmail} />
+                              <DetailField label="Recipient Email" value={purchaseOrder.recipientEmail || 'Not emailed'} />
                               <DetailField label="Generated By" value={purchaseOrder.generatedByName ?? 'Unknown'} />
                               <DetailField label="Generated At" value={formatDate(purchaseOrder.generatedAt)} />
                               <DetailField label="Sent At" value={formatDate(purchaseOrder.sentAt)} />
@@ -1012,60 +1136,18 @@ function RequisitionDetailDialog({
                               <FileText className="size-4" />
                             </div>
                             <div>
-                              <p className="text-[15px] font-semibold text-[#111827]">Generate Purchase Order</p>
+                              <p className="text-[15px] font-semibold text-[#111827]">Open Purchase Order Composer</p>
                               <p className="mt-1 text-[13px] leading-5 text-[#6b7280]">
-                                Send the approved purchase order PDF to an admin-only recipient and record it for audit.
+                                Continue this approved requisition in the new Crove-style composer with live PDF preview, download, and save actions.
                               </p>
                             </div>
                           </div>
                         </div>
-
-                        <FormField label="Purchase Order Format">
-                          <FormSelect
-                            value={purchaseOrderForm.formatKey}
-                            onValueChange={(value) => onPurchaseOrderFormChange({ ...purchaseOrderForm, formatKey: value as ProcurementPurchaseOrderInput['formatKey'] })}
-                          >
-                            <SelectItem value="STANDARD">Standard Format</SelectItem>
-                          </FormSelect>
-                        </FormField>
-
-                        <FormField label="Admin Recipient Email">
-                          <FormSelect
-                            value={purchaseOrderForm.recipientMemberId}
-                            onValueChange={(value) => {
-                              const recipient = adminRecipients.find((item) => item.memberId === value);
-                              onPurchaseOrderFormChange({
-                                ...purchaseOrderForm,
-                                recipientMemberId: value,
-                                recipientEmail: recipient?.email ?? '',
-                              });
-                            }}
-                            placeholder="Select admin recipient"
-                          >
-                            {adminRecipients.map((recipient) => (
-                              <SelectItem key={recipient.memberId} value={recipient.memberId}>
-                                {recipient.name} - {recipient.email}
-                              </SelectItem>
-                            ))}
-                          </FormSelect>
-                        </FormField>
-
-                        <FormField label="Finance Note">
-                          <FormTextarea
-                            value={purchaseOrderForm.message ?? ''}
-                            onChange={(event) => onPurchaseOrderFormChange({ ...purchaseOrderForm, message: event.target.value })}
-                            placeholder="Optional note for the admin team..."
-                            className="min-h-20 bg-white"
-                          />
-                        </FormField>
-
-                        <Button
-                          onClick={onIssuePurchaseOrder}
-                          disabled={isIssuingPurchaseOrder || !purchaseOrderForm.recipientMemberId || !purchaseOrderForm.recipientEmail}
-                          className="h-11 w-full rounded-xl bg-[#00874a] hover:bg-[#007241]"
-                        >
-                          <Send className="mr-2 size-4" />
-                          {isIssuingPurchaseOrder ? 'Generating PDF and sending...' : 'Generate and Send Purchase Order'}
+                        <Button asChild className="h-11 w-full rounded-xl bg-[#0066cc] hover:bg-[#0055aa]">
+                          <Link href={`/${orgSlug}/procurement/purchase-orders/${requisition.id}`}>
+                            <FileText className="mr-2 size-4" />
+                            Open PO Composer
+                          </Link>
                         </Button>
                       </div>
                     ) : (
@@ -1086,12 +1168,262 @@ function RequisitionDetailDialog({
   );
 }
 
+function PurchaseOrderTable({
+  rows,
+  isLoading = false,
+  onDownload,
+  isDownloading = false,
+}: {
+  rows: ProcurementPurchaseOrderListItem[];
+  isLoading?: boolean;
+  onDownload: (purchaseOrderId: string) => void;
+  isDownloading?: boolean;
+}) {
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'generatedAt', desc: true }]);
+
+  const columns = useMemo(
+    () => [
+      purchaseOrderColumnHelper.accessor('poNumber', {
+        header: 'PO Number',
+        enableSorting: true,
+        cell: (info) => (
+          <div className="min-w-0">
+            <p className="truncate font-medium text-[#111827]">{info.getValue()}</p>
+            <p className="truncate text-[13px] text-[#6b7280]">{info.row.original.fileName}</p>
+          </div>
+        ),
+      }),
+      purchaseOrderColumnHelper.accessor('requestLabel', {
+        header: 'Requisition',
+        enableSorting: true,
+        cell: (info) => (
+          <span className="block truncate text-[14px] text-[#111827]">{info.getValue() ?? '—'}</span>
+        ),
+      }),
+      purchaseOrderColumnHelper.accessor('assetName', {
+        header: 'Asset / Request',
+        enableSorting: true,
+        cell: (info) => (
+          <span className="block truncate text-[14px] text-[#111827]">{info.getValue() ?? 'Asset Purchase'}</span>
+        ),
+      }),
+      purchaseOrderColumnHelper.accessor('status', {
+        header: 'Status',
+        enableSorting: true,
+        cell: (info) => (
+          <Badge className={cn('border', PURCHASE_ORDER_STATUS_STYLES[info.getValue()] ?? STATUS_STYLES.DRAFT)}>
+            {humanize(info.getValue())}
+          </Badge>
+        ),
+      }),
+      purchaseOrderColumnHelper.accessor('generatedByName', {
+        header: 'Generated By',
+        enableSorting: true,
+        cell: (info) => (
+          <span className="block truncate text-[14px] text-[#111827]">{info.getValue() ?? 'Unknown'}</span>
+        ),
+      }),
+      purchaseOrderColumnHelper.accessor((row) => row.recipientName ?? row.recipientEmail, {
+        id: 'recipient',
+        header: 'Recipient',
+        enableSorting: true,
+        cell: (info) => (
+          <div className="min-w-0">
+            <p className="truncate text-[14px] text-[#111827]">{info.getValue() ?? 'Not emailed'}</p>
+            <p className="truncate text-[13px] text-[#6b7280]">{info.row.original.recipientEmail || 'No recipient email'}</p>
+          </div>
+        ),
+      }),
+      purchaseOrderColumnHelper.accessor('generatedAt', {
+        header: 'Generated At',
+        enableSorting: true,
+        cell: (info) => (
+          <span className="text-[14px] text-[#111827]">{formatDate(info.getValue())}</span>
+        ),
+      }),
+      purchaseOrderColumnHelper.display({
+        id: 'action',
+        header: '',
+        cell: (info) => (
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 rounded-lg text-[#0066cc] hover:bg-[#eff6ff] hover:text-[#0057ad]"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDownload(info.row.original.id);
+              }}
+              aria-label={`Download ${info.row.original.poNumber}`}
+              disabled={isDownloading}
+            >
+              <Download className="size-4" />
+            </Button>
+          </div>
+        ),
+      }),
+    ],
+    [isDownloading, onDownload],
+  );
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 10 } },
+  });
+
+  return (
+    <section className="overflow-hidden rounded-[28px] border border-[#e5e7eb] bg-white">
+      <Table className="min-w-[1120px] table-fixed">
+        <colgroup>
+          {PURCHASE_ORDER_COLUMN_WIDTHS.map((width, index) => (
+            <col key={`${index}-${width}`} style={{ width }} />
+          ))}
+        </colgroup>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id} className="border-b border-black/[0.04] bg-canvas/50 hover:bg-canvas/50">
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  className={cn(
+                    'h-auto px-4 py-3 text-center text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
+                    header.column.id === 'poNumber' ? 'text-left' : '',
+                    header.column.id === 'action' ? 'w-12' : '',
+                  )}
+                >
+                  {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        'flex w-full items-center gap-1 select-none',
+                        header.column.id === 'poNumber' ? 'justify-start text-left' : 'justify-center',
+                      )}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      <span className="flex flex-col">
+                        <ChevronUp
+                          className={cn(
+                            'size-3 -mb-1',
+                            header.column.getIsSorted() === 'asc' ? 'text-[#111827]' : 'text-[#d1d5db]',
+                          )}
+                        />
+                        <ChevronDown
+                          className={cn(
+                            'size-3',
+                            header.column.getIsSorted() === 'desc' ? 'text-[#111827]' : 'text-[#d1d5db]',
+                          )}
+                        />
+                      </span>
+                    </button>
+                  ) : (
+                    flexRender(header.column.columnDef.header, header.getContext())
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            PURCHASE_ORDER_TABLE_SKELETON_IDS.map((id) => (
+              <TableRow key={id} className="border-b border-black/[0.04] hover:bg-transparent">
+                <TableCell colSpan={8} className="px-4 py-4">
+                  <div className="h-10 animate-pulse rounded-xl bg-neutral-100" />
+                </TableCell>
+              </TableRow>
+            ))
+          ) : table.getRowModel().rows.length > 0 ? (
+            table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id} className="border-b border-black/[0.04] hover:bg-black/[0.02]">
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    className={cn(
+                      'px-4 py-4 text-center',
+                      cell.column.id === 'poNumber' ? 'text-left' : '',
+                      cell.column.id === 'action' ? 'w-12' : '',
+                    )}
+                  >
+                    <div className="min-w-0">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </div>
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={8} className="px-4 py-12 text-center text-[14px] text-[#6b7280]">
+                Generated purchase orders will appear here after Finance issues them.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+
+      {!isLoading && table.getPageCount() > 1 ? (
+        <div className="flex items-center justify-between border-t border-black/[0.04] px-6 py-4">
+          <span className="text-[12px] font-medium text-[#6b7280]">
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="h-8 rounded-lg border-[#e5e7eb] px-3 text-[12px]"
+            >
+              Prev
+            </Button>
+            {Array.from({ length: table.getPageCount() }).map((_, index) => (
+              <Button
+                key={`po-page-${index}`}
+                variant={table.getState().pagination.pageIndex === index ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => table.setPageIndex(index)}
+                className={cn(
+                  'h-8 min-w-8 rounded-lg px-2 text-[12px]',
+                  table.getState().pagination.pageIndex === index
+                    ? 'bg-[#111827] text-white hover:bg-[#111827]'
+                    : 'border-[#e5e7eb] text-[#6b7280]',
+                )}
+              >
+                {index + 1}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="h-8 rounded-lg border-[#e5e7eb] px-3 text-[12px]"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function RequisitionTable({
+  orgSlug,
   rows,
   isLoading = false,
   onOpen,
   onCancel,
 }: {
+  orgSlug: string;
   rows: ProcurementRequisitionRecord[];
   isLoading?: boolean;
   onOpen: (row: ProcurementRequisitionRecord) => void;
@@ -1193,6 +1525,13 @@ function RequisitionTable({
                   <DropdownMenuItem onClick={() => onOpen(row)}>
                     View details
                   </DropdownMenuItem>
+                  {row.status === 'APPROVED' ? (
+                    <DropdownMenuItem asChild>
+                      <Link href={`/${orgSlug}/procurement/purchase-orders/${row.id}`}>
+                        Open PO composer
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
                   {canCancel ? (
                     <DropdownMenuItem
                       variant="destructive"
@@ -1210,7 +1549,7 @@ function RequisitionTable({
         },
       }),
     ],
-    [onCancel, onOpen],
+    [onCancel, onOpen, orgSlug],
   );
 
   const table = useReactTable({
