@@ -93,6 +93,7 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
             { title: "Payroll",            urlSuffix: "payroll",             permissionKey: "payroll"          },
             { title: "Payslips",           urlSuffix: "payslips",            permissionKey: "payslips"         },
             { title: "Tax",                urlSuffix: "tax",                 permissionKey: "tax"              },
+            { title: "Procurement",        urlSuffix: "procurement",         permissionKey: "procurement"      },
         ],
     },
     {

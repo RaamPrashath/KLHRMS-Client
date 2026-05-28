@@ -50,6 +50,7 @@ const MODULE_LABELS: Record<string, string> = {
   payroll:            'Payroll',
   payslips:           'Payslips',
   tax:                'Tax',
+  procurement:        'Procurement',
   assets:             'Assets',
   maintenance:        'Maintenance',
   helpdesk:           'Helpdesk',
@@ -62,7 +63,7 @@ const SECTIONS: { label: string; modules: string[] }[] = [
   { label: 'Time & Attendance', modules: ['attendance', 'leaves', 'timesheet', 'projects', 'weeklyPlan'] },
   { label: 'Recruitment',       modules: ['jobs', 'candidates', 'interviews', 'offers'] },
   { label: 'Lifecycle',         modules: ['onboarding', 'documentCollection', 'offboarding', 'knowledgeTransfer'] },
-  { label: 'Payroll & Finance', modules: ['salaryStructures', 'payroll', 'payslips', 'tax'] },
+  { label: 'Payroll & Finance', modules: ['salaryStructures', 'payroll', 'payslips', 'tax', 'procurement'] },
   { label: 'Operations',        modules: ['assets', 'maintenance', 'helpdesk', 'documents'] },
 ];
 
@@ -122,7 +123,9 @@ function ScopeBadge({ module, action, scope, disabled, onActivate }: Readonly<Sc
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // All modules now support all standard actions (view, create, edit, delete, approve)
-function moduleSupportsAction(_module: string, _action: string): boolean {
+function moduleSupportsAction(module: string, action: string): boolean {
+  void module;
+  void action;
   return true;
 }
 

@@ -34,6 +34,7 @@ export const HRMS_MODULES = [
   'payroll',
   'payslips',
   'tax',
+  'procurement',
   // Operations
   'assets',
   'maintenance',
