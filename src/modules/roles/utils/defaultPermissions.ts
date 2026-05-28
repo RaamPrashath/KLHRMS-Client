@@ -251,6 +251,8 @@ export function createHRManagerPermissions(): RolePermissions {
   permissions.payroll.view = 'organization';
   permissions.payslips.view = 'organization';
   permissions.tax.view = 'organization';
+  permissions.procurement.view = 'organization';
+  permissions.procurement.create = 'organization';
   
   // Operations
   permissions.assets.view = 'organization';
@@ -313,6 +315,9 @@ export function createFinanceManagerPermissions(): RolePermissions {
   permissions.tax.create = 'organization';
   permissions.tax.edit = 'organization';
   permissions.tax.delete = 'organization';
+  permissions.procurement.view = 'organization';
+  permissions.procurement.edit = 'organization';
+  permissions.procurement.approve = 'organization';
   
   // Operations
   permissions.documents.view = 'organization';

@@ -11,6 +11,8 @@ interface BulkAttendanceToolbarProps {
   onToday: () => void;
   saveState: SaveState;
   saveError: string | null;
+  showTimesheetEntryToggle?: boolean;
+  onTimesheetToggle?: () => void;
 }
 
 export function BulkAttendanceToolbar({
@@ -20,6 +22,8 @@ export function BulkAttendanceToolbar({
   onToday,
   saveState,
   saveError,
+  showTimesheetEntryToggle = false,
+  onTimesheetToggle,
 }: Readonly<BulkAttendanceToolbarProps>) {
   const visibleMonthLabel = format(weekStart, 'MMMM');
   const isCurrentWeek = (() => {
@@ -32,6 +36,7 @@ export function BulkAttendanceToolbar({
 
   return (
     <div className="flex items-center gap-3">
+
       {/* iOS-style segmented control navigation */}
       <div className="inline-flex items-center gap-0 bg-secondary/40 border border-border p-0.5 rounded-lg">
         <button

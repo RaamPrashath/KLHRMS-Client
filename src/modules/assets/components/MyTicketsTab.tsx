@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -9,8 +9,18 @@ import {
   useReactTable,
   type SortingState,
 } from '@tanstack/react-table';
-import { ChevronDown, ChevronUp, Hammer } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronDown, ChevronUp, Hammer, Loader2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -21,6 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatDate, humanize } from '@/modules/assets/lib/assetUtils';
+import { useAssetMutations } from '@/modules/assets/hooks/useAssetMutations';
 import { useMyTicketsQuery, type MyTicket } from '@/modules/assets/hooks/useMyTicketsQuery';
 
 const statusStyle: Record<string, { dot: string; label: string }> = {
@@ -30,8 +41,19 @@ const statusStyle: Record<string, { dot: string; label: string }> = {
   CANCELLED: { dot: '#6b7280', label: 'Cancelled' },
 };
 
-function MyTicketsTable({ tickets }: { tickets: MyTicket[] }) {
+function MyTicketsTable({
+  tickets,
+  onWithdraw,
+  withdrawingTicketId,
+}: {
+  tickets: MyTicket[];
+  onWithdraw: (ticket: MyTicket) => Promise<void>;
+  withdrawingTicketId: string | null;
+}) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
+  const [ticketToWithdraw, setTicketToWithdraw] = useState<MyTicket | null>(null);
+  const canWithdraw = (ticket: MyTicket) =>
+    ticket.status !== 'COMPLETED' && ticket.status !== 'CANCELLED';
 
   const columns = useMemo(
     () => [
@@ -102,8 +124,37 @@ function MyTicketsTable({ tickets }: { tickets: MyTicket[] }) {
         ),
         enableSorting: true,
       },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }: { row: { original: MyTicket } }) => {
+          const ticket = row.original;
+          const disabled = !canWithdraw(ticket) || withdrawingTicketId === ticket.id;
+
+          return (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 rounded-lg text-[#9ca3af] hover:bg-[#fef2f2] hover:text-[#dc2626] disabled:opacity-40"
+                disabled={disabled}
+                onClick={() => setTicketToWithdraw(ticket)}
+                aria-label={`Withdraw ticket ${ticket.ticketId}`}
+                title={canWithdraw(ticket) ? 'Withdraw ticket' : 'Ticket cannot be withdrawn'}
+              >
+                {withdrawingTicketId === ticket.id ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Trash2 className="size-4" />
+                )}
+              </Button>
+            </div>
+          );
+        },
+      },
     ],
-    [],
+    [withdrawingTicketId],
   );
 
   const table = useReactTable({
@@ -229,6 +280,38 @@ function MyTicketsTable({ tickets }: { tickets: MyTicket[] }) {
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={!!ticketToWithdraw}
+        onOpenChange={(open) => {
+          if (!open) setTicketToWithdraw(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Withdraw ticket?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {ticketToWithdraw
+                ? `This will withdraw ${ticketToWithdraw.ticketId} from your raised tickets.`
+                : 'This will withdraw the selected ticket.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!withdrawingTicketId}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!ticketToWithdraw || !!withdrawingTicketId}
+              onClick={async (event) => {
+                event.preventDefault();
+                if (!ticketToWithdraw) return;
+                await onWithdraw(ticketToWithdraw);
+                setTicketToWithdraw(null);
+              }}
+            >
+              {withdrawingTicketId ? 'Withdrawing...' : 'Withdraw'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -241,6 +324,28 @@ export function MyTicketsTab({
   memberId: string;
 }) {
   const { data, isLoading } = useMyTicketsQuery(orgSlug, memberId);
+  const mutations = useAssetMutations(orgSlug, memberId);
+
+  async function handleWithdraw(ticket: MyTicket) {
+    try {
+      await mutations.withdrawMyTicket.mutateAsync(ticket.id);
+      toast.success(`Ticket ${ticket.ticketId} withdrawn`);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? (() => {
+              try {
+                const parsed = JSON.parse(error.message) as { message?: string };
+                return parsed.message ?? 'Failed to withdraw ticket';
+              } catch {
+                return error.message;
+              }
+            })()
+          : 'Failed to withdraw ticket';
+      toast.error(message);
+      throw error;
+    }
+  }
 
   if (isLoading) {
     return (
@@ -259,5 +364,11 @@ export function MyTicketsTab({
     );
   }
 
-  return <MyTicketsTable tickets={data ?? []} />;
+  return (
+    <MyTicketsTable
+      tickets={data ?? []}
+      onWithdraw={handleWithdraw}
+      withdrawingTicketId={mutations.withdrawMyTicket.isPending ? mutations.withdrawMyTicket.variables ?? null : null}
+    />
+  );
 }

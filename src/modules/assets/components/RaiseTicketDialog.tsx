@@ -37,17 +37,33 @@ export function RaiseTicketDialog({
   onOpenChange,
   assets,
   memberId,
+  title = 'Report an Issue',
+  descriptionText = 'Select an asset and describe the problem',
+  assetPlaceholder = 'Search your assigned assets...',
+  descriptionPlaceholder = 'What seems to be the issue? Describe the problem in detail...',
+  submitLabel = 'Raise Ticket',
+  initialAssetId = null,
+  lockAssetSelection = false,
+  defaultMaintenanceType = 'REPAIR',
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   assets: AssetSummary[];
   memberId: string;
+  title?: string;
+  descriptionText?: string;
+  assetPlaceholder?: string;
+  descriptionPlaceholder?: string;
+  submitLabel?: string;
+  initialAssetId?: string | null;
+  lockAssetSelection?: boolean;
+  defaultMaintenanceType?: string;
   onSubmit: (data: { assetId: string; maintenanceType: string; issueDescription: string }) => Promise<void>;
 }) {
   const [assetSearchOpen, setAssetSearchOpen] = useState(false);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
-  const [maintenanceType, setMaintenanceType] = useState('REPAIR');
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(initialAssetId);
+  const [maintenanceType, setMaintenanceType] = useState(defaultMaintenanceType);
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -78,8 +94,8 @@ export function RaiseTicketDialog({
 
   function handleClose() {
     setAssetSearchOpen(false);
-    setSelectedAssetId(null);
-    setMaintenanceType('REPAIR');
+    setSelectedAssetId(initialAssetId);
+    setMaintenanceType(defaultMaintenanceType);
     setDescription('');
     onOpenChange(false);
   }
@@ -114,10 +130,10 @@ export function RaiseTicketDialog({
                 </div>
                 <div>
                   <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
-                    Report an Issue
+                    {title}
                   </h2>
                   <p className="mt-0.5 text-[13px] text-[#6e6e73]">
-                    Select an asset and describe the problem
+                    {descriptionText}
                   </p>
                 </div>
               </div>
@@ -135,12 +151,13 @@ export function RaiseTicketDialog({
                 <Label className="text-[13px] text-[#6e6e73] font-medium">
                   Asset <span className="text-[#b3261e]">*</span>
                 </Label>
-                <Popover open={assetSearchOpen} onOpenChange={setAssetSearchOpen}>
+                <Popover open={lockAssetSelection ? false : assetSearchOpen} onOpenChange={setAssetSearchOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
-                      aria-expanded={assetSearchOpen}
+                      aria-expanded={lockAssetSelection ? false : assetSearchOpen}
+                      disabled={lockAssetSelection}
                       className={cn(
                         'h-11 w-full justify-between rounded-2xl border-[#e5e7eb] px-4 text-[15px] font-normal shadow-none',
                         selectedAsset ? 'text-[#1d1d1f]' : 'text-[#9ca3af]',
@@ -148,60 +165,62 @@ export function RaiseTicketDialog({
                     >
                       {selectedAsset
                         ? `${selectedAsset.name} (${selectedAsset.assetCode})`
-                        : 'Search your assigned assets...'}
-                      <ChevronsUpDown className="ml-2 size-4 shrink-0 text-[#86868b]" />
+                        : assetPlaceholder}
+                      {!lockAssetSelection && <ChevronsUpDown className="ml-2 size-4 shrink-0 text-[#86868b]" />}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    sideOffset={4}
-                    className="w-[var(--radix-popover-trigger-width)] rounded-2xl border-[#e5e7eb] p-0 shadow-lg"
-                  >
-                    <Command>
-                      <CommandInput
-                        placeholder="Search assets..."
-                        className="h-11 text-[15px]"
-                      />
-                      <CommandList>
-                        <CommandEmpty className="py-6 text-[13px] text-[#6e6e73]">
-                          No assets found
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {assignedAssets.map((asset) => (
-                            <CommandItem
-                              key={asset.id}
-                              value={`${asset.name} ${asset.assetCode}`}
-                              onSelect={() => {
-                                setSelectedAssetId(asset.id);
-                                setAssetSearchOpen(false);
-                              }}
-                              className="flex items-center gap-3 py-2.5 px-3 text-[14px]"
-                            >
-                              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f0f4f8] text-[#6b7280]">
-                                <Hammer className="size-3.5" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-[#1d1d1f] truncate">
-                                  {asset.name}
-                                </p>
-                                <p className="text-[12px] text-[#6e6e73]">
-                                  {asset.assetCode}
-                                </p>
-                              </div>
-                              <Check
-                                className={cn(
-                                  'size-4 shrink-0',
-                                  selectedAssetId === asset.id
-                                    ? 'text-[#00874a] opacity-100'
-                                    : 'opacity-0',
-                                )}
-                              />
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
+                  {!lockAssetSelection && (
+                    <PopoverContent
+                      align="start"
+                      sideOffset={4}
+                      className="w-[var(--radix-popover-trigger-width)] rounded-2xl border-[#e5e7eb] p-0 shadow-lg"
+                    >
+                      <Command>
+                        <CommandInput
+                          placeholder="Search assets..."
+                          className="h-11 text-[15px]"
+                        />
+                        <CommandList>
+                          <CommandEmpty className="py-6 text-[13px] text-[#6e6e73]">
+                            No assets found
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {assignedAssets.map((asset) => (
+                              <CommandItem
+                                key={asset.id}
+                                value={`${asset.name} ${asset.assetCode}`}
+                                onSelect={() => {
+                                  setSelectedAssetId(asset.id);
+                                  setAssetSearchOpen(false);
+                                }}
+                                className="flex items-center gap-3 py-2.5 px-3 text-[14px]"
+                              >
+                                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f0f4f8] text-[#6b7280]">
+                                  <Hammer className="size-3.5" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-medium text-[#1d1d1f] truncate">
+                                    {asset.name}
+                                  </p>
+                                  <p className="text-[12px] text-[#6e6e73]">
+                                    {asset.assetCode}
+                                  </p>
+                                </div>
+                                <Check
+                                  className={cn(
+                                    'size-4 shrink-0',
+                                    selectedAssetId === asset.id
+                                      ? 'text-[#00874a] opacity-100'
+                                      : 'opacity-0',
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  )}
                 </Popover>
               </div>
 
@@ -237,7 +256,7 @@ export function RaiseTicketDialog({
                     <Textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="What seems to be the issue? Describe the problem in detail..."
+                      placeholder={descriptionPlaceholder}
                       rows={4}
                       className="rounded-2xl border-[#e5e7eb] px-4 py-3 text-[15px] shadow-none resize-none placeholder:text-[#9ca3af]"
                     />
@@ -260,7 +279,7 @@ export function RaiseTicketDialog({
                 className="h-10 rounded-full px-6 text-[14px] font-medium text-white"
                 style={{ backgroundColor: '#b3261e' }}
               >
-                {submitting ? 'Submitting...' : 'Raise Ticket'}
+                {submitting ? 'Submitting...' : submitLabel}
               </Button>
             </div>
           </motion.div>

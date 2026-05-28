@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
   CircleCheck,
@@ -7,25 +9,187 @@ import {
   Ticket,
   WrenchIcon,
 } from 'lucide-react';
-import { useDashboardQuery } from '@/modules/assets/hooks/useDashboardQuery';
-import { DashboardKPICard } from './DashboardKPICard';
-import { StatusDonutChart } from './StatusDonutChart';
-import { MonthlyTrendChart } from './MonthlyTrendChart';
+import { toast } from 'sonner';
+import { fetchAssetDetailAction } from '@/modules/assets/api/assetServerActions';
+import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog';
+import { readError } from '@/modules/assets/lib/assetUtils';
+import type {
+  AssetDetail,
+  AssetProvideRecordSummary,
+  AssetSummary,
+  AssetUnitResponse,
+} from '@/modules/assets/types/assetTypes';
+import {
+  useBrandModelAnalyticsQuery,
+  useDashboardQuery,
+  useOsDistributionQuery,
+  useWarrantyFeedQuery,
+} from '@/modules/assets/hooks/useDashboardQuery';
 import { ActivityTable } from './ActivityTable';
+import { BrandModelInventoryMatrix } from './BrandModelInventoryMatrix';
+import { DashboardKPICard } from './DashboardKPICard';
+import { MonthlyTrendChart } from './MonthlyTrendChart';
 import { OpenTicketList } from './OpenTicketList';
+import { OsDistributionCard } from './OsDistributionCard';
+import { StatusDonutChart } from './StatusDonutChart';
+import { UpcomingExpirationsFeed } from './UpcomingExpirationsFeed';
+import type { BrandModelInventoryRow } from './dashboard.types';
 
 function SkeletonLine({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-[#e8e8eb] ${className ?? ''}`} />;
 }
 
+function deriveAggregateStatus(row: BrandModelInventoryRow): AssetSummary['status'] {
+  if (row.inOfficeStock > 0) return 'AVAILABLE';
+  if (row.providedStock > 0) return 'ASSIGNED';
+  if (row.maintenanceOrDamagedStock > 0) return 'IN_MAINTENANCE';
+  return 'AVAILABLE';
+}
+
+function sortByNewest<T extends { providedDate?: string | null; serviceDate?: string | null; createdAt?: string | null }>(
+  items: T[],
+) {
+  return [...items].sort((left, right) => {
+    const leftDate = left.providedDate || left.serviceDate || left.createdAt || '';
+    const rightDate = right.providedDate || right.serviceDate || right.createdAt || '';
+    return rightDate.localeCompare(leftDate);
+  });
+}
+
+function buildAggregateDetail(row: BrandModelInventoryRow, details: AssetDetail[]): AssetDetail {
+  const unitIds = new Set(row.unitIds);
+  const serialNumbers = new Set(row.serialNumbers);
+
+  const units: AssetUnitResponse[] = [];
+  const assetHistory: AssetProvideRecordSummary[] = [];
+  const maintenanceHistory: AssetDetail['maintenanceHistory'] = [];
+
+  for (const detail of details) {
+    if (detail.units.length > 0) {
+      units.push(
+        ...detail.units.filter(
+          (unit) =>
+            unitIds.has(unit.id) || (unit.serialNumber ? serialNumbers.has(unit.serialNumber) : false),
+        ),
+      );
+    } else if (detail.serialNumber && serialNumbers.has(detail.serialNumber)) {
+      units.push({
+        id: `${detail.id}:implicit`,
+        assetId: detail.id,
+        serialNumber: detail.serialNumber,
+        status: detail.status,
+        currentHolderMemberId: detail.currentHolderMemberId,
+        currentHolderName: detail.currentHolderName,
+        condition: detail.condition,
+      });
+    }
+
+    assetHistory.push(
+      ...detail.assetHistory.filter((record) => {
+        if (unitIds.size === 0) return true;
+        return record.assetUnitId ? unitIds.has(record.assetUnitId) : detail.units.length <= 1;
+      }),
+    );
+
+    maintenanceHistory.push(
+      ...detail.maintenanceHistory.filter((record) => {
+        if (unitIds.size === 0) return true;
+        return record.assetUnitId ? unitIds.has(record.assetUnitId) : detail.units.length <= 1;
+      }),
+    );
+  }
+
+  const newestDetail = details[0];
+  const activeProvision = assetHistory.find((record) => record.returnDate === null) ?? null;
+
+  return {
+    id: `brand-model:${row.rowKey}`,
+    assetCode: `${row.brand.toUpperCase()}-${row.model.toUpperCase().replaceAll(' ', '-')}`,
+    name: `${row.brand} ${row.model}`,
+    category: 'LAPTOP',
+    categoryDefinitionId: newestDetail?.categoryDefinitionId ?? null,
+    serialNumber: units[0]?.serialNumber ?? null,
+    model: row.model,
+    purchaseDate: null,
+    purchasePrice: null,
+    warrantyExpiryDate: null,
+    condition: newestDetail?.condition ?? 'GOOD',
+    status: deriveAggregateStatus(row),
+    location: newestDetail?.location ?? 'Multiple locations',
+    notes: `Filtered laptop inventory view for ${row.brand} ${row.model}`,
+    quantity: row.totalStock,
+    createdAt: newestDetail?.createdAt ?? new Date().toISOString(),
+    updatedAt: newestDetail?.updatedAt ?? new Date().toISOString(),
+    currentHolderMemberId: activeProvision?.memberId ?? null,
+    currentHolderName: activeProvision?.memberName ?? null,
+    currentHolderEmail: activeProvision?.memberEmail ?? null,
+    openMaintenanceCount: maintenanceHistory.filter((record) =>
+      ['OPEN', 'IN_PROGRESS'].includes(record.status),
+    ).length,
+    unitSummary: {
+      total: row.totalStock,
+      available: row.inOfficeStock,
+      provided: row.providedStock,
+      underMaintenance: row.maintenanceOrDamagedStock,
+      damaged: row.maintenanceOrDamagedStock,
+    },
+    customFields: [],
+    activeProvision,
+    assetHistory: sortByNewest(assetHistory),
+    maintenanceHistory: sortByNewest(maintenanceHistory),
+    units,
+  };
+}
+
 export function DashboardTab({
   orgSlug,
   memberId,
+  canManageAssets,
 }: {
   orgSlug: string;
   memberId: string;
+  canManageAssets: boolean;
 }) {
   const { data, isLoading, isError } = useDashboardQuery(orgSlug, memberId);
+  const brandModelQuery = useBrandModelAnalyticsQuery(orgSlug, memberId);
+  const osDistributionQuery = useOsDistributionQuery(orgSlug, memberId);
+  const warrantyFeedQuery = useWarrantyFeedQuery(orgSlug, memberId);
+  const queryClient = useQueryClient();
+
+  const [selectedBreakdown, setSelectedBreakdown] = useState<AssetDetail | null>(null);
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
+  const [loadingRowKey, setLoadingRowKey] = useState<string | null>(null);
+  const [activityTab, setActivityTab] = useState<'assigned' | 'maintenance'>('assigned');
+
+  useEffect(() => {
+    if (brandModelQuery.data) {
+      console.info(
+        '[Assets] Temporary Laptop Stock depth:',
+        brandModelQuery.data.temporaryLaptopStockDepth,
+      );
+    }
+  }, [brandModelQuery.data]);
+
+  async function handleBreakdownRowClick(row: BrandModelInventoryRow) {
+    setLoadingRowKey(row.rowKey);
+    try {
+      const details = await Promise.all(
+        row.assetIds.map((assetId) =>
+          queryClient.fetchQuery({
+            queryKey: ['asset', orgSlug, assetId],
+            queryFn: () => fetchAssetDetailAction({ orgSlug, memberId, assetId }),
+            staleTime: 1000 * 60,
+          }),
+        ),
+      );
+      setSelectedBreakdown(buildAggregateDetail(row, details));
+      setIsBreakdownOpen(true);
+    } catch (error) {
+      toast.error(readError(error, 'Failed to load brand and model inventory details'));
+    } finally {
+      setLoadingRowKey(null);
+    }
+  }
 
   if (isError) {
     return (
@@ -59,6 +223,10 @@ export function DashboardTab({
             <SkeletonLine className="mb-4 h-5 w-36" />
             <SkeletonLine className="h-40 w-full" />
           </div>
+        </div>
+        <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
+          <SkeletonLine className="mb-4 h-5 w-48" />
+          <SkeletonLine className="h-52 w-full" />
         </div>
         <div className="grid grid-cols-3 gap-5">
           <div className="col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white p-5">
@@ -94,6 +262,12 @@ export function DashboardTab({
 
   const d = data!;
 
+  const assignedActivity = d.recentActivity.filter(
+    (item) => item.type === 'ASSIGNED' || item.type === 'RETURNED',
+  );
+  const maintenanceActivity = d.recentActivity.filter((item) => item.type === 'MAINTENANCE');
+  const filteredActivity = activityTab === 'assigned' ? assignedActivity : maintenanceActivity;
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -119,12 +293,59 @@ export function DashboardTab({
         </div>
       </div>
 
+      <BrandModelInventoryMatrix
+        analytics={brandModelQuery.data}
+        isLoading={brandModelQuery.isLoading}
+        activeRowKey={loadingRowKey}
+        onRowClick={handleBreakdownRowClick}
+      />
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <OsDistributionCard
+          data={osDistributionQuery.data}
+          isLoading={osDistributionQuery.isLoading}
+          isError={osDistributionQuery.isError}
+        />
+        <UpcomingExpirationsFeed
+          data={warrantyFeedQuery.data}
+          isLoading={warrantyFeedQuery.isLoading}
+        />
+      </div>
+
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-          <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-            Recent Activity
-          </h3>
-          <ActivityTable items={d.recentActivity} />
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
+              Recent Activity
+            </h3>
+            <div className="flex items-center gap-0.5 rounded-lg bg-[#f5f5f7] p-0.5">
+              <button
+                type="button"
+                onClick={() => setActivityTab('assigned')}
+                className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                  activityTab === 'assigned'
+                    ? 'bg-white text-[#1d1d1f] shadow-sm'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                }`}
+              >
+                Assigned
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivityTab('maintenance')}
+                className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                  activityTab === 'maintenance'
+                    ? 'bg-white text-[#1d1d1f] shadow-sm'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                }`}
+              >
+                Maintenance
+              </button>
+            </div>
+          </div>
+          <div className="max-h-[380px] overflow-y-auto">
+            <ActivityTable items={filteredActivity} />
+          </div>
         </div>
         <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
           <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
@@ -133,6 +354,24 @@ export function DashboardTab({
           <OpenTicketList tickets={d.recentTickets} />
         </div>
       </div>
+
+      <AssetDetailDialog
+        open={isBreakdownOpen}
+        onOpenChange={(open) => {
+          setIsBreakdownOpen(open);
+          if (!open) setSelectedBreakdown(null);
+        }}
+        isLoading={loadingRowKey !== null && !selectedBreakdown}
+        asset={selectedBreakdown ?? undefined}
+        canManageAssets={canManageAssets}
+        hideActions
+        titleOverride={selectedBreakdown?.name}
+        onEdit={() => {}}
+        onArchive={() => {}}
+        onProvide={() => {}}
+        onReturn={() => {}}
+        onMaintenance={() => {}}
+      />
     </div>
   );
 }

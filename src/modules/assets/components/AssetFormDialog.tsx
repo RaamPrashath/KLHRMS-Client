@@ -58,18 +58,21 @@ function DynamicFieldRenderer({
       return <InputField label={fieldDef.fieldName} value={value || ''} onChange={(v) => onChange(v || null)} />;
     case 'BOOLEAN':
       return (
-        <div className="flex items-center gap-2">
-          <Checkbox id={`cf-${fieldDef.id}`} checked={value === 'true'} onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')} />
-          <Label htmlFor={`cf-${fieldDef.id}`} className="text-[14px] text-[#111827] cursor-pointer">{fieldDef.fieldName}</Label>
+        <div className="grid gap-1.5">
+          <Label className="text-[13px] font-medium text-transparent select-none hidden md:block">Placeholder</Label>
+          <div className="flex h-10 items-center gap-2">
+            <Checkbox id={`cf-${fieldDef.id}`} checked={value === 'true'} onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')} />
+            <Label htmlFor={`cf-${fieldDef.id}`} className="text-sm font-medium text-gray-700 cursor-pointer">{fieldDef.fieldName}</Label>
+          </div>
         </div>
       );
     case 'SELECT': {
       const options = fieldDef.fieldOptions?.options || [];
       return (
-        <div className="grid gap-2">
-          <Label className="text-[13px] text-[#6b7280]">{fieldDef.fieldName}</Label>
+        <div className="grid gap-1.5">
+          <Label className="text-[13px] font-medium text-[#4b5563]">{fieldDef.fieldName}</Label>
           <Select value={value || undefined} onValueChange={(v) => onChange(v)}>
-            <SelectTrigger className="h-11 rounded-2xl border-[#e5e7eb] shadow-none">
+            <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
               <SelectValue placeholder={`Select ${fieldDef.fieldName.toLowerCase()}`} />
             </SelectTrigger>
             <SelectContent>
@@ -213,7 +216,7 @@ export function AssetFormDialog({
               animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
               exit={{ opacity: 0, x: 320, y: 40, scale: 0.92 }}
               transition={{ type: 'spring', stiffness: 380, damping: 32, mass: 0.9 }}
-              className="fixed left-1/2 top-1/2 z-50 flex h-155 w-[92vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-[#e5e7eb] bg-white shadow-2xl"
+              className="fixed left-1/2 top-1/2 z-50 flex h-155 w-[92vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-[#eef0f3] px-6 py-4 shrink-0">
                 <div className="flex items-center gap-3">
@@ -240,17 +243,17 @@ export function AssetFormDialog({
                   {/* Section 1: Basic Details */}
                   <div>
                     <div className="mb-4 flex items-center gap-2">
-                      <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{sectionNumber.base}</span>
+                       <span className="flex size-6 items-center justify-center rounded-md bg-[#1d1d1f] text-[11px] font-semibold text-white">{sectionNumber.base}</span>
                       <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">Basic Details</span>
                     </div>
                     <div className="grid gap-5 md:grid-cols-2">
                       <InputField label="Asset Name" value={assetName} onChange={(v) => setAssetName(v)} />
 
                       {/* Category select */}
-                      <div className="grid gap-2">
-                        <Label className="text-[13px] text-[#6b7280]">Category</Label>
+                      <div className="grid gap-1.5">
+                        <Label className="text-[13px] font-medium text-[#4b5563]">Category</Label>
                         <Select value={selectedCategoryId || undefined} onValueChange={handleCategorySelect}>
-                          <SelectTrigger className="h-11 rounded-2xl border-[#e5e7eb] shadow-none">
+                          <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
                             <SelectValue placeholder="Select a category" />
                           </SelectTrigger>
                           <SelectContent>
@@ -265,10 +268,10 @@ export function AssetFormDialog({
 
                       {/* Asset Code */}
                       {uniqueAssetCodes.length > 0 && !useCustomAssetCode ? (
-                        <div className="grid gap-2">
-                          <Label className="text-[13px] text-[#6b7280]">Asset ID / Code</Label>
+                        <div className="grid gap-1.5">
+                          <Label className="text-[13px] font-medium text-[#4b5563]">Asset ID / Code</Label>
                           <Select value={assetCode || undefined} onValueChange={handleAssetCodeSelect}>
-                            <SelectTrigger className="h-11 rounded-2xl border-[#e5e7eb] shadow-none">
+                            <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
                               <SelectValue placeholder="Auto-filled from category" />
                             </SelectTrigger>
                             <SelectContent>
@@ -283,13 +286,13 @@ export function AssetFormDialog({
                           </Select>
                         </div>
                       ) : (
-                        <div className="grid gap-2">
-                          <Label className="text-[13px] text-[#6b7280]">Asset ID / Code</Label>
+                        <div className="grid gap-1.5">
+                          <Label className="text-[13px] font-medium text-[#4b5563]">Asset ID / Code</Label>
                           <Input
                             value={assetCode}
                             onChange={(e) => setAssetCode(e.target.value)}
                             placeholder="e.g. AST-LAP"
-                            className="h-11 rounded-2xl border-[#e5e7eb] text-[15px]"
+                            className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
                           />
                           {useCustomAssetCode && uniqueAssetCodes.length > 0 && (
                             <button
@@ -309,7 +312,7 @@ export function AssetFormDialog({
                   {dynamicFields.length > 0 && (
                     <div>
                       <div className="mb-4 flex items-center gap-2">
-                        <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{sectionNumber.dynamic}</span>
+                        <span className="flex size-6 items-center justify-center rounded-md bg-[#1d1d1f] text-[11px] font-semibold text-white">{sectionNumber.dynamic}</span>
                         <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">{selectedCategory?.name} Fields</span>
                       </div>
                       <div className="rounded-2xl border border-[#eef0f3] bg-[#fbfcfb] p-4">
@@ -325,7 +328,7 @@ export function AssetFormDialog({
                   {/* Section 3: Configuration */}
                   <div>
                     <div className="mb-4 flex items-center gap-2">
-                      <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{dynamicFields.length > 0 ? sectionNumber.dynamic + 1 : sectionNumber.config}</span>
+                      <span className="flex size-6 items-center justify-center rounded-md bg-[#1d1d1f] text-[11px] font-semibold text-white">{dynamicFields.length > 0 ? sectionNumber.dynamic + 1 : sectionNumber.config}</span>
                       <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">Configuration</span>
                     </div>
                     <div className="rounded-2xl border border-[#eef0f3] bg-[#fbfcfb] p-4">
@@ -342,7 +345,7 @@ export function AssetFormDialog({
                   {/* Section 4: Quantity & Serial Numbers */}
                   <div>
                     <div className="mb-4 flex items-center gap-2">
-                      <span className="flex size-6 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-semibold text-white">{dynamicFields.length > 0 ? sectionNumber.dynamic + 2 : sectionNumber.serials}</span>
+                      <span className="flex size-6 items-center justify-center rounded-md bg-[#1d1d1f] text-[11px] font-semibold text-white">{dynamicFields.length > 0 ? sectionNumber.dynamic + 2 : sectionNumber.serials}</span>
                       <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6b7280]">Quantity & Serial Numbers</span>
                     </div>
                     <div className="rounded-2xl border border-[#eef0f3] bg-[#fbfcfb] p-4">
@@ -352,22 +355,22 @@ export function AssetFormDialog({
                         </div>
                         <div className="flex gap-1.5 pt-5">
                           <button type="button" onClick={() => { setSerials([...serials, '']); setQuantity(quantity + 1); }}
-                            className="flex size-8 items-center justify-center rounded-full border border-[#d8dde5] text-[#6b7280] transition-colors hover:border-[#cdd5df] hover:text-[#1d1d1f]">
+                            className="flex size-8 items-center justify-center rounded-lg border border-[#d8dde5] text-[#6b7280] transition-colors hover:border-[#cdd5df] hover:text-[#1d1d1f]">
                             <Plus className="size-3.5" />
                           </button>
                         </div>
                       </div>
                       <p className="mt-1 text-[11px] text-[#9ca3af]">Each quantity creates a separate physical asset row with its own serial number.</p>
-                      <div className="grid gap-2 mt-3 md:grid-cols-2">
+                      <div className="grid gap-3 mt-3 md:grid-cols-2">
                         {serials.map((serial, i) => (
                           <div key={i} className="grid gap-1.5">
-                            <Label className="text-[12px] text-[#6b7280]">Serial #{i + 1}</Label>
+                            <Label className="text-[13px] font-medium text-[#4b5563]">Serial #{i + 1}</Label>
                             <div className="flex items-center gap-1.5">
                               <Input value={serial} onChange={(e) => updateSerial(i, e.target.value)}
-                                placeholder={`Serial for unit ${i + 1}`} className="h-10 rounded-xl border-[#e5e7eb] text-[13px]" />
+                                placeholder={`Serial for unit ${i + 1}`} className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent" />
                               {serials.length > 1 && (
                                 <button type="button" onClick={() => { setSerials(serials.filter((_, j) => j !== i)); setQuantity(quantity - 1); }}
-                                  className="flex size-8 shrink-0 items-center justify-center rounded-full text-[#9ca3af] hover:text-[#b3261e]">
+                                  className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-transparent text-[#9ca3af] hover:border-red-100 hover:bg-red-50 hover:text-[#b3261e] transition-colors">
                                   <X className="size-3.5" />
                                 </button>
                               )}
@@ -383,16 +386,16 @@ export function AssetFormDialog({
               <div className="flex items-center justify-between border-t border-[#eef0f3] px-6 py-4 shrink-0">
                 <div className="flex gap-2">
                   <Button variant="ghost" onClick={() => onOpenChange(false)}
-                    className="rounded-full px-5 text-[13px]">
+                    className="rounded-lg px-4 text-[13px]">
                     Cancel
                   </Button>
                   <Button variant="ghost" onClick={handleReset}
-                    className="rounded-full px-5 text-[13px] text-[#6b7280]">
+                    className="rounded-lg px-4 text-[13px] text-[#6b7280]">
                     Reset
                   </Button>
                 </div>
                 <Button onClick={() => void handleSave()} disabled={isSaving || !assetName.trim() || !assetCode.trim() || serials.filter(s => s.trim()).length === 0}
-                  className="h-10 rounded-full px-6 text-[14px] font-medium text-white"
+                  className="h-10 rounded-lg px-5 text-sm font-medium text-white shadow-sm"
                   style={{ backgroundColor: ACTION_GREEN }}>
                   <Check className="mr-1.5 size-4" />
                   {isSaving ? 'Creating...' : `Create ${serials.filter(s => s.trim()).length} Asset${serials.filter(s => s.trim()).length !== 1 ? 's' : ''}`}

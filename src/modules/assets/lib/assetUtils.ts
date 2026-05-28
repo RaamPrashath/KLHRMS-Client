@@ -12,8 +12,11 @@ export function readError(error: unknown, fallback: string) {
 
 export function humanize(value: string) {
   const aliases: Record<string, string> = {
-    PROVIDED: 'Issued',
+    PROVIDED: 'Assigned',
+    ASSIGNED: 'Assigned',
     PROVIDED_ASSETS: 'Issued Assets',
+    IN_MAINTENANCE: 'In Maintenance',
+    PENDING_RETURN: 'Pending Return',
   };
   if (aliases[value]) return aliases[value];
 
@@ -40,8 +43,9 @@ export function formatCurrency(value: number | null) {
 export function statusBadge(status: AssetStatus) {
   const map: Record<AssetStatus, string> = {
     AVAILABLE: 'bg-[#eef9f1] text-[#156f3d]',
-    PROVIDED: 'bg-[#eef5ff] text-[#2454a6]',
-    UNDER_MAINTENANCE: 'bg-[#fff7e8] text-[#8a5a00]',
+    ASSIGNED: 'bg-[#eef5ff] text-[#2454a6]',
+    IN_MAINTENANCE: 'bg-[#fff7e8] text-[#8a5a00]',
+    PENDING_RETURN: 'bg-[#fff6db] text-[#8a5a00]',
     DAMAGED: 'bg-[#fff1f1] text-[#b3261e]',
     LOST: 'bg-[#fff4e5] text-[#965400]',
     RETIRED: 'bg-[#f3f4f6] text-[#5b6470]',
@@ -87,13 +91,13 @@ export function base64ToBlob(base64: string, mimeType: string) {
 export function deriveReturnNextStatus(condition: AssetCondition) {
   return condition === 'NEW' || condition === 'GOOD' || condition === 'FAIR'
     ? 'AVAILABLE'
-    : 'UNDER_MAINTENANCE';
+    : 'IN_MAINTENANCE';
 }
 
 export function getRowActions(status: AssetStatus) {
   if (status === 'AVAILABLE') return ['View', 'Issue Asset', 'Log Maintenance', 'Decommission'];
-  if (status === 'PROVIDED') return ['View', 'Return Asset', 'Log Maintenance'];
-  if (status === 'UNDER_MAINTENANCE') return ['View'];
+  if (status === 'ASSIGNED') return ['View', 'Return Asset', 'Log Maintenance', 'Revoke & Swap'];
+  if (status === 'IN_MAINTENANCE' || status === 'PENDING_RETURN') return ['View', 'Revoke & Swap'];
   if (status === 'DAMAGED') return ['View', 'Log Maintenance', 'Decommission'];
   return ['View'];
 }

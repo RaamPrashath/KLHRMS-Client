@@ -42,7 +42,7 @@ export function MaintenanceUpdateDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[92vw]! max-w-160! rounded-3xl border border-[#e5e7eb] bg-white p-0">
+      <DialogContent className="w-[92vw]! max-w-160! rounded-2xl border border-[#e5e7eb] bg-white p-0">
         <div className="flex flex-col">
           <DialogHeader className="border-b border-[#eef0f3] px-6 py-5 text-left">
             <DialogTitle className="text-[22px] font-semibold tracking-[-0.02em] text-[#111827]">
@@ -61,7 +61,7 @@ export function MaintenanceUpdateDialog({
                 <Select
                   value={form.status}
                   onValueChange={(value) =>
-                    setForm({
+                     setForm({
                       ...form,
                       status: value as AssetMaintenanceUpdateInput['status'],
                     })
@@ -128,7 +128,8 @@ export function MaintenanceUpdateDialog({
                     <SelectItem value="DAMAGED">Damaged</SelectItem>
                     <SelectItem value="RETIRED">Retired</SelectItem>
                     <SelectItem value="DISPOSED">Disposed</SelectItem>
-                    <SelectItem value="UNDER_MAINTENANCE">Under Maintenance</SelectItem>
+                    <SelectItem value="IN_MAINTENANCE">In Maintenance</SelectItem>
+                    <SelectItem value="PENDING_RETURN">Pending Return</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -140,13 +141,13 @@ export function MaintenanceUpdateDialog({
               </div>
 
               <DialogFooter className="border-t border-[#eef0f3] px-6 py-4">
-                <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full px-5">
+                <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-lg px-4">
                   Cancel
                 </Button>
                 <Button
                   onClick={onSave}
                   disabled={isSaving}
-                  className="rounded-full px-6 text-white"
+                  className="rounded-lg px-5 text-white"
                   style={{ backgroundColor: ACTION_GREEN }}
                 >
                   {isSaving ? 'Saving...' : 'Save Maintenance'}

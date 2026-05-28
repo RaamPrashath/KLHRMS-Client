@@ -201,7 +201,7 @@ export function WorkLogDirectoryPageShell({
                 rows={reportQuery.data?.items ?? []}
                 isLoading={reportQuery.isLoading}
                 pageSize={pageSize}
-                onViewFullLog={setSelectedAttendanceRecordId}
+                onRowClick={setSelectedAttendanceRecordId}
               />
             )}
           </div>

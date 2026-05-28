@@ -40,11 +40,7 @@ export default function RootLayout({
                 "font-sans",
             )}
         >
-            <head>
-                <script dangerouslySetInnerHTML={{
-                    __html: `document.querySelectorAll('[fdprocessedid]').forEach(function(e){e.removeAttribute("fdprocessedid")})`,
-                }} />
-            </head>
+            
             <body className="min-h-full flex flex-col" suppressHydrationWarning>
                 <Providers>{children}</Providers>
 

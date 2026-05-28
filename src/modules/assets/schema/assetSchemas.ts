@@ -8,8 +8,9 @@ export const assetCategoryOptions = [
 
 export const assetStatusOptions = [
   'AVAILABLE',
-  'PROVIDED',
-  'UNDER_MAINTENANCE',
+  'ASSIGNED',
+  'IN_MAINTENANCE',
+  'PENDING_RETURN',
   'DAMAGED',
   'LOST',
   'RETIRED',
@@ -51,6 +52,17 @@ export const helpdeskCategoryOptions = [
   'IT_SUPPORT',
   'FINANCE',
   'GENERAL',
+] as const;
+
+export const operationalCriticalityTierOptions = [
+  'MISSION_CRITICAL',
+  'BUSINESS_CRITICAL',
+  'STANDARD',
+] as const;
+
+export const assetReplacementModeOptions = [
+  'PERMANENT_REPLACEMENT',
+  'TEMPORARY_BACKUP',
 ] as const;
 
 export const assetReportTypeOptions = [
@@ -139,7 +151,7 @@ export const assetReturnSchema = z.object({
   returnedCondition: z.enum(assetConditionOptions),
   receivedByMemberId: z.string().optional().or(z.literal('')),
   returnNotes: z.string().optional().or(z.literal('')),
-  nextStatus: z.enum(['AVAILABLE', 'UNDER_MAINTENANCE', 'DAMAGED', 'RETIRED', 'DISPOSED']).optional().nullable(),
+  nextStatus: z.enum(['AVAILABLE', 'IN_MAINTENANCE', 'PENDING_RETURN', 'DAMAGED', 'RETIRED', 'DISPOSED']).optional().nullable(),
 });
 
 export const assetMaintenanceCreateSchema = z.object({
@@ -149,6 +161,8 @@ export const assetMaintenanceCreateSchema = z.object({
   issueDescription: z.string().trim().min(1, 'Issue description is required'),
   serviceDate: z.string().min(1, 'Service date is required'),
   expectedCompletionDate: z.string().optional().or(z.literal('')),
+  estimatedDowntimeHours: z.coerce.number().int().min(0).nullable().optional(),
+  operationalCriticalityTier: z.enum(operationalCriticalityTierOptions).default('STANDARD'),
   cost: z.coerce.number().min(0, 'Cost must be 0 or more').nullable().optional(),
   status: z.enum(['OPEN', 'IN_PROGRESS']),
   conditionBeforeMaintenance: z.enum(assetConditionOptions).optional().nullable(),
@@ -173,6 +187,9 @@ export const helpdeskTicketCreateSchema = z
     attachmentsMetadata: z.array(ticketAttachmentMetadataSchema).optional().default([]),
     maintenanceType: z.enum(assetMaintenanceTypeOptions).default('REPAIR'),
     serviceDate: z.string().optional().or(z.literal('')),
+    expectedCompletionDate: z.string().optional().or(z.literal('')),
+    estimatedDowntimeHours: z.coerce.number().int().min(0).nullable().optional(),
+    operationalCriticalityTier: z.enum(operationalCriticalityTierOptions).default('STANDARD'),
     conditionBeforeMaintenance: z.enum(assetConditionOptions).optional().nullable(),
     notes: z.string().optional().or(z.literal('')),
   })
@@ -201,7 +218,7 @@ export const assetMaintenanceUpdateSchema = z
     completedDate: z.string().optional().or(z.literal('')),
     conditionAfterMaintenance: z.enum(assetConditionOptions).optional().nullable(),
     nextAssetStatus: z
-      .enum(['AVAILABLE', 'UNDER_MAINTENANCE', 'DAMAGED', 'RETIRED', 'DISPOSED'])
+      .enum(['AVAILABLE', 'IN_MAINTENANCE', 'PENDING_RETURN', 'DAMAGED', 'RETIRED', 'DISPOSED'])
       .optional()
       .nullable(),
     notes: z.string().optional().or(z.literal('')),
@@ -223,6 +240,16 @@ export const assetMaintenanceUpdateSchema = z
       });
     }
   });
+
+export const assetRevokeSwapSchema = z.object({
+  maintenanceId: z.string().min(1, 'Maintenance record is required'),
+  replacementMode: z.enum(assetReplacementModeOptions),
+  replacementAssetUnitId: z.string().min(1, 'Replacement unit is required'),
+  revokeStatus: z.enum(['IN_MAINTENANCE', 'PENDING_RETURN']).default('IN_MAINTENANCE'),
+  replacementConditionWhileProviding: z.enum(assetConditionOptions).default('GOOD'),
+  providedByMemberId: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
 
 // Category schemas
 export const assetCategoryCreateSchema = z.object({
@@ -256,3 +283,4 @@ export type HelpdeskTicketCreateInput = z.infer<typeof helpdeskTicketCreateSchem
 export type AssetCategoryCreateInput = z.infer<typeof assetCategoryCreateSchema>;
 export type AssetCategoryFieldCreateInput = z.infer<typeof assetCategoryFieldCreateSchema>;
 export type AssetCategoryFieldUpdateInput = z.infer<typeof assetCategoryFieldUpdateSchema>;
+export type AssetRevokeSwapInput = z.infer<typeof assetRevokeSwapSchema>;

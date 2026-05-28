@@ -72,13 +72,13 @@ function FieldRow({
   onRemove: (index: number) => void;
 }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-xl bg-white p-2.5 shadow-[inset_0_0_0_1px_#e5e7eb]">
+    <div className="flex items-start gap-2.5 rounded-lg bg-white p-2.5 shadow-[inset_0_0_0_1px_#e5e7eb]">
       <div className="flex-1 grid grid-cols-[1fr_130px_auto] gap-2.5 items-center">
         <Input
           value={field.fieldName}
           onChange={(e) => onUpdate(index, { ...field, fieldName: e.target.value })}
           placeholder="Field name"
-          className="h-10 rounded-xl border-[#e5e7eb] text-[14px]"
+          className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
         />
         <Select
           value={field.fieldType}
@@ -86,7 +86,7 @@ function FieldRow({
             onUpdate(index, { ...field, fieldType: v as AssetCategoryFieldCreateInput['fieldType'] })
           }
         >
-          <SelectTrigger className="h-10 rounded-xl border-[#e5e7eb] text-[13px]">
+          <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -97,7 +97,7 @@ function FieldRow({
             ))}
           </SelectContent>
         </Select>
-        <label className="flex items-center gap-1.5 cursor-pointer text-[13px] text-[#6b7280]">
+        <label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium text-gray-700">
           <input
             type="checkbox"
             checked={field.isRequired}
@@ -110,7 +110,7 @@ function FieldRow({
       <button
         type="button"
         onClick={() => onRemove(index)}
-        className="flex size-9 shrink-0 items-center justify-center rounded-full text-[#9ca3af] transition-colors hover:bg-[#f3f4f6] hover:text-[#b3261e]"
+        className="flex size-10 shrink-0 items-center justify-center rounded-lg text-[#9ca3af] transition-colors hover:bg-[#f3f4f6] hover:text-[#b3261e]"
       >
         <X className="size-4" />
       </button>
@@ -153,24 +153,24 @@ function AddFieldDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl border border-[#e5e7eb] bg-white p-0 max-w-md">
+      <DialogContent className="rounded-2xl border border-[#e5e7eb] bg-white p-0 max-w-md">
         <div className="px-5 py-4 border-b border-[#eef0f3]">
           <DialogTitle className="text-[18px] font-semibold text-[#111827]">Add Field</DialogTitle>
         </div>
         <div className="px-5 py-4 space-y-4">
           <div className="grid gap-1.5">
-            <Label className="text-[13px] text-[#6b7280]">Field Name</Label>
+            <Label className="text-[13px] font-medium text-[#4b5563]">Field Name</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Serial Number"
-              className="h-11 rounded-xl border-[#e5e7eb] text-[15px]"
+              className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
             />
           </div>
           <div className="grid gap-1.5">
-            <Label className="text-[13px] text-[#6b7280]">Field Type</Label>
+            <Label className="text-[13px] font-medium text-[#4b5563]">Field Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as AssetCategoryFieldCreateInput['fieldType'])}>
-              <SelectTrigger className="h-11 rounded-xl border-[#e5e7eb] text-[15px]">
+              <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -180,7 +180,7 @@ function AddFieldDialog({
               </SelectContent>
             </Select>
           </div>
-          <label className="flex items-center gap-2 text-[14px] text-[#111827] cursor-pointer">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
             <input
               type="checkbox"
               checked={required}
@@ -191,13 +191,13 @@ function AddFieldDialog({
           </label>
         </div>
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-[#eef0f3]">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full px-5 text-[13px]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-lg px-4 text-[13px]">
             Cancel
           </Button>
           <Button
             onClick={() => void handleSave()}
             disabled={saving || !name.trim()}
-            className="rounded-full px-5 text-[13px] text-white"
+            className="rounded-lg px-4 text-[13px] text-white"
             style={{ backgroundColor: ACTION_GREEN }}
           >
             {saving ? 'Adding...' : 'Add Field'}
@@ -243,38 +243,38 @@ function EditCategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl border border-[#e5e7eb] bg-white p-0 max-w-md">
+      <DialogContent className="rounded-2xl border border-[#e5e7eb] bg-white p-0 max-w-md">
         <div className="px-5 py-4 border-b border-[#eef0f3]">
           <DialogTitle className="text-[18px] font-semibold text-[#111827]">Edit Category</DialogTitle>
         </div>
         <div className="px-5 py-4 space-y-4">
           <div className="grid gap-1.5">
-            <Label className="text-[13px] text-[#6b7280]">Category Name</Label>
+            <Label className="text-[13px] font-medium text-[#4b5563]">Category Name</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Category name"
-              className="h-11 rounded-xl border-[#e5e7eb] text-[15px]"
+              className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
             />
           </div>
           <div className="grid gap-1.5">
-            <Label className="text-[13px] text-[#6b7280]">Asset ID / Code</Label>
+            <Label className="text-[13px] font-medium text-[#4b5563]">Asset ID / Code</Label>
             <Input
               value={assetCode}
               onChange={(e) => setAssetCode(e.target.value)}
               placeholder="e.g. AST-LAP"
-              className="h-11 rounded-xl border-[#e5e7eb] text-[15px]"
+              className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
             />
           </div>
         </div>
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-[#eef0f3]">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full px-5 text-[13px]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-lg px-4 text-[13px]">
             Cancel
           </Button>
           <Button
             onClick={() => void handleSave()}
             disabled={saving || !name.trim()}
-            className="rounded-full px-5 text-[13px] text-white"
+            className="rounded-lg px-4 text-[13px] text-white"
             style={{ backgroundColor: ACTION_GREEN }}
           >
             {saving ? 'Saving...' : 'Save'}
@@ -315,7 +315,7 @@ function ConfirmDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl border border-[#e5e7eb] bg-white p-0 max-w-md">
+      <DialogContent className="rounded-2xl border border-[#e5e7eb] bg-white p-0 max-w-md">
         <div className="px-5 py-4 border-b border-[#eef0f3]">
           <DialogTitle className="text-[18px] font-semibold text-[#111827]">Delete Category</DialogTitle>
           <DialogDescription className="text-[14px] text-[#6b7280] mt-1">
@@ -324,13 +324,13 @@ function ConfirmDeleteDialog({
           </DialogDescription>
         </div>
         <div className="flex justify-end gap-2 px-5 py-4">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full px-5 text-[13px]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-lg px-4 text-[13px]">
             Cancel
           </Button>
           <Button
             onClick={() => void handleDelete()}
             disabled={deleting}
-            className="rounded-full px-5 text-[13px] text-white bg-[#b3261e] hover:bg-[#8a1a15]"
+            className="rounded-lg px-4 text-[13px] text-white bg-[#b3261e] hover:bg-[#8a1a15]"
           >
             {deleting ? 'Deleting...' : 'Delete'}
           </Button>
@@ -577,7 +577,7 @@ export function AssetSettingsDialog({
               animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
               exit={{ opacity: 0, x: 320, y: 40, scale: 0.92 }}
               transition={{ type: 'spring', stiffness: 380, damping: 32, mass: 0.9 }}
-              className="fixed left-1/2 top-1/2 z-50 flex h-145 w-[92vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl border border-[#e5e7eb] bg-white shadow-2xl"
+              className="fixed left-1/2 top-1/2 z-50 flex h-145 w-[92vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-2xl"
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-[#eef0f3] px-6 py-4 shrink-0">
@@ -623,21 +623,21 @@ export function AssetSettingsDialog({
                 {activeTab === 'create' ? (
                   <div className="space-y-5">
                     <div className="grid gap-1.5">
-                      <Label className="text-[13px] text-[#6b7280]">Category Name</Label>
+                      <Label className="text-[13px] font-medium text-[#4b5563]">Category Name</Label>
                       <Input
                         value={catName}
                         onChange={(e) => setCatName(e.target.value)}
                         placeholder="e.g. Laptop, Accessories"
-                        className="h-11 rounded-xl border-[#e5e7eb] text-[15px]"
+                        className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
                       />
                     </div>
                     <div className="grid gap-1.5">
-                      <Label className="text-[13px] text-[#6b7280]">Asset ID / Code</Label>
+                      <Label className="text-[13px] font-medium text-[#4b5563]">Asset ID / Code</Label>
                       <Input
                         value={catAssetCode}
                         onChange={(e) => setCatAssetCode(e.target.value)}
                         placeholder="e.g. AST-LAP (reusable for all assets in this category)"
-                        className="h-11 rounded-xl border-[#e5e7eb] text-[15px]"
+                        className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
                       />
                       <p className="text-[11px] text-[#9ca3af]">This code will be reused by all physical assets in this category. Not required to be unique.</p>
                     </div>
@@ -648,7 +648,7 @@ export function AssetSettingsDialog({
                         <button
                           type="button"
                           onClick={addField}
-                          className="flex items-center gap-1 rounded-full border border-[#d8dde5] px-3 py-1.5 text-[12px] font-medium text-[#6b7280] transition-colors hover:border-[#cdd5df] hover:text-[#1d1d1f]"
+                          className="flex items-center gap-1 rounded-lg border border-[#d8dde5] px-3 py-1.5 text-[12px] font-medium text-[#6b7280] transition-colors hover:border-[#cdd5df] hover:text-[#1d1d1f]"
                         >
                           <Plus className="size-3.5" />
                           Add Field
@@ -657,7 +657,7 @@ export function AssetSettingsDialog({
 
                       <div className="space-y-2.5">
                         {fields.length === 0 ? (
-                          <div className="rounded-xl border border-dashed border-[#d5dbe3] px-4 py-6 text-center">
+                          <div className="rounded-lg border border-dashed border-[#d5dbe3] px-4 py-6 text-center">
                             <p className="text-[14px] font-medium text-[#111827]">No custom fields yet</p>
                             <p className="mt-0.5 text-[13px] text-[#6b7280]">
                               Click &quot;Add Field&quot; to define what data to collect for this category.
@@ -675,7 +675,7 @@ export function AssetSettingsDialog({
                       <Button
                         onClick={() => void handleCreate()}
                         disabled={isSaving || !catName.trim()}
-                        className="h-10 rounded-full px-6 text-[14px] font-medium text-white"
+                        className="h-10 rounded-lg px-5 text-sm font-medium text-white shadow-sm"
                         style={{ backgroundColor: ACTION_GREEN }}
                       >
                         {isSaving ? 'Creating...' : 'Create Category'}
@@ -733,7 +733,7 @@ export function AssetSettingsDialog({
                                             .map((f) => (
                                               <div
                                                 key={f.id}
-                                                className="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-[inset_0_0_0_1px_#e5e7eb]"
+                                                className="flex items-center justify-between rounded-lg bg-white px-4 py-3 shadow-[inset_0_0_0_1px_#e5e7eb]"
                                               >
                                                 <div className="flex items-center gap-3">
                                                   <span className="text-[14px] font-medium text-[#111827]">{f.fieldName}</span>
