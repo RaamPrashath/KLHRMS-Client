@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { SaveState } from '@/modules/attendance/types/bulkAttendanceTypes';
 
 interface BulkAttendanceToolbarProps {
@@ -75,28 +75,7 @@ export function BulkAttendanceToolbar({
         </button>
       </div>
 
-      {/* Save state */}
-      {saveState === 'saving' && (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted border border-border/50 px-2 py-1 rounded-md">
-          <Loader2 className="size-3 animate-spin" />
-          Saving
-        </span>
-      )}
-      {saveState === 'saved' && (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-md">
-          <CheckCircle2 className="size-3" />
-          Saved
-        </span>
-      )}
-      {saveState === 'error' && (
-        <span
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 px-2 py-1 rounded-md"
-          title={saveError ?? undefined}
-        >
-          <AlertCircle className="size-3" />
-          Save failed
-        </span>
-      )}
+
     </div>
   );
 }

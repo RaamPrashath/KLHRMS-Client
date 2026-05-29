@@ -290,10 +290,14 @@ export function WorkLogForm({
         <Textarea
           id="wl-notes"
           value={notes}
-          onChange={(event) => setNotes(event.target.value)}
+          onChange={(event) => {
+            setNotes(event.target.value);
+            const el = event.target;
+            el.style.height = 'auto';
+            el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+          }}
           placeholder="Additional details..."
-          rows={3}
-          className="resize-none"
+          className="resize-none min-h-[72px] max-h-[160px] overflow-y-auto"
         />
       </div>
 

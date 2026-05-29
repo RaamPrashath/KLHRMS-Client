@@ -366,6 +366,7 @@ export function AttendanceClockCard({
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [clockInDescription, setClockInDescription] = useState("");
   const [clockOutWorkLogText, setClockOutWorkLogText] = useState("");
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [clockInFieldErrors, setClockInFieldErrors] = useState<{
     project?: string;
     task?: string;
@@ -899,11 +900,16 @@ export function AttendanceClockCard({
               </label>
               <Textarea
                 id="clock-in-description"
+                ref={descriptionRef}
                 value={clockInDescription}
-                onChange={(event) => setClockInDescription(event.target.value)}
+                onChange={(event) => {
+                  setClockInDescription(event.target.value);
+                  const el = event.target;
+                  el.style.height = "auto";
+                  el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+                }}
                 placeholder="Additional details..."
-                rows={3}
-                className="resize-none border-hairline bg-canvas/30 text-sm text-ink placeholder:text-ink-muted-48/50"
+                className="resize-none border-hairline bg-canvas/30 text-sm text-ink placeholder:text-ink-muted-48/50 min-h-[72px] max-h-[160px] overflow-y-auto"
               />
             </div>
           </div>
