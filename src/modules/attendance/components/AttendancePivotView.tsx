@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { AttendanceRecord } from '@/modules/attendance/types/attendanceTypes';
 
@@ -25,8 +26,10 @@ interface AttendancePivotViewProps {
   isLoading: boolean;
   showEmployeeColumn: boolean;
   allEmployees?: EmployeeInfo[];
-  holidayDates?: Set<string>;
-  leaveDates?: Set<string>;
+  /** date → holiday name */
+  holidayNames?: Map<string, string>;
+  /** date → leave type name */
+  leaveNames?: Map<string, string>;
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -164,9 +167,9 @@ function cellValue(record: AttendanceRecord | undefined): string {
   return `${record.totalHours.toFixed(1)}h`;
 }
 
-function offDayLabel(ymd: string, holidayDates: Set<string>, leaveDates: Set<string>): string | null {
-  if (holidayDates.has(ymd)) return 'Holiday';
-  if (leaveDates.has(ymd)) return 'Leave';
+function offDayLabel(ymd: string, holidayNames: Map<string, string>, leaveNames: Map<string, string>): string | null {
+  if (holidayNames.has(ymd)) return 'Holiday';
+  if (leaveNames.has(ymd)) return 'Leave';
   return null;
 }
 
@@ -186,32 +189,41 @@ function isToday(d: Date): boolean {
 function PivotSkeleton({
   colCount,
   showEmployeeColumn,
+  mode,
 }: {
   readonly colCount: number;
   readonly showEmployeeColumn: boolean;
+  readonly mode: 'weekly' | 'monthly';
 }) {
+  const rowCount = mode === 'weekly' ? 7 : 10;
   return (
     <>
-      {Array.from({ length: 5 }, (_, i) => (
-        <tr key={i} className="border-b border-neutral-100">
+      {Array.from({ length: rowCount }, (_, i) => (
+        <tr key={i} className={cn('border-b border-neutral-100', i % 2 === 0 && 'bg-neutral-50/30')}>
           {showEmployeeColumn && (
             <td className="px-4 py-3 min-w-[180px]">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-7 w-7 rounded-full shrink-0" />
-                <div className="flex flex-col gap-1">
-                  <Skeleton className="h-3 w-28" />
-                  <Skeleton className="h-2.5 w-16" />
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-2 w-10" />
               </div>
             </td>
           )}
-          {Array.from({ length: colCount }, (_, j) => (
-            <td key={j} className="px-3 py-3 text-center">
-              <Skeleton className="h-3.5 w-8 mx-auto" />
-            </td>
-          ))}
+          {Array.from({ length: colCount }, (_, j) => {
+            const hasRecord = (i + j) % 3 !== 0;
+            return (
+              <td key={j} className="px-2 py-3 text-center">
+                {hasRecord ? (
+                  <Skeleton className="h-3 w-6 mx-auto" />
+                ) : (
+                  <div className="flex justify-center">
+                    <div className="h-4 w-10 rounded bg-red-50/60" />
+                  </div>
+                )}
+              </td>
+            );
+          })}
           <td className="px-4 py-3 text-right">
-            <Skeleton className="h-3.5 w-10 ml-auto" />
+            <Skeleton className="h-3 w-8 ml-auto" />
           </td>
         </tr>
       ))}
@@ -267,15 +279,15 @@ export function AttendancePivotView({
   isLoading,
   showEmployeeColumn,
   allEmployees,
-  holidayDates: holidayDatesProp,
-  leaveDates: leaveDatesProp,
+  holidayNames: holidayNamesProp,
+  leaveNames: leaveNamesProp,
 }: Readonly<AttendancePivotViewProps>) {
   const anchor = parseYMD(periodStart);
   const days = getDays(mode, anchor);
   const periodLabel = formatPeriodLabel(mode, days);
   const employeeRows = buildEmployeeRows(records, days, showEmployeeColumn, allEmployees);
-  const holidayDates = holidayDatesProp ?? new Set<string>();
-  const leaveDates = leaveDatesProp ?? new Set<string>();
+  const holidayNames = holidayNamesProp ?? new Map<string, string>();
+  const leaveNames = leaveNamesProp ?? new Map<string, string>();
 
   // For monthly view, group days into weeks for the header (optional — we just show all days)
   const isMonthly = mode === 'monthly';
@@ -329,36 +341,52 @@ export function AttendancePivotView({
 
               {/* Date column headers */}
               {days.map((d) => {
+                const ymd = toYMD(d);
                 const today = isToday(d);
+                const isOff = holidayNames.has(ymd) || leaveNames.has(ymd);
+                const tooltipText = holidayNames.get(ymd) ?? leaveNames.get(ymd) ?? null;
+                const headerContent = (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span
+                      className={cn(
+                        'text-[10px] font-semibold uppercase tracking-wider',
+                        today ? 'text-primary' : isOff ? 'text-red-500' : 'text-neutral-500',
+                      )}
+                    >
+                      {`${MONTH_NAMES[d.getMonth()]!.slice(0, 3)} ${d.getDate()}`}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[9px] font-medium uppercase tracking-widest',
+                        today ? 'text-primary/70' : isOff ? 'text-red-400' : 'text-neutral-400',
+                      )}
+                    >
+                      {DAY_ABBR[d.getDay()]}
+                    </span>
+                  </div>
+                );
                 return (
                   <th
-                    key={toYMD(d)}
+                    key={ymd}
                     className={cn(
                       'px-2 py-2.5 text-center whitespace-nowrap',
                       isMonthly ? 'min-w-[52px]' : 'min-w-[72px]',
                     )}
                   >
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span
-                        className={cn(
-                          'text-[10px] font-semibold uppercase tracking-wider',
-                          today ? 'text-primary' : 'text-neutral-500',
-                        )}
-                      >
-                        {`${MONTH_NAMES[d.getMonth()]!.slice(0, 3)} ${d.getDate()}`}
-                      </span>
-                      <span
-                        className={cn(
-                          'text-[9px] font-medium uppercase tracking-widest',
-                          today ? 'text-primary/70' : 'text-neutral-400',
-                        )}
-                      >
-                        {DAY_ABBR[d.getDay()]}
-                      </span>
-                      {today && (
-                        <span className="mt-0.5 h-1 w-1 rounded-full bg-primary" />
-                      )}
-                    </div>
+                    {tooltipText ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            {headerContent}
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            {tooltipText}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      headerContent
+                    )}
                   </th>
                 );
               })}
@@ -377,6 +405,7 @@ export function AttendancePivotView({
                   <PivotSkeleton
                     colCount={days.length}
                     showEmployeeColumn={showEmployeeColumn}
+                    mode={mode}
                   />
                 );
               }
@@ -409,8 +438,8 @@ export function AttendancePivotView({
                     const ymd = toYMD(d);
                     const record = row.byDate.get(ymd);
                     const today = isToday(d);
-                    const isOff = holidayDates.has(ymd) || leaveDates.has(ymd);
-                    const offLabel = offDayLabel(ymd, holidayDates, leaveDates);
+                    const isOff = holidayNames.has(ymd) || leaveNames.has(ymd);
+                    const offLabel = offDayLabel(ymd, holidayNames, leaveNames);
                     return (
                       <td
                         key={ymd}

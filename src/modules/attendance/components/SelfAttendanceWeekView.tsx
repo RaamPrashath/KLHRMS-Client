@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useMyAttendanceQuery } from '@/modules/attendance/hooks/queries/attendance';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
@@ -17,6 +18,27 @@ function getStatusInfo(status: AttendanceStatus | null, isLeave: boolean) {
   if (status === 'ABSENT') return { text: 'Absent', color: '#EA4335' };
   if (status === 'HALF_DAY') return { text: 'Half Day', color: '#FBBC05' };
   return null;
+}
+
+function StatusDot({ status, isLeave }: { readonly status: AttendanceStatus | null; readonly isLeave: boolean }) {
+  if (status === 'PRESENT') {
+    return <span className="size-2 rounded-full bg-[#00874A]" />;
+  }
+  if (status === 'HALF_DAY') {
+    return (
+      <span
+        className="size-2 rounded-full"
+        style={{
+          border: '2px solid #FBBC05',
+          background: 'linear-gradient(to top, #FBBC05 50%, transparent 50%)',
+        }}
+      />
+    );
+  }
+  if (status === 'ABSENT' || isLeave) {
+    return <span className="size-2 rounded-full border-2 border-[#EA4335]" />;
+  }
+  return <span className="size-1.5 rounded-full bg-[#6E6E73]" />;
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -106,7 +128,7 @@ export function SelfAttendanceWeekView({
   return (
     <div className="w-full">
       {/* Header */}
-      <div className="flex items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
+      <div className="flex items-center border-b border-black/[0.04] bg-canvas/50 py-3">
         <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Date</div>
         <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock In</div>
         <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock Out</div>
@@ -115,34 +137,48 @@ export function SelfAttendanceWeekView({
       </div>
 
       {/* Body */}
-      <div className="px-4">
-        {isLoading ? (
-          <div className="flex flex-col divide-y divide-black/4 bg-surface">
-            {Array.from({ length: 7 }, (_, i) => (
-              <div key={i} className="border-b border-black/4 p-6">
-                <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+      {isLoading ? (
+        <div className="flex flex-col bg-surface">
+          {Array.from({ length: 7 }, (_, i) => (
+            <div key={i} className="flex items-center border-b border-black/4 py-3">
+              <div className="flex-1 flex flex-col items-center gap-0.5">
+                <Skeleton className="h-3 w-11" />
+                <Skeleton className="h-2.5 w-8 mt-0.5" />
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col bg-surface">
-            {days.map((day) => {
-              const dateStr = format(day, 'yyyy-MM-dd');
-              const record = dayMap.get(dateStr) ?? null;
-              const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-              const holidayName = holidayNameMap.get(dateStr) ?? null;
-              const isLeave = leaveDaySet.has(dateStr);
-              const isOff = isWeekend || isLeave || !!holidayName;
-              const statusInfo = isLeave ? getStatusInfo(null, true) : record ? getStatusInfo(record.status, false) : null;
+              <div className="flex-1 flex justify-center">
+                <Skeleton className="h-3 w-9" />
+              </div>
+              <div className="flex-1 flex justify-center">
+                <Skeleton className="h-3 w-9" />
+              </div>
+              <div className="flex-1 flex justify-center">
+                <Skeleton className="h-3 w-7" />
+              </div>
+              <div className="flex-1 flex justify-center">
+                <Skeleton className="h-5 w-12 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col bg-surface">
+          {days.map((day) => {
+            const dateStr = format(day, 'yyyy-MM-dd');
+            const record = dayMap.get(dateStr) ?? null;
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            const holidayName = holidayNameMap.get(dateStr) ?? null;
+            const isLeave = leaveDaySet.has(dateStr);
+            const isOff = isWeekend || isLeave || !!holidayName;
+            const statusInfo = isLeave ? getStatusInfo(null, true) : record ? getStatusInfo(record.status, false) : null;
 
-              return (
-                <div
-                  key={dateStr}
-                  className={cn(
-                    'flex items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4',
-                    isOff && 'bg-red-50/40',
-                  )}
-                >
+            return (
+              <div
+                key={dateStr}
+                className={cn(
+                  'flex items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3',
+                  isOff && 'bg-red-50/40',
+                )}
+              >
                   <div className="flex-1 flex flex-col items-center gap-0.5">
                     <span className="text-sm font-medium text-neutral-900">
                       {format(day, 'dd MMM')}
@@ -177,7 +213,7 @@ export function SelfAttendanceWeekView({
                         className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-medium"
                         style={{ backgroundColor: `${statusInfo.color}0D`, color: statusInfo.color }}
                       >
-                        <span className="size-1.5 rounded-full" style={{ backgroundColor: statusInfo.color }} />
+                        <StatusDot status={record.status} isLeave={isLeave} />
                         {statusInfo.text}
                       </div>
                     ) : (
@@ -188,8 +224,7 @@ export function SelfAttendanceWeekView({
               );
             })}
           </div>
-        )}
-      </div>
+          )}
     </div>
   );
 }

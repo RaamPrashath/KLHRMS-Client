@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { List, CalendarDays, CalendarRange } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AttendanceFilters } from '@/modules/attendance/components/AttendanceFilters';
 import { AttendanceRow } from '@/modules/attendance/components/AttendanceRow';
 import { AttendanceExportButtons } from '@/modules/attendance/components/AttendanceExportButtons';
@@ -99,6 +100,62 @@ const VIEW_MODES: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
   { mode: 'weekly',  icon: <CalendarDays className="size-3.5" />, label: 'Week' },
   { mode: 'monthly', icon: <CalendarRange className="size-3.5" />, label: 'Month' },
 ];
+
+// ─── Tab slider ───────────────────────────────────────────────────────────────
+
+function TabSlider({
+  activeMode,
+  onChange,
+}: {
+  readonly activeMode: ViewMode;
+  readonly onChange: (mode: ViewMode) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+  const activeIdx = VIEW_MODES.findIndex((m) => m.mode === activeMode);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const activeBtn = container.querySelector<HTMLButtonElement>(`[data-tab-index="${activeIdx}"]`);
+    if (!activeBtn) return;
+    const cr = container.getBoundingClientRect();
+    const br = activeBtn.getBoundingClientRect();
+    setIndicatorStyle({ left: br.left - cr.left, width: br.width });
+  }, [activeIdx]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="mt-2 flex items-center self-start rounded-xl bg-neutral-50 p-1 border border-black/4 relative"
+    >
+      <div
+        className="absolute top-1 bottom-1 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+        style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+      />
+      {VIEW_MODES.map(({ mode, icon, label }, idx) => (
+        <button
+          key={mode}
+          data-tab-index={idx}
+          type="button"
+          onClick={() => onChange(mode)}
+          aria-label={`${label} view`}
+          aria-pressed={activeMode === mode}
+          className={cn(
+            'inline-flex items-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg relative z-10 transition-colors duration-200',
+            activeMode === mode
+              ? 'text-[#00874A]'
+              : 'text-neutral-500 hover:text-neutral-900',
+          )}
+        >
+          {icon}
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -255,23 +312,23 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     pageSize: 200,
   });
 
-  const pivotHolidayDates = useMemo(
-    () => new Set(pivotHolidays.filter((h) => h.isHoliday).map((h) => h.holidayDate)),
+  const pivotHolidayNames = useMemo(
+    () => new Map(pivotHolidays.filter((h) => h.isHoliday).map((h) => [h.holidayDate, h.name])),
     [pivotHolidays],
   );
 
-  const pivotLeaveDates = useMemo(() => {
-    const set = new Set<string>();
+  const pivotLeaveNames = useMemo(() => {
+    const map = new Map<string, string>();
     if (pivotLeaveData?.items) {
       for (const leave of pivotLeaveData.items) {
         const start = new Date(leave.startDate);
         const end = new Date(leave.endDate);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          set.add(d.toISOString().split('T')[0]);
+          map.set(d.toISOString().split('T')[0], leave.leaveType.name);
         }
       }
     }
-    return set;
+    return map;
   }, [pivotLeaveData]);
 
   return (
@@ -285,26 +342,10 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                 Attendance Records
               </h2>
 
-              <div className="mt-2 flex items-center self-start rounded-xl bg-neutral-50 p-1 border border-black/4">
-                {VIEW_MODES.map(({ mode, icon, label }) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => handleViewModeChange(mode)}
-                    aria-label={`${label} view`}
-                    aria-pressed={viewMode === mode}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg transition-all duration-200 ease-out',
-                      viewMode === mode
-                        ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-                        : 'text-neutral-500 hover:text-neutral-900',
-                    )}
-                  >
-                    {icon}
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <TabSlider
+                activeMode={viewMode}
+                onChange={handleViewModeChange}
+              />
             </div>
 
             <div className="shrink-0">
@@ -364,9 +405,9 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
               return (
                 <>
                   {/* Header */}
-                  <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
+                  <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3">
                     {showEmployeeColumn && (
-                      <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</div>
+                      <div className="flex-1 text-left pl-6 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</div>
                     )}
                     <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Date</div>
                     <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock In</div>
@@ -377,32 +418,52 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                   </div>
 
                   {/* Body */}
-                  <div className="px-4">
-                    {isLoading ? (
-                      <div className="flex flex-col divide-y divide-black/4 bg-surface">
-                        {SKELETON_IDS.slice(0, pageSize).map((id) => (
-                          <div key={id} className="border-b border-black/4 p-6">
-                            <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+                  {isLoading ? (
+                    <div className="flex flex-col bg-surface">
+                      {SKELETON_IDS.slice(0, pageSize).map((id) => (
+                        <div key={id} className="flex justify-around items-center border-b border-black/4 py-3">
+                          {showEmployeeColumn && (
+                            <div className="flex-1 flex justify-start pl-6">
+                              <Skeleton className="h-3 w-14" />
+                            </div>
+                          )}
+                          <div className="flex-1 flex justify-center">
+                            <Skeleton className="h-3 w-12" />
                           </div>
-                        ))}
-                      </div>
-                    ) : items.length === 0 ? (
-                      <div className="bg-surface py-16 text-center text-sm text-neutral-400">
-                        No attendance records found.
-                      </div>
-                    ) : (
-                      <div className="flex flex-col bg-surface">
-                        {items.map((record) => (
-                          <AttendanceRow
-                            key={record.id}
-                            record={record}
-                            showEmployeeColumn={showEmployeeColumn}
-                            onViewWorkLog={(id) => setWorkLogRecordId(id)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                          <div className="flex-1 flex justify-center">
+                            <Skeleton className="h-3 w-10" />
+                          </div>
+                          <div className="flex-1 flex justify-center">
+                            <Skeleton className="h-3 w-10" />
+                          </div>
+                          <div className="flex-1 flex justify-center">
+                            <Skeleton className="h-3 w-7" />
+                          </div>
+                          <div className="flex-1 flex justify-center">
+                            <Skeleton className="h-5 w-12 rounded-full" />
+                          </div>
+                          <div className="flex-1 flex justify-center">
+                            <Skeleton className="h-3 w-14" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : items.length === 0 ? (
+                    <div className="bg-surface py-16 text-center text-sm text-neutral-400">
+                      No attendance records found.
+                    </div>
+                  ) : (
+                    <div className="flex flex-col bg-surface">
+                      {items.map((record) => (
+                        <AttendanceRow
+                          key={record.id}
+                          record={record}
+                          showEmployeeColumn={showEmployeeColumn}
+                          onViewWorkLog={(id) => setWorkLogRecordId(id)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </>
               );
             }
@@ -418,8 +479,8 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                 isLoading={isLoading}
                 showEmployeeColumn={showEmployeeColumn}
                 allEmployees={allEmployees}
-                holidayDates={pivotHolidayDates}
-                leaveDates={pivotLeaveDates}
+                holidayNames={pivotHolidayNames}
+                leaveNames={pivotLeaveNames}
               />
             );
           })()}

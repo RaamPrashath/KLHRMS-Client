@@ -59,8 +59,6 @@ interface AttendanceClockCardProps {
   roleName?: string | null;
 }
 
-const MIN_CLOCK_OUT_REASON_CHARS = 20;
-
 interface GeoState {
   status: "idle" | "loading" | "ready" | "error";
   latitude: number | null;
@@ -595,9 +593,6 @@ export function AttendanceClockCard({
 
   function handleClockOutConfirm() {
     const trimmedWorkLog = clockOutWorkLogText.trim();
-    if (trimmedWorkLog.length < MIN_CLOCK_OUT_REASON_CHARS) {
-      return;
-    }
 
     setInlineError(null);
     clockOutMutation
@@ -900,7 +895,7 @@ export function AttendanceClockCard({
 
             <div className="space-y-1.5">
               <label htmlFor="clock-in-description" className="text-[14px] font-semibold text-ink-muted-48">
-                Description <span className="font-normal opacity-60 text-ink-muted-48">(optional)</span>
+                Description
               </label>
               <Textarea
                 id="clock-in-description"
@@ -929,9 +924,12 @@ export function AttendanceClockCard({
         activeClockIn={activeClockIn}
         elapsedDisplay={elapsedDisplay}
         workLogText={clockOutWorkLogText}
-        minChars={MIN_CLOCK_OUT_REASON_CHARS}
         isPending={clockOutMutation.isPending}
-        onOpenChange={setIsClockOutDialogOpen}
+        error={inlineError}
+        onOpenChange={(open) => {
+          setIsClockOutDialogOpen(open);
+          if (!open) setInlineError(null);
+        }}
         onWorkLogChange={setClockOutWorkLogText}
         onConfirm={handleClockOutConfirm}
       />

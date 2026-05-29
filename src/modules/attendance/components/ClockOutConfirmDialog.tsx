@@ -3,7 +3,6 @@
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -16,11 +15,11 @@ interface ClockOutConfirmDialogProps {
   activeClockIn: string | null;
   elapsedDisplay: string;
   workLogText: string;
-  minChars: number;
   isPending: boolean;
   onOpenChange: (open: boolean) => void;
   onWorkLogChange: (value: string) => void;
   onConfirm: () => void;
+  error?: string | null;
 }
 
 function formatStartLabel(value: string | null): string {
@@ -45,72 +44,64 @@ export function ClockOutConfirmDialog({
   activeClockIn,
   elapsedDisplay,
   workLogText,
-  minChars,
   isPending,
   onOpenChange,
   onWorkLogChange,
   onConfirm,
+  error,
 }: Readonly<ClockOutConfirmDialogProps>) {
-  const trimmedLength = workLogText.trim().length;
-  const charsRemaining = Math.max(0, minChars - trimmedLength);
-  const canConfirm = trimmedLength >= minChars && !isPending;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Confirm clock-out</DialogTitle>
-          <DialogDescription>
-            Wrap up your day before closing the session.
-          </DialogDescription>
+          <DialogTitle className="text-center">Confirm clock-out</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
-          <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2">
+          <div className="grid gap-3 rounded-2xl border border-hairline bg-canvas/30 p-4 sm:grid-cols-2">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-ink-muted-48">
                 Session started
               </p>
-              <p className="mt-1 text-sm font-medium text-foreground">
+              <p className="mt-0.5 text-sm font-medium text-ink">
                 {formatStartLabel(activeClockIn)}
               </p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-ink-muted-48">
                 Active duration
               </p>
-              <p className="mt-1 font-mono text-lg font-semibold text-foreground">
+              <p className="mt-0.5 font-mono text-xl font-semibold tabular-nums text-ink">
                 {elapsedDisplay}
               </p>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="clock-out-work-log" className="text-sm font-semibold text-foreground">
-              What did you accomplish today? (Daily Work Log)
+          <div>
+            <label htmlFor="clock-out-work-log" className="text-[14px] font-medium block mb-2">
+              Daily work log
             </label>
             <Textarea
               id="clock-out-work-log"
               value={workLogText}
               onChange={(event) => onWorkLogChange(event.target.value)}
-              rows={6}
-              placeholder="Summarize the work you completed, progress made, and any important outcomes."
-              className="resize-none"
-              maxLength={1000}
+              rows={3}
+              placeholder="What did you accomplish today? (optional)"
+              className="resize-none border-hairline bg-canvas/30 text-sm text-ink placeholder:text-ink-muted-48/50"
             />
-            <p className="text-xs text-muted-foreground">
-              {charsRemaining > 0
-                ? `${charsRemaining} more characters required before you can clock out.`
-                : `${trimmedLength} characters entered.`}
-            </p>
+            {error ? (
+              <p className="mt-1.5 text-sm text-destructive-text" role="alert">
+                {error}
+              </p>
+            ) : null}
           </div>
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isPending}>
+        <DialogFooter className="sm:justify-center">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={onConfirm} disabled={!canConfirm}>
+          <Button type="button" onClick={onConfirm} disabled={isPending}>
             {isPending ? 'Clocking out...' : 'Confirm Clock-Out'}
           </Button>
         </DialogFooter>
