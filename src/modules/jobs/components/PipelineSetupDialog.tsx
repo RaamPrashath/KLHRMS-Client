@@ -406,7 +406,7 @@ export function PipelineSetupDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[80vh] w-[80vw] max-w-[80vw] gap-0 overflow-hidden bg-surface p-0 sm:max-w-[80vw] max-sm:h-[92vh] max-sm:w-[calc(100vw-1rem)] max-sm:max-w-[calc(100vw-1rem)]">
+      <DialogContent showCloseButton={false} className="h-[80vh] w-[80vw] max-w-[80vw] gap-0 overflow-hidden bg-surface p-0 sm:max-w-[80vw] max-sm:h-[92vh] max-sm:w-[calc(100vw-1rem)] max-sm:max-w-[calc(100vw-1rem)]">
         <div className="grid h-full min-h-0 grid-cols-1 md:grid-cols-[30%_70%]">
           <aside className="flex min-h-0 flex-col border-b border-neutral-100 bg-canvas md:border-b-0 md:border-r">
             <div className="border-b border-neutral-100 p-4">

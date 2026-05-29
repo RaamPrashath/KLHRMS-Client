@@ -1,10 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, ArrowLeft, Brain, CheckCircle2, Save, Send, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Brain, CheckCircle2, Send, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 
@@ -143,39 +143,20 @@ export function CreateJobRequisitionPage({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [form.formState.isDirty]);
 
-  const handleSaveDraft = useCallback(async () => {
-    if (!canCreate || isReview || isReadOnly) {
-      toast.error('You do not have permission to create requisitions');
-      return;
-    }
-    if (!watchedValues.title?.trim()) {
-      form.setError('title', { message: 'Title is required before saving' });
-      toast.error('Add a job title before saving');
-      return;
-    }
-    try {
-      await save();
-      toast.success(isEdit ? 'Requisition updated' : 'Draft saved');
-    } catch (saveError) {
-      toast.error(getErrorMessage(saveError, isEdit ? 'Failed to update requisition' : 'Failed to save draft'));
-    }
-  }, [canCreate, form, isEdit, isReadOnly, isReview, save, watchedValues.title]);
-
   const handleSubmitForApproval = form.handleSubmit(async () => {
     if (!canCreate || isReview || isReadOnly) {
       toast.error('You do not have permission to submit requisitions');
       return;
     }
     try {
-      const savedId = await save();
-      const requisitionId = savedId ?? draftId;
-      if (!requisitionId) {
+      await save();
+      if (!draftId) {
         toast.error('Save the draft before submitting');
         return;
       }
-      await submitMutation.mutateAsync(requisitionId);
+      await submitMutation.mutateAsync(draftId);
       toast.success('Requisition submitted for approval');
-      router.push(`/${orgSlug}/jobs/${requisitionId}`);
+      router.push(`/${orgSlug}/jobs/${draftId}`);
     } catch (submitError) {
       toast.error(getErrorMessage(submitError, 'Failed to submit requisition'));
     }
@@ -276,16 +257,10 @@ export function CreateJobRequisitionPage({
               </Button>
             </>
           ) : isReadOnly ? null : (
-            <>
-              <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
-                <Save className="size-4" />
-                {isEdit ? 'Save Changes' : 'Save Draft'}
-              </Button>
-              <Button type="submit" form="job-requisition-form" disabled={submitMutation.isPending || isSaving}>
-                <Send className="size-4" />
-                {submitMutation.isPending ? 'Submitting...' : 'Submit for Approval'}
-              </Button>
-            </>
+            <Button type="submit" form="job-requisition-form" disabled={submitMutation.isPending || isSaving}>
+              <Send className="size-4" />
+              {submitMutation.isPending ? 'Submitting...' : 'Submit for Approval'}
+            </Button>
           )}
         </div>
       </div>

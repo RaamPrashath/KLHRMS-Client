@@ -15,7 +15,6 @@ export function KnockoutRuleSection({ form }: Readonly<KnockoutRuleSectionProps>
   return (
     <SectionCard id="knockout-rule" title="Knockout rule">
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="knockout-rule-input">Knockout rule (optional)</Label>
         <Textarea
           id="knockout-rule-input"
           {...form.register('knockoutRule')}
