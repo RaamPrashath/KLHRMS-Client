@@ -380,12 +380,18 @@ export async function fetchLeaveBalancesAction(params: {
     memberId?: string;
     leaveTypeId?: string;
     year?: number;
+    search?: string;
+    page?: number;
+    pageSize?: number;
   };
 }): Promise<LeaveBalanceListResponse> {
   const query = buildQuery({
     memberId: params.filters?.memberId,
     leaveTypeId: params.filters?.leaveTypeId,
     year: params.filters?.year,
+    search: params.filters?.search,
+    page: params.filters?.page,
+    pageSize: params.filters?.pageSize,
   });
   const res = await fetch(`${getApiUrl()}/leaves/balances${query}`, {
     method: 'GET',

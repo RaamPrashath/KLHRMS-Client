@@ -92,6 +92,8 @@ export interface LeaveRequestListResponse {
 export interface LeaveBalanceListResponse {
   items: LeaveBalanceRecord[];
   total: number;
+  page: number;
+  page_size: number;
 }
 
 export interface LeaveCalendarResponse {
@@ -124,6 +126,8 @@ export interface LeaveBalanceFiltersState {
   memberId?: string;
   leaveTypeId?: string;
   year?: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface LeaveCalendarFiltersState {
