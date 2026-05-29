@@ -93,8 +93,15 @@ export function SelfAttendanceWeekView({
     return set;
   }, [leaveData]);
 
-  // ── Build 7 day rows ───────────────────────────────────────────────
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // ── Build 7 day rows — today first, then backward through week ────
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const todayIdx = weekDays.findIndex((d) => format(d, 'yyyy-MM-dd') === todayStr);
+  const days = [
+    weekDays[todayIdx],
+    ...weekDays.slice(0, todayIdx).reverse(),
+    ...weekDays.slice(todayIdx + 1).reverse(),
+  ];
 
   return (
     <div className="w-full">
