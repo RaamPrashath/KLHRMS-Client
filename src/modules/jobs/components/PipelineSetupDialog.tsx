@@ -80,6 +80,7 @@ const STAGE_TYPE_LABELS: Record<(typeof PIPELINE_STAGE_TYPES)[number], string> =
   INTERVIEW: 'Interview',
   OFFER: 'Offer',
   HIRED: 'Accepted',
+  ONBOARDING: 'Onboarding',
   REJECTED: 'Rejected',
 };
 
@@ -121,6 +122,17 @@ const DEFAULT_STAGE_PREVIEWS: StagePreview[] = [
     id: 'default-hired',
     name: 'Accepted',
     stageType: 'HIRED',
+    meetingEnabled: false,
+    offerLetterEnabled: false,
+    dueDate: null,
+    extendToNextWorkingDay: false,
+    isDefault: true,
+    isFinal: true,
+  },
+  {
+    id: 'default-onboarding',
+    name: 'Onboarding',
+    stageType: 'ONBOARDING',
     meetingEnabled: false,
     offerLetterEnabled: false,
     dueDate: null,
@@ -347,6 +359,11 @@ function NewColumnForm({
             >
               <RadioGroupItem value={type} disabled={submitting} />
               {STAGE_TYPE_LABELS[type]}
+              {type === 'OFFER' || type === 'ONBOARDING' ? (
+                <span className="ml-auto rounded bg-warning-bg px-1.5 py-0.5 text-[11px] font-medium text-warning-text">
+                  Max 1
+                </span>
+              ) : null}
             </label>
           ))}
         </RadioGroup>

@@ -18,6 +18,7 @@ function stageTone(stageType: PipelineStageRecord['stageType']) {
   if (stageType === 'REJECTED') return 'bg-destructive-bg text-destructive-text';
   if (stageType === 'INTERVIEW') return 'bg-info-bg text-info-text';
   if (stageType === 'OFFER') return 'bg-warning-bg text-warning-text';
+  if (stageType === 'ONBOARDING') return 'bg-info-bg text-info-text';
   return 'bg-neutral-50 text-neutral-500';
 }
 

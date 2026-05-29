@@ -169,17 +169,28 @@ export function StageConfigDrawer({
                 ['INTERVIEW', 'Interview'],
                 ['OFFER', 'Offer'],
                 ['HIRED', 'Accepted'],
+                ['ONBOARDING', 'Onboarding'],
                 ['REJECTED', 'Rejected'],
               ].map(([value, label]) => (
                 <label key={value} className="flex cursor-pointer items-center gap-3 rounded-xl border border-neutral-200 bg-canvas px-4 py-3 text-sm font-medium text-neutral-900">
                   <RadioGroupItem value={value} id={`stage-type-${value}`} />
                   {label}
+                  {value === 'OFFER' || value === 'ONBOARDING' ? (
+                    <span className="ml-auto rounded bg-warning-bg px-1.5 py-0.5 text-[11px] font-medium text-warning-text">
+                      Max 1
+                    </span>
+                  ) : null}
                 </label>
               ))}
             </RadioGroup>
             {showTerminalWarning ? (
               <div className="rounded-xl border border-warning-bg bg-warning-bg/50 p-3 text-sm text-warning-text">
                 <span className="inline-flex items-center gap-2 font-medium"><AlertTriangle className="size-4" />Only one {stageType === 'HIRED' ? 'Accepted' : 'Rejected'} stage is recommended.</span>
+              </div>
+            ) : null}
+            {stageType === 'OFFER' || stageType === 'ONBOARDING' ? (
+              <div className="rounded-xl border border-warning-bg bg-warning-bg/50 p-3 text-sm text-warning-text">
+                <span className="inline-flex items-center gap-2 font-medium"><AlertTriangle className="size-4" />Only one {stageType === 'OFFER' ? 'Offer' : 'Onboarding'} stage is recommended.</span>
               </div>
             ) : null}
           </div>

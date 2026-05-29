@@ -15,9 +15,10 @@ export default async function CandidateJobStageWorkspacePage({
 
   const { orgSlug, jobSlug, stageSlug } = await params;
   let member: Awaited<ReturnType<typeof requireOrgMembership>>['member'];
+  let org: Awaited<ReturnType<typeof requireOrgMembership>>['org'];
 
   try {
-    ({ member } = await requireOrgMembership(session.user.id, orgSlug));
+    ({ member, org } = await requireOrgMembership(session.user.id, orgSlug));
   } catch {
     redirect('/organizations');
   }
@@ -26,6 +27,7 @@ export default async function CandidateJobStageWorkspacePage({
     <StageWorkspaceRouterShell
       orgSlug={orgSlug}
       memberId={member.id}
+      organizationId={org.id}
       jobSlug={jobSlug}
       stageSlug={stageSlug}
     />

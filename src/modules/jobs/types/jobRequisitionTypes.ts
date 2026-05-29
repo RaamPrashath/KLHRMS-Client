@@ -55,6 +55,7 @@ export const PIPELINE_STAGE_TYPES = [
   'INTERVIEW',
   'OFFER',
   'HIRED',
+  'ONBOARDING',
   'REJECTED',
 ] as const;
 
