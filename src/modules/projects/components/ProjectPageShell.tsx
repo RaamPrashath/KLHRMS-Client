@@ -246,7 +246,7 @@ export function ProjectPageShell({
                       id="project-name"
                       value={projectForm.name}
                       onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
                     />
                   </div>
 
@@ -256,7 +256,7 @@ export function ProjectPageShell({
                       id="project-client"
                       value={projectForm.clientName || ''}
                       onChange={(e) => setProjectForm({ ...projectForm, clientName: e.target.value })}
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
                     />
                   </div>
                 </div>
@@ -311,7 +311,7 @@ export function ProjectPageShell({
                     id="project-description"
                     value={projectForm.description || ''}
                     onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
-                    className="min-h-20 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#0066cc]"
+                    className="min-h-20 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
                   />
                 </div>
 

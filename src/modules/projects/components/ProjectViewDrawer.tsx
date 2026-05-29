@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
@@ -39,7 +39,7 @@ import type {
   ProjectStatus,
 } from '@/modules/projects/types/projectTypes';
 
-function AnimatedTabBar({
+function TabBar({
   tabs,
   value,
   onValueChange,
@@ -48,30 +48,50 @@ function AnimatedTabBar({
   value: string;
   onValueChange: (v: string) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+  const activeIdx = tabs.findIndex((t) => t.value === value);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const activeBtn = container.querySelector<HTMLButtonElement>(`[data-tab-index="${activeIdx}"]`);
+    if (!activeBtn) return;
+    const cr = container.getBoundingClientRect();
+    const br = activeBtn.getBoundingClientRect();
+    setIndicatorStyle({ left: br.left - cr.left, width: br.width });
+  }, [activeIdx]);
+
   return (
-    <div className="relative flex rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-1">
-      <motion.div
-        layout
-        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-        className="absolute top-1 bottom-1 rounded-lg bg-white shadow-sm"
-        style={{
-          left: `${(tabs.findIndex((t) => t.value === value) / tabs.length) * 100}%`,
-          width: `${(1 / tabs.length) * 100}%`,
-        }}
+    <div
+      ref={containerRef}
+      className="grid grid-cols-2 w-full rounded-xl bg-neutral-50 p-1 border border-black/4 relative"
+    >
+      <div
+        className="absolute top-1 bottom-1 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+        style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
       />
-      {tabs.map((tab) => (
+      {tabs.map((tab, idx) => (
         <button
           key={tab.value}
+          data-tab-index={idx}
           type="button"
           onClick={() => onValueChange(tab.value)}
-          className={`relative z-10 flex-1 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${
-            value === tab.value ? 'text-[#1d1d1f]' : 'text-[#6e6e73] hover:text-[#1d1d1f]'
-          }`}
+          className={cn(
+            'inline-flex items-center justify-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg relative z-10 transition-colors duration-200',
+            value === tab.value ? 'text-[#00874A]' : 'text-neutral-500 hover:text-neutral-900',
+          )}
         >
-          <span className="flex items-center justify-center gap-1.5">
-            {tab.label}
-            {tab.count !== undefined && <span className="text-[#86868b]">{tab.count}</span>}
-          </span>
+          {tab.label}
+          {tab.count !== undefined && (
+            <span className={cn(
+              'text-xs',
+              value === tab.value ? 'text-[#00874A]/70' : 'text-neutral-400',
+            )}>
+              {tab.count}
+            </span>
+          )}
         </button>
       ))}
     </div>
@@ -522,10 +542,11 @@ export function ProjectViewDrawer({
                     </div>
                   </div>
 
-                  {/* Description */}
-                  <p className="mt-3 text-[14px] leading-relaxed text-[#6e6e73]">
-                    {project.description || 'No description provided for this project.'}
-                  </p>
+                  {project.description && (
+                    <p className="mt-3 text-[14px] leading-relaxed text-[#6e6e73]">
+                      {project.description}
+                    </p>
+                  )}
 
                   {/* Quick stats */}
                   <div className="mt-4 flex flex-wrap gap-4 text-[13px] text-[#6e6e73]">
@@ -550,7 +571,7 @@ export function ProjectViewDrawer({
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'members')} className="flex min-h-0 flex-1 flex-col">
                 <div className="mx-6 mt-4 mb-0 flex shrink-0 items-center gap-2">
                   <div className="flex-1">
-                    <AnimatedTabBar
+                    <TabBar
                       tabs={[
                         { value: 'tasks', label: 'Tasks', count: project.tasks.length },
                         { value: 'members', label: 'Members', count: project.memberCount },
@@ -649,7 +670,7 @@ export function ProjectViewDrawer({
                 <TabsContent value="members" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
                   <Tabs value={memberTab} onValueChange={(v) => setMemberTab(v as 'assigned' | 'unassigned')} className="flex min-h-0 flex-1 flex-col">
                     <div className="mb-3 shrink-0">
-                      <AnimatedTabBar
+                      <TabBar
                         tabs={[
                           { value: 'assigned', label: 'Assigned', count: project.memberCount },
                           {

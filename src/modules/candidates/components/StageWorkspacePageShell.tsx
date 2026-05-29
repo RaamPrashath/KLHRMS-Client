@@ -920,6 +920,20 @@ export function StageWorkspacePageShell({
     );
   }
 
+  const stageType = workspace.stage.stageType;
+
+  if (stageType === 'OFFER') {
+    return <OfferStageView workspace={workspace} orgSlug={orgSlug} jobSlug={jobSlug} />;
+  }
+
+  if (stageType === 'HIRED') {
+    return <AcceptedStageView workspace={workspace} orgSlug={orgSlug} jobSlug={jobSlug} />;
+  }
+
+  if (stageType === 'ONBOARDING') {
+    return <OnboardStageView workspace={workspace} orgSlug={orgSlug} jobSlug={jobSlug} />;
+  }
+
   return (
     <div className="min-h-full bg-canvas px-6 sm:px-8">
       <div className="mb-6">
@@ -1268,6 +1282,156 @@ export function StageWorkspacePageShell({
             if (!open) setSelectedApplicationId(null);
           }}
         />
+    </div>
+  );
+}
+
+const offerStatusLabels: Record<string, string> = {
+  DRAFT: 'Draft', SENT: 'Sent', FAILED: 'Failed',
+  ACCEPTED: 'Accepted', REJECTED: 'Rejected', EXPIRED: 'Expired', WITHDRAWN: 'Withdrawn',
+};
+
+const statusColors: Record<string, string> = {
+  DRAFT: 'bg-neutral-100 text-neutral-600', SENT: 'bg-blue-50 text-blue-700',
+  FAILED: 'bg-red-50 text-red-700', ACCEPTED: 'bg-green-50 text-green-700',
+  REJECTED: 'bg-red-50 text-red-700', EXPIRED: 'bg-amber-50 text-amber-700',
+  WITHDRAWN: 'bg-neutral-100 text-neutral-500',
+};
+
+function OfferStageView({ workspace, orgSlug, jobSlug }: { workspace: StageWorkspace; orgSlug: string; jobSlug: string | null }) {
+  return (
+    <div className="min-h-full bg-canvas px-6 sm:px-8">
+      <StageHeader workspace={workspace} orgSlug={orgSlug} jobSlug={jobSlug} badge="Offer Stage" badgeColor="bg-violet-50 text-violet-700" />
+      <div className="rounded-xl border border-neutral-200 bg-surface overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-neutral-100 bg-neutral-50/60">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Candidate</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Applied</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Offer Status</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Eligibility</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-100">
+            {workspace.candidates.map((candidate) => (
+              <tr key={candidate.applicationId} className="hover:bg-neutral-50/50 transition-colors">
+                <td className="px-4 py-3"><span className="text-sm font-medium text-neutral-900">{candidate.candidate.firstName} {candidate.candidate.lastName}</span></td>
+                <td className="px-4 py-3"><span className="text-sm text-neutral-500">{candidate.candidate.email ?? '—'}</span></td>
+                <td className="px-4 py-3"><span className="text-sm text-neutral-500">{new Date(candidate.appliedAt).toLocaleDateString()}</span></td>
+                <td className="px-4 py-3">
+                  {candidate.currentAssignment?.status ? (
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[candidate.currentAssignment.status] ?? 'bg-neutral-100 text-neutral-600'}`}>
+                      {offerStatusLabels[candidate.currentAssignment.status] ?? candidate.currentAssignment.status}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-neutral-400">UNSENT</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">—</span>
+                </td>
+              </tr>
+            ))}
+            {workspace.candidates.length === 0 && (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-neutral-400">No candidates in this stage</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AcceptedStageView({ workspace, orgSlug, jobSlug }: { workspace: StageWorkspace; orgSlug: string; jobSlug: string | null }) {
+  return (
+    <div className="min-h-full bg-canvas px-6 sm:px-8">
+      <StageHeader workspace={workspace} orgSlug={orgSlug} jobSlug={jobSlug} badge="Hired Stage" badgeColor="bg-emerald-50 text-emerald-700" />
+      <div className="rounded-xl border border-neutral-200 bg-surface overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-neutral-100 bg-neutral-50/60">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Candidate</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Applied</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-100">
+            {workspace.candidates.map((candidate) => (
+              <tr key={candidate.applicationId} className="hover:bg-neutral-50/50 transition-colors">
+                <td className="px-4 py-3"><span className="text-sm font-medium text-neutral-900">{candidate.candidate.firstName} {candidate.candidate.lastName}</span></td>
+                <td className="px-4 py-3"><span className="text-sm text-neutral-500">{candidate.candidate.email ?? '—'}</span></td>
+                <td className="px-4 py-3"><span className="text-sm text-neutral-500">{new Date(candidate.appliedAt).toLocaleDateString()}</span></td>
+              </tr>
+            ))}
+            {workspace.candidates.length === 0 && (
+              <tr><td colSpan={3} className="px-4 py-8 text-center text-sm text-neutral-400">No candidates in this stage</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function OnboardStageView({ workspace, orgSlug, jobSlug }: { workspace: StageWorkspace; orgSlug: string; jobSlug: string | null }) {
+  return (
+    <div className="min-h-full bg-canvas px-6 sm:px-8">
+      <StageHeader workspace={workspace} orgSlug={orgSlug} jobSlug={jobSlug} badge="Onboarding Stage" badgeColor="bg-teal-50 text-teal-700" />
+      <div className="rounded-xl border border-neutral-200 bg-surface overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-neutral-100 bg-neutral-50/60">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Candidate</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Applied</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-100">
+            {workspace.candidates.map((candidate) => (
+              <tr key={candidate.applicationId} className="hover:bg-neutral-50/50 transition-colors">
+                <td className="px-4 py-3"><span className="text-sm font-medium text-neutral-900">{candidate.candidate.firstName} {candidate.candidate.lastName}</span></td>
+                <td className="px-4 py-3"><span className="text-sm text-neutral-500">{candidate.candidate.email ?? '—'}</span></td>
+                <td className="px-4 py-3"><span className="text-sm text-neutral-500">{new Date(candidate.appliedAt).toLocaleDateString()}</span></td>
+              </tr>
+            ))}
+            {workspace.candidates.length === 0 && (
+              <tr><td colSpan={3} className="px-4 py-8 text-center text-sm text-neutral-400">No candidates in this stage</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function StageHeader({ workspace, orgSlug, jobSlug, badge, badgeColor }: {
+  workspace: StageWorkspace; orgSlug: string; jobSlug: string | null;
+  badge: string; badgeColor: string;
+}) {
+  const router = useRouter();
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mt-7">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900" onClick={() => {
+            if (jobSlug) router.push(`/${orgSlug}/candidates/${jobSlug}/kanban`);
+            else router.back();
+          }}>
+            <ChevronLeft className="size-5" />
+          </Button>
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">{workspace.stage.name}</h1>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
+              <span className="size-1 rounded-full bg-neutral-300" />
+              <span className="font-mono text-xs font-medium text-neutral-400 uppercase tracking-wider">{workspace.candidateCount} Candidates</span>
+              <span className="size-1 rounded-full bg-neutral-300" />
+              <span className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${badgeColor}`}>{badge}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

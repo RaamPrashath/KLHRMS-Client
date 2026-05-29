@@ -19,6 +19,8 @@ export function useLeaveBalances(
           memberId: filters?.memberId,
           leaveTypeId: filters?.leaveTypeId,
           year: filters?.year,
+          page: filters?.page,
+          pageSize: filters?.pageSize,
         },
       }),
     enabled: !!orgSlug && !!memberId,

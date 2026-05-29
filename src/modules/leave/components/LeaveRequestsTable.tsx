@@ -63,7 +63,7 @@ export function LeaveRequestsTable({ requests, isLoading, onRowClick, viewScope 
   const [sortOption, setSortOption] = useState<SortOption>('latest');
   const [filterOption, setFilterOption] = useState<FilterOption>('all-time');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 25;
 
   // Determine if we should show the name column (hide for "self" scope)
   const showNameColumn = viewScope !== 'self';

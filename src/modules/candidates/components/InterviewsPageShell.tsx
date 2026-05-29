@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Clock, Loader2, Play, RotateCcw, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { CalendarPlus, Check, Clock, Loader2, Play, RotateCcw, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { SchedulingModal } from '@/modules/candidates/components/SchedulingModal';
+import { authClient } from '@/lib/auth-client';
 import {
   useAcceptInterview,
   useCompleteInterviewMeeting,
@@ -35,6 +36,28 @@ import {
 } from '@/modules/candidates/hooks/useAtsPipeline';
 import { cn } from '@/lib/utils';
 import type { MyInterview } from '@/modules/candidates/types/atsTypes';
+
+const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
+
+function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
+  if (Array.isArray(account.scopes)) {
+    return account.scopes.filter((scope): scope is string => typeof scope === 'string');
+  }
+  if (typeof account.scopes === 'string') {
+    return account.scopes.split(/[,\s]+/).filter(Boolean);
+  }
+  if (typeof account.scope === 'string') {
+    return account.scope.split(/[,\s]+/).filter(Boolean);
+  }
+  return [];
+}
+
+function readGoogleAccounts(data: unknown): Array<{ providerId?: unknown; scope?: unknown; scopes?: unknown }> {
+  return Array.isArray(data)
+    ? data.filter((item): item is { providerId?: unknown; scope?: unknown; scopes?: unknown } => typeof item === 'object' && item !== null)
+    : [];
+}
 
 function candidateName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
@@ -403,11 +426,37 @@ export function InterviewsPageShell({
   const [reassignmentInterview, setReassignmentInterview] = useState<MyInterview | null>(null);
   const [schedulingInterview, setSchedulingInterview] = useState<MyInterview | null>(null);
   const [completingInterview, setCompletingInterview] = useState<MyInterview | null>(null);
+  const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const pendingSchedulingInterviewRef = useRef<MyInterview | null>(null);
   const interviewsQuery = useFetchMyInterviews(orgSlug, memberId);
   const acceptInterview = useAcceptInterview(orgSlug, memberId);
   const rejectInterview = useRejectInterview(orgSlug, memberId);
   const startInterview = useStartInterviewMeeting(orgSlug, memberId, null);
   const completeInterview = useCompleteInterviewMeeting(orgSlug, memberId, null);
+
+  const checkGoogleAccess = useCallback(async (): Promise<boolean> => {
+    const result = await authClient.listAccounts();
+    if (result.error) return false;
+    const accounts = readGoogleAccounts(result.data);
+    const googleAccount = accounts.find((account) => account.providerId === 'google');
+    if (!googleAccount) return false;
+    return normalizeGoogleScopes(googleAccount).includes(GOOGLE_CALENDAR_SCOPE);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(GOOGLE_CONNECT_RETURN_PARAM)) return;
+    url.searchParams.delete(GOOGLE_CONNECT_RETURN_PARAM);
+    window.history.replaceState(null, '', url.toString());
+    toast.success('Google Calendar connected');
+    const pending = pendingSchedulingInterviewRef.current;
+    if (pending) {
+      pendingSchedulingInterviewRef.current = null;
+      setSchedulingInterview(pending);
+    }
+  }, []);
 
   if (interviewsQuery.isLoading) {
     return (
@@ -432,8 +481,40 @@ export function InterviewsPageShell({
 
   const interviews = interviewsQuery.data?.items ?? [];
 
-  function handleAccept(interview: MyInterview) {
+  async function promptGoogleConnect(interview: MyInterview) {
+    pendingSchedulingInterviewRef.current = interview;
+    setGoogleConnectOpen(true);
+  }
+
+  async function handleAccept(interview: MyInterview) {
+    const hasGoogle = await checkGoogleAccess();
+    if (!hasGoogle) {
+      await promptGoogleConnect(interview);
+      return;
+    }
     setSchedulingInterview(interview);
+  }
+
+  async function connectGoogle() {
+    try {
+      setIsConnectingGoogle(true);
+      const callbackUrl = new URL(window.location.href);
+      callbackUrl.searchParams.set(GOOGLE_CONNECT_RETURN_PARAM, '1');
+      const result = await authClient.linkSocial({
+        provider: 'google',
+        callbackURL: callbackUrl.toString(),
+        scopes: [GOOGLE_CALENDAR_SCOPE],
+        disableRedirect: false,
+      });
+      if (result.error && !String(result.error.message ?? '').includes('already linked')) {
+        throw new Error(result.error.message);
+      }
+    } catch (error) {
+      pendingSchedulingInterviewRef.current = null;
+      toast.error(error instanceof Error ? error.message : 'Failed to connect Google Calendar');
+    } finally {
+      setIsConnectingGoogle(false);
+    }
   }
 
   function handleReject(interview: MyInterview) {
@@ -454,7 +535,12 @@ export function InterviewsPageShell({
     );
   }
 
-  function handleSchedule(interview: MyInterview) {
+  async function handleSchedule(interview: MyInterview) {
+    const hasGoogle = await checkGoogleAccess();
+    if (!hasGoogle) {
+      await promptGoogleConnect(interview);
+      return;
+    }
     setSchedulingInterview(interview);
   }
 
@@ -610,6 +696,35 @@ export function InterviewsPageShell({
         />
       )}
 
+      <Dialog open={googleConnectOpen} onOpenChange={setGoogleConnectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary-ghost text-primary">
+              <CalendarPlus className="size-5" />
+            </div>
+            <DialogTitle>Connect Google Calendar</DialogTitle>
+            <DialogDescription>
+              Interview meetings need Google Calendar access to create a Meet link and email the candidate.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setGoogleConnectOpen(false);
+                pendingSchedulingInterviewRef.current = null;
+              }}
+              disabled={isConnectingGoogle}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={connectGoogle} disabled={isConnectingGoogle}>
+              {isConnectingGoogle ? 'Opening Google' : 'Connect Google'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <SchedulingModal
         key={schedulingInterview?.eventId ?? 'closed-scheduling-modal'}
         interview={schedulingInterview}

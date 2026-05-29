@@ -603,6 +603,7 @@ export function BulkAttendanceCalendar({
         dayLayoutAlgorithm="no-overlap"
         showMultiDayTimes={false}
         popup={false}
+        tooltipAccessor={() => ''}
       />
     </div>
   );

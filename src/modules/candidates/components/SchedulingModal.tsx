@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Clock3, Loader2, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -353,16 +354,28 @@ export function SchedulingModal({
 
   async function handleSubmit() {
     const validSlots = slots.filter((s) => s.date && isValidTime(s.startTime));
-    if (validSlots.length === 0) return;
+    if (validSlots.length === 0) {
+      toast.error('Please fill in at least one time slot with a date and time');
+      return;
+    }
 
     const proposedSlots = validSlots.map((s) => ({
       startTime: toIsoFromDateTime(s.date, s.startTime),
       endTime: addMinutes(s.date, s.startTime, resolvedDurationMinutes),
     }));
 
-    if (proposedSlots.some((s) => new Date(s.startTime).getTime() < Date.now())) return;
-    if (resolvedDurationMinutes < MIN_DURATION_MINUTES || resolvedDurationMinutes > MAX_DURATION_MINUTES) return;
-    if (proposedSlots.some((s) => new Date(s.endTime).getTime() <= new Date(s.startTime).getTime())) return;
+    if (proposedSlots.some((s) => new Date(s.startTime).getTime() < Date.now())) {
+      toast.error('Selected time is in the past. Please choose a future time slot.');
+      return;
+    }
+    if (resolvedDurationMinutes < MIN_DURATION_MINUTES || resolvedDurationMinutes > MAX_DURATION_MINUTES) {
+      toast.error(`Duration must be between ${MIN_DURATION_MINUTES} and ${MAX_DURATION_MINUTES} minutes`);
+      return;
+    }
+    if (proposedSlots.some((s) => new Date(s.endTime).getTime() <= new Date(s.startTime).getTime())) {
+      toast.error('End time must be after start time');
+      return;
+    }
 
     await onSubmit({ proposedSlots, durationMinutes: resolvedDurationMinutes });
   }

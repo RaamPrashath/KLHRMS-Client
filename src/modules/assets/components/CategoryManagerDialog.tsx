@@ -195,7 +195,7 @@ export function CategoryManagerDialog({
                       />
                     </div>
                     <div className="grid gap-1.5">
-                      <Label className="text-[13px] text-[#6b7280]">Description (optional)</Label>
+                      <Label className="text-[13px] text-[#6b7280] ">Description (optional)</Label>
                       <Input
                         value={newCategoryDesc}
                         onChange={(e) => setNewCategoryDesc(e.target.value)}

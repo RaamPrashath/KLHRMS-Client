@@ -22,7 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { LeaveBalanceAssignmentSheet } from '@/modules/leave/components/LeaveBalanceAssignmentSheet';
-import { useLeaveBalances } from '@/modules/leave/hooks/useLeaveBalances';
+import { useLeaveBalancesTable } from '@/modules/leave/hooks/useLeaveBalancesTable';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
 import { useHolidaysTable } from '@/modules/leave/hooks/useHolidaysTable';
 import { useLeaveShell } from '@/modules/leave/components/LeaveSectionShell';
@@ -114,7 +114,7 @@ export function LeaveRequestsView() {
   const [filter, setFilter] = useState<FilterOption>('all-time');
   const [sort, setSort] = useState<SortOption>('latest');
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(25);
 
   const allRequests = requestsQuery.data?.items ?? [];
 
@@ -209,8 +209,8 @@ export function LeaveRequestsView() {
       {requestsQuery.isLoading && (
         <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
           {['a','b','c','d','e'].map((k) => (
-            <div key={`req-${k}`} className="border-b border-black/4 p-6">
-              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            <div key={`req-${k}`} className="border-b border-black/4 px-6 py-3">
+              <div className="h-5 w-full animate-pulse rounded-md bg-neutral-100" />
             </div>
           ))}
         </div>
@@ -267,7 +267,7 @@ export function LeaveRequestsView() {
                 total={filtered.length}
                 pageSize={pageSize}
                 onPageChange={setPage}
-                onPageSizeChange={() => undefined}
+                onPageSizeChange={setPageSize}
               />
             </div>
           )}
@@ -281,41 +281,39 @@ export function LeaveRequestsView() {
 
 export function LeaveBalancesView() {
   const { orgSlug, memberId, permissions, canApprove, members, leaveTypes } = useLeaveShell();
-  const balancesQuery = useLeaveBalances(orgSlug, memberId, { year: new Date().getFullYear() });
+  const {
+    data,
+    isLoading,
+    isFetching,
+    filters,
+    totalPages,
+    setPage,
+    setPageSize,
+    setSearch,
+  } = useLeaveBalancesTable(orgSlug, memberId);
   const showMemberColumn = permissions.view !== 'self';
-  const [search, setSearch] = useState('');
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedBalance, setSelectedBalance] = useState<LeaveBalanceRecord | null>(null);
 
-  const items = balancesQuery.data?.items ?? [];
-  const filtered = React.useMemo(() => {
-    let result = items;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = items.filter(
-        (b: LeaveBalanceRecord) =>
-          (b.member.name ?? '').toLowerCase().includes(q) ||
-          (b.member.email ?? '').toLowerCase().includes(q) ||
-          b.leaveType.name.toLowerCase().includes(q),
-      );
-    }
-    return result;
-  }, [items, search]);
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
 
-  const balEmptyBody = search ? 'Try adjusting your search or filter.' : 'Balances will appear here once leave types and allocations are in place.';
+  const balEmptyBody = filters.search
+    ? 'Try adjusting your search or filter.'
+    : 'Balances will appear here once leave types and allocations are in place.';
 
   return (
     <Card>
       <Toolbar>
         <SearchInput
-          value={search}
-          onChange={(v) => { setSearch(v); }}
+          value={filters.search}
+          onChange={(v) => setSearch(v)}
           placeholder="Search by member or leave type…"
         />
         <div className="flex-1" />
         {canApprove ? (
           <Button
-            className="h-8 rounded-full bg-primary px-4 text-sm text-white shadow-[0_10px_24px_rgba(0,135,74,0.18)] hover:bg-primary-hover"
+            className="h-9 rounded bg-primary px-4 text-sm text-white shadow-[0_10px_24px_rgba(0,135,74,0.18)] hover:bg-primary-hover"
             onClick={() => {
               setSelectedBalance(null);
               setAssignOpen(true);
@@ -326,66 +324,82 @@ export function LeaveBalancesView() {
         ) : null}
       </Toolbar>
 
-      {balancesQuery.isLoading && (
-        <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
-          {['a','b','c','d','e'].map((k) => (
-            <div key={`bal-${k}`} className="border-b border-black/4 p-6">
-              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
-            </div>
-          ))}
-        </div>
-      )}
-      {!balancesQuery.isLoading && filtered.length === 0 && (
-        <SectionEmpty title="No balances found" body={balEmptyBody} />
-      )}
-      {!balancesQuery.isLoading && filtered.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-black/[0.04] bg-canvas/50">
-                {showMemberColumn && <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Member</th>}
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Leave Type</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Allocated</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Used</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Carry</th>
-                <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Remaining</th>
-                {canApprove ? <th className="px-6 py-3 text-right text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Action</th> : null}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/4 bg-surface">
-              {filtered.map((b: LeaveBalanceRecord) => (
-                <tr key={b.id} className="transition-colors hover:bg-black/[0.02]">
-                  {showMemberColumn && (
-                    <td className="px-6 py-3">
-                      <p className="font-medium text-neutral-900">{b.member.name ?? b.member.email ?? b.member.memberId}</p>
-                      <p className="text-xs text-neutral-500">{b.member.email}</p>
-                    </td>
-                  )}
-                  <td className="px-6 py-3 text-neutral-700">{b.leaveType.name}</td>
-                  <td className="px-6 py-3 font-mono text-neutral-900">{b.allocated}</td>
-                  <td className="px-6 py-3 font-mono text-neutral-900">{b.used}</td>
-                  <td className="px-6 py-3 font-mono text-neutral-900">{b.carriedForward}</td>
-                  <td className="px-6 py-3 font-mono font-semibold text-primary">{b.remaining}</td>
-                  {canApprove ? (
-                    <td className="px-6 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        className="h-7 rounded-full px-3 text-xs text-neutral-600 hover:bg-black/[0.03]"
-                        onClick={() => {
-                          setSelectedBalance(b);
-                          setAssignOpen(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    </td>
-                  ) : null}
+      <div className={cn('transition-opacity', isFetching && !isLoading ? 'opacity-60' : 'opacity-100')}>
+        {isLoading && (
+          <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
+            {['a','b','c','d','e'].map((k) => (
+              <div key={`bal-${k}`} className="border-b border-black/4 p-6">
+                <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+              </div>
+            ))}
+          </div>
+        )}
+        {!isLoading && items.length === 0 && (
+          <SectionEmpty title="No balances found" body={balEmptyBody} />
+        )}
+        {!isLoading && items.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-black/[0.04] bg-canvas/50">
+                  {showMemberColumn && <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Member</th>}
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Leave Type</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Allocated</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Used</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Carry</th>
+                  <th className="px-6 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Remaining</th>
+                  {canApprove ? <th className="px-6 py-3 text-right text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Action</th> : null}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-black/4 bg-surface">
+                {items.map((b: LeaveBalanceRecord) => (
+                  <tr key={b.id} className="transition-colors hover:bg-black/[0.02]">
+                    {showMemberColumn && (
+                      <td className="px-6 py-3">
+                        <p className="font-medium text-neutral-900">{b.member.name ?? b.member.email ?? b.member.memberId}</p>
+                        <p className="text-xs text-neutral-500">{b.member.email}</p>
+                      </td>
+                    )}
+                    <td className="px-6 py-3 text-neutral-700">{b.leaveType.name}</td>
+                    <td className="px-6 py-3 font-mono text-neutral-900">{b.allocated}</td>
+                    <td className="px-6 py-3 font-mono text-neutral-900">{b.used}</td>
+                    <td className="px-6 py-3 font-mono text-neutral-900">{b.carriedForward}</td>
+                    <td className="px-6 py-3 font-mono font-semibold text-primary">{b.remaining}</td>
+                    {canApprove ? (
+                      <td className="px-6 py-3 text-right">
+                        <Button
+                          variant="ghost"
+                          className="h-7 rounded-full px-3 text-xs text-neutral-600 hover:bg-black/[0.03]"
+                          onClick={() => {
+                            setSelectedBalance(b);
+                            setAssignOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {total > 0 && (
+        <div className="border-t border-black/[0.04] px-8 py-6">
+          <EmployeePagination
+            page={filters.page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={filters.pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
+
       {canApprove ? (
         <LeaveBalanceAssignmentSheet
           open={assignOpen}
@@ -407,7 +421,7 @@ export function LeaveTypesView() {
   const { canApprove, leaveTypes, leaveTypesLoading, openLeaveTypeDialog } = useLeaveShell();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(25);
 
   if (!canApprove) {
     return (
@@ -446,8 +460,8 @@ export function LeaveTypesView() {
       {leaveTypesLoading && (
         <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
           {['a','b','c','d'].map((k) => (
-            <div key={`lt-${k}`} className="border-b border-black/4 p-6">
-              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            <div key={`lt-${k}`} className="border-b border-black/4 px-6 py-3">
+              <div className="h-5 w-full animate-pulse rounded-md bg-neutral-100" />
             </div>
           ))}
         </div>
@@ -496,7 +510,7 @@ export function LeaveTypesView() {
               total={filtered.length}
               pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={() => undefined}
+              onPageSizeChange={setPageSize}
             />
           </div>
         </>

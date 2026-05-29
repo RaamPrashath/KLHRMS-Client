@@ -2,47 +2,45 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchHolidaysAction } from '@/modules/leave/api/leaveServerActions';
-import type { HolidayListResponse } from '@/modules/leave/types/leaveTypes';
+import { fetchLeaveBalancesAction } from '@/modules/leave/api/leaveServerActions';
+import type { LeaveBalanceListResponse } from '@/modules/leave/types/leaveTypes';
 
-export interface HolidayTableFilters {
+export interface LeaveBalanceTableFilters {
   search: string;
-  month: number; // 0 = all months
   year: number;
   page: number;
   pageSize: number;
 }
 
-const DEFAULT_FILTERS: HolidayTableFilters = {
+const DEFAULT_FILTERS: LeaveBalanceTableFilters = {
   search: '',
-  month: 0,
   year: new Date().getFullYear(),
   page: 1,
   pageSize: 25,
 };
 
-export function useHolidaysTable(orgSlug: string, memberId: string) {
-  const [filters, setFilters] = useState<HolidayTableFilters>(DEFAULT_FILTERS);
+export function useLeaveBalancesTable(orgSlug: string, memberId: string) {
+  const [filters, setFilters] = useState<LeaveBalanceTableFilters>(DEFAULT_FILTERS);
 
-  const query = useQuery<HolidayListResponse, Error>({
+  const query = useQuery<LeaveBalanceListResponse, Error>({
     queryKey: [
-      'leave-holidays-table',
+      'leave-balances-table',
       orgSlug,
       filters.year,
-      filters.month,
       filters.search,
       filters.page,
       filters.pageSize,
     ],
     queryFn: () =>
-      fetchHolidaysAction({
+      fetchLeaveBalancesAction({
         orgSlug,
         memberId,
-        year: filters.year,
-        month: filters.month > 0 ? filters.month : undefined,
-        search: filters.search || undefined,
-        page: filters.page,
-        pageSize: filters.pageSize,
+        filters: {
+          year: filters.year,
+          search: filters.search || undefined,
+          page: filters.page,
+          pageSize: filters.pageSize,
+        },
       }),
     enabled: !!orgSlug && !!memberId,
     placeholderData: (prev) => prev,
@@ -64,10 +62,6 @@ export function useHolidaysTable(orgSlug: string, memberId: string) {
     setFilters((f) => ({ ...f, search, page: 1 }));
   }
 
-  function setMonth(month: number) {
-    setFilters((f) => ({ ...f, month, page: 1 }));
-  }
-
   function setYear(year: number) {
     setFilters((f) => ({ ...f, year, page: 1 }));
   }
@@ -81,7 +75,6 @@ export function useHolidaysTable(orgSlug: string, memberId: string) {
     setPage,
     setPageSize,
     setSearch,
-    setMonth,
     setYear,
   };
 }

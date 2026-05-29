@@ -4,13 +4,19 @@ import { useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { z } from 'zod';
 
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
 
 import { leaveRequestSchema, type LeaveRequestInput } from '@/modules/leave/schema/leaveSchemas';
 import { useCreateLeaveRequest } from '@/modules/leave/hooks/useCreateLeaveRequest';
@@ -183,20 +189,74 @@ export function ApplyLeaveSheet({
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="leave-start-date" className="text-sm font-medium text-neutral-900">
-                  Start Date
-                </Label>
-                <Input id="leave-start-date" type="date" className="h-10" {...form.register('startDate')} />
+                <Label className="text-sm font-medium text-neutral-900">Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'h-10 w-full justify-start text-left font-normal',
+                        !startDate && 'text-neutral-400'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 size-4 shrink-0" />
+                      {startDate ? format(new Date(`${startDate}T00:00:00`), 'PP') : 'Select start date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate ? new Date(`${startDate}T00:00:00`) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const formatted = format(date, 'yyyy-MM-dd');
+                          form.setValue('startDate', formatted, { shouldValidate: true });
+                          if (endDate && date > new Date(`${endDate}T00:00:00`)) {
+                            form.setValue('endDate', '', { shouldValidate: true });
+                          }
+                        }
+                      }}
+                      disabled={{ before: new Date() }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 {form.formState.errors.startDate ? (
                   <p className="text-xs text-destructive-text">{form.formState.errors.startDate.message}</p>
                 ) : null}
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="leave-end-date" className="text-sm font-medium text-neutral-900">
-                  End Date
-                </Label>
-                <Input id="leave-end-date" type="date" className="h-10" {...form.register('endDate')} />
+                <Label className="text-sm font-medium text-neutral-900">End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'h-10 w-full justify-start text-left font-normal',
+                        !endDate && 'text-neutral-400'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 size-4 shrink-0" />
+                      {endDate ? format(new Date(`${endDate}T00:00:00`), 'PP') : 'Select end date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDate ? new Date(`${endDate}T00:00:00`) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          form.setValue('endDate', format(date, 'yyyy-MM-dd'), { shouldValidate: true });
+                        }
+                      }}
+                      disabled={{
+                        before: startDate ? new Date(`${startDate}T00:00:00`) : new Date(),
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 {form.formState.errors.endDate ? (
                   <p className="text-xs text-destructive-text">{form.formState.errors.endDate.message}</p>
                 ) : null}

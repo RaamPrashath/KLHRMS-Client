@@ -120,9 +120,19 @@ export function AttendancePageShell({
     // ── Permission loading ─────────────────────────────────────────────────────
     if (permissionsLoading) {
         return (
-            <div className="flex items-center justify-center py-20">
-                <p className="text-sm text-neutral-500">Loading…</p>
-            </div>
+            <main className="min-h-full bg-canvas">
+                <div className="flex flex-col gap-6 flex-1 min-h-full">
+                    <div className="ml-7 mt-7 mr-7">
+                        <div className="h-9 w-56 animate-pulse rounded-lg bg-neutral-100" />
+                    </div>
+                    <div className="mx-7">
+                        <div className="h-32 animate-pulse rounded-2xl bg-neutral-100" />
+                    </div>
+                    <div className="mx-7 mb-7">
+                        <div className="h-96 animate-pulse rounded-2xl bg-neutral-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]" />
+                    </div>
+                </div>
+            </main>
         );
     }
 

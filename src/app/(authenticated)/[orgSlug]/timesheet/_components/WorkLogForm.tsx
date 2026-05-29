@@ -284,16 +284,20 @@ export function WorkLogForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="wl-notes" className="text-[13px] font-medium text-foreground">
-          Description <span className="font-normal text-muted-foreground">(optional)</span>
+        <Label htmlFor="wl-notes" className="text-[13px] text-foreground">
+          Description
         </Label>
         <Textarea
           id="wl-notes"
           value={notes}
-          onChange={(event) => setNotes(event.target.value)}
+          onChange={(event) => {
+            setNotes(event.target.value);
+            const el = event.target;
+            el.style.height = 'auto';
+            el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+          }}
           placeholder="Additional details..."
-          rows={3}
-          className="resize-none"
+          className="resize-none min-h-[72px] max-h-[160px] overflow-y-auto"
         />
       </div>
 
