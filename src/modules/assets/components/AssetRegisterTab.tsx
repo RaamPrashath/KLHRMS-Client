@@ -40,8 +40,9 @@ const PAGE_SIZE = 9;
 
 const STATUS_DOT: Record<string, string> = {
   AVAILABLE: 'bg-[#22c55e]',
-  PROVIDED: 'bg-[#3b82f6]',
-  UNDER_MAINTENANCE: 'bg-[#eab308]',
+  ASSIGNED: 'bg-[#3b82f6]',
+  IN_MAINTENANCE: 'bg-[#eab308]',
+  PENDING_RETURN: 'bg-[#f59e0b]',
   DAMAGED: 'bg-[#ef4444]',
   LOST: 'bg-[#f97316]',
   RETIRED: 'bg-[#9ca3af]',

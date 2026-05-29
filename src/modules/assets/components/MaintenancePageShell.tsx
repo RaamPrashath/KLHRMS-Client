@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { RevokeAndSwapDialog } from '@/modules/assets/components/RevokeAndSwapDialog';
 import { useAssetMutations } from '@/modules/assets/hooks/useAssetMutations';
 import { useMaintenanceTicketsQuery } from '@/modules/assets/hooks/useMaintenanceTicketsQuery';
 import {
@@ -22,6 +23,7 @@ import {
 } from '@/modules/maintenance/kanban';
 import { MaintenanceTableView } from '@/modules/assets/components/MaintenanceTableView';
 import { humanize } from '@/modules/assets/lib/assetUtils';
+import type { AssetMaintenanceStatus, AssetMaintenanceType } from '@/modules/assets/types/assetTypes';
 import {
   assetMaintenanceStatusOptions,
   assetMaintenanceTypeOptions,
@@ -45,6 +47,8 @@ export function MaintenancePageShell({
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [swapDialogOpen, setSwapDialogOpen] = useState(false);
+  const [selectedSwapTicketId, setSelectedSwapTicketId] = useState<string | null>(null);
 
   const tickets = useMemo(() => ticketsQuery.data ?? [], [ticketsQuery.data]);
 
@@ -52,12 +56,13 @@ export function MaintenancePageShell({
     let result = tickets;
     if (search.trim()) {
       const q = search.toLowerCase().trim();
-      result = result.filter(
-        (t) =>
-          (t.ticketId ?? '').toLowerCase().includes(q) ||
-          (t.assetName ?? '').toLowerCase().includes(q) ||
-          (t.issueDescription ?? '').toLowerCase().includes(q) ||
-          (t.loggedByName ?? '').toLowerCase().includes(q),
+        result = result.filter(
+          (t) =>
+            (t.ticketId ?? '').toLowerCase().includes(q) ||
+            (t.assetName ?? '').toLowerCase().includes(q) ||
+            (t.issueDescription ?? '').toLowerCase().includes(q) ||
+            (t.loggedByName ?? '').toLowerCase().includes(q) ||
+            (t.assetLifecycleStatusLabel ?? '').toLowerCase().includes(q),
       );
     }
     if (statusFilter !== 'ALL') {
@@ -95,6 +100,11 @@ export function MaintenancePageShell({
     setSearch('');
     setStatusFilter('ALL');
     setTypeFilter('ALL');
+  }
+
+  function openSwapDialog(ticketId: string) {
+    setSelectedSwapTicketId(ticketId);
+    setSwapDialogOpen(true);
   }
 
   return (
@@ -228,11 +238,28 @@ export function MaintenancePageShell({
             collapsed={collapsed}
             onToggleColumn={toggleCollapse}
             onUpdateMaintenance={(params) => mutations.updateMaintenance.mutateAsync(params)}
+            onOpenSwap={openSwapDialog}
           />
         ) : (
-          <MaintenanceTableView tickets={filteredTickets} />
+          <MaintenanceTableView tickets={filteredTickets} onOpenSwap={openSwapDialog} />
         )}
       </div>
+
+      <RevokeAndSwapDialog
+        key={selectedSwapTicketId ?? 'maintenance-swap'}
+        open={swapDialogOpen}
+        onOpenChange={setSwapDialogOpen}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        defaultMaintenanceId={selectedSwapTicketId}
+        maintenanceOptions={filteredTickets.map((ticket) => ({
+          id: ticket.id,
+          ticketId: ticket.ticketId,
+          maintenanceType: ticket.maintenanceType as AssetMaintenanceType,
+          status: ticket.status as AssetMaintenanceStatus,
+          issueDescription: ticket.issueDescription,
+        }))}
+      />
     </div>
   );
 }

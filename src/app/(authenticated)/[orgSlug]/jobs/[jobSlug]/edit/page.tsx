@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 import { type RolePermissions } from '@/lib/hrms-roles';
 import { requireOrgMembership } from '@/lib/organizations';
 
-import { fetchDepartmentMetaAction } from '@/modules/departments/api/departmentServerActions';
+import { fetchOptionalDepartmentMeta } from '@/modules/jobs/lib/fetchOptionalDepartmentMeta';
 import { EditJobRequisitionPage } from '@/modules/jobs/pages/EditJobRequisitionPage';
 
 export default async function EditJobRequisitionRoute({
@@ -25,22 +25,15 @@ export default async function EditJobRequisitionRoute({
     redirect('/organizations');
   }
 
-  const meta = await fetchDepartmentMetaAction({ orgSlug, memberId: member.id });
+  const meta = await fetchOptionalDepartmentMeta({ orgSlug, memberId: member.id });
 
   return (
     <EditJobRequisitionPage
       orgSlug={orgSlug}
       memberId={member.id}
       requisitionId={jobSlug}
-      departments={meta.departments.map((department) => ({
-        id: department.id,
-        name: department.label,
-      }))}
-      orgMembers={meta.members.map((orgMember) => ({
-        id: orgMember.id,
-        name: orgMember.label,
-        email: orgMember.email ?? '',
-      }))}
+      departments={meta?.departments ?? []}
+      orgMembers={meta?.members ?? []}
       permissions={(member.role?.permissions as RolePermissions) ?? null}
     />
   );

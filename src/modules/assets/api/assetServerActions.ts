@@ -4,6 +4,7 @@ import {
   assetIssueSchema,
   assetMaintenanceCreateSchema,
   assetMaintenanceUpdateSchema,
+  assetRevokeSwapSchema,
   helpdeskTicketCreateSchema,
   assetReturnSchema,
   assetSchema,
@@ -11,6 +12,7 @@ import {
   type AssetIssueInput,
   type AssetMaintenanceCreateInput,
   type AssetMaintenanceUpdateInput,
+  type AssetRevokeSwapInput,
   type HelpdeskTicketCreateInput,
   type AssetReturnInput,
 } from '@/modules/assets/schema/assetSchemas';
@@ -18,6 +20,10 @@ import type {
   AssetCategoryDefinition,
   AssetCategoryFieldDefinition,
   AssetDetail,
+  EmployeeAssetViewResponse,
+  AssetRevokeSwapInput as AssetRevokeSwapPayload,
+  AssetSwapExecutionResult,
+  AssetSwapPreview,
   AssetFiltersState,
   AssetIdDefinition,
   AssetIssueResponse,
@@ -132,6 +138,18 @@ export async function fetchAssetsAction(params: {
   return handleResponse<AssetListResponse>(res);
 }
 
+export async function fetchEmployeeAssetViewAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<EmployeeAssetViewResponse> {
+  const res = await fetch(`${getApiUrl()}/assets/employee-view`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<EmployeeAssetViewResponse>(res);
+}
+
 export async function fetchAssetMetaAction(params: {
   orgSlug: string;
   memberId: string;
@@ -232,6 +250,19 @@ export async function returnAssetAction(params: {
   return handleResponse<AssetDetail>(res);
 }
 
+export async function requestAssetReturnAction(params: {
+  orgSlug: string;
+  memberId: string;
+  assetId: string;
+}): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${getApiUrl()}/assets/${params.assetId}/request-return`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<{ success: boolean; message: string }>(res);
+}
+
 export async function createAssetMaintenanceAction(params: {
   orgSlug: string;
   memberId: string;
@@ -256,6 +287,8 @@ export async function createAssetMaintenanceAction(params: {
       issueDescription: payload.issueDescription,
       serviceDate: payload.serviceDate,
       expectedCompletionDate: payload.expectedCompletionDate || null,
+      estimatedDowntimeHours: payload.estimatedDowntimeHours ?? null,
+      operationalCriticalityTier: payload.operationalCriticalityTier,
       cost: payload.cost ?? null,
       status: payload.status,
       conditionBeforeMaintenance: payload.conditionBeforeMaintenance || null,
@@ -346,9 +379,24 @@ export async function createHelpdeskTicketAction(params: {
       attachmentsMetadata: parsed.data.attachmentsMetadata,
       maintenanceType: parsed.data.maintenanceType,
       serviceDate: parsed.data.serviceDate || null,
+      expectedCompletionDate: parsed.data.expectedCompletionDate || null,
+      estimatedDowntimeHours: parsed.data.estimatedDowntimeHours ?? null,
+      operationalCriticalityTier: parsed.data.operationalCriticalityTier,
       conditionBeforeMaintenance: parsed.data.conditionBeforeMaintenance || null,
       notes: parsed.data.notes || null,
     }),
+  });
+  return handleResponse<MyTicket>(res);
+}
+
+export async function withdrawMyTicketAction(params: {
+  orgSlug: string;
+  memberId: string;
+  ticketId: string;
+}): Promise<MyTicket> {
+  const res = await fetch(`${getApiUrl()}/assets/tickets/mine/${params.ticketId}/withdraw`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
   });
   return handleResponse<MyTicket>(res);
 }
@@ -511,6 +559,7 @@ export interface MaintenanceTicket {
   ticketId: string;
   ticketMode: TicketMode;
   assetId: string | null;
+  assetUnitId: string | null;
   assetName: string | null;
   assetCode: string | null;
   assetCondition: string | null;
@@ -521,9 +570,16 @@ export interface MaintenanceTicket {
   issueDescription: string;
   status: string;
   serviceDate: string;
+  expectedCompletionDate: string | null;
+  estimatedDowntimeHours: number | null;
+  operationalCriticalityTier: string | null;
+  replacementDecision: string | null;
   createdAt: string;
   loggedByMemberId: string | null;
   loggedByName: string | null;
+  assetLifecycleStatus: string | null;
+  assetLifecycleStatusLabel: string | null;
+  swapPreview: AssetSwapPreview | null;
 }
 
 export async function fetchMaintenanceTicketsAction(params: {
@@ -536,6 +592,51 @@ export async function fetchMaintenanceTicketsAction(params: {
     cache: 'no-store',
   });
   return handleResponse<MaintenanceTicket[]>(res);
+}
+
+export async function fetchAssetSwapPreviewAction(params: {
+  orgSlug: string;
+  memberId: string;
+  maintenanceId: string;
+}): Promise<AssetSwapPreview> {
+  const res = await fetch(`${getApiUrl()}/assets/maintenance/${params.maintenanceId}/swap-preview`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<AssetSwapPreview>(res);
+}
+
+export async function revokeAndSwapAssetAction(params: {
+  orgSlug: string;
+  memberId: string;
+  maintenanceId: string;
+  data: AssetRevokeSwapInput;
+}): Promise<AssetSwapExecutionResult> {
+  const parsed = assetRevokeSwapSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(
+      JSON.stringify({
+        status: 400,
+        message: parsed.error.issues[0]?.message ?? 'Validation failed',
+      }),
+    );
+  }
+
+  const res = await fetch(`${getApiUrl()}/assets/maintenance/${params.maintenanceId}/revoke-swap`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({
+      maintenanceId: parsed.data.maintenanceId,
+      replacementMode: parsed.data.replacementMode,
+      replacementAssetUnitId: parsed.data.replacementAssetUnitId,
+      revokeStatus: parsed.data.revokeStatus,
+      replacementConditionWhileProviding: parsed.data.replacementConditionWhileProviding,
+      providedByMemberId: parsed.data.providedByMemberId || null,
+      notes: parsed.data.notes || null,
+    } satisfies AssetRevokeSwapPayload),
+  });
+  return handleResponse<AssetSwapExecutionResult>(res);
 }
 
 // ── My Tickets Actions ────────────────────────────────────────────────────────
@@ -566,7 +667,63 @@ export async function fetchAssetDashboardAction(params: {
   return handleResponse<import('@/modules/assets/components/dashboard/dashboard.types').DashboardData>(res);
 }
 
+export async function fetchReturnedAssetsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<import('@/modules/assets/components/dashboard/dashboard.types').ReturnedAssetItem[]> {
+  const res = await fetch(`${getApiUrl()}/assets/returned`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<
+    import('@/modules/assets/components/dashboard/dashboard.types').ReturnedAssetItem[]
+  >(res);
+}
+
 // ── Asset ID CRUD Actions ────────────────────────────────────────────────────
+
+export async function fetchAssetBrandModelAnalyticsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<import('@/modules/assets/components/dashboard/dashboard.types').BrandModelInventoryAnalytics> {
+  const res = await fetch(`${getApiUrl()}/assets/analytics/brand-models`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<
+    import('@/modules/assets/components/dashboard/dashboard.types').BrandModelInventoryAnalytics
+  >(res);
+}
+
+export async function fetchAssetOsDistributionAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<import('@/modules/assets/components/dashboard/dashboard.types').OsDistributionAnalytics> {
+  const res = await fetch(`${getApiUrl()}/assets/analytics/os-distribution`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<
+    import('@/modules/assets/components/dashboard/dashboard.types').OsDistributionAnalytics
+  >(res);
+}
+
+export async function fetchAssetWarrantyFeedAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<import('@/modules/assets/components/dashboard/dashboard.types').WarrantyExpirationFeedData> {
+  const res = await fetch(`${getApiUrl()}/assets/warranty/upcoming`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<
+    import('@/modules/assets/components/dashboard/dashboard.types').WarrantyExpirationFeedData
+  >(res);
+}
 
 export async function fetchAssetIdsAction(params: {
   orgSlug: string;

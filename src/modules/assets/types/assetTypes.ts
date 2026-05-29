@@ -2,12 +2,22 @@ export type AssetCategory = string;
 
 export type AssetStatus =
   | 'AVAILABLE'
-  | 'PROVIDED'
-  | 'UNDER_MAINTENANCE'
+  | 'ASSIGNED'
+  | 'IN_MAINTENANCE'
+  | 'PENDING_RETURN'
   | 'DAMAGED'
   | 'LOST'
   | 'RETIRED'
   | 'DISPOSED';
+
+export type OperationalCriticalityTier =
+  | 'MISSION_CRITICAL'
+  | 'BUSINESS_CRITICAL'
+  | 'STANDARD';
+
+export type AssetReplacementMode =
+  | 'PERMANENT_REPLACEMENT'
+  | 'TEMPORARY_BACKUP';
 
 export type AssetCondition =
   | 'NEW'
@@ -193,6 +203,37 @@ export interface AssetProvideRecordSummary {
   receivedByMemberId: string | null;
   receivedByName: string | null;
   returnNotes: string | null;
+  replacementAssignmentId: string | null;
+  handoverRequestedAt: string | null;
+  handoverCompletedAt: string | null;
+  handoverConditionNotes: string | null;
+}
+
+export type EmployeeAssetState =
+  | 'CURRENT_ASSIGNED'
+  | 'RETURN_PENDING'
+  | 'RETURNED_IN_REPAIR'
+  | 'RETURNED';
+
+export interface EmployeeAssetViewRecord extends AssetSummary {
+  assignmentId: string;
+  assetId: string;
+  assetUnitId: string | null;
+  providedDate: string;
+  returnDate: string | null;
+  returnedCondition: AssetCondition | null;
+  returnNotes: string | null;
+  handoverRequestedAt: string | null;
+  handoverCompletedAt: string | null;
+  handoverConditionNotes: string | null;
+  replacementAssignmentId: string | null;
+  employeeState: EmployeeAssetState;
+  employeeStatusLabel: string;
+}
+
+export interface EmployeeAssetViewResponse {
+  current: EmployeeAssetViewRecord[];
+  previous: EmployeeAssetViewRecord[];
 }
 
 export interface AssetMaintenanceSummary {
@@ -208,12 +249,16 @@ export interface AssetMaintenanceSummary {
   issueDescription: string;
   serviceDate: string;
   expectedCompletionDate: string | null;
+  estimatedDowntimeHours: number | null;
+  operationalCriticalityTier: OperationalCriticalityTier | null;
   completedDate: string | null;
   cost: number | null;
   status: AssetMaintenanceStatus;
   conditionBeforeMaintenance: AssetCondition | null;
   conditionAfterMaintenance: AssetCondition | null;
   notes: string | null;
+  replacementDecision: AssetReplacementMode | null;
+  replacementAssetUnitId: string | null;
   loggedByMemberId: string | null;
   loggedByName: string | null;
 }
@@ -258,4 +303,54 @@ export interface AssetFiltersState {
   currentHolderMemberId?: string;
   page: number;
   pageSize: number;
+}
+
+export interface SwapAvailabilityOption {
+  mode: AssetReplacementMode;
+  label: string;
+  available: boolean;
+  availableCount: number;
+  assetUnitIds: string[];
+  serialNumbers: string[];
+  recommended: boolean;
+}
+
+export interface AssetSwapPreview {
+  maintenanceId: string;
+  assetId: string;
+  assetUnitId: string | null;
+  currentAssetStatus: AssetStatus;
+  currentCondition: AssetCondition | null;
+  assignedMemberId: string | null;
+  assignedMemberName: string | null;
+  model: string | null;
+  operationalCriticalityTier: OperationalCriticalityTier | null;
+  estimatedDowntimeHours: number | null;
+  requiresReplacementValidation: boolean;
+  recommendedMode: AssetReplacementMode | null;
+  reason: string;
+  options: SwapAvailabilityOption[];
+}
+
+export interface AssetRevokeSwapInput {
+  maintenanceId: string;
+  replacementMode: AssetReplacementMode;
+  replacementAssetUnitId: string;
+  revokeStatus: 'IN_MAINTENANCE' | 'PENDING_RETURN';
+  replacementConditionWhileProviding: AssetCondition;
+  providedByMemberId?: string | null;
+  notes?: string | null;
+}
+
+export interface AssetSwapExecutionResult {
+  maintenanceId: string;
+  revokedAssetId: string;
+  revokedAssetUnitId: string | null;
+  revokedStatus: AssetStatus;
+  replacementAssetId: string;
+  replacementAssetUnitId: string;
+  replacementMode: AssetReplacementMode;
+  assignmentId: string;
+  assignedMemberId: string;
+  assignedMemberName: string | null;
 }

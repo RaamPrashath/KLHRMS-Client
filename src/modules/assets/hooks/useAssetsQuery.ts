@@ -4,9 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import {
   fetchAssetDetailAction,
   fetchAssetMetaAction,
+  fetchAssetSwapPreviewAction,
   fetchAssetsAction,
   fetchAssetCategoriesAction,
   fetchAvailableAssetGroupsAction,
+  fetchEmployeeAssetViewAction,
 } from '@/modules/assets/api/assetServerActions';
 import type {
   AssetCategoryDefinition,
@@ -14,7 +16,9 @@ import type {
   AssetFiltersState,
   AssetListResponse,
   AssetMetaResponse,
+  AssetSwapPreview,
   AvailableAssetGroup,
+  EmployeeAssetViewResponse,
 } from '@/modules/assets/types/assetTypes';
 
 export function useAssetsQuery(orgSlug: string, memberId: string, filters: AssetFiltersState) {
@@ -30,6 +34,14 @@ export function useAssetMetaQuery(orgSlug: string, memberId: string) {
   return useQuery<AssetMetaResponse, Error>({
     queryKey: ['assets-meta', orgSlug],
     queryFn: () => fetchAssetMetaAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
+  });
+}
+
+export function useEmployeeAssetViewQuery(orgSlug: string, memberId: string) {
+  return useQuery<EmployeeAssetViewResponse, Error>({
+    queryKey: ['asset-employee-view', orgSlug, memberId],
+    queryFn: () => fetchEmployeeAssetViewAction({ orgSlug, memberId }),
     enabled: !!orgSlug && !!memberId,
   });
 }
@@ -55,5 +67,17 @@ export function useAvailableAssetGroupsQuery(orgSlug: string, memberId: string) 
     queryKey: ['asset-available-groups', orgSlug],
     queryFn: () => fetchAvailableAssetGroupsAction({ orgSlug, memberId }),
     enabled: !!orgSlug && !!memberId,
+  });
+}
+
+export function useAssetSwapPreviewQuery(
+  orgSlug: string,
+  memberId: string,
+  maintenanceId: string | null,
+) {
+  return useQuery<AssetSwapPreview, Error>({
+    queryKey: ['asset-swap-preview', orgSlug, maintenanceId],
+    queryFn: () => fetchAssetSwapPreviewAction({ orgSlug, memberId, maintenanceId: maintenanceId! }),
+    enabled: !!orgSlug && !!memberId && !!maintenanceId,
   });
 }

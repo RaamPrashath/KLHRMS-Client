@@ -5,25 +5,8 @@ import { auth } from '@/lib/auth';
 import { type RolePermissions } from '@/lib/hrms-roles';
 import { requireOrgMembership } from '@/lib/organizations';
 
-import { fetchDepartmentMetaAction } from '@/modules/departments/api/departmentServerActions';
+import { fetchOptionalDepartmentMeta } from '@/modules/jobs/lib/fetchOptionalDepartmentMeta';
 import { JobRequisitionDetailPage } from '@/modules/jobs/pages/JobRequisitionDetailPage';
-
-async function fetchOptionalDepartmentMeta(params: {
-  orgSlug: string;
-  memberId: string;
-}): Promise<Awaited<ReturnType<typeof fetchDepartmentMetaAction>> | null> {
-  try {
-    return await fetchDepartmentMetaAction(params);
-  } catch (error) {
-    try {
-      const parsed = JSON.parse(error instanceof Error ? error.message : '{}');
-      if (parsed.status === 403) return null;
-    } catch {
-      // Re-throw the original error below.
-    }
-    throw error;
-  }
-}
 
 export default async function JobRequisitionPage({
   params,
@@ -49,15 +32,8 @@ export default async function JobRequisitionPage({
       orgSlug={orgSlug}
       memberId={member.id}
       requisitionId={jobSlug}
-      departments={(meta?.departments ?? []).map((department) => ({
-        id: department.id,
-        name: department.label,
-      }))}
-      orgMembers={(meta?.members ?? []).map((orgMember) => ({
-        id: orgMember.id,
-        name: orgMember.label,
-        email: orgMember.email ?? '',
-      }))}
+      departments={meta?.departments ?? []}
+      orgMembers={meta?.members ?? []}
       permissions={(member.role?.permissions as RolePermissions) ?? null}
     />
   );

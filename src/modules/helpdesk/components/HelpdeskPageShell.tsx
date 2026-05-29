@@ -1,8 +1,18 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertCircle, Laptop, LifeBuoy, Plus, Search, Send, TicketCheck } from 'lucide-react';
+import { AlertCircle, Laptop, LifeBuoy, Loader2, Plus, Search, Send, TicketCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,9 +80,20 @@ function EmptyTickets() {
   );
 }
 
-function TicketList({ tickets, isLoading }: { tickets: HelpdeskTicket[]; isLoading: boolean }) {
+function TicketList({
+  tickets,
+  isLoading,
+  onWithdraw,
+  withdrawingTicketId,
+}: {
+  tickets: HelpdeskTicket[];
+  isLoading: boolean;
+  onWithdraw: (ticket: HelpdeskTicket) => Promise<void>;
+  withdrawingTicketId: string | null;
+}) {
   const [search, setSearch] = useState('');
   const [kindFilter, setKindFilter] = useState<'ALL' | HelpdeskTicket['kind']>('ALL');
+  const [ticketToWithdraw, setTicketToWithdraw] = useState<HelpdeskTicket | null>(null);
 
   const filteredTickets = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -87,6 +108,10 @@ function TicketList({ tickets, isLoading }: { tickets: HelpdeskTicket[]; isLoadi
       return matchesKind && matchesSearch;
     });
   }, [kindFilter, search, tickets]);
+
+  function canWithdraw(ticket: HelpdeskTicket) {
+    return !['RESOLVED', 'CLOSED', 'COMPLETED', 'CANCELLED'].includes(ticket.status);
+  }
 
   return (
     <section className="mt-6">
@@ -136,10 +161,10 @@ function TicketList({ tickets, isLoading }: { tickets: HelpdeskTicket[]; isLoadi
       ) : (
         <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left">
+            <table className="w-full min-w-[900px] text-left">
               <thead className="border-b border-[#eef0f3] bg-[#f8faf9]">
                 <tr>
-                  {['Ticket', 'Type', 'Subject', 'Priority', 'Status', 'Created'].map((heading) => (
+                  {['Ticket', 'Type', 'Subject', 'Priority', 'Status', 'Created', ''].map((heading) => (
                     <th key={heading} className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
                       {heading}
                     </th>
@@ -167,6 +192,24 @@ function TicketList({ tickets, isLoading }: { tickets: HelpdeskTicket[]; isLoadi
                     </td>
                     <td className="px-4 py-3"><TicketStatusBadge status={ticket.status} /></td>
                     <td className="px-4 py-3 text-[12px] tabular-nums text-[#6e6e73]">{formatDate(ticket.createdAt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-lg text-[#9ca3af] hover:bg-[#fef2f2] hover:text-[#dc2626] disabled:opacity-40"
+                        disabled={!canWithdraw(ticket) || withdrawingTicketId === ticket.id}
+                        onClick={() => setTicketToWithdraw(ticket)}
+                        aria-label={`Withdraw ticket ${ticket.ticketId}`}
+                        title={canWithdraw(ticket) ? 'Withdraw ticket' : 'Ticket cannot be withdrawn'}
+                      >
+                        {withdrawingTicketId === ticket.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -174,6 +217,38 @@ function TicketList({ tickets, isLoading }: { tickets: HelpdeskTicket[]; isLoadi
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={!!ticketToWithdraw}
+        onOpenChange={(open) => {
+          if (!open) setTicketToWithdraw(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Withdraw ticket?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {ticketToWithdraw
+                ? `This will withdraw ${ticketToWithdraw.ticketId} from your tickets.`
+                : 'This will withdraw the selected ticket.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!withdrawingTicketId}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!ticketToWithdraw || !!withdrawingTicketId}
+              onClick={async (event) => {
+                event.preventDefault();
+                if (!ticketToWithdraw) return;
+                await onWithdraw(ticketToWithdraw);
+                setTicketToWithdraw(null);
+              }}
+            >
+              {withdrawingTicketId ? 'Withdrawing...' : 'Withdraw'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
@@ -212,6 +287,7 @@ export function HelpdeskPageShell({ orgSlug, memberId }: { orgSlug: string; memb
         serviceDate: new Date().toISOString().slice(0, 10),
         status: 'OPEN',
         conditionBeforeMaintenance: 'GOOD',
+        operationalCriticalityTier: 'STANDARD',
         notes: '',
       });
       setAssetId('');
@@ -252,6 +328,16 @@ export function HelpdeskPageShell({ orgSlug, memberId }: { orgSlug: string; memb
     { key: 'raise' as const, label: 'Raise Issue', icon: Plus },
     { key: 'tickets' as const, label: 'See Tickets', icon: TicketCheck },
   ];
+
+  async function handleWithdraw(ticket: HelpdeskTicket) {
+    try {
+      await mutations.withdrawTicket.mutateAsync(ticket.id);
+      toast.success(`Ticket ${ticket.ticketId} withdrawn`);
+    } catch (error) {
+      toast.error(readError(error, 'Failed to withdraw ticket'));
+      throw error;
+    }
+  }
 
   return (
     <div className="w-full" suppressHydrationWarning>
@@ -428,7 +514,14 @@ export function HelpdeskPageShell({ orgSlug, memberId }: { orgSlug: string; memb
       )}
 
       {activeTab === 'tickets' && (
-        <TicketList tickets={ticketsQuery.data ?? []} isLoading={ticketsQuery.isLoading} />
+        <TicketList
+          tickets={ticketsQuery.data ?? []}
+          isLoading={ticketsQuery.isLoading}
+          onWithdraw={handleWithdraw}
+          withdrawingTicketId={
+            mutations.withdrawTicket.isPending ? mutations.withdrawTicket.variables ?? null : null
+          }
+        />
       )}
     </div>
   );

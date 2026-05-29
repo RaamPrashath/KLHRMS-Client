@@ -404,9 +404,9 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
             onNext={() => maybeChangeMonth(1)}
           />
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <Select value={selectedLocation} onValueChange={(value) => setSelectedLocation(value as PlanLocationValue)}>
-              <SelectTrigger className="h-11 min-w-[220px] rounded-lg border-border bg-background text-xs font-semibold">
+              <SelectTrigger className="h-10 min-w-[220px] rounded-xl border-border bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted/30 focus:ring-2 focus:ring-primary/20">
                 <SelectValue placeholder="Choose a location" />
               </SelectTrigger>
               <SelectContent>
@@ -421,32 +421,32 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-lg border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              className="h-10 rounded-xl border-primary/20 bg-background px-5 text-xs font-semibold uppercase tracking-wider text-primary hover:bg-primary/5 hover:border-primary/40 transition-colors focus-visible:ring-2 focus-visible:ring-primary/20"
               onClick={handleApplyEverywhere}
               disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
             >
-              <Sparkles className="mr-2 h-4 w-4" />
+              <Sparkles className="mr-2 h-4 w-4 shrink-0" />
               Apply to all weekdays
             </Button>
 
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-lg border-border bg-background px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              className="h-10 rounded-xl border-border bg-background px-5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-muted-foreground/20"
               onClick={handleClearAll}
               disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
             >
-              <Eraser className="mr-2 h-4 w-4" />
+              <Eraser className="mr-2 h-4 w-4 shrink-0" />
               Reset draft
             </Button>
 
             <Button
               type="button"
-              className="h-11 rounded-lg px-5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              className="h-10 rounded-xl bg-primary text-primary-foreground px-5 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-primary-hover active:bg-primary-press shadow-xs focus-visible:ring-2 focus-visible:ring-primary/20"
               onClick={handleSave}
               disabled={!isDirty || saveMutation.isPending || isMonthLoading}
             >
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="mr-2 h-4 w-4 shrink-0" />
               {saveMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>

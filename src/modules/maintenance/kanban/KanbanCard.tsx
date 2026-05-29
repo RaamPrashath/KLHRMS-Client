@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Clock, MessageSquare, Paperclip } from 'lucide-react';
+import { Clock, MessageSquare, Paperclip, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 import type { KanbanIssue } from './kanban.types';
@@ -11,6 +11,15 @@ const priorityStyles: Record<string, string> = {
   high: 'bg-destructive-bg text-destructive-text border-destructive-border',
   medium: 'bg-warning-bg text-warning-text border-warning-border',
   low: 'bg-secondary text-secondary-foreground border-border',
+};
+
+const lifecycleStyles: Record<string, string> = {
+  ASSIGNED: 'bg-blue-50 text-blue-700 border-blue-100',
+  PENDING_RETURN: 'bg-amber-50 text-amber-700 border-amber-100',
+  RETURNED_IN_REPAIR: 'bg-orange-50 text-orange-700 border-orange-100',
+  RETURNED_READY: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  AVAILABLE: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  IN_MAINTENANCE: 'bg-orange-50 text-orange-700 border-orange-100',
 };
 
 function daysAgo(dateStr: string): string {
@@ -24,8 +33,10 @@ function daysAgo(dateStr: string): string {
 
 export function KanbanCard({
   issue,
+  onOpenSwap,
 }: {
   issue: KanbanIssue;
+  onOpenSwap: (ticketId: string) => void;
 }) {
   const {
     attributes,
@@ -78,6 +89,35 @@ export function KanbanCard({
         </p>
       )}
 
+      {issue.assetLifecycleStatusLabel && (
+        <div className="mt-2">
+          <span
+            className={cn(
+              'inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium',
+              lifecycleStyles[issue.assetLifecycleStatus ?? ''] ?? 'bg-neutral-100 text-neutral-600 border-neutral-200',
+            )}
+          >
+            {issue.assetLifecycleStatusLabel}
+          </span>
+        </div>
+      )}
+
+      {issue.swapPreview && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {issue.swapPreview.options.map((option) => (
+            <span
+              key={option.mode}
+              className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-medium',
+                option.available ? 'bg-[#eff6ff] text-[#2454a6]' : 'bg-[#fff1f1] text-[#b3261e]',
+              )}
+            >
+              {option.mode === 'PERMANENT_REPLACEMENT' ? 'Exact' : 'Temp'} {option.availableCount}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="mt-3 flex items-center gap-3">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
@@ -107,6 +147,20 @@ export function KanbanCard({
           </span>
         </div>
       </div>
+
+      {issue.swapPreview?.requiresReplacementValidation && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenSwap(issue.id);
+          }}
+          className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#111827] px-2.5 py-1 text-[10px] font-semibold text-white"
+        >
+          <RefreshCcw className="size-3" />
+          Swap
+        </button>
+      )}
     </div>
   );
 }

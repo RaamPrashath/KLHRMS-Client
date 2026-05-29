@@ -34,8 +34,6 @@ interface WorkLogFiltersBarProps {
   onEmployeeNameChange: (value: string) => void;
 }
 
-const ALL_VALUE = 'ALL';
-
 export function WorkLogFiltersBar({
   preset,
   dateFrom,
@@ -54,80 +52,70 @@ export function WorkLogFiltersBar({
   onEmployeeNameChange,
 }: Readonly<WorkLogFiltersBarProps>) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="grid gap-3 xl:grid-cols-[180px_1fr_180px_180px]">
-        <Select value={preset} onValueChange={(value) => onPresetChange(value as WorkLogPreset)}>
-          <SelectTrigger className="h-10 rounded-xl">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="last7">Last 7 Days</SelectItem>
-            <SelectItem value="custom">Custom Range</SelectItem>
-          </SelectContent>
-        </Select>
+    <div className="flex flex-wrap items-end gap-3">
+      <Select value={preset} onValueChange={(v) => onPresetChange(v as WorkLogPreset)}>
+        <SelectTrigger className="h-11 w-[130px] rounded-xl border-border/60 bg-background shadow-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="today">Today</SelectItem>
+          <SelectItem value="last7">Last 7 days</SelectItem>
+          <SelectItem value="custom">Custom range</SelectItem>
+        </SelectContent>
+      </Select>
 
-        <div className="grid gap-3 md:grid-cols-2">
+      {preset === 'custom' && (
+        <>
           <Input
+            type="date"
             value={dateFrom}
-            onChange={(event) => onDateFromChange(event.target.value)}
-            type="date"
-            disabled={preset !== 'custom'}
-            className="h-10 rounded-xl"
+            onChange={(e) => onDateFromChange(e.target.value)}
+            className="h-11 w-[170px] rounded-xl border-border/60 bg-background shadow-none"
           />
           <Input
+            type="date"
             value={dateTo}
-            onChange={(event) => onDateToChange(event.target.value)}
-            type="date"
-            disabled={preset !== 'custom'}
-            className="h-10 rounded-xl"
+            onChange={(e) => onDateToChange(e.target.value)}
+            className="h-11 w-[170px] rounded-xl border-border/60 bg-background shadow-none"
           />
-        </div>
+        </>
+      )}
 
-        <Select value={departmentId || ALL_VALUE} onValueChange={(value) => onDepartmentChange(value === ALL_VALUE ? '' : value)}>
-          <SelectTrigger className="h-10 rounded-xl">
-            <SelectValue placeholder="All Departments" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE}>All Departments</SelectItem>
-            {departmentOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Select value={departmentId} onValueChange={onDepartmentChange}>
+        <SelectTrigger className="h-11 w-[200px] rounded-xl border-border/60 bg-background shadow-none">
+          <SelectValue placeholder="All departments" />
+        </SelectTrigger>
+        <SelectContent>
+          {departmentOptions.map((opt) => (
+            <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-        <Select value={teamId || ALL_VALUE} onValueChange={(value) => onTeamChange(value === ALL_VALUE ? '' : value)}>
-          <SelectTrigger className="h-10 rounded-xl">
-            <SelectValue placeholder="All Teams" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE}>All Teams</SelectItem>
-            {teamOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Select value={teamId} onValueChange={onTeamChange}>
+        <SelectTrigger className="h-11 w-[200px] rounded-xl border-border/60 bg-background shadow-none">
+          <SelectValue placeholder="All teams" />
+        </SelectTrigger>
+        <SelectContent>
+          {teamOptions.map((opt) => (
+            <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)]">
-        <div>
-          <Input
-            value={employeeName}
-            onChange={(event) => onEmployeeNameChange(event.target.value)}
-            placeholder="Search employee"
-            list="work-log-employee-suggestions"
-            className="h-10 rounded-xl"
-          />
-          <datalist id="work-log-employee-suggestions">
-            {employeeSuggestions.map((option) => (
-              <option key={option.id} value={option.label} />
-            ))}
-          </datalist>
-        </div>
+      <div className="max-w-md">
+        <Input
+          value={employeeName}
+          onChange={(event) => onEmployeeNameChange(event.target.value)}
+          placeholder="Search employee"
+          list="work-log-employee-suggestions"
+          className="h-11 rounded-xl border-border/60 bg-background shadow-none"
+        />
+        <datalist id="work-log-employee-suggestions">
+          {employeeSuggestions.map((option) => (
+            <option key={option.id} value={option.label} />
+          ))}
+        </datalist>
       </div>
     </div>
   );
