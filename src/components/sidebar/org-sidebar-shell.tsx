@@ -49,6 +49,7 @@ export function OrgSidebarShell({
     const isPermissionsRoute = pathname.includes("/permissions")
     const isStageRoute = pathname.includes("/stage");
     const isHelpdeskRoute = pathname.includes("/helpdesk");
+    const isOfferRoute = pathname.includes("/offer");
     const isDRoute = pathname.includes("/")
     
     const isFullWidthRoute = 
@@ -66,7 +67,9 @@ export function OrgSidebarShell({
         isMaintenanceRoute || 
         isPermissionsRoute ||
         isStageRoute ||
-        isHelpdeskRoute || isDRoute
+        isHelpdeskRoute ||
+        isOfferRoute ||
+        isDRoute
 
     return (
         <div className="fixed inset-0 flex overflow-hidden bg-canvas">
@@ -78,12 +81,13 @@ export function OrgSidebarShell({
                 organizations={organizations}
                 user={user}
             />
-            <main className={cn("min-h-0 flex-1 overscroll-contain", isTimesheetRoute ? "overflow-hidden" : "overflow-y-auto")}>
+            <main className={cn("min-h-0 flex-1 overscroll-contain", isTimesheetRoute || isOfferRoute ? "overflow-hidden" : "overflow-y-auto")}>
                 <div
                     className={cn(
                         "w-full",
                         isFullWidthRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
-                        isLeaveRoute || isPermissionsRoute || isAssetRoute || isMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isLeaveRoute || isPermissionsRoute || isAssetRoute || isMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isOfferRoute && "h-full min-h-0 overflow-hidden",
                     )}
                 >
                     {children}

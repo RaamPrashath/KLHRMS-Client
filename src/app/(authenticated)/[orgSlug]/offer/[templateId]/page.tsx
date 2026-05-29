@@ -3,17 +3,17 @@ import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
-import { StageWorkspaceRouterShell } from '@/modules/candidates/components/StageWorkspaceRouterShell';
+import { OfferTemplateBuilderPage } from '@/modules/offers/components/OfferTemplateBuilderPage';
 
-export default async function CandidateJobStageWorkspacePage({
+export default async function EditOfferTemplatePage({
   params,
 }: Readonly<{
-  params: Promise<{ orgSlug: string; jobSlug: string; stageSlug: string }>;
+  params: Promise<{ orgSlug: string; templateId: string }>;
 }>) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) redirect('/login');
 
-  const { orgSlug, jobSlug, stageSlug } = await params;
+  const { orgSlug, templateId } = await params;
   let member: Awaited<ReturnType<typeof requireOrgMembership>>['member'];
 
   try {
@@ -23,11 +23,11 @@ export default async function CandidateJobStageWorkspacePage({
   }
 
   return (
-    <StageWorkspaceRouterShell
+    <OfferTemplateBuilderPage
       orgSlug={orgSlug}
       memberId={member.id}
-      jobSlug={jobSlug}
-      stageSlug={stageSlug}
+      templateId={templateId}
+      mode="edit"
     />
   );
 }

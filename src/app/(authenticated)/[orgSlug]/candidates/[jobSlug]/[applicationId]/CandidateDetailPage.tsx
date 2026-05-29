@@ -199,6 +199,8 @@ function ProfileTab({
   analysisError,
   retrying,
   onRetry,
+  orgSlug,
+  memberId,
 }: {
   readonly detail: CandidateApplicationDetail;
   readonly analysis?: CandidateResumeAnalysis;
@@ -206,6 +208,8 @@ function ProfileTab({
   readonly analysisError: Error | null;
   readonly retrying: boolean;
   readonly onRetry: () => void;
+  readonly orgSlug: string;
+  readonly memberId: string;
 }) {
   return (
     <CandidateMergedProfile
@@ -215,6 +219,8 @@ function ProfileTab({
       analysisError={analysisError}
       retryingAnalysis={retrying}
       onRetryAnalysis={onRetry}
+      orgSlug={orgSlug}
+      memberId={memberId}
     />
   );
 }
@@ -1038,6 +1044,8 @@ export function CandidateDetailPage({
                 analysisError={resumeAnalysisQuery.error}
                 retrying={retryResumeAnalysis.isPending}
                 onRetry={handleRetryResumeAnalysis}
+                orgSlug={orgSlug}
+                memberId={memberId}
               />
             ) : null}
 

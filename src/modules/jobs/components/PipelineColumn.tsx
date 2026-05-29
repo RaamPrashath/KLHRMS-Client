@@ -21,6 +21,11 @@ function stageTone(stageType: PipelineStageRecord['stageType']) {
   return 'bg-neutral-50 text-neutral-500';
 }
 
+function stageTypeLabel(stageType: PipelineStageRecord['stageType']) {
+  if (stageType === 'HIRED') return 'Accepted';
+  return stageType.replace('_', ' ');
+}
+
 interface PipelineColumnProps {
   stage: PipelineStageRecord;
   candidateCount?: number;
@@ -42,7 +47,7 @@ export function PipelineColumn({ stage, candidateCount = 0 }: Readonly<PipelineC
               </span>
             </div>
             <span className={cn('mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium', stageTone(stage.stageType))}>
-              {stage.stageType.replace('_', ' ')}
+              {stageTypeLabel(stage.stageType)}
             </span>
           </div>
 

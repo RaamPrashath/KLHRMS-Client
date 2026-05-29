@@ -65,7 +65,7 @@ function isStageNamed(stage: PipelineStage, token: string): boolean {
 }
 
 function isHiredStage(stage: PipelineStage): boolean {
-  return stage.stageType === 'HIRED' || isStageNamed(stage, 'hired');
+  return stage.stageType === 'HIRED' || isStageNamed(stage, 'accepted') || isStageNamed(stage, 'hired');
 }
 
 function isRejectedStage(stage: PipelineStage): boolean {
@@ -289,7 +289,7 @@ export function AtsJobOverviewDashboard({
           helper="This week / ongoing"
           icon={CalendarClock}
         />
-        <OverviewCard label="Offer Accepted" value={dashboard.hired} helper="Candidates moved to hired" icon={UserRoundCheck} />
+        <OverviewCard label="Offer Accepted" value={dashboard.hired} helper="Candidates moved to accepted" icon={UserRoundCheck} />
         <OverviewCard label="Offer Rejected" value={dashboard.rejected} helper="Candidates closed as rejected" icon={XCircle} />
       </div>
 

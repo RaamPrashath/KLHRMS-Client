@@ -1,0 +1,98 @@
+'use client';
+
+import { AlertTriangle, Loader2 } from 'lucide-react';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import type { OfferCandidateValidationResponse } from '@/modules/offers/types/offerTypes';
+
+interface OfferSendConfirmDialogProps {
+  readonly open: boolean;
+  readonly validation: OfferCandidateValidationResponse | null;
+  readonly expiryLabel: string;
+  readonly sending: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly onConfirm: () => void;
+}
+
+function candidateLabel(item: NonNullable<OfferCandidateValidationResponse['validCandidates'][number]>) {
+  const candidate = item.candidate;
+  if (!candidate) return item.applicationId;
+  return `${candidate.firstName} ${candidate.lastName}`.trim() || candidate.email || item.applicationId;
+}
+
+export function OfferSendConfirmDialog({
+  open,
+  validation,
+  expiryLabel,
+  sending,
+  onOpenChange,
+  onConfirm,
+}: OfferSendConfirmDialogProps) {
+  const validCandidates = validation?.validCandidates ?? [];
+  const blockedCandidates = validation?.blockedCandidates ?? [];
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="rounded-2xl bg-surface shadow-[var(--shadow-4)] sm:max-w-2xl">
+        <AlertDialogHeader className="place-items-start text-left">
+          <div className="mb-1 flex size-10 items-center justify-center rounded-lg bg-warning-bg text-warning-text">
+            <AlertTriangle className="size-5" />
+          </div>
+          <AlertDialogTitle>Send offers</AlertDialogTitle>
+          <AlertDialogDescription>
+            PDFs will be generated and emailed to selected candidates. Accept/reject links stop working after {expiryLabel}.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="max-h-72 overflow-y-auto rounded-lg border border-neutral-100">
+          {validCandidates.map((item) => (
+            <div key={item.applicationId} className="flex items-start justify-between gap-3 border-b border-neutral-100 px-3 py-2 last:border-0">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-neutral-900">{candidateLabel(item)}</p>
+                <p className="truncate text-xs text-neutral-500">{item.candidate?.email ?? 'No email'}</p>
+              </div>
+              {item.eligibility.warnings.length > 0 ? (
+                <span className="shrink-0 rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-text">
+                  Warning
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-success-bg px-2 py-0.5 text-xs font-medium text-success-text">
+                  Ready
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {blockedCandidates.length > 0 ? (
+          <p className="text-xs text-warning-text">
+            {blockedCandidates.length} blocked candidate{blockedCandidates.length === 1 ? '' : 's'} will be skipped.
+          </p>
+        ) : null}
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={sending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(event) => {
+              event.preventDefault();
+              onConfirm();
+            }}
+            disabled={sending || validCandidates.length === 0}
+          >
+            {sending ? <Loader2 className="size-4 animate-spin" /> : null}
+            Send offers
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}

@@ -168,7 +168,7 @@ export function StageConfigDrawer({
                 ['DEFAULT', 'Default'],
                 ['INTERVIEW', 'Interview'],
                 ['OFFER', 'Offer'],
-                ['HIRED', 'Hired'],
+                ['HIRED', 'Accepted'],
                 ['REJECTED', 'Rejected'],
               ].map(([value, label]) => (
                 <label key={value} className="flex cursor-pointer items-center gap-3 rounded-xl border border-neutral-200 bg-canvas px-4 py-3 text-sm font-medium text-neutral-900">
@@ -179,7 +179,7 @@ export function StageConfigDrawer({
             </RadioGroup>
             {showTerminalWarning ? (
               <div className="rounded-xl border border-warning-bg bg-warning-bg/50 p-3 text-sm text-warning-text">
-                <span className="inline-flex items-center gap-2 font-medium"><AlertTriangle className="size-4" />Only one {stageType === 'HIRED' ? 'Hired' : 'Rejected'} stage is recommended.</span>
+                <span className="inline-flex items-center gap-2 font-medium"><AlertTriangle className="size-4" />Only one {stageType === 'HIRED' ? 'Accepted' : 'Rejected'} stage is recommended.</span>
               </div>
             ) : null}
           </div>

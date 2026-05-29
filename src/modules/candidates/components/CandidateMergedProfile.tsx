@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { OfferLettersPanel } from '@/modules/offers/components/OfferLettersPanel';
 import type {
   CandidateApplicationDetail,
   CandidateResumeAnalysis,
@@ -536,6 +537,8 @@ export function CandidateMergedProfile({
   analysisError,
   onRetryAnalysis,
   retryingAnalysis,
+  orgSlug,
+  memberId,
 }: {
   readonly detail: CandidateApplicationDetail;
   readonly analysis?: CandidateResumeAnalysis;
@@ -543,6 +546,8 @@ export function CandidateMergedProfile({
   readonly analysisError: Error | null;
   readonly onRetryAnalysis: () => void;
   readonly retryingAnalysis: boolean;
+  readonly orgSlug?: string;
+  readonly memberId?: string;
 }) {
   const facts = analysis?.extractedFacts;
   const skillMetric = getSkillMetric(analysis);
@@ -663,6 +668,10 @@ export function CandidateMergedProfile({
               <LinkRow label="Portfolio" href={detail.candidate.portfolioUrl} icon={FileText} />
             </div>
           </SectionPanel>
+
+          {orgSlug && memberId ? (
+            <OfferLettersPanel orgSlug={orgSlug} memberId={memberId} applicationId={detail.id} />
+          ) : null}
 
         </aside>
       </div>
