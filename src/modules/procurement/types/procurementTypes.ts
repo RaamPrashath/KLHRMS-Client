@@ -88,11 +88,160 @@ export interface ProcurementPurchaseOrderRecord {
   generatedByMemberId: string | null;
   generatedByName: string | null;
   generatedAt: string;
+  templateVersion: string;
+  templateData: Record<string, unknown>;
   sentAt: string | null;
   emailSubject: string | null;
   emailError: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProcurementPurchaseOrderListItem {
+  id: string;
+  poNumber: string;
+  status: 'GENERATED' | 'SENT' | 'FAILED' | 'CANCELLED';
+  fileName: string;
+  generatedAt: string;
+  generatedByName: string | null;
+  recipientName: string | null;
+  recipientEmail: string;
+  requestLabel: string | null;
+  assetName: string | null;
+  storageBucket: string;
+  storagePath: string;
+}
+
+export interface ProcurementPurchaseOrderListResponse {
+  items: ProcurementPurchaseOrderListItem[];
+}
+
+export interface ProcurementPurchaseOrderDownloadResponse {
+  fileName: string;
+  downloadUrl: string;
+  expiresInSeconds: number;
+}
+
+export interface ProcurementPurchaseOrderCompanyInput {
+  displayName: string;
+  name: string;
+  logoUrl: string | null;
+  address: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  taxId: string | null;
+}
+
+export interface ProcurementPurchaseOrderTemplateVisibilityInput {
+  showLogo: boolean;
+  showVendorContact: boolean;
+  showVendorAddress: boolean;
+  showBillingAddress: boolean;
+  showShippingAddress: boolean;
+  showSubject: boolean;
+  showPaymentTerms: boolean;
+  showNotes: boolean;
+  showTerms: boolean;
+  showFooter: boolean;
+  showSignature: boolean;
+}
+
+export interface ProcurementPurchaseOrderSignatoryInput {
+  name: string | null;
+  title: string | null;
+  signatureImageUrl: string | null;
+}
+
+export interface ProcurementPurchaseOrderTemplateInput {
+  name: string;
+  pageSize: 'A4' | 'LETTER';
+  locale: string;
+  language: string;
+  headerTitle: string;
+  headerSubtitle: string | null;
+  headerRichText: string | null;
+  footerRichText: string | null;
+  company: ProcurementPurchaseOrderCompanyInput;
+  signatory: ProcurementPurchaseOrderSignatoryInput;
+  visibility: ProcurementPurchaseOrderTemplateVisibilityInput;
+  defaultPaymentTermsHtml: string | null;
+  defaultNotesHtml: string | null;
+  defaultTermsHtml: string | null;
+}
+
+export interface ProcurementPurchaseOrderVendorInput {
+  name: string;
+  contactPerson: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  taxId: string | null;
+}
+
+export interface ProcurementPurchaseOrderDocumentInput {
+  vendor: ProcurementPurchaseOrderVendorInput;
+  purchaseOrderDate: string;
+  deliveryDate: string | null;
+  billingAddress: string | null;
+  shippingAddress: string | null;
+  shippingMethod: string | null;
+  currency: string;
+  subject: string | null;
+  paymentTermsHtml: string | null;
+  notesHtml: string | null;
+  termsHtml: string | null;
+  footerNotesHtml: string | null;
+}
+
+export interface ProcurementPurchaseOrderLineItemInput {
+  description: string;
+  sku: string | null;
+  quantity: number;
+  unitPrice: number;
+  taxPercent: number;
+  total: number;
+}
+
+export interface ProcurementPurchaseOrderDraftInput {
+  document: ProcurementPurchaseOrderDocumentInput;
+  lineItems: ProcurementPurchaseOrderLineItemInput[];
+}
+
+export interface ProcurementPurchaseOrderTemplateRecord {
+  id: string | null;
+  name: string;
+  status: string;
+  templateVersion: string;
+  updatedAt: string | null;
+  template: ProcurementPurchaseOrderTemplateInput;
+}
+
+export interface ProcurementPurchaseOrderDraftResponse {
+  requisition: ProcurementRequisitionRecord;
+  organization: {
+    name: string;
+    logoUrl: string | null;
+  };
+  adminRecipients: ProcurementAdminRecipientOption[];
+  emailConfigured: boolean;
+  templateVersion: string;
+  templateRecordId: string | null;
+  template: ProcurementPurchaseOrderTemplateInput;
+  document: ProcurementPurchaseOrderDraftInput;
+}
+
+export interface ProcurementPdfPreviewResponse {
+  fileName: string;
+  base64: string;
+  contentType: string;
+}
+
+export interface ProcurementPurchaseOrderIssueResponse {
+  requisition: ProcurementRequisitionRecord;
+  purchaseOrderId: string;
+  poNumber: string;
+  status: string;
+  pdf: ProcurementPdfPreviewResponse;
 }
 
 export interface ProcurementSnapshotRead {

@@ -228,7 +228,9 @@ function SidebarNavigation({
                             <SidebarLabel>{group.title}</SidebarLabel>
                             {group.items.map((item) => {
                                 const url = item.urlSuffix ? `/${orgSlug}/${item.urlSuffix}` : `/${orgSlug}`;
-                                const isActive = pathname === url;
+                                const isActive = url === `/${orgSlug}`
+                                    ? pathname === url
+                                    : (pathname === url || pathname.startsWith(url + "/"));
                                 const Icon = NAV_ICONS[item.urlSuffix as keyof typeof NAV_ICONS];
 
                                 return (

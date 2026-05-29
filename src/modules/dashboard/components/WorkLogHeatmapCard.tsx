@@ -57,7 +57,7 @@ function chunkDays(days: Date[]): Date[][] {
   return weeks;
 }
 
-function getDayTone(totalHours: number, isOffDay: boolean) {
+function getDayTone(totalHours: number, isOffDay: boolean, isPastDay: boolean) {
   if (isOffDay) {
     return {
       backgroundClassName: "bg-[#ffe9ec] text-[#bf3e4d]",
@@ -65,21 +65,27 @@ function getDayTone(totalHours: number, isOffDay: boolean) {
     };
   }
   if (totalHours === 0) {
+    if (isPastDay) {
+      return {
+        backgroundClassName: "bg-[#fb7185] text-white",
+        legendLabel: "Absent",
+      };
+    }
     return {
       backgroundClassName: "bg-[#eff2f6] text-[#8a94a6]",
-      legendLabel: "Absent",
+      legendLabel: "Not clocked in",
     };
   }
-  if (totalHours < 4) {
+  if (totalHours < 5) {
     return {
-      backgroundClassName: "bg-[#d9f7e7] text-[#117245]",
-      legendLabel: "Less than four hours logged",
+      backgroundClassName: "bg-[#fde68a] text-[#92400e]",
+      legendLabel: "Less than five hours logged",
     };
   }
   if (totalHours <= 8) {
     return {
       backgroundClassName: "bg-[#77e2b7] text-[#0f5f39]",
-      legendLabel: "Four to eight hours logged",
+      legendLabel: "Five to eight hours logged",
     };
   }
   return {
@@ -357,7 +363,8 @@ export function WorkLogHeatmapCard({
                 const isSelected = dialogState.open && dialogState.date === dateStr;
                 const isCurrentDay = isToday(day);
                 const totalHours = dayTotals.get(dateStr) ?? 0;
-                const tone = getDayTone(totalHours, offDayDates.has(dateStr));
+                const isPastDay = dateStr < format(new Date(), "yyyy-MM-dd") && !isCurrentDay;
+                const tone = getDayTone(totalHours, offDayDates.has(dateStr), isPastDay);
 
                 return (
                   <button
@@ -396,13 +403,19 @@ export function WorkLogHeatmapCard({
             <span
               className={cn("bg-[#10b26c]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
             />
-            Logged (8h+)
+            8h+
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className={cn("bg-[#77e2b7]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
+            />
+            5–8h
           </span>
           <span className="flex items-center gap-1.5">
             <span
               className={cn("bg-[#fde68a]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
             />
-            Partial (&lt;8h)
+            &lt;5h
           </span>
           <span className="flex items-center gap-1.5">
             <span
