@@ -59,8 +59,67 @@ export function useCreateOfferDispatch(
   stageSlug: string,
 ) {
   const queryClient = useQueryClient();
-  return useMutation<OfferDispatchCreateResponse, Error, OfferDispatchPayload>({
+  return useMutation<OfferDispatchCreateResponse, Error, OfferDispatchPayload, { previousWorkspace: OfferStageWorkspace | undefined }>({
     mutationFn: (data) => createOfferDispatchAction({ orgSlug, memberId, jobSlug, stageSlug, data }),
+    onMutate: async (payload) => {
+      const queryKey = offerWorkspaceKey(orgSlug, jobSlug, stageSlug);
+      // Snapshot the current workspace
+      const previousWorkspace = queryClient.getQueryData<OfferStageWorkspace>(queryKey);
+      if (!previousWorkspace) return { previousWorkspace };
+
+      // Optimistically set dispatched candidates to DRAFT
+      const updatedCandidates = previousWorkspace.candidates.map((candidate) => {
+        if (payload.applicationIds.includes(candidate.applicationId)) {
+          return {
+            ...candidate,
+            offerStatus: 'DRAFT',
+            latestOffer: candidate.latestOffer ?? ({
+              id: '',
+              organizationId: '',
+              applicationId: candidate.applicationId,
+              batchId: null,
+              templateId: null,
+              templateCategoryId: null,
+              stageId: null,
+              status: 'DRAFT',
+              title: '',
+              message: null,
+              salary: null,
+              currency: 'INR',
+              joiningDate: null,
+              expiresAt: payload.expiresAt ?? null,
+              sentAt: null,
+              respondedAt: null,
+              candidateToken: null,
+              pdfUrl: null,
+              renderedHtml: null,
+              storageBucket: null,
+              storagePath: null,
+              fileName: null,
+              emailSentAt: null,
+              emailError: null,
+              responseIgnoredAt: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            } satisfies import('@/modules/offers/types/offerTypes').OfferLetter),
+          };
+        }
+        return candidate;
+      });
+
+      queryClient.setQueryData<OfferStageWorkspace>(queryKey, {
+        ...previousWorkspace,
+        candidates: updatedCandidates,
+      });
+
+      return { previousWorkspace };
+    },
+    onError: (_err, _payload, context) => {
+      if (context?.previousWorkspace) {
+        const queryKey = offerWorkspaceKey(orgSlug, jobSlug, stageSlug);
+        queryClient.setQueryData<OfferStageWorkspace>(queryKey, context.previousWorkspace);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: offerWorkspaceKey(orgSlug, jobSlug, stageSlug) });
       queryClient.invalidateQueries({ queryKey: ['offer-templates', orgSlug] });

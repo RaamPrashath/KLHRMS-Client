@@ -7,7 +7,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -17,7 +16,6 @@ import type { OfferCandidateValidationResponse } from '@/modules/offers/types/of
 interface OfferSendConfirmDialogProps {
   readonly open: boolean;
   readonly validation: OfferCandidateValidationResponse | null;
-  readonly expiryLabel: string;
   readonly sending: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly onConfirm: () => void;
@@ -32,7 +30,6 @@ function candidateLabel(item: NonNullable<OfferCandidateValidationResponse['vali
 export function OfferSendConfirmDialog({
   open,
   validation,
-  expiryLabel,
   sending,
   onOpenChange,
   onConfirm,
@@ -48,9 +45,6 @@ export function OfferSendConfirmDialog({
             <AlertTriangle className="size-5" />
           </div>
           <AlertDialogTitle>Send offers</AlertDialogTitle>
-          <AlertDialogDescription>
-            PDFs will be generated and emailed to selected candidates. Accept/reject links stop working after {expiryLabel}.
-          </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="max-h-72 overflow-y-auto rounded-lg border border-neutral-100">

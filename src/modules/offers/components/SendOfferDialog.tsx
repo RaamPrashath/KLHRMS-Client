@@ -8,25 +8,30 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { OfferPreviewPane } from '@/modules/offers/components/OfferPreviewPane';
 import { OfferSendConfirmDialog } from '@/modules/offers/components/OfferSendConfirmDialog';
 import { OfferTemplatePicker } from '@/modules/offers/components/OfferTemplatePicker';
+import { composeTemplateHtml } from '@/modules/offers/utils/offerTemplateRender';
 import {
   useCreateOfferDispatch,
   useValidateOfferDispatch,
@@ -40,9 +45,33 @@ import type {
   OfferCandidateValidationResponse,
   OfferStageWorkspace,
   OfferTemplate,
+  OfferTemplateCategory,
   OfferTemplateListItem,
   OfferWorkspaceCandidate,
 } from '@/modules/offers/types/offerTypes';
+import { cn } from '@/lib/utils';
+
+/* ── Preview styling constants (mirrors OfferTemplatePreview) ── */
+const PREVIEW_PAGE_W = 794;
+const PREVIEW_PADDING_X = 76;
+const PREVIEW_PADDING_Y = 90;
+const PREVIEW_CONTENT_CLASSES = cn(
+  'space-y-4 text-[15px] leading-[30px]',
+  '[&_a]:text-primary [&_a]:underline',
+  '[&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:leading-7 [&_h2]:text-neutral-900',
+  '[&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:leading-6 [&_h3]:text-neutral-900',
+  '[&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5',
+  '[&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-neutral-200 [&_td]:p-2 [&_th]:border [&_th]:border-neutral-200 [&_th]:bg-neutral-50 [&_th]:p-2',
+  '[&_.offer-letter-header]:relative [&_.offer-letter-header]:mb-8 [&_.offer-letter-header]:min-h-[116px]',
+  '[&_.offer-letter-header-brand]:absolute [&_.offer-letter-header-brand]:left-[var(--offer-header-brand-left)] [&_.offer-letter-header-brand]:top-[var(--offer-header-brand-top)]',
+  '[&_.offer-letter-logo]:max-h-14 [&_.offer-letter-logo]:max-w-44 [&_.offer-letter-logo]:object-contain',
+  '[&_.offer-letter-header-meta]:absolute [&_.offer-letter-header-meta]:right-0 [&_.offer-letter-header-meta]:top-12 [&_.offer-letter-header-meta]:text-right [&_.offer-letter-header-meta]:text-[13px] [&_.offer-letter-header-meta]:leading-6',
+  '[&_.offer-letter-header_h1]:absolute [&_.offer-letter-header_h1]:bottom-0 [&_.offer-letter-header_h1]:left-0 [&_.offer-letter-header_h1]:right-0 [&_.offer-letter-header_h1]:text-center [&_.offer-letter-header_h1]:whitespace-nowrap [&_.offer-letter-header_h1]:text-base [&_.offer-letter-header_h1]:font-semibold',
+  '[&_footer]:mt-6 [&_footer]:pt-0 [&_footer]:text-[13px] [&_footer]:text-neutral-900',
+  '[&_.offer-signature-slot]:mb-6 [&_.offer-signature-slot_img]:mb-2 [&_.offer-signature-slot_img]:max-h-20 [&_.offer-signature-slot_img]:max-w-32 [&_.offer-signature-slot_img]:object-contain',
+  '[&_.offer-signature-name]:font-semibold [&_.offer-footer-address]:mt-7 [&_.offer-footer-address_p]:mb-0 [&_.offer-footer-address_p]:leading-5',
+  '[&_.offer-footer-website]:float-right [&_.offer-footer-website]:-mt-[34px] [&_.offer-footer-website]:text-[17px] [&_.offer-footer-website]:font-bold [&_.offer-footer-website]:text-neutral-900 [&_.offer-footer-website]:no-underline',
+);
 
 interface SendOfferDialogProps {
   readonly open: boolean;
@@ -130,6 +159,16 @@ export function SendOfferDialog({
   const selectedTemplate = selectedTemplateQuery.data ?? null;
   const expiryDate = useMemo(() => expiryDateFromDays(expiryDays), [expiryDays]);
   const expiryLabel = formatExpiry(expiryDate);
+
+  const selectedCategory = useMemo<OfferTemplateCategory | null>(() => {
+    if (!selectedTemplate || !selectedCategoryId) return null;
+    return selectedTemplate.categories.find((cat) => cat.id === selectedCategoryId) ?? null;
+  }, [selectedTemplate, selectedCategoryId]);
+
+  const previewHtml = useMemo(() => {
+    if (!selectedTemplate || !selectedCategory) return '';
+    return composeTemplateHtml(selectedTemplate, selectedCategory);
+  }, [selectedTemplate, selectedCategory]);
 
   useEffect(() => {
     if (!open || selectedTemplateId || templates.length === 0) return;
@@ -219,9 +258,6 @@ export function SendOfferDialog({
         <DialogContent className="flex h-[80dvh] w-[80vw] !max-w-[80vw] flex-col gap-0 overflow-hidden rounded-2xl bg-surface p-0 shadow-[var(--shadow-4)]">
           <DialogHeader className="shrink-0 border-b border-neutral-100 px-6 py-5">
             <DialogTitle className="text-xl font-semibold text-neutral-900">Send offer letter</DialogTitle>
-            <DialogDescription>
-              Choose a template, review the letter content, and configure offer expiry.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-neutral-100 md:grid-cols-[minmax(280px,360px)_minmax(0,1fr)] md:divide-x md:divide-y-0">
@@ -236,15 +272,59 @@ export function SendOfferDialog({
               onSearchChange={setTemplateSearch}
               onSelectTemplate={onSelectedTemplateChange}
               onDeleteTemplate={(template: OfferTemplateListItem) => setDeleteTarget(template)}
+              onReloadTemplates={() => templatesQuery.refetch()}
             />
-            <OfferPreviewPane
-              orgSlug={orgSlug}
-              template={selectedTemplate}
-              loading={selectedTemplateQuery.isLoading}
-              selectedCategoryId={selectedCategoryId}
-              onCategoryChange={onSelectedCategoryChange}
-              onDeleteTemplate={(template) => setDeleteTarget(templateAsDeleteTarget(template))}
-            />
+            <div className="flex min-h-0 flex-col">
+              {selectedTemplate && selectedTemplate.categories.length > 1 ? (
+                <div className="shrink-0 border-b border-neutral-100 px-4 py-3">
+                  <Select
+                    value={selectedCategory?.id ?? ''}
+                    onValueChange={onSelectedCategoryChange}
+                  >
+                    <SelectTrigger className="h-8 w-full text-xs bg-surface">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedTemplate.categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+              <div className="min-h-0 flex-1 overflow-y-auto bg-canvas p-4">
+                {previewHtml ? (
+                  <div
+                    className="mx-auto bg-surface shadow-[var(--shadow-2)]"
+                    style={{ width: PREVIEW_PAGE_W, padding: `${PREVIEW_PADDING_Y}px ${PREVIEW_PADDING_X}px` }}
+                  >
+                    {/* Corner mark */}
+                    <div className="absolute bg-primary" style={{ top: 28, left: 28, height: 68, width: 19 }} />
+                    {/* Bottom bar */}
+                    <div className="absolute flex items-end gap-1" style={{ bottom: 32, right: PREVIEW_PADDING_X }}>
+                      <span className="block h-1.5 w-16 bg-neutral-900" />
+                      <span className="block h-1.5 w-8 bg-primary" />
+                    </div>
+                    <div
+                      className={PREVIEW_CONTENT_CLASSES}
+                      style={{
+                        '--offer-header-brand-left': '-9px',
+                        '--offer-header-brand-top': '-56px',
+                      } as React.CSSProperties}
+                      dangerouslySetInnerHTML={{ __html: previewHtml }}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-neutral-400">
+                    {selectedTemplate
+                      ? 'Select a category to preview'
+                      : 'Select a template to preview'}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="shrink-0 border-t border-neutral-100 px-6 py-4 sm:items-center sm:justify-between">
@@ -294,7 +374,6 @@ export function SendOfferDialog({
       <OfferSendConfirmDialog
         open={confirmOpen}
         validation={validationResult}
-        expiryLabel={expiryLabel}
         sending={createDispatch.isPending}
         onOpenChange={setConfirmOpen}
         onConfirm={() => void confirmDispatch()}
@@ -306,9 +385,6 @@ export function SendOfferDialog({
         <AlertDialogContent className="rounded-2xl bg-surface shadow-[var(--shadow-4)]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete template?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteTarget?.name} will be removed if it is not referenced by an in-progress batch.
-            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteTemplate.isPending}>Cancel</AlertDialogCancel>

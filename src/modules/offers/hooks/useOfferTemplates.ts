@@ -82,14 +82,48 @@ export function useUpdateOfferTemplate(orgSlug: string, memberId: string, templa
 
 export function useDeleteOfferTemplate(orgSlug: string, memberId: string) {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, { templateId: string }>({
+  return useMutation<void, Error, { templateId: string }, { previousQueries: Map<string, unknown> }>({
     mutationFn: ({ templateId }) => deleteOfferTemplateAction({ orgSlug, memberId, templateId }),
+    onMutate: async ({ templateId }) => {
+      // Snapshot previous lists across all search/status variants
+      const queryKey = ['offer-templates', orgSlug];
+      const previousQueries = new Map<string, unknown>();
+      queryClient.getQueriesData({ queryKey }).forEach(([key, data]) => {
+        previousQueries.set(JSON.stringify(key), data);
+      });
+
+      // Optimistically remove the deleted template from every cached list
+      queryClient.setQueriesData({ queryKey }, (old: unknown) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((item: unknown) => {
+          if (typeof item === 'object' && item !== null && 'id' in item) {
+            return (item as { id: unknown }).id !== templateId;
+          }
+          return true;
+        });
+      });
+
+      // Remove the individual template detail
+      queryClient.removeQueries({ queryKey: ['offer-template', orgSlug, templateId] });
+
+      return { previousQueries };
+    },
+    onError: (_err, _vars, context) => {
+      // Rollback to snapshots on error
+      if (context?.previousQueries) {
+        context.previousQueries.forEach((data, keyStr) => {
+          const key = JSON.parse(keyStr) as unknown[];
+          queryClient.setQueryData(key, data);
+        });
+      }
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['offer-templates', orgSlug] });
       queryClient.removeQueries({ queryKey: ['offer-template', orgSlug, variables.templateId] });
     },
   });
 }
+
 
 export function useCopyOfferTemplate(orgSlug: string, memberId: string) {
   const queryClient = useQueryClient();

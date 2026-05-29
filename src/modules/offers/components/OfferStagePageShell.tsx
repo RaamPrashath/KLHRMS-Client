@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Loader2, RotateCcw, Search, Send } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { ChevronLeft, Loader2, RotateCcw, Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { OfferCandidateTable } from '@/modules/offers/components/OfferCandidateTable';
 import { SendOfferDialog } from '@/modules/offers/components/SendOfferDialog';
 import { useOfferTemplate } from '@/modules/offers/hooks/useOfferTemplates';
@@ -28,29 +26,19 @@ interface OfferStagePageShellProps {
   readonly initialWorkspace?: OfferStageWorkspace;
 }
 
-interface FilterOption {
-  key: OfferStatusFilter;
-  label: string;
-}
-
-interface CandidateErrorContext {
-  requiresCompensation: boolean;
-  jobHasSalaryData: boolean;
-}
-
 type OfferStatusFilter = 'ALL' | 'UNSENT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'FAILED' | 'EXPIRED';
 
-const FILTERS: FilterOption[] = [
-  { key: 'ALL', label: 'All' },
-  { key: 'UNSENT', label: 'Unsent' },
-  { key: 'SENT', label: 'Sent' },
-  { key: 'ACCEPTED', label: 'Accepted' },
-  { key: 'REJECTED', label: 'Rejected' },
-  { key: 'FAILED', label: 'Failed' },
-  { key: 'EXPIRED', label: 'Expired' },
-];
-
 const COMPENSATION_TOKENS = ['job.salaryMin', 'job.salaryMax', 'job.currency'];
+
+const STATUS_FILTER_OPTIONS: { value: OfferStatusFilter; label: string }[] = [
+  { value: 'ALL', label: 'All' },
+  { value: 'UNSENT', label: 'Unsent' },
+  { value: 'SENT', label: 'Sent' },
+  { value: 'ACCEPTED', label: 'Accepted' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'FAILED', label: 'Failed' },
+  { value: 'EXPIRED', label: 'Expired' },
+];
 
 function readActionError(error: unknown, fallback: string): string {
   if (!(error instanceof Error)) return fallback;
@@ -87,9 +75,9 @@ function normalizeErrorLabel(error: string): string {
   return error;
 }
 
-function candidateErrors(candidate: OfferWorkspaceCandidate, context: CandidateErrorContext): string[] {
+function candidateErrors(candidate: OfferWorkspaceCandidate, requiresCompensation: boolean, jobHasSalaryData: boolean): string[] {
   const errors = candidate.eligibility.errors.map(normalizeErrorLabel);
-  if (context.requiresCompensation && !context.jobHasSalaryData) {
+  if (requiresCompensation && !jobHasSalaryData) {
     errors.push('Missing compensation data');
   }
   return Array.from(new Set(errors));
@@ -121,11 +109,18 @@ export function OfferStagePageShell({
   stageSlug,
   initialWorkspace,
 }: OfferStagePageShellProps) {
+  const [, startTransition] = useTransition();
   const router = useRouter();
   const workspaceQuery = useOfferWorkspace(orgSlug, memberId, jobSlug, stageSlug, initialWorkspace);
   const workspace = workspaceQuery.data;
+
+  // ── Filter & pagination state ──
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<OfferStatusFilter>('ALL');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  // ── Selection & send state ──
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<Set<string>>(new Set());
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(workspace?.recentTemplate?.id ?? workspace?.templates[0]?.id ?? null);
@@ -138,14 +133,7 @@ export function OfferStagePageShell({
   const requiresCompensation = templateRequiresCompensation(selectedTemplate, selectedCategoryId);
   const moveApplication = useMoveApplicationStage(orgSlug, memberId, workspace?.jobPosting.id ?? null);
 
-  const errorContext = useMemo<CandidateErrorContext>(
-    () => ({
-      requiresCompensation,
-      jobHasSalaryData: workspace?.jobHasSalaryData ?? true,
-    }),
-    [requiresCompensation, workspace?.jobHasSalaryData],
-  );
-
+  // ── Filtered candidates ──
   const filteredCandidates = useMemo(
     () =>
       (workspace?.candidates ?? []).filter((candidate) =>
@@ -162,21 +150,66 @@ export function OfferStagePageShell({
     return map;
   }, [workspace?.candidates]);
 
-  const visibleSelectableIds = useMemo(
-    () =>
-      filteredCandidates
-        .filter((candidate) => candidateErrors(candidate, errorContext).length === 0)
-        .map((candidate) => candidate.applicationId),
-    [errorContext, filteredCandidates],
+  // ── Client-side pagination ──
+  const totalFiltered = filteredCandidates.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+  const safePage = Math.min(page, totalPages);
+
+  const paginatedCandidates = useMemo(
+    () => filteredCandidates.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filteredCandidates, safePage, pageSize],
   );
 
+  const visibleSelectableIds = useMemo(
+    () =>
+      paginatedCandidates
+        .filter((candidate) => candidateErrors(candidate, requiresCompensation, workspace?.jobHasSalaryData ?? true).length === 0)
+        .map((candidate) => candidate.applicationId),
+    [paginatedCandidates, requiresCompensation, workspace?.jobHasSalaryData],
+  );
+
+  // ── Handlers ──
+  const handleSearchChange = useCallback((value: string) => {
+    startTransition(() => {
+      setSearch(value);
+      setPage(1);
+    });
+  }, []);
+
+  const handleStatusFilterChange = useCallback((value: string) => {
+    startTransition(() => {
+      setStatusFilter(value as OfferStatusFilter);
+      setPage(1);
+    });
+  }, []);
+
+  const handleClearAll = useCallback(() => {
+    startTransition(() => {
+      setSearch('');
+      setStatusFilter('ALL');
+      setPage(1);
+    });
+  }, []);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    startTransition(() => setPage(newPage));
+  }, []);
+
+  const handlePageSizeChange = useCallback((newSize: number) => {
+    startTransition(() => {
+      setPageSize(newSize);
+      setPage(1);
+    });
+  }, []);
+
+  // Clean up stale selections
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setSelectedApplicationIds((current) => {
         const next = new Set<string>();
         for (const applicationId of current) {
           const candidate = candidateById.get(applicationId);
-          if (candidate && candidateErrors(candidate, errorContext).length === 0) {
+          if (candidate && candidateErrors(candidate, requiresCompensation, workspace?.jobHasSalaryData ?? true).length === 0) {
             next.add(applicationId);
           }
         }
@@ -184,7 +217,7 @@ export function OfferStagePageShell({
       });
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [candidateById, errorContext]);
+  }, [candidateById, requiresCompensation, workspace?.jobHasSalaryData]);
 
   const selectedCandidates = useMemo(
     () =>
@@ -242,6 +275,7 @@ export function OfferStagePageShell({
     }
   }
 
+  // ── Loading state ──
   if (workspaceQuery.isLoading && !workspace) {
     return (
       <div className="flex min-h-full items-center justify-center bg-canvas p-6 text-sm text-neutral-500">
@@ -268,55 +302,43 @@ export function OfferStagePageShell({
   }
 
   return (
-    <div className="min-h-full bg-canvas px-4 py-5 sm:px-8">
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="mt-1 text-neutral-500 hover:text-neutral-900"
-            onClick={handleBackToPipeline}
-            aria-label="Back to candidate pipeline"
-          >
-            <ChevronLeft className="size-5" />
-          </Button>
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold text-neutral-900 sm:text-3xl">{workspace.stage.name}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
-              <span className="size-1 rounded-full bg-neutral-300" />
-              <span className="font-mono text-xs font-medium uppercase tracking-wider text-neutral-400">
-                {workspace.candidateCount} candidates
-              </span>
-              {workspace.latestBatch?.failureCount ? (
-                <>
-                  <span className="size-1 rounded-full bg-neutral-300" />
-                  <span className="rounded-full bg-destructive-bg px-2 py-0.5 text-xs font-medium text-destructive-text">
-                    {workspace.latestBatch.failureCount} failed
-                  </span>
-                </>
-              ) : null}
-            </div>
+    <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">
+      {/* ── Page header ── */}
+      <div className="ml-7 mt-7 flex items-start gap-3">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="mt-1 shrink-0 text-neutral-500 hover:text-neutral-900"
+          onClick={handleBackToPipeline}
+          aria-label="Back to candidate pipeline"
+        >
+          <ChevronLeft className="size-5" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">{workspace.stage.name}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
+            <span className="size-1 rounded-full bg-neutral-300" />
+            <span className="font-mono text-xs font-medium uppercase tracking-wider text-neutral-400">
+              {workspace.candidateCount} candidates
+            </span>
+            {workspace.latestBatch?.failureCount ? (
+              <>
+                <span className="size-1 rounded-full bg-neutral-300" />
+                <span className="rounded-full bg-destructive-bg px-2 py-0.5 text-xs font-medium text-destructive-text">
+                  {workspace.latestBatch.failureCount} failed
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {selectedApplicationIds.size > 0 ? (
             <span className="rounded-full bg-primary-ghost px-3 py-1 text-xs font-medium text-primary">
               {selectedApplicationIds.size} selected
             </span>
           ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void workspaceQuery.refetch()}
-            disabled={workspaceQuery.isFetching}
-          >
-            {workspaceQuery.isFetching ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
-            Refresh
-          </Button>
           <Button
             type="button"
             size="sm"
@@ -330,58 +352,33 @@ export function OfferStagePageShell({
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search offer candidates"
-            placeholder="Search candidates"
-            className="bg-neutral-50 pl-9"
-          />
-        </div>
-        <div className="flex overflow-x-auto rounded-xl border border-neutral-100 bg-neutral-50 p-1">
-          {FILTERS.map((filter) => {
-            const active = statusFilter === filter.key;
-            return (
-              <button
-                key={filter.key}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setStatusFilter(filter.key)}
-                className={cn(
-                  'h-8 shrink-0 rounded-lg px-3 text-[13px] font-medium transition-colors',
-                  active ? 'bg-surface text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]' : 'text-neutral-500 hover:text-neutral-900',
-                )}
-              >
-                {filter.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {(!workspace.acceptedStage || !workspace.rejectedStage) ? (
-        <div className="mb-3 flex flex-wrap gap-2 text-xs text-neutral-500">
-          {!workspace.acceptedStage ? <span>No Accepted stage configured</span> : null}
-          {!workspace.rejectedStage ? <span>No Rejected stage configured</span> : null}
-        </div>
-      ) : null}
-
+      {/* ── Candidate table (includes filters + pagination) ── */}
       <OfferCandidateTable
-        candidates={filteredCandidates}
+        candidates={paginatedCandidates}
+        totalFiltered={totalFiltered}
         selectedApplicationIds={selectedApplicationIds}
         acceptedStage={workspace.acceptedStage}
         rejectedStage={workspace.rejectedStage}
         visibleSelectableIds={visibleSelectableIds}
         movingApplicationId={movingApplicationId}
-        getCandidateErrors={(candidate) => candidateErrors(candidate, errorContext)}
+        search={search}
+        statusFilter={statusFilter}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        requiresCompensation={requiresCompensation}
+        jobHasSalaryData={workspace.jobHasSalaryData ?? true}
+        onSearchChange={handleSearchChange}
+        onStatusFilterChange={handleStatusFilterChange}
+        onClearAll={handleClearAll}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
         onToggleCandidate={toggleCandidate}
         onToggleAllVisible={toggleAllVisible}
         onMoveToStage={(applicationId, stage) => void moveToStage(applicationId, stage)}
       />
 
+      {/* ── Send offer dialog ── */}
       <SendOfferDialog
         open={sendDialogOpen}
         orgSlug={orgSlug}

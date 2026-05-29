@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Edit, FilePlus2, Search, Trash2 } from 'lucide-react';
+import { Copy, Edit, FilePlus2, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ interface OfferTemplatePickerProps {
   readonly onSearchChange: (search: string) => void;
   readonly onSelectTemplate: (templateId: string) => void;
   readonly onDeleteTemplate: (template: OfferTemplateListItem) => void;
+  readonly onReloadTemplates: () => void;
 }
 
 function formatDate(value: string | null): string {
@@ -40,8 +41,8 @@ function TemplateRow({
   badge,
   onSelect,
   onDeleteTemplate,
-  onCopy,
-  copying,
+  onDuplicate,
+  duplicating,
 }: {
   readonly orgSlug: string;
   readonly template: OfferTemplateListItem;
@@ -49,8 +50,8 @@ function TemplateRow({
   readonly badge?: string;
   readonly onSelect: () => void;
   readonly onDeleteTemplate: () => void;
-  readonly onCopy: () => void;
-  readonly copying: boolean;
+  readonly onDuplicate: () => void;
+  readonly duplicating: boolean;
 }) {
   return (
     <div
@@ -91,9 +92,9 @@ function TemplateRow({
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label={`Copy ${template.name}`}
-          disabled={copying}
-          onClick={onCopy}
+          aria-label={`Duplicate ${template.name}`}
+          disabled={duplicating}
+          onClick={onDuplicate}
         >
           <Copy className="size-4" />
         </Button>
@@ -123,18 +124,22 @@ export function OfferTemplatePicker({
   onSearchChange,
   onSelectTemplate,
   onDeleteTemplate,
+  onReloadTemplates,
 }: OfferTemplatePickerProps) {
   const copyTemplate = useCopyOfferTemplate(orgSlug, memberId);
   const visibleTemplates = recentTemplate
     ? templates.filter((template) => template.id !== recentTemplate.id)
     : templates;
 
-  async function copyTemplateRow(template: OfferTemplateListItem) {
+  async function duplicateTemplateRow(template: OfferTemplateListItem) {
     try {
-      await copyTemplate.mutateAsync({ templateId: template.id, data: {} });
-      toast.success('Template copied');
+      await copyTemplate.mutateAsync({
+        templateId: template.id,
+        data: { name: `${template.name} - Copy` },
+      });
+      toast.success('Template duplicated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to copy template');
+      toast.error(error instanceof Error ? error.message : 'Failed to duplicate template');
     }
   }
 
@@ -148,8 +153,16 @@ export function OfferTemplatePicker({
             onChange={(event) => onSearchChange(event.target.value)}
             aria-label="Search offer templates"
             placeholder="Search templates"
-            className="bg-neutral-50 pl-9"
+            className="bg-neutral-50 pl-9 pr-10"
           />
+          <button
+            type="button"
+            onClick={onReloadTemplates}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+            aria-label="Reload templates"
+          >
+            <RotateCcw className="size-4" />
+          </button>
         </div>
       </div>
 
@@ -188,8 +201,8 @@ export function OfferTemplatePicker({
             badge="Recent"
             onSelect={() => onSelectTemplate(recentTemplate.id)}
             onDeleteTemplate={() => onDeleteTemplate(recentTemplate)}
-            onCopy={() => void copyTemplateRow(recentTemplate)}
-            copying={copyTemplate.isPending}
+            onDuplicate={() => void duplicateTemplateRow(recentTemplate)}
+            duplicating={copyTemplate.isPending}
           />
         ) : null}
 
@@ -201,8 +214,8 @@ export function OfferTemplatePicker({
             selected={selectedTemplateId === template.id}
             onSelect={() => onSelectTemplate(template.id)}
             onDeleteTemplate={() => onDeleteTemplate(template)}
-            onCopy={() => void copyTemplateRow(template)}
-            copying={copyTemplate.isPending}
+            onDuplicate={() => void duplicateTemplateRow(template)}
+            duplicating={copyTemplate.isPending}
           />
         ))}
 
