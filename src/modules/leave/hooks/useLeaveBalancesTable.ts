@@ -16,7 +16,7 @@ const DEFAULT_FILTERS: LeaveBalanceTableFilters = {
   search: '',
   year: new Date().getFullYear(),
   page: 1,
-  pageSize: 20,
+  pageSize: 25,
 };
 
 export function useLeaveBalancesTable(orgSlug: string, memberId: string) {

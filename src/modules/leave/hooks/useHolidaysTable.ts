@@ -18,7 +18,7 @@ const DEFAULT_FILTERS: HolidayTableFilters = {
   month: 0,
   year: new Date().getFullYear(),
   page: 1,
-  pageSize: 20,
+  pageSize: 25,
 };
 
 export function useHolidaysTable(orgSlug: string, memberId: string) {

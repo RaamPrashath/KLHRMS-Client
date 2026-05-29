@@ -114,7 +114,7 @@ export function LeaveRequestsView() {
   const [filter, setFilter] = useState<FilterOption>('all-time');
   const [sort, setSort] = useState<SortOption>('latest');
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(25);
 
   const allRequests = requestsQuery.data?.items ?? [];
 
@@ -209,8 +209,8 @@ export function LeaveRequestsView() {
       {requestsQuery.isLoading && (
         <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
           {['a','b','c','d','e'].map((k) => (
-            <div key={`req-${k}`} className="border-b border-black/4 p-6">
-              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            <div key={`req-${k}`} className="border-b border-black/4 px-6 py-3">
+              <div className="h-5 w-full animate-pulse rounded-md bg-neutral-100" />
             </div>
           ))}
         </div>
@@ -267,7 +267,7 @@ export function LeaveRequestsView() {
                 total={filtered.length}
                 pageSize={pageSize}
                 onPageChange={setPage}
-                onPageSizeChange={() => undefined}
+                onPageSizeChange={setPageSize}
               />
             </div>
           )}
@@ -421,7 +421,7 @@ export function LeaveTypesView() {
   const { canApprove, leaveTypes, leaveTypesLoading, openLeaveTypeDialog } = useLeaveShell();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(25);
 
   if (!canApprove) {
     return (
@@ -460,8 +460,8 @@ export function LeaveTypesView() {
       {leaveTypesLoading && (
         <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
           {['a','b','c','d'].map((k) => (
-            <div key={`lt-${k}`} className="border-b border-black/4 p-6">
-              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            <div key={`lt-${k}`} className="border-b border-black/4 px-6 py-3">
+              <div className="h-5 w-full animate-pulse rounded-md bg-neutral-100" />
             </div>
           ))}
         </div>
@@ -510,7 +510,7 @@ export function LeaveTypesView() {
               total={filtered.length}
               pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={() => undefined}
+              onPageSizeChange={setPageSize}
             />
           </div>
         </>
