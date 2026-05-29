@@ -34,7 +34,7 @@ export function DefaultPipelineConfirmDialog({
           </div>
           <DialogTitle>Use default pipeline?</DialogTitle>
           <DialogDescription>
-            This will create 5 stages: Screening, Interview, Offer, Hired, and Rejected.
+            This will create 5 stages: Screening, Interview, Offer, Accepted, and Rejected.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

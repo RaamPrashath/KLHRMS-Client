@@ -26,9 +26,12 @@ const STAGE_TYPE_LABELS: Record<(typeof PIPELINE_STAGE_TYPES)[number], string> =
   DEFAULT: 'Default',
   INTERVIEW: 'Interview',
   OFFER: 'Offer',
-  HIRED: 'Hired',
+  HIRED: 'Accepted',
+  ONBOARDING: 'Onboarding',
   REJECTED: 'Rejected',
 };
+
+const SINGLETON_STAGE_TYPES = new Set<(typeof PIPELINE_STAGE_TYPES)[number]>(['OFFER', 'ONBOARDING']);
 
 interface AddStageDialogProps {
   open: boolean;
@@ -106,6 +109,11 @@ export function AddStageDialog({
                 >
                   <RadioGroupItem value={stageType} disabled={submitting} />
                   {STAGE_TYPE_LABELS[stageType]}
+                  {SINGLETON_STAGE_TYPES.has(stageType) ? (
+                    <span className="ml-auto rounded bg-warning-bg px-1.5 py-0.5 text-[11px] font-medium text-warning-text">
+                      Max 1
+                    </span>
+                  ) : null}
                 </label>
               ))}
             </RadioGroup>

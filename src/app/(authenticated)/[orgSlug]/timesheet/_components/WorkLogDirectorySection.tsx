@@ -12,10 +12,11 @@ import {
 } from '@/components/ui/select';
 import { useBulkAttendancePermissions } from '@/modules/attendance/hooks/queries/attendance';
 import { useWorkLogReportsQuery } from '@/modules/attendance/hooks/queries/workLogReports';
+import { getTodayIST } from '@/modules/attendance/utils/attendanceFormatters';
 import { useDepartmentMetaQuery } from '@/modules/departments/hooks/useDepartmentsQuery';
 import { WorkLogDetailDialog } from './WorkLogDetailDialog';
 import { WorkLogDirectoryTable } from './WorkLogDirectoryTable';
-import { WorkLogFiltersBar } from './WorkLogFiltersBar';
+import { WorkLogFiltersBar, type WorkLogPreset } from './WorkLogFiltersBar';
 
 interface WorkLogDirectorySectionProps {
   orgSlug: string;
@@ -26,6 +27,12 @@ export function WorkLogDirectorySection({
   orgSlug,
   memberId,
 }: Readonly<WorkLogDirectorySectionProps>) {
+  const today = getTodayIST();
+  const [preset, setPreset] = useState<WorkLogPreset>('today');
+  const [customDateFrom, setCustomDateFrom] = useState(today);
+  const [customDateTo, setCustomDateTo] = useState(today);
+  const [departmentId, setDepartmentId] = useState('');
+  const [teamId, setTeamId] = useState('');
   const [employeeName, setEmployeeName] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -33,7 +40,22 @@ export function WorkLogDirectorySection({
 
   const permissionsQuery = useBulkAttendancePermissions(orgSlug, memberId);
   const departmentMetaQuery = useDepartmentMetaQuery(orgSlug, memberId, permissionsQuery.permissions.view === 'organization');
+
+  function subtractDays(dateIso: string, days: number): string {
+    const [year, month, day] = dateIso.split('-').map(Number);
+    const next = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1));
+    next.setUTCDate(next.getUTCDate() - days);
+    return next.toISOString().slice(0, 10);
+  }
+
+  const dateFrom = preset === 'today' ? today : preset === 'last7' ? subtractDays(today, 6) : customDateFrom;
+  const dateTo = preset === 'today' ? today : preset === 'last7' ? today : customDateTo;
+
   const filters = {
+    date_from: dateFrom,
+    date_to: dateTo,
+    department_id: departmentId || undefined,
+    team_id: teamId || undefined,
     employee_name: employeeName.trim() || undefined,
     page,
     page_size: pageSize,
@@ -97,8 +119,36 @@ export function WorkLogDirectorySection({
 
       <div className="mx-7 flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
         <WorkLogFiltersBar
+          preset={preset}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          departmentId={departmentId}
+          teamId={teamId}
           employeeName={employeeName}
           employeeSuggestions={(departmentMetaQuery.data?.members ?? []).map((member) => ({ id: member.id, label: member.label }))}
+          departmentOptions={(departmentMetaQuery.data?.departments ?? []).map((item) => ({ id: item.id, label: item.label }))}
+          teamOptions={[]}
+          onPresetChange={(value) => {
+            setPreset(value);
+            setPage(1);
+          }}
+          onDateFromChange={(value) => {
+            setCustomDateFrom(value);
+            setPage(1);
+          }}
+          onDateToChange={(value) => {
+            setCustomDateTo(value);
+            setPage(1);
+          }}
+          onDepartmentChange={(value) => {
+            setDepartmentId(value);
+            setTeamId('');
+            setPage(1);
+          }}
+          onTeamChange={(value) => {
+            setTeamId(value);
+            setPage(1);
+          }}
           onEmployeeNameChange={(value) => {
             setEmployeeName(value);
             setPage(1);

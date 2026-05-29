@@ -1,0 +1,397 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { ChevronLeft, Loader2, RotateCcw, Search, Send, ExternalLink } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+import { assignCredentialsAndCreateUserAction } from '@/modules/onboarding/api/onboardingServerActions';
+import { useOnboardWorkspace, useRoles } from '@/modules/onboarding/hooks/useOnboarding';
+import type { OnboardWorkspace, OnboardWorkspaceCandidate } from '@/modules/onboarding/types/onboardingTypes';
+
+interface OnboardStageShellProps {
+  readonly orgSlug: string;
+  readonly memberId: string;
+  readonly organizationId: string;
+  readonly jobSlug: string;
+  readonly stageSlug: string;
+  readonly initialWorkspace?: OnboardWorkspace;
+}
+
+function candidateName(candidate: OnboardWorkspaceCandidate): string {
+  return `${candidate.candidate.firstName ?? ''} ${candidate.candidate.lastName ?? ''}`.trim() || 'Unnamed candidate';
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  }).format(new Date(value));
+}
+
+function statusClasses(status: string): string {
+  if (status === 'CREDENTIALS_SENT') return 'bg-success-bg text-success-text';
+  if (status === 'DOCUMENTS_SUBMITTED') return 'bg-info-bg text-info-text';
+  if (status === 'PENDING') return 'bg-warning-bg text-warning-text';
+  if (status === 'FAILED') return 'bg-destructive-bg text-destructive-text';
+  return 'bg-neutral-50 text-neutral-500';
+}
+
+function statusLabel(status: string): string {
+  if (status === 'DOCUMENTS_SUBMITTED') return 'Docs Submitted';
+  if (status === 'CREDENTIALS_SENT') return 'Credentials Sent';
+  if (status === 'PENDING') return 'Pending';
+  if (status === 'FAILED') return 'Failed';
+  return status;
+}
+
+function readActionError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback;
+  try {
+    const parsed = JSON.parse(error.message) as { message?: unknown };
+    return typeof parsed.message === 'string' ? parsed.message : fallback;
+  } catch {
+    return error.message || fallback;
+  }
+}
+
+function matchesSearch(candidate: OnboardWorkspaceCandidate, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  return [candidateName(candidate), candidate.candidate.email]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+    .includes(normalized);
+}
+
+export function OnboardStageShell({
+  orgSlug,
+  memberId,
+  organizationId,
+  jobSlug,
+  stageSlug,
+  initialWorkspace,
+}: OnboardStageShellProps) {
+  const router = useRouter();
+  const workspaceQuery = useOnboardWorkspace(orgSlug, memberId, jobSlug, stageSlug, initialWorkspace);
+  const workspace = workspaceQuery.data;
+  const rolesQuery = useRoles(orgSlug, memberId);
+  const roles = rolesQuery.data ?? [];
+
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [sendingState, setSendingState] = useState<Record<string, boolean>>({});
+  const [roleSelections, setRoleSelections] = useState<Record<string, string>>({});
+  const [emailInputs, setEmailInputs] = useState<Record<string, string>>({});
+
+  const filteredCandidates = useMemo(
+    () =>
+      (workspace?.candidates ?? []).filter((candidate) => matchesSearch(candidate, search)),
+    [search, workspace?.candidates],
+  );
+
+  function handleBackToPipeline() {
+    const storageKey = `ats-stage-return:${orgSlug}:${jobSlug}:${stageSlug}`;
+    const stored = typeof window !== 'undefined' ? window.sessionStorage.getItem(storageKey) : null;
+    router.push(stored ?? `/${orgSlug}/candidates/${jobSlug}`);
+  }
+
+  async function handleSendCredentials(candidate: OnboardWorkspaceCandidate) {
+    const recordId = candidate.onboardingRecordId;
+    if (!recordId) return;
+    const roleId = roleSelections[candidate.applicationId];
+    const email = emailInputs[candidate.applicationId];
+    if (!roleId) {
+      toast.error('Please select a role');
+      return;
+    }
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email');
+      return;
+    }
+
+    setSendingState((prev) => ({ ...prev, [candidate.applicationId]: true }));
+    try {
+      await assignCredentialsAndCreateUserAction({
+        orgSlug,
+        memberId,
+        recordId,
+        data: { roleId, email },
+        organizationId,
+      });
+      toast.success(`Credentials sent to ${candidateName(candidate)}`);
+      setRoleSelections((prev) => ({ ...prev, [candidate.applicationId]: '' }));
+      setEmailInputs((prev) => ({ ...prev, [candidate.applicationId]: '' }));
+      queryClient.invalidateQueries({ queryKey: ['onboard-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
+    } catch (error) {
+      toast.error(readActionError(error, 'Failed to send credentials'));
+    } finally {
+      setSendingState((prev) => ({ ...prev, [candidate.applicationId]: false }));
+    }
+  }
+
+  if (workspaceQuery.isLoading && !workspace) {
+    return (
+      <div className="flex min-h-full items-center justify-center bg-canvas p-6 text-sm text-neutral-500">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-[var(--shadow-1)]">
+          <Loader2 className="size-4 animate-spin text-primary" />
+          Loading onboard workspace
+        </div>
+      </div>
+    );
+  }
+
+  if (!workspace) {
+    return (
+      <div className="min-h-full bg-canvas p-6">
+        <div className="rounded-xl border border-neutral-100 bg-surface p-6 text-sm shadow-[var(--shadow-1)]">
+          <p className="font-medium text-neutral-900">Onboard workspace was not found.</p>
+          <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => void workspaceQuery.refetch()}>
+            <RotateCcw className="size-3.5" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-full bg-canvas px-4 py-5 sm:px-8">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="mt-1 text-neutral-500 hover:text-neutral-900"
+            onClick={handleBackToPipeline}
+            aria-label="Back to candidate pipeline"
+          >
+            <ChevronLeft className="size-5" />
+          </Button>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-semibold text-neutral-900 sm:text-3xl">{workspace.stage.name}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
+              <span className="size-1 rounded-full bg-neutral-300" />
+              <span className="font-mono text-xs font-medium uppercase tracking-wider text-neutral-400">
+                {workspace.candidateCount} candidates
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void workspaceQuery.refetch()}
+            disabled={workspaceQuery.isFetching}
+          >
+            {workspaceQuery.isFetching ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <div className="relative min-w-0 max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            aria-label="Search candidates"
+            placeholder="Search candidates"
+            className="bg-neutral-50 pl-9"
+          />
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-neutral-100 bg-surface shadow-[var(--shadow-1)]">
+        <Table>
+          <TableHeader className="bg-canvas">
+            <TableRow className="hover:bg-canvas">
+              <TableHead className="min-w-[200px] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Candidate
+              </TableHead>
+              <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Status
+              </TableHead>
+              <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Aadhar
+              </TableHead>
+              <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                PAN
+              </TableHead>
+              <TableHead className="min-w-[140px] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Role
+              </TableHead>
+              <TableHead className="min-w-[180px] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Email
+              </TableHead>
+              <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Action
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredCandidates.length > 0 ? (
+              filteredCandidates.map((candidate) => {
+                const canSend = candidate.onboardingStatus === 'DOCUMENTS_SUBMITTED';
+                const isSending = sendingState[candidate.applicationId] ?? false;
+                const credsSent = candidate.onboardingStatus === 'CREDENTIALS_SENT';
+
+                return (
+                  <TableRow
+                    key={candidate.applicationId}
+                    className="border-b border-neutral-100 hover:bg-canvas"
+                  >
+                    <TableCell className="px-4 py-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-neutral-900">{candidateName(candidate)}</p>
+                        <p className="truncate text-xs text-neutral-500">{candidate.candidate.email || 'No email'}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', statusClasses(candidate.onboardingStatus))}>
+                        {statusLabel(candidate.onboardingStatus)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      {candidate.aadharUrl && candidate.aadharUrl.startsWith('http') ? (
+                        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-700">
+                          <a href={candidate.aadharUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="size-3.5" />
+                            View
+                          </a>
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-neutral-400">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      {candidate.panUrl && candidate.panUrl.startsWith('http') ? (
+                        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-700">
+                          <a href={candidate.panUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="size-3.5" />
+                            View
+                          </a>
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-neutral-400">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      {credsSent ? (
+                        <span className="text-xs text-neutral-500">
+                          {roles.find((r) => r.id === candidate.assignedRoleId)?.name ?? 'Assigned'}
+                        </span>
+                      ) : (
+                        <Select
+                          value={roleSelections[candidate.applicationId] ?? ''}
+                          onValueChange={(value) =>
+                            setRoleSelections((prev) => ({ ...prev, [candidate.applicationId]: value }))
+                          }
+                          disabled={!canSend || isSending}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {rolesQuery.isLoading ? (
+                              <SelectItem value="loading" disabled>Loading...</SelectItem>
+                            ) : roles.length === 0 ? (
+                              <SelectItem value="none" disabled>No roles available</SelectItem>
+                            ) : (
+                              roles.map((role) => (
+                                <SelectItem key={role.id} value={role.id}>
+                                  {role.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      {credsSent ? (
+                        <span className="text-xs text-neutral-500">{candidate.assignedEmail}</span>
+                      ) : (
+                        <Input
+                          value={emailInputs[candidate.applicationId] ?? candidate.candidate.email ?? ''}
+                          onChange={(e) =>
+                            setEmailInputs((prev) => ({ ...prev, [candidate.applicationId]: e.target.value }))
+                          }
+                          placeholder="Enter email"
+                          className="h-8 text-xs"
+                          disabled={!canSend || isSending}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      {credsSent ? (
+                        <span className="rounded-full bg-success-bg px-2 py-0.5 text-xs font-medium text-success-text">
+                          Sent
+                        </span>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className={cn('h-7 px-3 text-xs', canSend ? 'bg-primary hover:bg-primary-hover' : 'bg-neutral-200 text-neutral-400')}
+                          disabled={!canSend || isSending}
+                          onClick={() => void handleSendCredentials(candidate)}
+                        >
+                          {isSending ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            <Send className="size-3" />
+                          )}
+                          Send
+                        </Button>
+                      )}
+                      {candidate.credentialsEmailError ? (
+                        <p className="mt-1 text-xs text-destructive-text">{candidate.credentialsEmailError}</p>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="h-28 px-4 text-center text-sm text-neutral-500">
+                  No candidates in this stage.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}

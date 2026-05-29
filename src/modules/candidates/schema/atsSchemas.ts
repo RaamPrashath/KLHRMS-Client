@@ -9,14 +9,14 @@ export const createPipelineStageSchema = z.object({
   jobPostingId: z.string().min(1),
   name: z.string().trim().min(1, 'Stage name is required').max(50),
   afterStageId: z.string().min(1).optional().nullable(),
-  stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).default('DEFAULT'),
+  stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'ONBOARDING', 'REJECTED']).default('DEFAULT'),
   dueDate: z.string().datetime().optional().nullable(),
 });
 
 export const updatePipelineStageSchema = z.object({
   name: z.string().trim().min(1, 'Stage name is required').max(50).optional(),
   order: z.number().optional(),
-  stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']).optional(),
+  stageType: z.enum(['DEFAULT', 'INTERVIEW', 'OFFER', 'HIRED', 'ONBOARDING', 'REJECTED']).optional(),
   dueDate: z.string().datetime().optional().nullable(),
   dueDateEnabled: z.boolean().optional(),
 });
@@ -78,14 +78,14 @@ export interface CreatePipelineStageInput {
   jobPostingId: string;
   name: string;
   afterStageId?: string | null;
-  stageType: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
+  stageType: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'ONBOARDING' | 'REJECTED';
   dueDate?: string | null;
 }
 
 export interface UpdatePipelineStageInput {
   name?: string;
   order?: number;
-  stageType?: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
+  stageType?: 'DEFAULT' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'ONBOARDING' | 'REJECTED';
   dueDate?: string | null;
   dueDateEnabled?: boolean;
 }
