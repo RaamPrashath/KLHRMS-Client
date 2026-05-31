@@ -63,20 +63,25 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+const CHIP_COLORS: Record<string, string> = {
+  blue: "bg-blue-50 text-blue-700 border border-blue-200",
+  purple: "bg-purple-50 text-purple-700 border border-purple-200",
+  gray: "bg-neutral-100 text-neutral-500 border border-neutral-200",
+};
+
 function MemberChip({
   label,
-  tone = "default",
-}: Readonly<{ label: string; tone?: "default" | "muted" }>) {
+  color = "gray",
+}: Readonly<{ label: string; color?: "blue" | "purple" | "gray" }>) {
   return (
-    <div
+    <span
       className={cn(
-        "inline-flex min-h-8 items-center gap-2 rounded-full border border-black/4 bg-canvas px-2.5 text-[13px] transition-colors",
-        tone === "default" ? "text-neutral-900" : "text-neutral-500",
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors",
+        CHIP_COLORS[color],
       )}
     >
-      {tone === "default" && <span className="size-1.5 rounded-full bg-primary" />}
       {label}
-    </div>
+    </span>
   );
 }
 
@@ -121,9 +126,9 @@ function AttendanceOverviewSection({
 
   const isLoading = attendanceQuery.isLoading || contextQuery.isLoading;
   const sections = [
-    { label: "Clocked In", members: clockedInMembers, tone: "default" as const },
-    { label: "Not Clocked In", members: notClockedInMembers, tone: "muted" as const },
-    { label: "On Leave", members: onLeaveMembers, tone: "muted" as const },
+    { label: "Clocked In", members: clockedInMembers, color: "blue" as const },
+    { label: "Not Clocked Out", members: notClockedInMembers, color: "purple" as const },
+    { label: "Absent", members: onLeaveMembers, color: "gray" as const },
   ];
 
   return (
@@ -155,7 +160,7 @@ function AttendanceOverviewSection({
               ) : filtered.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {filtered.map((m) => (
-                    <MemberChip key={m.memberId} label={getDisplayName(m.name, m.email ?? m.memberId)} tone={s.tone} />
+                    <MemberChip key={m.memberId} label={getDisplayName(m.name, m.email ?? m.memberId)} color={s.color} />
                   ))}
                 </div>
               ) : (

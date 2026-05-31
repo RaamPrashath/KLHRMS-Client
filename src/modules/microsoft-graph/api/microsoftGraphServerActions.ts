@@ -1,5 +1,7 @@
 "use server";
 
+import { hashPassword } from "better-auth/crypto";
+import { prisma } from "@/lib/prisma";
 import type {
   ConnectionTestResult,
   MicrosoftSettings,
@@ -35,6 +37,33 @@ async function handleResponse<T>(res: Response): Promise<T> {
     throw new Error(detail);
   }
   return res.json() as Promise<T>;
+}
+
+async function ensureSyncCredentialAccounts(organizationId: string) {
+  const users = await prisma.user.findMany({
+    where: {
+      members: { some: { organizationId } },
+      accounts: {
+        some: { providerId: "microsoft" },
+        none: { providerId: "credential" },
+      },
+    },
+    select: { id: true, email: true },
+  });
+
+  if (users.length === 0) return;
+
+  const hashedPassword = await hashPassword("org123");
+
+  await prisma.account.createMany({
+    data: users.map((u) => ({
+      accountId: u.id,
+      providerId: "credential",
+      userId: u.id,
+      password: hashedPassword,
+    })),
+    skipDuplicates: true,
+  });
 }
 
 export async function fetchMicrosoftSettingsAction(params: {
@@ -84,6 +113,23 @@ export async function testMicrosoftConnectionAction(params: {
   return handleResponse<ConnectionTestResult>(res);
 }
 
+export async function saveMicrosoftSettingsAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: { tenant_id: string; client_id: string; client_secret: string };
+}): Promise<MicrosoftSettings> {
+  const res = await fetch(
+    `${getApiUrl()}/microsoft-graph/settings`,
+    {
+      method: "PUT",
+      headers: buildHeaders(params.orgSlug, params.memberId),
+      body: JSON.stringify(params.data),
+      cache: "no-store",
+    },
+  );
+  return handleResponse<MicrosoftSettings>(res);
+}
+
 export async function syncMicrosoftEmployeesAction(params: {
   orgSlug: string;
   memberId: string;
@@ -96,5 +142,15 @@ export async function syncMicrosoftEmployeesAction(params: {
       cache: "no-store",
     },
   );
-  return handleResponse<SyncRunResponse>(res);
+  const result = await handleResponse<SyncRunResponse>(res);
+
+  const org = await prisma.organization.findUnique({
+    where: { slug: params.orgSlug },
+    select: { id: true },
+  });
+  if (org) {
+    await ensureSyncCredentialAccounts(org.id);
+  }
+
+  return result;
 }

@@ -1,7 +1,7 @@
 export interface MicrosoftSettings {
   tenant_id: string;
   client_id: string;
-  client_secret_configured: boolean;
+  client_secret: string;
   is_enabled: boolean;
   last_sync_at: string | null;
   last_sync_status: string | null;

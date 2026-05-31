@@ -171,11 +171,24 @@ export async function updateEmployeeRoleAction(
       return { success: false, error: 'You do not have permission to edit employee roles' };
     }
 
-    await organizations.updateOrganizationMemberRole({
-      organizationId: org.id,
-      memberId,
-      roleId,
+    const apiUrl = process.env.HRMS_API_URL;
+    if (!apiUrl) return { success: false, error: 'HRMS_API_URL not configured' };
+
+    const res = await fetch(`${apiUrl}/employees/${encodeURIComponent(memberId)}/role`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-organization-slug': slug,
+        'x-membership-id': member.id,
+      },
+      body: JSON.stringify({ role_id: roleId }),
     });
+
+    if (!res.ok) {
+      let detail = 'Failed to update role';
+      try { const b = await res.json(); detail = b.detail ?? detail; } catch {}
+      return { success: false, error: detail };
+    }
 
     revalidatePath(`/${slug}/employees`);
     return { success: true };

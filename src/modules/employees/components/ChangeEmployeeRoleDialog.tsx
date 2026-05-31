@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useRef, useState, useTransition } from 'react';
+import { useCallback, useRef, useTransition } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -34,6 +35,7 @@ export function ChangeEmployeeRoleDialog({
 }: Readonly<ChangeEmployeeRoleDialogProps>) {
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const queryClient = useQueryClient();
 
   const handleSubmit = useCallback(
     (formData: FormData) => {
@@ -41,6 +43,7 @@ export function ChangeEmployeeRoleDialog({
         const result = await updateEmployeeRoleAction(orgSlug, formData);
         if (result.success) {
           toast.success('Employee role updated');
+          await queryClient.invalidateQueries({ queryKey: ['employees', orgSlug] });
           onOpenChange(false);
           formRef.current?.reset();
         } else {
@@ -48,7 +51,7 @@ export function ChangeEmployeeRoleDialog({
         }
       });
     },
-    [orgSlug, onOpenChange],
+    [orgSlug, onOpenChange, queryClient],
   );
 
   return (
