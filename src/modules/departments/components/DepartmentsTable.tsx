@@ -10,6 +10,14 @@ import {
 } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody as ShadcnTableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { DepartmentsFilters } from './DepartmentsFilters';
 import { DepartmentsPagination } from './DepartmentsPagination';
@@ -40,6 +48,23 @@ function formatStatus(status: DepartmentStatus) {
 
 const SKELETON_COUNT = 20;
 const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-row-${i}`);
+
+function colWidth(id: string): string {
+  const map: Record<string, string> = {
+    department: 'w-[28%]',
+    lead: 'w-[22%]',
+    teams: 'w-[10%]',
+    people: 'w-[10%]',
+    projects: 'w-[10%]',
+    status: 'w-[14%]',
+    actions: 'w-[6%]',
+  };
+  return map[id] ?? 'w-[10%]';
+}
+
+function colAlign(id: string): string {
+  return id === 'department' || id === 'lead' ? 'justify-start' : 'justify-center';
+}
 
 const columns: ColumnDef<DepartmentSummary>[] = [
   {
@@ -98,77 +123,91 @@ const columns: ColumnDef<DepartmentSummary>[] = [
   },
 ];
 
-interface TableBodyProps {
+interface DepartmentsTableBodyProps {
   isLoading: boolean;
   rows: Row<DepartmentSummary>[];
   pageSize: number;
+  columnCount: number;
   onRowClick: (department: DepartmentSummary) => void;
 }
 
-function TableBody({ isLoading, rows, pageSize, onRowClick }: Readonly<TableBodyProps>) {
+function DepartmentsTableBody({
+  isLoading,
+  rows,
+  pageSize,
+  columnCount,
+  onRowClick,
+}: Readonly<DepartmentsTableBodyProps>) {
   if (isLoading) {
     return (
-      <div className="flex flex-col divide-y divide-black/4 bg-surface">
+      <ShadcnTableBody className="bg-surface">
         {SKELETON_IDS.slice(0, pageSize).map((id) => (
-          <div key={id} className="border-b border-black/4 p-6">
-            <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
-          </div>
+          <TableRow key={id} className="border-black/4 hover:bg-transparent">
+            <TableCell colSpan={columnCount} className="p-6">
+              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            </TableCell>
+          </TableRow>
         ))}
-      </div>
+      </ShadcnTableBody>
     );
   }
 
   if (rows.length === 0) {
     return (
-      <div className="bg-surface py-16 text-center text-sm text-neutral-400">
-        No departments found.
-      </div>
+      <ShadcnTableBody className="bg-surface">
+        <TableRow className="border-black/4 hover:bg-transparent">
+          <TableCell colSpan={columnCount} className="py-16 text-center text-sm text-neutral-400">
+            No departments found.
+          </TableCell>
+        </TableRow>
+      </ShadcnTableBody>
     );
   }
 
   return (
-    <div className="flex flex-col bg-surface">
+    <ShadcnTableBody className="bg-surface">
       {rows.map((row) => {
         const dept = row.original;
         return (
-          <div
+          <TableRow
             key={row.id}
             onClick={() => onRowClick(dept)}
-            className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4 cursor-pointer"
+            className="cursor-pointer border-black/4 transition-colors hover:bg-black/[0.02]"
           >
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
-            </div>
+            {row.getVisibleCells().map((cell) => (
+              <TableCell
+                key={cell.id}
+                className={cn(
+                  colWidth(cell.column.id),
+                  'px-3 py-3 whitespace-nowrap',
+                  cell.column.id === 'department' || cell.column.id === 'lead' ? 'text-left' : 'text-center',
+                )}
+              >
+                <div className={cn('flex', colAlign(cell.column.id))}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </div>
+              </TableCell>
+            ))}
 
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[1].column.columnDef.cell, row.getVisibleCells()[1].getContext())}
-            </div>
-
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[2].column.columnDef.cell, row.getVisibleCells()[2].getContext())}
-            </div>
-
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[3].column.columnDef.cell, row.getVisibleCells()[3].getContext())}
-            </div>
-
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[4].column.columnDef.cell, row.getVisibleCells()[4].getContext())}
-            </div>
-
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[5].column.columnDef.cell, row.getVisibleCells()[5].getContext())}
-            </div>
-
-            <div className="w-10 shrink-0 flex justify-end">
-              <Button variant="ghost" className="h-9 px-3 text-neutral-700 hover:bg-black/5 rounded-lg">
-                <ChevronRight className="size-4 opacity-50" />
-              </Button>
-            </div>
-          </div>
+            <TableCell className="w-[6%] px-3 py-3 text-right">
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRowClick(dept);
+                  }}
+                  className="h-9 rounded-lg px-3 text-neutral-700 hover:bg-black/5"
+                >
+                  <ChevronRight className="size-4 opacity-50" />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
         );
       })}
-    </div>
+    </ShadcnTableBody>
   );
 }
 
@@ -196,6 +235,8 @@ export function DepartmentsTable({
     pageCount: totalPages,
   });
 
+  const columnCount = table.getAllLeafColumns().length + 1;
+
   return (
     <div className="flex flex-col flex-1 mx-7 mb-7">
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
@@ -210,23 +251,38 @@ export function DepartmentsTable({
         </div>
 
         <div className="w-full">
-          <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Department</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Lead</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Teams</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">People</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Projects</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</div>
-            <div className="w-10 shrink-0" />
-          </div>
-
           <div className="px-4">
-            <TableBody
-              isLoading={isLoading}
-              rows={table.getRowModel().rows}
-              pageSize={pageSize}
-              onRowClick={onRowClick}
-            />
+            <Table className="table-fixed">
+              <TableHeader className="bg-canvas/50">
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id} className="border-black/[0.04] hover:bg-transparent">
+                    {hg.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className={cn(
+                          colWidth(header.id),
+                          'h-auto px-3 py-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
+                          header.id === 'department' || header.id === 'lead' ? 'text-left' : 'text-center',
+                        )}
+                      >
+                        {header.isPlaceholder
+                          ? ''
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                    <TableHead className="w-[6%] px-3 py-3" />
+                  </TableRow>
+                ))}
+              </TableHeader>
+
+              <DepartmentsTableBody
+                isLoading={isLoading}
+                rows={table.getRowModel().rows}
+                pageSize={pageSize}
+                columnCount={columnCount}
+                onRowClick={onRowClick}
+              />
+            </Table>
           </div>
         </div>
 

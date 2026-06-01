@@ -11,6 +11,14 @@ import { useMemo } from 'react';
 import { Pencil, UserX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Table,
+  TableBody as ShadcnTableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { AttendanceBadge } from './AttendanceBadge';
 import { EmployeeFilters } from './EmployeeFilters';
 import { EmployeePagination } from './EmployeePagination';
@@ -53,12 +61,12 @@ interface EmployeeTableProps {
 
 function colWidth(id: string): string {
   const map: Record<string, string> = {
-    employee: 'w-[240px]',
-    email: 'w-[200px]',
-    role: 'w-[170px]',
-    source: 'w-[120px]',
-    attendance: 'w-[150px]',
-    actions: 'w-[100px]',
+    employee: 'w-[26%]',
+    email: 'w-[24%]',
+    role: 'w-[16%]',
+    source: 'w-[12%]',
+    attendance: 'w-[14%]',
+    actions: 'w-[8%]',
   };
   return map[id] ?? 'w-[120px]';
 }
@@ -155,8 +163,8 @@ function buildColumns(
             Microsoft
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-0.5 text-[11px] font-medium text-neutral-500">
-            Manual
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+            Credentials
           </span>
         )
       ),
@@ -182,7 +190,6 @@ function buildColumns(
           title="Deactivate employee"
         >
           <UserX className="size-3.5" />
-          Deactivate
         </button>
       ),
     });
@@ -191,52 +198,69 @@ function buildColumns(
   return cols;
 }
 
-interface TableBodyProps {
+interface EmployeeTableBodyProps {
   isLoading: boolean;
   rows: Row<EmployeeListItem>[];
   pageSize: number;
-  canEditRole: boolean;
+  columnCount: number;
 }
 
-function TableBody({ isLoading, rows, pageSize, canEditRole }: Readonly<TableBodyProps>) {
+function EmployeeTableBody({
+  isLoading,
+  rows,
+  pageSize,
+  columnCount,
+}: Readonly<EmployeeTableBodyProps>) {
   if (isLoading) {
     return (
-      <div className="flex flex-col divide-y divide-black/4 bg-surface">
+      <ShadcnTableBody className="bg-surface">
         {SKELETON_IDS.slice(0, pageSize).map((id) => (
-          <div key={id} className="border-b border-black/4 p-6">
-            <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
-          </div>
+          <TableRow key={id} className="border-black/4 hover:bg-transparent">
+            <TableCell colSpan={columnCount} className="p-6">
+              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            </TableCell>
+          </TableRow>
         ))}
-      </div>
+      </ShadcnTableBody>
     );
   }
 
   if (rows.length === 0) {
     return (
-      <div className="bg-surface py-16 text-center text-sm text-neutral-400">
-        No employees found.
-      </div>
+      <ShadcnTableBody className="bg-surface">
+        <TableRow className="border-black/4 hover:bg-transparent">
+          <TableCell colSpan={columnCount} className="py-16 text-center text-sm text-neutral-400">
+            No employees found.
+          </TableCell>
+        </TableRow>
+      </ShadcnTableBody>
     );
   }
 
   return (
-    <div className="flex flex-col divide-y divide-black/4 bg-surface">
+    <ShadcnTableBody className="bg-surface">
       {rows.map((row) => (
-        <div
+        <TableRow
           key={row.id}
-          className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4"
+          className="border-black/4 transition-colors hover:bg-black/[0.02]"
         >
           {row.getVisibleCells().map((cell) => (
-            <div
+            <TableCell
               key={cell.id}
-              className={cn(colWidth(cell.column.id), 'shrink-0 flex', colAlign(cell.column.id))}
+              className={cn(
+                colWidth(cell.column.id),
+                'px-3 py-3 whitespace-nowrap',
+                colAlign(cell.column.id) === 'justify-end' ? 'text-right' : 'text-left',
+              )}
             >
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </div>
+              <div className={cn('flex', colAlign(cell.column.id))}>
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </div>
+            </TableCell>
           ))}
-        </div>
+        </TableRow>
       ))}
-    </div>
+    </ShadcnTableBody>
   );
 }
 
@@ -273,6 +297,8 @@ export function EmployeeTable({
     pageCount: totalPages,
   });
 
+  const columnCount = table.getAllLeafColumns().length;
+
   return (
     <div className="flex flex-col flex-1 mx-7 mb-7">
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
@@ -292,31 +318,36 @@ export function EmployeeTable({
 
         {/* ── Layer 2 & 3: Table (Flex) ─────────────────────────────────────────── */}
         <div className="w-full">
-          {/* Header Row */}
-          <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
-            {table.getHeaderGroups().map((hg) =>
-              hg.headers.map((header) => (
-                <div
-                  key={header.id}
-                  className={cn(
-                    colWidth(header.id),
-                    'shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider',
-                    colAlign(header.id) === 'justify-end' ? 'text-right' : 'text-left',
-                  )}
-                >
-                  {header.isPlaceholder ? '' : flexRender(header.column.columnDef.header, header.getContext())}
-                </div>
-              )),
-            )}
-          </div>
-
           <div className="px-4">
-            <TableBody
-              isLoading={isLoading}
-              rows={table.getRowModel().rows}
-              pageSize={pageSize}
-              canEditRole={canEditRole}
-            />
+            <Table className="table-fixed">
+              <TableHeader className="bg-canvas/50">
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id} className="border-black/[0.04] hover:bg-transparent">
+                    {hg.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className={cn(
+                          colWidth(header.id),
+                          'h-auto px-3 py-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
+                          colAlign(header.id) === 'justify-end' ? 'text-right' : 'text-left',
+                        )}
+                      >
+                        {header.isPlaceholder
+                          ? ''
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+
+              <EmployeeTableBody
+                isLoading={isLoading}
+                rows={table.getRowModel().rows}
+                pageSize={pageSize}
+                columnCount={columnCount}
+              />
+            </Table>
           </div>
         </div>
 

@@ -38,13 +38,13 @@ export function DepartmentsFilters({
 
   return (
     <div className="flex items-center gap-2">
-      <div className="relative flex-1">
+      <div className="relative w-full max-w-[280px]">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
         <Input
           placeholder="Search departments…"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
+          className="h-9 pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
         />
       </div>
 
