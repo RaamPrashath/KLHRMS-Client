@@ -34,9 +34,11 @@ function daysAgo(dateStr: string): string {
 export function KanbanCard({
   issue,
   onOpenSwap,
+  onOpenIssue,
 }: {
   issue: KanbanIssue;
   onOpenSwap: (ticketId: string) => void;
+  onOpenIssue: (issue: KanbanIssue) => void;
 }) {
   const {
     attributes,
@@ -60,6 +62,7 @@ export function KanbanCard({
       style={style}
       {...attributes}
       {...listeners}
+      onClick={() => onOpenIssue(issue)}
       className={cn(
         'rounded-xl border bg-card p-3 transition-all duration-150',
         'hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]',
