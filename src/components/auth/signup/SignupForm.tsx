@@ -166,9 +166,11 @@ export function SignupForm() {
                             }}
                         />
                         {errors.password && <FieldError id="signup-password-error">{errors.password.message}</FieldError>}
-                        <div className="pt-1.5">
-                            <PasswordRules password={passwordValue} />
-                        </div>
+                        {passwordValue.length > 0 ? (
+                            <div className="pt-1.5">
+                                <PasswordRules password={passwordValue} />
+                            </div>
+                        ) : null}
                     </Field>
 
                     <Field>
