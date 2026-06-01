@@ -5,12 +5,14 @@ export interface KanbanIssue {
   assetId: string | null;
   title: string | null;
   ticketId: string;
+  maintenanceType: string;
   description: string;
   assetLifecycleStatus: string | null;
   assetLifecycleStatusLabel: string | null;
   priority: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'done' | 'cancelled';
   assignees: { name: string; avatar?: string }[];
+  raisedByName: string | null;
   dueDate: string;
   createdAt: string;
   commentCount: number;
