@@ -13,6 +13,7 @@ export interface KanbanIssue {
   status: 'open' | 'in_progress' | 'done' | 'cancelled';
   assignees: { name: string; avatar?: string }[];
   raisedByName: string | null;
+  raisedByEmail: string | null;
   dueDate: string;
   createdAt: string;
   commentCount: number;
