@@ -132,11 +132,11 @@ export function FloatingPanelTrigger({
     >
       <motion.div
         layoutId={`floating-panel-label-container-${uniqueId}`}
-        className="size-full"
+        className="size-full flex items-center justify-center"
       >
         <motion.div
           layoutId={`floating-panel-label-${uniqueId}`}
-          className="size-full text-sm font-semibold"
+          className="size-full text-sm font-semibold flex items-center justify-center"
         >
           {children}
         </motion.div>

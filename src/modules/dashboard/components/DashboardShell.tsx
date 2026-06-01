@@ -13,7 +13,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  FloatingPanelBody,
+  FloatingPanelCloseButton,
+  FloatingPanelContent,
+  FloatingPanelRoot,
+  FloatingPanelTrigger,
+} from "@/components/ui/floating-panel";
 import { Input } from "@/components/ui/input";
+import { useApiClient } from "@/hooks/useApiClient";
+import { useTeamWeeklyPlanQuery } from "@/hooks/queries/weekly_plan";
 import { cn } from "@/lib/utils";
 import type { RolePermissions } from "@/lib/hrms-roles";
 import { getScope, hasPermission } from "@/lib/hrms-roles";
@@ -26,6 +35,7 @@ import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
 import { useRejectLeaveRequest } from "@/modules/leave/hooks/useRejectLeaveRequest";
 import type { LeaveRequestRecord } from "@/modules/leave/types/leaveTypes";
 import { canApproveLeaves, resolveLeavePermissions } from "@/modules/leave/utils/leavePermissions";
+import { getCurrentWeekState } from "@/modules/weekly-plan/date";
 import { InviteEmployeeDialog } from "@/modules/employees/components/InviteEmployeeDialog";
 import { DashboardClockWidget } from "./DashboardClockWidget";
 import { DashboardTopBar } from "./DashboardTopBar";
@@ -34,6 +44,7 @@ import { JobOpeningsCard } from "./JobOpeningsCard";
 
 interface DashboardShellProps {
   orgSlug: string;
+  orgId: string;
   memberId: string;
   roleName: string | null;
   permissions: RolePermissions | null;
@@ -87,10 +98,13 @@ function MemberChip({
 
 function AttendanceOverviewSection({
   orgSlug,
+  orgId,
   memberId,
-}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId">>) {
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "orgId" | "memberId">>) {
   const today = getTodayIST();
   const [search, setSearch] = useState("");
+  const auth = useApiClient(orgId);
+  const currentWeek = useMemo(() => getCurrentWeekState(), []);
 
   const contextQuery = useQuery({
     queryKey: ["leave-context", orgSlug, memberId],
@@ -103,20 +117,45 @@ function AttendanceOverviewSection({
   const { data: leaveData } = useLeaveRequests(orgSlug, memberId, {
     status: "APPROVED", fromDate: today, toDate: today, page: 1, pageSize: 200,
   });
+  const teamWeeklyPlanQuery = useTeamWeeklyPlanQuery(
+    orgSlug,
+    orgId,
+    memberId,
+    currentWeek.year,
+    currentWeek.week,
+    true,
+  );
 
-  const { clockedInMembers, notClockedInMembers, onLeaveMembers } = useMemo(() => {
+  const { officeClockedInMembers, remoteClockedInMembers, notClockedInMembers, absentMembers } = useMemo(() => {
     const members = contextQuery.data?.members ?? [];
     const attendanceItems = attendanceQuery.data?.items ?? [];
     const activeIds = new Set(
       attendanceItems.filter((r) => r.clockIn && !r.clockOut).map((r) => r.employeeId),
     );
     const onLeaveMemberIds = new Set((leaveData?.items ?? []).map((l) => l.memberId));
+    const locationByUserId = new Map(
+      (teamWeeklyPlanQuery.data ?? [])
+        .filter((entry) => entry.date === today)
+        .map((entry) => [entry.user_id, entry.work_location]),
+    );
+
+    const officeClockedInMembers = members.filter((member) => {
+      if (!activeIds.has(member.memberId)) return false;
+      return locationByUserId.get(member.userId) !== "WFH";
+    });
+
+    const remoteClockedInMembers = members.filter((member) => {
+      if (!activeIds.has(member.memberId)) return false;
+      return locationByUserId.get(member.userId) === "WFH";
+    });
+
     return {
-      clockedInMembers: members.filter((m) => activeIds.has(m.memberId)),
-      onLeaveMembers: members.filter((m) => !activeIds.has(m.memberId) && onLeaveMemberIds.has(m.memberId)),
+      officeClockedInMembers,
+      remoteClockedInMembers,
+      absentMembers: members.filter((m) => !activeIds.has(m.memberId) && onLeaveMemberIds.has(m.memberId)),
       notClockedInMembers: members.filter((m) => !activeIds.has(m.memberId) && !onLeaveMemberIds.has(m.memberId)),
     };
-  }, [attendanceQuery.data?.items, contextQuery.data?.members, leaveData?.items]);
+  }, [attendanceQuery.data?.items, contextQuery.data?.members, leaveData?.items, teamWeeklyPlanQuery.data, today]);
 
   const filterFn = (m: { name: string | null; email: string | null }) => {
     if (!search) return true;
@@ -124,25 +163,78 @@ function AttendanceOverviewSection({
     return (m.name ?? "").toLowerCase().includes(q) || (m.email ?? "").toLowerCase().includes(q);
   };
 
-  const isLoading = attendanceQuery.isLoading || contextQuery.isLoading;
+  const isLoading = attendanceQuery.isLoading || contextQuery.isLoading || (auth != null && teamWeeklyPlanQuery.isLoading);
   const sections = [
-    { label: "Clocked In", members: clockedInMembers, color: "blue" as const },
-    { label: "Not Clocked Out", members: notClockedInMembers, color: "purple" as const },
-    { label: "Absent", members: onLeaveMembers, color: "gray" as const },
+    { label: "Clocked In (Office)", members: officeClockedInMembers, color: "blue" as const },
+    { label: "Clocked In (Work From Home)", members: remoteClockedInMembers, color: "purple" as const },
+    { label: "Not Clocked In", members: notClockedInMembers, color: "gray" as const },
   ];
+  const filteredAbsentMembers = absentMembers.filter(filterFn);
+  const filteredAbsentCount = filteredAbsentMembers.length;
 
   return (
     <section>
       <div className="mb-4 flex items-center justify-between gap-4">
         <h2 className="text-base font-semibold text-neutral-900">Today&apos;s Attendance</h2>
-        <div className="relative max-w-xs flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-          <Input
-            placeholder="Search members..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 border-0 bg-canvas pl-9 text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10"
-          />
+        <div className="flex max-w-md flex-1 items-center justify-end gap-2.5">
+          <FloatingPanelRoot>
+            <FloatingPanelTrigger
+              title="Absent Members"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white px-3.5 text-[12px] font-medium text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+            >
+              <span className="inline-flex items-center justify-center gap-2 leading-none">
+                Absent
+                <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold leading-none text-neutral-900">
+                  {filteredAbsentCount}
+                </span>
+              </span>
+            </FloatingPanelTrigger>
+            <FloatingPanelContent className="w-[min(calc(100vw-2rem),22rem)] max-h-[min(34rem,calc(100vh-2rem))] overflow-hidden rounded-[18px] border-neutral-200 shadow-[0_20px_70px_rgba(0,0,0,0.16)]">
+              <FloatingPanelBody className="max-h-[calc(min(34rem,100vh-2rem)-2.75rem)] overflow-y-auto px-4 pb-4 pt-1">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-[12px] font-medium text-neutral-400">
+                    Members on approved leave today
+                  </p>
+                  <FloatingPanelCloseButton className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f5f5f7]" />
+                </div>
+
+                {isLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((item) => (
+                      <div key={item} className="h-11 animate-pulse rounded-xl bg-neutral-100" />
+                    ))}
+                  </div>
+                ) : filteredAbsentMembers.length > 0 ? (
+                  <div className="space-y-2">
+                    {filteredAbsentMembers.map((member) => (
+                      <div
+                        key={member.memberId}
+                        className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5"
+                      >
+                        <p className="text-[13px] font-medium text-neutral-900">
+                          {getDisplayName(member.name, member.email ?? member.memberId)}
+                        </p>
+                        <p className="mt-0.5 text-[12px] text-neutral-500">
+                          {member.email ?? member.memberId}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-neutral-400">No absent members found.</p>
+                )}
+              </FloatingPanelBody>
+            </FloatingPanelContent>
+          </FloatingPanelRoot>
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+            <Input
+              placeholder="Search members..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 border-0 bg-canvas pl-9 text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10"
+            />
+          </div>
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -443,6 +535,7 @@ function MainDashboardLayout({
 
 function AdminDashboardContent({
   orgSlug,
+  orgId,
   memberId,
   roleName,
   permissions,
@@ -462,7 +555,7 @@ function AdminDashboardContent({
     <div className="flex flex-col gap-5 p-3">
       <MainDashboardLayout orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
       <div className="flex flex-col gap-6">
-        {canViewOrgAttendance ? <AttendanceOverviewSection orgSlug={orgSlug} memberId={memberId} /> : null}
+        {canViewOrgAttendance ? <AttendanceOverviewSection orgSlug={orgSlug} orgId={orgId} memberId={memberId} /> : null}
         {showAdminControlPanel ? (
           <div className={cn(
             "grid gap-6",
@@ -548,6 +641,7 @@ function DefaultDashboardContent({
 
 export function DashboardShell({
   orgSlug,
+  orgId,
   memberId,
   roleName,
   permissions,
@@ -565,5 +659,5 @@ export function DashboardShell({
     return <DefaultDashboardContent orgSlug={orgSlug} memberId={memberId} roleName={roleName} />;
   }
 
-  return <AdminDashboardContent orgSlug={orgSlug} memberId={memberId} roleName={roleName} permissions={permissions} />;
+  return <AdminDashboardContent orgSlug={orgSlug} orgId={orgId} memberId={memberId} roleName={roleName} permissions={permissions} />;
 }

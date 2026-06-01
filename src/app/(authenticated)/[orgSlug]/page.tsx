@@ -12,12 +12,14 @@ export default async function DashboardPage({
   const session = await requireServerSession();
 
   const { orgSlug } = await params;
+  let orgId: string;
   let memberId: string;
   let roleName: string | null = null;
   let permissions: RolePermissions | null = null;
 
   try {
     const { member } = await requireOrgMembership(session.user.id, orgSlug);
+    orgId = member.organizationId;
     memberId = member.id;
     roleName = member.role?.name ?? null;
     permissions = (member.role?.permissions as RolePermissions) ?? null;
@@ -29,6 +31,7 @@ export default async function DashboardPage({
     <div className="min-h-full bg-canvas">
       <DashboardShell
         orgSlug={orgSlug}
+        orgId={orgId!}
         memberId={memberId!}
         roleName={roleName}
         permissions={permissions}
