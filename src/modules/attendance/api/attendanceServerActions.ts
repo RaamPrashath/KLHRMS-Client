@@ -1,5 +1,6 @@
 'use server';
 
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 import { getServerSession } from '@/lib/server-session';
 import { prisma } from '@/lib/prisma';
 import type { PlanLocationValue } from '@/types/weekly_plan';
@@ -24,8 +25,7 @@ import {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getApiUrl(): string {
-  const url = process.env.HRMS_API_URL;
-  if (!url) throw new Error('HRMS_API_URL environment variable is not set');
+  const url = getHrmsApiUrl();
   return url.replace(/\/$/, '');
 }
 

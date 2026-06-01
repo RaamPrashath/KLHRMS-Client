@@ -1,5 +1,6 @@
 'use server';
 
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 import type { PublicCareerApplicationInput } from '@/modules/jobs/schema/publicCareerSchemas';
 import type {
   PublicCareerApplicationResult,
@@ -7,9 +8,7 @@ import type {
 } from '@/modules/jobs/types/publicCareerTypes';
 
 function getApiUrl(): string {
-  const url = process.env.HRMS_API_URL;
-  if (!url) throw new Error('HRMS_API_URL environment variable is not set');
-  return url;
+  return getHrmsApiUrl();
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {

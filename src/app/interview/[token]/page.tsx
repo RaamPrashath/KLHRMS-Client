@@ -4,6 +4,7 @@ import { use, useCallback, useState } from 'react';
 import { Check, Clock, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 
 interface ProposedSlot {
   id: string;
@@ -42,7 +43,7 @@ function formatSlotTime(startTime: string, endTime: string): string {
 }
 
 function getApiUrl(): string {
-  return process.env.NEXT_PUBLIC_HRMS_API_URL || process.env.HRMS_API_URL || 'http://localhost:8000';
+  return getHrmsApiUrl();
 }
 
 export default function InterviewSlotPickerPage({

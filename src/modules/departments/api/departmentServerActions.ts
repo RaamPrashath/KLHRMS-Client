@@ -1,5 +1,6 @@
 'use server';
 
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 import {
   departmentSchema,
   teamMemberSchema,
@@ -11,9 +12,7 @@ import {
 import type { DepartmentListResponse, DepartmentMetaResponse, DepartmentSummary, TeamSummary } from '@/modules/departments/types/departmentTypes';
 
 function getApiUrl(): string {
-  const url = process.env.HRMS_API_URL;
-  if (!url) throw new Error('HRMS_API_URL environment variable is not set');
-  return url;
+  return getHrmsApiUrl();
 }
 
 function buildHeaders(orgSlug: string, memberId: string): HeadersInit {

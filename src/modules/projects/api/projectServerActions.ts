@@ -1,5 +1,6 @@
 'use server';
 
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 import type {
   ProjectDetail,
   ProjectForAttendance,
@@ -42,7 +43,7 @@ export async function fetchProjectsForAttendanceAction(params: {
   orgSlug: string;
   memberId: string;
 }): Promise<ProjectForAttendance[]> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects/for-attendance`, {
@@ -66,7 +67,7 @@ export async function fetchProjectsAction(params: {
   page?: number;
   pageSize?: number;
 }): Promise<ProjectListResponse> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const queryParams = new URLSearchParams();
@@ -92,7 +93,7 @@ export async function fetchProjectMetaAction(params: {
   orgSlug: string;
   memberId: string;
 }): Promise<ProjectMetaResponse> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects/meta`, {
@@ -112,7 +113,7 @@ export async function fetchProjectByIdAction(params: {
   memberId: string;
   projectId: string;
 }): Promise<ProjectDetail> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects/${params.projectId}`, {
@@ -132,7 +133,7 @@ export async function createProjectAction(params: {
   memberId: string;
   data: ProjectInput;
 }): Promise<ProjectDetail> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects`, {
@@ -155,7 +156,7 @@ export async function updateProjectAction(params: {
   projectId: string;
   data: ProjectInput;
 }): Promise<ProjectDetail> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects/${params.projectId}`, {
@@ -177,7 +178,7 @@ export async function deleteProjectAction(params: {
   memberId: string;
   projectId: string;
 }): Promise<void> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects/${params.projectId}`, {
@@ -197,7 +198,7 @@ export async function addProjectMemberAction(params: {
   projectId: string;
   data: ProjectMemberInput;
 }): Promise<ProjectDetail> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects/${params.projectId}/members`, {
@@ -220,7 +221,7 @@ export async function bulkAssignProjectMembersAction(params: {
   projectId: string;
   memberIds: string[];
 }): Promise<ProjectDetail> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects/${params.projectId}/members/bulk`, {
@@ -243,7 +244,7 @@ export async function removeProjectMemberAction(params: {
   projectId: string;
   targetMemberId: string;
 }): Promise<ProjectDetail> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects/${params.projectId}/members/${params.targetMemberId}`, {
@@ -265,7 +266,7 @@ export async function createProjectTaskAction(params: {
   projectId: string;
   data: ProjectTaskInput;
 }): Promise<ProjectTaskSummary[]> {
-  const url = process.env.HRMS_API_URL;
+  const url = getHrmsApiUrl();
   if (!url) throw new Error('HRMS_API_URL is not set');
 
   const res = await fetch(`${url}/projects/${params.projectId}/tasks`, {

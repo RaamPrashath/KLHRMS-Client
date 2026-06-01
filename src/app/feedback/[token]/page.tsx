@@ -4,6 +4,7 @@ import { use, useState } from 'react';
 import { Check, Loader2, MessageSquareText } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 import { RichTextEditor } from '@/modules/jobs/components/RichTextEditor';
 
 interface FeedbackInfo {
@@ -15,7 +16,7 @@ interface FeedbackInfo {
 }
 
 function getApiUrl(): string {
-  return process.env.NEXT_PUBLIC_HRMS_API_URL || process.env.HRMS_API_URL || 'http://localhost:8000';
+  return getHrmsApiUrl();
 }
 
 function formatDate(iso: string): string {

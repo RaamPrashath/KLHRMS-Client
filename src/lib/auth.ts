@@ -3,10 +3,17 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { emailOTP } from "better-auth/plugins";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
+import { getAuthAllowedHosts, getPublicAppUrl, getTrustedOrigins } from "@/lib/deployment-env";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const auth = betterAuth({
+    baseURL: {
+        allowedHosts: getAuthAllowedHosts(),
+        fallback: getPublicAppUrl(),
+        protocol: process.env.NODE_ENV === "production" ? "https" : "auto",
+    },
+    trustedOrigins: getTrustedOrigins(),
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
