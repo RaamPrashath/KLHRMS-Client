@@ -349,6 +349,7 @@ export interface MyTicket {
   status: string;
   serviceDate: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export async function createHelpdeskTicketAction(params: {
@@ -577,6 +578,7 @@ export interface MaintenanceTicket {
   createdAt: string;
   loggedByMemberId: string | null;
   loggedByName: string | null;
+  loggedByEmail: string | null;
   assetLifecycleStatus: string | null;
   assetLifecycleStatusLabel: string | null;
   swapPreview: AssetSwapPreview | null;

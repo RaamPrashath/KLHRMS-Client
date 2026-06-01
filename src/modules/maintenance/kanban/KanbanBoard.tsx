@@ -88,6 +88,7 @@ function mapTicketsToIssues(tickets: MaintenanceTicket[]): KanbanIssue[] {
     status: MAINTENANCE_TICKET_STATUS_TO_COLUMN[t.status] || 'open',
     assignees: t.loggedByName ? [{ name: t.loggedByName }] : [],
     raisedByName: t.loggedByName,
+    raisedByEmail: t.loggedByEmail,
     dueDate: t.serviceDate,
     createdAt: t.createdAt,
     commentCount: 0,
