@@ -81,7 +81,7 @@ function buildCalendarDays(year: number, month: number) {
 
 export function LeavePageShell({ orgSlug, memberId }: Readonly<LeavePageShellProps>) {
   const [requestFilters, setRequestFilters] = useState<LeaveRequestFiltersState>(buildDefaultRequestFilters);
-  const [balanceFilters, setBalanceFilters] = useState<LeaveBalanceFiltersState>({ year: new Date().getFullYear() });
+  const [balanceFilters, setBalanceFilters] = useState<LeaveBalanceFiltersState>({ year: new Date().getFullYear(), page: 1, pageSize: 20 });
   const [calendarFilters, setCalendarFilters] = useState<LeaveCalendarFiltersState>({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
