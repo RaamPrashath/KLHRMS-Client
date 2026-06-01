@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
@@ -63,6 +65,14 @@ export function DepartmentTeamsDialog({
       <DialogContent
         className="w-[min(60vw,1100px)]! max-w-none! border border-[#e5e5ea] bg-white p-0 shadow-2xl rounded-[18px] overflow-hidden"
       >
+        <DialogTitle className="sr-only">
+          {department ? `${department.name} teams and staffing` : 'Department teams and staffing'}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          {department
+            ? `View teams, members, and linked projects for the ${department.name} department.`
+            : 'View teams, members, and linked projects for a department.'}
+        </DialogDescription>
         {!department ? (
           <div className="px-8 py-10">
             <p className="text-[15px] text-[#6e6e73]">Unable to load teams for this department.</p>

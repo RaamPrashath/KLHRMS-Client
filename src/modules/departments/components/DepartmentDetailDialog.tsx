@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -47,6 +49,14 @@ export function DepartmentDetailDialog({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl border border-[#e5e5ea] bg-white p-0 shadow-2xl rounded-[18px] overflow-hidden">
+        <DialogTitle className="sr-only">
+          {department ? `${department.name} department details` : 'Department details'}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          {department
+            ? `View the overview, staffing, and status details for the ${department.name} department.`
+            : 'View department details.'}
+        </DialogDescription>
         {!department ? (
           <div className="px-8 py-10">
             <p className="text-[15px] text-[#6e6e73]">Unable to load department details.</p>
