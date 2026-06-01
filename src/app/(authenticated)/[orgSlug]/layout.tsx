@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import organizations, { requireOrgMembership } from "@/lib/organizations";
 import { OrgSidebarShell } from "@/components/sidebar/org-sidebar-shell";
-import { type RolePermissions } from "@/lib/hrms-roles";
+import { getScope, type RolePermissions } from "@/lib/hrms-roles";
 import { requireServerSession } from "@/lib/server-session";
 
 export default async function OrganizationLayout({
@@ -23,11 +23,25 @@ export default async function OrganizationLayout({
         redirect("/organizations");
     }
 
-    const organizationOptions = (await organizations.getOrganizationsForUser(session.user.id)).map((item) => ({
+    const permissions = (member.role?.permissions as RolePermissions) ?? null;
+    const canSwitchOrganizations =
+        getScope(permissions, "permission", "edit") === "organization" ||
+        getScope(permissions, "employees", "edit") === "organization" ||
+        getScope(permissions, "organization", "edit") === "organization";
+
+    const allOrganizationOptions = (await organizations.getOrganizationsForUser(session.user.id)).map((item) => ({
         slug: item.slug,
         name: item.name,
         roleName: item.membership.role?.name ?? null,
     }));
+
+    const dedupedOrganizationOptions = Array.from(
+        new Map(allOrganizationOptions.map((item) => [item.slug, item])).values(),
+    );
+
+    const organizationOptions = canSwitchOrganizations
+        ? dedupedOrganizationOptions
+        : dedupedOrganizationOptions.filter((item) => item.slug === org.slug);
 
     const userImage = (session.user as { image?: string | null }).image ?? null;
 
@@ -36,7 +50,7 @@ export default async function OrganizationLayout({
             orgSlug={org.slug}
             orgName={org.name}
             roleName={member.role?.name ?? null}
-            permissions={(member.role?.permissions as RolePermissions) ?? null}
+            permissions={permissions}
             organizations={organizationOptions}
             user={{
                 name: session.user.name ?? null,

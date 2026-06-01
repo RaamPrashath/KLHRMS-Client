@@ -96,7 +96,7 @@ export function DepartmentsPageShell({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<DepartmentStatus | 'ALL'>('ALL');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
 
   // ── Dialog state ────────────────────────────────────────────────────────────
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);

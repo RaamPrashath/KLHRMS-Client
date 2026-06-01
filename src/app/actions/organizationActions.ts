@@ -26,55 +26,64 @@ export async function createOrganizationAction(formData: FormData) {
 }
 
 export async function updateOrganizationAction(slug: string, formData: FormData) {
-  const name = formData.get('name');
-  const latitudeRaw = formData.get('latitude');
-  const longitudeRaw = formData.get('longitude');
+  try {
+    const name = formData.get('name');
+    const latitudeRaw = formData.get('latitude');
+    const longitudeRaw = formData.get('longitude');
 
-  if (!name || typeof name !== 'string') {
-    throw new Error('Name is required');
+    if (!name || typeof name !== 'string') {
+      return { success: false, error: 'Name is required' };
+    }
+    const normalizedName = name.trim();
+    if (!normalizedName) {
+      return { success: false, error: 'Name is required' };
+    }
+
+    const parseCoordinate = (
+      value: FormDataEntryValue | null,
+      label: 'Latitude' | 'Longitude',
+      min: number,
+      max: number,
+    ) => {
+      if (value == null || value === '') return null;
+      if (typeof value !== 'string') {
+        throw new Error(`${label} must be a valid number`);
+      }
+
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) {
+        throw new Error(`${label} must be a valid number`);
+      }
+      if (parsed < min || parsed > max) {
+        throw new Error(`${label} must be between ${min} and ${max}`);
+      }
+      return parsed;
+    };
+
+    const latitude = parseCoordinate(latitudeRaw, 'Latitude', -90, 90);
+    const longitude = parseCoordinate(longitudeRaw, 'Longitude', -180, 180);
+
+    const session = await requireServerSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    await organizations.requireOrgOwner(session.user.id, slug);
+    await organizations.updateOrganizationSettingsBySlug({
+      slug,
+      name: normalizedName,
+      latitude,
+      longitude,
+    });
+
+    revalidatePath(`/${slug}/settings`);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update organization settings',
+    };
   }
-  const normalizedName = name.trim();
-  if (!normalizedName) {
-    throw new Error('Name is required');
-  }
-
-  const parseCoordinate = (
-    value: FormDataEntryValue | null,
-    label: 'Latitude' | 'Longitude',
-    min: number,
-    max: number,
-  ) => {
-    if (value == null || value === '') return null;
-    if (typeof value !== 'string') {
-      throw new Error(`${label} must be a valid number`);
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-      throw new Error(`${label} must be a valid number`);
-    }
-    if (parsed < min || parsed > max) {
-      throw new Error(`${label} must be between ${min} and ${max}`);
-    }
-    return parsed;
-  };
-
-  const latitude = parseCoordinate(latitudeRaw, 'Latitude', -90, 90);
-  const longitude = parseCoordinate(longitudeRaw, 'Longitude', -180, 180);
-
-  const session = await requireServerSession();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-
-  await organizations.requireOrgOwner(session.user.id, slug);
-  await organizations.updateOrganizationSettingsBySlug({
-    slug,
-    name: normalizedName,
-    latitude,
-    longitude,
-  });
-
-  revalidatePath(`/${slug}/settings`);
-  redirect(`/${slug}/settings`);
 }
 
 export async function deleteOrganizationAction(slug: string, formData: FormData) {

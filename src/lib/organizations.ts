@@ -471,6 +471,20 @@ export async function addOrganizationMemberByEmail(params: {
     });
 
     if (user) {
+      const existingMembership = await tx.member.findFirst({
+        where: {
+          userId: user.id,
+          organizationId: { not: params.organizationId },
+        },
+        select: { id: true, organizationId: true },
+      });
+
+      if (existingMembership) {
+        throw new Error(
+          "This email is already assigned to another organization. Use a different email for this invited user.",
+        );
+      }
+
       const existingMember = await tx.member.findUnique({
         where: {
           organizationId_userId: {
@@ -501,6 +515,21 @@ export async function addOrganizationMemberByEmail(params: {
     }
 
     try {
+      const existingInvite = await tx.organizationInvite.findFirst({
+        where: {
+          email,
+          organizationId: { not: params.organizationId },
+          status: "PENDING",
+        },
+        select: { id: true, organizationId: true },
+      });
+
+      if (existingInvite) {
+        throw new Error(
+          "This email already has a pending invite for another organization. Use a different email for this invited user.",
+        );
+      }
+
       const invite = await tx.organizationInvite.upsert({
         where: {
           organizationId_email: {
@@ -563,6 +592,20 @@ export async function addOrganizationMemberWithAccount(params: {
     });
 
     if (existingUser) {
+      const existingMembership = await tx.member.findFirst({
+        where: {
+          userId: existingUser.id,
+          organizationId: { not: params.organizationId },
+        },
+        select: { id: true, organizationId: true },
+      });
+
+      if (existingMembership) {
+        throw new Error(
+          "This email is already assigned to another organization. Use a different email for this invited user.",
+        );
+      }
+
       const existingMember = await tx.member.findUnique({
         where: {
           organizationId_userId: {
