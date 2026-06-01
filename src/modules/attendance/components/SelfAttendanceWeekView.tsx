@@ -213,7 +213,7 @@ export function SelfAttendanceWeekView({
                         className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-medium"
                         style={{ backgroundColor: `${statusInfo.color}0D`, color: statusInfo.color }}
                       >
-                        <StatusDot status={record.status} isLeave={isLeave} />
+                        <StatusDot status={record?.status ?? null} isLeave={isLeave} />
                         {statusInfo.text}
                       </div>
                     ) : (
