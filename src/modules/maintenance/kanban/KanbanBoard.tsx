@@ -15,6 +15,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { toast } from 'sonner';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCardDragOverlay } from './KanbanCardDragOverlay';
+import { MaintenanceIssueDialog } from './MaintenanceIssueDialog';
 import { readError } from '@/modules/assets/lib/assetUtils';
 import type {
   ColumnId,
@@ -79,12 +80,14 @@ function mapTicketsToIssues(tickets: MaintenanceTicket[]): KanbanIssue[] {
     assetId: t.assetId ?? '',
     title: t.assetName ?? t.subject ?? '',
     ticketId: t.ticketId,
+    maintenanceType: t.maintenanceType,
     description: t.issueDescription,
     assetLifecycleStatus: t.assetLifecycleStatus,
     assetLifecycleStatusLabel: t.assetLifecycleStatusLabel,
     priority: resolvePriority(t),
     status: MAINTENANCE_TICKET_STATUS_TO_COLUMN[t.status] || 'open',
     assignees: t.loggedByName ? [{ name: t.loggedByName }] : [],
+    raisedByName: t.loggedByName,
     dueDate: t.serviceDate,
     createdAt: t.createdAt,
     commentCount: 0,
@@ -119,8 +122,10 @@ export function KanbanBoard({
   onOpenSwap: (ticketId: string) => void;
 }) {
   const [activeIssue, setActiveIssue] = useState<KanbanIssue | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<KanbanIssue | null>(null);
   const [grouped, setGrouped] = useState<Record<ColumnId, KanbanIssue[]> | null>(null);
   const [groupedVersion, setGroupedVersion] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const allIssues = useMemo(() => mapTicketsToIssues(tickets), [tickets]);
   const ticketVersion = useMemo(
@@ -161,6 +166,68 @@ export function KanbanBoard({
   function handleDragStart(event: DragStartEvent) {
     const issue = event.active.data.current?.issue as KanbanIssue | undefined;
     if (issue) setActiveIssue(issue);
+  }
+
+  function moveIssueLocally(issueId: string, toColId: ColumnId) {
+    setGrouped((prev) => {
+      const current = prev && groupedVersion === ticketVersion ? prev : safeGrouped;
+      const updated: Record<ColumnId, KanbanIssue[]> = {} as Record<ColumnId, KanbanIssue[]>;
+      let movedIssue: KanbanIssue | null = null;
+
+      for (const key of COLUMN_IDS) {
+        updated[key] = current[key]
+          .filter((item) => {
+            if (item.id !== issueId) return true;
+            movedIssue = { ...item, status: toColId };
+            return false;
+          });
+      }
+
+      if (movedIssue) {
+        updated[toColId] = [...updated[toColId], movedIssue];
+      }
+
+      return movedIssue ? updated : current;
+    });
+    setGroupedVersion(ticketVersion);
+    setSelectedIssue((current) => (current && current.id === issueId ? { ...current, status: toColId } : current));
+  }
+
+  async function updateIssueStatus(
+    issue: KanbanIssue,
+    toColId: ColumnId,
+    options?: { skipLocalMove?: boolean; force?: boolean },
+  ) {
+    if (!options?.force && issue.status === toColId) return;
+
+    const targetStatus = COLUMN_TO_TICKET_STATUS[toColId];
+    if (!targetStatus) return;
+
+    const updateData: AssetMaintenanceUpdateInput = {
+      maintenanceId: issue.id,
+      status: targetStatus,
+    };
+
+    if (targetStatus === 'COMPLETED') {
+      updateData.completedDate = new Date().toISOString().split('T')[0];
+      updateData.nextAssetStatus = 'AVAILABLE';
+    }
+
+    if (!options?.skipLocalMove) {
+      moveIssueLocally(issue.id, toColId);
+    }
+    setIsUpdatingStatus(true);
+    try {
+      await onUpdateMaintenance({
+        assetId: issue.assetId,
+        data: updateData,
+      });
+      setSelectedIssue((current) => (current && current.id === issue.id ? { ...current, status: toColId } : current));
+    } catch (error) {
+      toast.error(readError(error, 'Failed to update status'));
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -225,24 +292,10 @@ export function KanbanBoard({
     setActiveIssue(null);
 
     if (fromCol !== toColId && activeData) {
-      const targetStatus = COLUMN_TO_TICKET_STATUS[toColId];
-      if (targetStatus) {
-        const updateData: AssetMaintenanceUpdateInput = {
-          maintenanceId: activeData.id,
-          status: targetStatus,
-        };
-        if (targetStatus === 'COMPLETED') {
-          updateData.completedDate = new Date().toISOString().split('T')[0];
-          updateData.nextAssetStatus = 'AVAILABLE';
-        }
-        try {
-          await onUpdateMaintenance({
-            assetId: activeData.assetId,
-            data: updateData,
-          });
-        } catch (error) {
-          toast.error(readError(error, 'Failed to update status'));
-        }
+      try {
+        await updateIssueStatus(activeData, toColId, { skipLocalMove: true, force: true });
+      } catch {
+        // error toast is already handled in updateIssueStatus
       }
     }
   }
@@ -264,6 +317,7 @@ export function KanbanBoard({
               isCollapsed={collapsed[column.id]}
               onToggleCollapse={() => onToggleColumn(column.id)}
               onOpenSwap={onOpenSwap}
+              onOpenIssue={setSelectedIssue}
             />
           ))}
         </div>
@@ -272,6 +326,18 @@ export function KanbanBoard({
           {activeIssue && <KanbanCardDragOverlay issue={activeIssue} />}
         </DragOverlay>
       </DndContext>
+
+      <MaintenanceIssueDialog
+        issue={selectedIssue}
+        open={Boolean(selectedIssue)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedIssue(null);
+        }}
+        onMoveTo={(issue, target) => {
+          void updateIssueStatus(issue, target);
+        }}
+        isUpdating={isUpdatingStatus}
+      />
     </div>
   );
 }
