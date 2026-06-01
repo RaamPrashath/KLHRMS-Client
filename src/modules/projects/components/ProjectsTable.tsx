@@ -10,6 +10,14 @@ import {
 } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody as ShadcnTableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ProjectsFilters } from './ProjectsFilters';
 import { ProjectsPagination } from './ProjectsPagination';
@@ -41,6 +49,22 @@ const STATUS_STYLES: Record<ProjectStatus, string> = {
 
 const SKELETON_COUNT = 20;
 const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-row-${i}`);
+
+function colWidth(id: string): string {
+  const map: Record<string, string> = {
+    project: 'w-[28%]',
+    client: 'w-[22%]',
+    team: 'w-[20%]',
+    people: 'w-[10%]',
+    status: 'w-[14%]',
+    actions: 'w-[6%]',
+  };
+  return map[id] ?? 'w-[10%]';
+}
+
+function colAlign(id: string): string {
+  return id === 'project' || id === 'client' || id === 'team' ? 'justify-start' : 'justify-center';
+}
 
 const columns: ColumnDef<ProjectSummary>[] = [
   {
@@ -90,73 +114,93 @@ const columns: ColumnDef<ProjectSummary>[] = [
   },
 ];
 
-interface TableBodyProps {
+interface ProjectsTableBodyProps {
   isLoading: boolean;
   rows: Row<ProjectSummary>[];
   pageSize: number;
+  columnCount: number;
   onRowClick: (project: ProjectSummary) => void;
 }
 
-function TableBody({ isLoading, rows, pageSize, onRowClick }: Readonly<TableBodyProps>) {
+function ProjectsTableBody({
+  isLoading,
+  rows,
+  pageSize,
+  columnCount,
+  onRowClick,
+}: Readonly<ProjectsTableBodyProps>) {
   if (isLoading) {
     return (
-      <div className="flex flex-col divide-y divide-black/4 bg-surface">
+      <ShadcnTableBody className="bg-surface">
         {SKELETON_IDS.slice(0, pageSize).map((id) => (
-          <div key={id} className="border-b border-black/4 p-6">
-            <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
-          </div>
+          <TableRow key={id} className="border-black/4 hover:bg-transparent">
+            <TableCell colSpan={columnCount} className="p-6">
+              <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+            </TableCell>
+          </TableRow>
         ))}
-      </div>
+      </ShadcnTableBody>
     );
   }
 
   if (rows.length === 0) {
     return (
-      <div className="bg-surface py-16 text-center text-sm text-neutral-400">
-        No projects found.
-      </div>
+      <ShadcnTableBody className="bg-surface">
+        <TableRow className="border-black/4 hover:bg-transparent">
+          <TableCell colSpan={columnCount} className="py-16 text-center text-sm text-neutral-400">
+            No projects found.
+          </TableCell>
+        </TableRow>
+      </ShadcnTableBody>
     );
   }
 
   return (
-    <div className="flex flex-col bg-surface">
+    <ShadcnTableBody className="bg-surface">
       {rows.map((row) => {
         const project = row.original;
         return (
-          <div
+          <TableRow
             key={row.id}
             onClick={() => onRowClick(project)}
-            className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 cursor-pointer"
+            className="cursor-pointer border-black/4 transition-colors hover:bg-black/[0.02]"
           >
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
-            </div>
+            {row.getVisibleCells().map((cell) => (
+              <TableCell
+                key={cell.id}
+                className={cn(
+                  colWidth(cell.column.id),
+                  'px-3 py-3 whitespace-nowrap',
+                  cell.column.id === 'project' || cell.column.id === 'client' || cell.column.id === 'team'
+                    ? 'text-left'
+                    : 'text-center',
+                )}
+              >
+                <div className={cn('flex', colAlign(cell.column.id))}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </div>
+              </TableCell>
+            ))}
 
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[1].column.columnDef.cell, row.getVisibleCells()[1].getContext())}
-            </div>
-
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[2].column.columnDef.cell, row.getVisibleCells()[2].getContext())}
-            </div>
-
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[3].column.columnDef.cell, row.getVisibleCells()[3].getContext())}
-            </div>
-
-            <div className="flex-1 flex justify-center">
-              {flexRender(row.getVisibleCells()[4].column.columnDef.cell, row.getVisibleCells()[4].getContext())}
-            </div>
-
-            <div className="w-10 shrink-0 flex justify-end">
-              <Button variant="ghost" className="h-9 px-3 text-neutral-700 hover:bg-black/5 rounded-xl">
-                <ChevronRight className="size-4 opacity-50" />
-              </Button>
-            </div>
-          </div>
+            <TableCell className="w-[6%] px-3 py-3 text-right">
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRowClick(project);
+                  }}
+                  className="h-9 rounded-xl px-3 text-neutral-700 hover:bg-black/5"
+                >
+                  <ChevronRight className="size-4 opacity-50" />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
         );
       })}
-    </div>
+    </ShadcnTableBody>
   );
 }
 
@@ -184,6 +228,8 @@ export function ProjectsTable({
     pageCount: totalPages,
   });
 
+  const columnCount = table.getAllLeafColumns().length + 1;
+
   return (
     <div className="flex flex-col flex-1 mx-7 mb-7">
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
@@ -198,22 +244,40 @@ export function ProjectsTable({
         </div>
 
         <div className="w-full">
-          <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3">
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Project</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Client</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Team</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">People</div>
-            <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</div>
-            <div className="w-10 shrink-0" />
-          </div>
+          <div className="px-4">
+            <Table className="table-fixed">
+              <TableHeader className="bg-canvas/50">
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id} className="border-black/[0.04] hover:bg-transparent">
+                    {hg.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className={cn(
+                          colWidth(header.id),
+                          'h-auto px-3 py-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
+                          header.id === 'project' || header.id === 'client' || header.id === 'team'
+                            ? 'text-left'
+                            : 'text-center',
+                        )}
+                      >
+                        {header.isPlaceholder
+                          ? ''
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                    <TableHead className="w-[6%] px-3 py-3" />
+                  </TableRow>
+                ))}
+              </TableHeader>
 
-          <div>
-            <TableBody
-              isLoading={isLoading}
-              rows={table.getRowModel().rows}
-              pageSize={pageSize}
-              onRowClick={onRowClick}
-            />
+              <ProjectsTableBody
+                isLoading={isLoading}
+                rows={table.getRowModel().rows}
+                pageSize={pageSize}
+                columnCount={columnCount}
+                onRowClick={onRowClick}
+              />
+            </Table>
           </div>
         </div>
 

@@ -22,7 +22,7 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
   const [roleId, setRoleId] = useState<string | undefined>(undefined);
   const [attendanceStatus, setAttendanceStatus] = useState<AttendanceTodayStatus | undefined>(undefined);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
 
   // ── Role editing state ──────────────────────────────────────────────────────
   const [editTarget, setEditTarget] = useState<{ memberId: string; currentRoleName: string | null } | null>(null);

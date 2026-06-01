@@ -30,12 +30,6 @@ export function createEmptyPermissions(): RolePermissions {
 export function createEmployeePermissions(): RolePermissions {
   const permissions = createEmptyPermissions();
   
-  // People
-  permissions.employees.view = 'self';
-  permissions.organization.view = 'organization'; // Can see org chart
-  permissions.departments.view = 'organization'; // Can see departments
-  permissions.permission.view = 'self'; // Can see their own role
-  
   // Time & Attendance
   permissions.attendance.view = 'self';
   permissions.attendance.create = 'self';
@@ -59,13 +53,6 @@ export function createEmployeePermissions(): RolePermissions {
   permissions.jobs.edit = 'self';
   permissions.jobs.delete = 'self';
 
-  // Recruitment
-  permissions.candidates.view = 'self';
-  permissions.candidates.create = 'self';
-  permissions.candidates.edit = 'self';
-  permissions.candidates.delete = 'self';
-  permissions.candidates.approve = 'self';
-
   permissions.interviews.view = 'self';
   permissions.interviews.create = 'self';
   permissions.interviews.edit = 'self';
@@ -83,7 +70,6 @@ export function createEmployeePermissions(): RolePermissions {
   permissions.assets.view = 'self'; // Can see assigned assets
   permissions.helpdesk.view = 'self';
   permissions.helpdesk.create = 'self';
-  permissions.documents.view = 'organization'; // Can view company documents
   
   return permissions;
 }
