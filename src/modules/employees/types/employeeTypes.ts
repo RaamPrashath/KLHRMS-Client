@@ -27,6 +27,7 @@ export interface EmployeeListItem {
   role: RoleBrief | null;
   joined_at: string;
   attendance_today: AttendanceTodayInfo;
+  microsoft_synced: boolean;
 }
 
 export interface EmployeeListResponse {

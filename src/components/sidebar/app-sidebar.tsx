@@ -55,6 +55,7 @@ import { cn } from "@/lib/utils";
 import {
     type RolePermissions,
     filterNavByPermissions,
+    getScope,
 } from "@/lib/hrms-roles";
 import { OrganizationSwitcher, type SidebarOrganizationOption } from "@/components/sidebar/organization-switcher";
 
@@ -266,11 +267,18 @@ function UserFooter({
     user,
     orgSlug,
     roleName,
+    permissions,
 }: {
     user: AppSidebarProps["user"];
     orgSlug: string;
     roleName: string | null;
+    permissions: RolePermissions | null;
 }) {
+    const isAdmin = permissions
+        ? getScope(permissions, "permission", "edit") === "organization" ||
+          getScope(permissions, "employees", "edit") === "organization" ||
+          getScope(permissions, "organization", "edit") === "organization"
+        : false;
     const { open } = useSidebar();
     const router = useRouter();
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -390,14 +398,25 @@ function UserFooter({
 
                         <div className="space-y-0.5">
                             <Link
-                                href={`/${orgSlug}/settings`}
+                                href={`/${orgSlug}/settings/account`}
                                 role="menuitem"
                                 onClick={() => setDropdownOpen(false)}
                                 className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/70 transition-colors hover:bg-white/5 hover:text-white"
                             >
                                 <GearIcon className="h-4 w-4 shrink-0" />
-                                Settings
+                                Account Settings
                             </Link>
+                            {isAdmin && (
+                                <Link
+                                    href={`/${orgSlug}/settings`}
+                                    role="menuitem"
+                                    onClick={() => setDropdownOpen(false)}
+                                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+                                >
+                                    <Building2 className="h-4 w-4 shrink-0" />
+                                    Organization Settings
+                                </Link>
+                            )}
                             <div className="mx-2 my-1 h-px bg-white/5" />
                             <button
                                 role="menuitem"
@@ -447,7 +466,7 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
                     />
                 </div>
 
-                <UserFooter user={user} orgSlug={orgSlug} roleName={roleName} />
+                <UserFooter user={user} orgSlug={orgSlug} roleName={roleName} permissions={permissions} />
             </SidebarBody>
         </Sidebar>
     );

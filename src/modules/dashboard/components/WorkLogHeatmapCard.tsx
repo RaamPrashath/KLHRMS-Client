@@ -65,15 +65,9 @@ function getDayTone(totalHours: number, isOffDay: boolean, isPastDay: boolean) {
     };
   }
   if (totalHours === 0) {
-    if (isPastDay) {
-      return {
-        backgroundClassName: "bg-[#fb7185] text-white",
-        legendLabel: "Absent",
-      };
-    }
     return {
       backgroundClassName: "bg-[#eff2f6] text-[#8a94a6]",
-      legendLabel: "Not clocked in",
+      legendLabel: "No entry",
     };
   }
   if (totalHours < 5) {
@@ -419,21 +413,10 @@ export function WorkLogHeatmapCard({
           </span>
           <span className="flex items-center gap-1.5">
             <span
-              className={cn("bg-[#fb7185]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
+              className={cn("bg-[#eff2f6]", isEmployeeVariant ? "size-3 rounded-full" : "size-3 rounded-[6px]")}
             />
-            Absent
+            No entry
           </span>
-          {isEmployeeVariant ? (
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-[#d1d5db]" />
-              Off Day
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-[6px] border border-[#e3e9f2] bg-[#f5f7fb]" />
-              Off Day
-            </span>
-          )}
         </div>
       </div>
 

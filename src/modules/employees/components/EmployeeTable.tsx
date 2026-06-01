@@ -56,6 +56,7 @@ function colWidth(id: string): string {
     employee: 'w-[240px]',
     email: 'w-[200px]',
     role: 'w-[170px]',
+    source: 'w-[120px]',
     attendance: 'w-[150px]',
     actions: 'w-[100px]',
   };
@@ -98,14 +99,9 @@ function buildColumns(
                 {getInitials(name)}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex flex-col items-start">
-              <p className="truncate text-sm font-medium text-neutral-900" title={name}>
-                {name}
-              </p>
-              <p className="truncate text-[11px] text-neutral-500" title={email}>
-                {email}
-              </p>
-            </div>
+            <p className="min-w-0 truncate text-sm font-medium text-neutral-900" title={name}>
+              {name}
+            </p>
           </div>
         );
       },
@@ -142,6 +138,27 @@ function buildColumns(
             </button>
           )}
         </div>
+      ),
+    },
+    {
+      id: 'source',
+      header: 'Source',
+      cell: ({ row }) => (
+        row.original.microsoft_synced ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 border border-blue-200">
+            <svg className="size-3" viewBox="0 0 21 21" fill="none" aria-hidden="true">
+              <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+              <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+              <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+              <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+            </svg>
+            Microsoft
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-0.5 text-[11px] font-medium text-neutral-500">
+            Manual
+          </span>
+        )
       ),
     },
     {
