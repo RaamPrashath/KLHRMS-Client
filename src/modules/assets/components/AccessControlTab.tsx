@@ -27,7 +27,15 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from '@/components/ui/combobox';
 import {
   Select,
   SelectContent,
@@ -50,15 +58,21 @@ import {
   useAccessLogsQuery,
   useAccessLogSummaryQuery,
 } from '@/modules/assets/hooks/useAccessControlQuery';
+import { useEmployeesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { formatDate, humanize } from '@/modules/assets/lib/assetUtils';
 import type { AccessControlAssignmentItem, AccessControlLogItem } from '@/modules/assets/types/accessControlTypes';
+import type { EmployeeListItem } from '@/modules/employees/types/employeeTypes';
 
 type SubTab = 'logs' | 'assignments';
 
 const ENTRY_METHODS = ['CARD_SWIPE', 'BIOMETRIC', 'MANUAL', 'QR_CODE', 'KEYPAD'];
 const LOG_STATUSES = ['GRANTED', 'DENIED', 'EXPIRED'];
 const DIRECTIONS = ['IN', 'OUT'];
-const POINTS = ['Main Gate', 'Side Gate', 'Server Room', 'Floor 1', 'Floor 2', 'Floor 3', 'Parking', 'Lab'];
+const POINTS = ['Front Door', 'Meeting Room', 'Server Room', 'HR Office', 'Parking Gate'];
+
+function employeeDisplayName(employee: EmployeeListItem): string {
+  return employee.name.trim() || employee.email.trim() || employee.member_id;
+}
 
 // ── Detail Dialog ────────────────────────────────────────────────────────────
 
@@ -204,18 +218,60 @@ function GrantAccessDialog({
   memberId: string;
 }) {
   const mutations = useAccessControlMutations(orgSlug, memberId);
-  const [employeeName, setEmployeeName] = useState('');
-  const [accessPoint, setAccessPoint] = useState('');
+  const employeesQuery = useEmployeesQuery(orgSlug, memberId, {
+    page: 1,
+    pageSize: 100,
+    search: '',
+  });
+  const employees = employeesQuery.data?.items ?? [];
+
+  const [employeeQuery, setEmployeeQuery] = useState('');
+  const [selectedEmployeeMemberId, setSelectedEmployeeMemberId] = useState<string | null>(null);
+  const [accessPointQuery, setAccessPointQuery] = useState('');
+  const [selectedAccessPoint, setSelectedAccessPoint] = useState<string | null>(null);
+  const [isEmployeeOpen, setIsEmployeeOpen] = useState(false);
+  const [isAccessPointOpen, setIsAccessPointOpen] = useState(false);
+
+  const selectedEmployee = useMemo(
+    () => employees.find((employee) => employee.member_id === selectedEmployeeMemberId) ?? null,
+    [employees, selectedEmployeeMemberId],
+  );
+
+  const filteredEmployees = useMemo(() => {
+    const query = employeeQuery.toLowerCase().trim();
+    if (!query) return employees;
+
+    return employees.filter((employee) => {
+      const displayName = employeeDisplayName(employee).toLowerCase();
+      return (
+        displayName.includes(query) ||
+        employee.email.toLowerCase().includes(query) ||
+        employee.member_id.toLowerCase().includes(query)
+      );
+    });
+  }, [employeeQuery, employees]);
+
+  const filteredAccessPoints = useMemo(() => {
+    const query = accessPointQuery.toLowerCase().trim();
+    if (!query) return POINTS;
+    return POINTS.filter((point) => point.toLowerCase().includes(query));
+  }, [accessPointQuery]);
+
+  function resetForm() {
+    setEmployeeQuery('');
+    setSelectedEmployeeMemberId(null);
+    setAccessPointQuery('');
+    setSelectedAccessPoint(null);
+  }
 
   async function handleGrant() {
-    if (!employeeName.trim() || !accessPoint.trim()) return;
+    if (!selectedEmployeeMemberId || !selectedAccessPoint) return;
     await mutations.createAssignment.mutateAsync({
-      employeeMemberId: employeeName.trim(),
-      accessPoint: accessPoint.trim(),
+      employeeMemberId: selectedEmployeeMemberId,
+      accessPoint: selectedAccessPoint,
       status: 'ACTIVE',
     });
-    setEmployeeName('');
-    setAccessPoint('');
+    resetForm();
     onOpenChange(false);
   }
 
@@ -244,26 +300,113 @@ function GrantAccessDialog({
 
             <div className="space-y-4 px-6 py-5">
               <div className="space-y-1.5">
-                <label className="text-[12px] font-medium text-[#6b7280]">Employee Member ID</label>
-                <Input
-                  value={employeeName}
-                  onChange={(e) => setEmployeeName(e.target.value)}
-                  placeholder="Enter member ID..."
-                  className="h-9 rounded-lg border-[#e5e7eb] text-[13px]"
-                />
+                <label className="text-[12px] font-medium text-[#6b7280]">Employee</label>
+                <Combobox
+                  open={isEmployeeOpen}
+                  onOpenChange={(nextOpen) => {
+                    setIsEmployeeOpen(nextOpen);
+                    if (!nextOpen) {
+                      setEmployeeQuery(selectedEmployee ? employeeDisplayName(selectedEmployee) : '');
+                    }
+                  }}
+                  value={selectedEmployee ? employeeDisplayName(selectedEmployee) : null}
+                  onValueChange={(value) => {
+                    const employee = employees.find((item) => employeeDisplayName(item) === value);
+                    setSelectedEmployeeMemberId(employee?.member_id ?? null);
+                    setEmployeeQuery(employee ? employeeDisplayName(employee) : '');
+                  }}
+                  inputValue={employeeQuery}
+                  onInputValueChange={setEmployeeQuery}
+                >
+                  <div className="flex items-center rounded-lg border border-[#e5e7eb] bg-white px-3">
+                    <User2 className="mr-2 size-4 shrink-0 text-[#9ca3af]" />
+                    <ComboboxInput
+                      placeholder="Search employee name, email, or member ID..."
+                      showTrigger={false}
+                      showClear={false}
+                      className="w-full border-0 bg-transparent shadow-none [&>div]:h-9 [&>div]:border-0 [&>div]:bg-transparent [&>div]:shadow-none"
+                    />
+                    <ComboboxTrigger className="ml-1 text-[#9ca3af]" />
+                  </div>
+                  <ComboboxContent className="rounded-lg border border-[#e2e5ea] p-1 shadow-none">
+                    <ComboboxList>
+                      {employeesQuery.isLoading ? (
+                        <div className="px-3 py-4 text-center text-[13px] text-[#9ca3af]">Loading employees...</div>
+                      ) : filteredEmployees.length === 0 ? (
+                        <ComboboxEmpty>No employees found</ComboboxEmpty>
+                      ) : (
+                        filteredEmployees.map((employee) => (
+                          <ComboboxItem
+                            key={employee.member_id}
+                            value={employeeDisplayName(employee)}
+                            className="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[13px] data-selected:bg-[#f8f9fa]"
+                          >
+                            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] text-[#6b7280]">
+                              <User2 className="size-3.5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium text-[#111827]">{employeeDisplayName(employee)}</p>
+                              <p className="truncate text-[11px] text-[#6b7280]">
+                                {employee.email} · {employee.member_id}
+                              </p>
+                            </div>
+                          </ComboboxItem>
+                        ))
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[12px] font-medium text-[#6b7280]">Access Point</label>
-                <Input
-                  value={accessPoint}
-                  onChange={(e) => setAccessPoint(e.target.value)}
-                  placeholder="e.g. Server Room, Main Gate..."
-                  className="h-9 rounded-lg border-[#e5e7eb] text-[13px]"
-                />
+                <Combobox
+                  open={isAccessPointOpen}
+                  onOpenChange={(nextOpen) => {
+                    setIsAccessPointOpen(nextOpen);
+                    if (!nextOpen) {
+                      setAccessPointQuery(selectedAccessPoint ?? '');
+                    }
+                  }}
+                  value={selectedAccessPoint}
+                  onValueChange={(value) => {
+                    setSelectedAccessPoint(value as string);
+                    setAccessPointQuery(value as string);
+                  }}
+                  inputValue={accessPointQuery}
+                  onInputValueChange={setAccessPointQuery}
+                >
+                  <div className="flex items-center rounded-lg border border-[#e5e7eb] bg-white px-3">
+                    <DoorOpen className="mr-2 size-4 shrink-0 text-[#9ca3af]" />
+                    <ComboboxInput
+                      placeholder="Search access point..."
+                      showTrigger={false}
+                      showClear={false}
+                      className="w-full border-0 bg-transparent shadow-none [&>div]:h-9 [&>div]:border-0 [&>div]:bg-transparent [&>div]:shadow-none"
+                    />
+                    <ComboboxTrigger className="ml-1 text-[#9ca3af]" />
+                  </div>
+                  <ComboboxContent className="rounded-lg border border-[#e2e5ea] p-1 shadow-none">
+                    <ComboboxList>
+                      {filteredAccessPoints.length === 0 ? (
+                        <ComboboxEmpty>No access points found</ComboboxEmpty>
+                      ) : (
+                        filteredAccessPoints.map((point) => (
+                          <ComboboxItem
+                            key={point}
+                            value={point}
+                            className="rounded-md px-3 py-2.5 text-[13px] font-medium text-[#111827] data-selected:bg-[#f8f9fa]"
+                          >
+                            {point}
+                          </ComboboxItem>
+                        ))
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
               </div>
               <Button
                 onClick={handleGrant}
-                disabled={!employeeName.trim() || !accessPoint.trim() || mutations.createAssignment.isPending}
+                disabled={!selectedEmployeeMemberId || !selectedAccessPoint || mutations.createAssignment.isPending}
                 className="mt-2 h-9 w-full rounded-lg bg-[#1d1d1f] text-[13px] font-medium text-white hover:bg-[#333]"
               >
                 {mutations.createAssignment.isPending ? 'Granting...' : 'Grant Access'}
