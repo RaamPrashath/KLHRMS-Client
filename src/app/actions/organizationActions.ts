@@ -1,5 +1,6 @@
 'use server';
 
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import organizations from '@/lib/organizations';
@@ -180,7 +181,7 @@ export async function updateEmployeeRoleAction(
       return { success: false, error: 'You do not have permission to edit employee roles' };
     }
 
-    const apiUrl = process.env.HRMS_API_URL;
+    const apiUrl = getHrmsApiUrl();
     if (!apiUrl) return { success: false, error: 'HRMS_API_URL not configured' };
 
     const res = await fetch(`${apiUrl}/employees/${encodeURIComponent(memberId)}/role`, {

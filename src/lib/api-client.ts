@@ -1,7 +1,7 @@
 /**
- * Single source of truth for the FastAPI backend URL.
- * This is the only file in the codebase that reads NEXT_PUBLIC_API_URL.
+ * Browser-facing FastAPI API root.
  */
 
-export const baseUrl =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api/v1";
+import { getHrmsApiUrl } from "@/lib/deployment-env";
+
+export const baseUrl = `${getHrmsApiUrl()}/api/v1`;

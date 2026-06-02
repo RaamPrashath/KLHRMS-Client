@@ -1,5 +1,6 @@
 'use server';
 
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 import type {
   AccessControlAssignmentItem,
   AccessControlAssignmentListResponse,
@@ -9,9 +10,7 @@ import type {
 } from '@/modules/assets/types/accessControlTypes';
 
 function getApiUrl(): string {
-  const url = process.env.HRMS_API_URL;
-  if (!url) throw new Error('HRMS_API_URL environment variable is not set');
-  return url;
+  return getHrmsApiUrl();
 }
 
 function buildHeaders(orgSlug: string, memberId: string): HeadersInit {

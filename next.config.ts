@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
+import { getHrmsApiUrl } from "./src/lib/deployment-env";
 
-const API_URL = process.env.NEXT_PUBLIC_HRMS_API_URL || process.env.HRMS_API_URL || "http://localhost:8000";
+const API_URL = getHrmsApiUrl();
 
 const nextConfig: NextConfig = {
   reactCompiler: true,

@@ -1,5 +1,6 @@
 'use server';
 
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { requireOrgMembership } from '@/lib/organizations';
@@ -29,9 +30,7 @@ import type {
 } from '@/modules/procurement/types/procurementTypes';
 
 function getApiUrl(): string {
-  const url = process.env.HRMS_API_URL;
-  if (!url) throw new Error('HRMS_API_URL environment variable is not set');
-  return url;
+  return getHrmsApiUrl();
 }
 
 function buildHeaders(orgSlug: string, memberId: string): HeadersInit {
