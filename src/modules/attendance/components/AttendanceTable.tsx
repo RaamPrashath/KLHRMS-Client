@@ -1,21 +1,19 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { List, CalendarDays, CalendarRange } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AttendanceFilters } from '@/modules/attendance/components/AttendanceFilters';
 import { AttendanceRow } from '@/modules/attendance/components/AttendanceRow';
 import { AttendanceExportButtons } from '@/modules/attendance/components/AttendanceExportButtons';
+import { EmployeePagination } from '@/modules/employees/components/EmployeePagination';
 import { AttendancePivotView, type PivotMode } from '@/modules/attendance/components/AttendancePivotView';
 import { SelfAttendanceWeekView } from '@/modules/attendance/components/SelfAttendanceWeekView';
-import { AttendanceWorkLogDialog } from '@/modules/attendance/components/AttendanceWorkLogDialog';
-import {
-  formatDate,
-  formatTime,
-  formatHours,
-  getTodayIST,
-} from '@/modules/attendance/utils/attendanceFormatters';
+
+import { getTodayIST } from '@/modules/attendance/utils/attendanceFormatters';
+import { fetchHolidaysAction } from '@/modules/leave/api/leaveServerActions';
 import { useEmployeesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
@@ -101,6 +99,43 @@ const VIEW_MODES: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
   { mode: 'monthly', icon: <CalendarRange className="size-3.5" />, label: 'Month' },
 ];
 
+interface AttendanceListRow {
+  key: string;
+  date: string;
+  employeeId: string;
+  employeeName: string;
+  record: AttendanceRecord | null;
+}
+
+function parseYmd(date: string): Date {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1);
+}
+
+function toYear(date: string): number {
+  return Number(date.slice(0, 4));
+}
+
+function enumerateDatesDesc(from: string, to: string): string[] {
+  const dates: string[] = [];
+  const cursor = parseYmd(to);
+  const end = parseYmd(from);
+  while (cursor >= end) {
+    dates.push(toYMD(cursor));
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return dates;
+}
+
+function getYearsInRange(from: string, to: string): number[] {
+  const start = toYear(from);
+  const end = toYear(to);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return [];
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
+
+const LIST_HOLIDAY_FETCH_SIZE = 200;
+
 // ─── Tab slider ───────────────────────────────────────────────────────────────
 
 function TabSlider({
@@ -169,16 +204,11 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     onRetry,
     filters,
     onFiltersChange,
-    canEdit,
-    canDelete,
     showEmployeeColumn,
-    onEdit,
-    onDelete,
   } = props;
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [pivotAnchor, setPivotAnchor] = useState<Date>(() => new Date());
-  const [workLogRecordId, setWorkLogRecordId] = useState<string | null>(null);
 
   useEffect(() => {
     if (viewMode === 'list') return;
@@ -203,7 +233,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
         dateFrom: undefined,
         dateTo: undefined,
         page: 1,
-        pageSize: 20,
+        pageSize: 50,
       });
     }
   }
@@ -224,10 +254,10 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     setPivotAnchor(new Date());
   }
 
-  const items = data?.items ?? [];
-  const pageSize = filters.pageSize ?? 20;
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
+  const pageSize = filters.pageSize ?? 50;
+  const today = getTodayIST();
   const currentPage = filters.page ?? 1;
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
 
   const exportRows: AttendanceExportRow[] = items.map((r) => ({
     id: r.id,
@@ -283,12 +313,13 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
       : getMonthStart(pivotAnchor),
   );
 
-  const columnCount = showEmployeeColumn ? 6 : 5;
 
   // Fetch all employees for org-scope pivot view
   const { data: employeeData } = useEmployeesQuery(orgSlug, memberId, {
     page: 1,
     pageSize: 200,
+  }, {
+    enabled: showEmployeeColumn,
   });
   const allEmployees = showEmployeeColumn
     ? (employeeData?.items ?? []).map((e) => ({
@@ -296,6 +327,106 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
         name: e.name,
       }))
     : undefined;
+
+  const dateEmployeeMap = useMemo(() => {
+    const map = new Map<string, Map<string, AttendanceRecord>>();
+    for (const r of items) {
+      if (!map.has(r.date)) map.set(r.date, new Map());
+      map.get(r.date)!.set(r.employeeId, r);
+    }
+    return map;
+  }, [items]);
+
+  const sortedDates = useMemo(() => {
+    const recordDates = Array.from(dateEmployeeMap.keys()).filter((d) => d <= today);
+    const oldestRecordDate = recordDates.sort((a, b) => a.localeCompare(b))[0];
+    const rangeEnd = filters.dateTo && filters.dateTo <= today ? filters.dateTo : today;
+    const rangeStart = filters.dateFrom ?? oldestRecordDate ?? rangeEnd;
+    if (rangeStart > rangeEnd) return [];
+    return enumerateDatesDesc(rangeStart, rangeEnd);
+  }, [dateEmployeeMap, filters.dateFrom, filters.dateTo, today]);
+
+  const sortedEmployeeList = useMemo(() => {
+    if (!allEmployees || allEmployees.length === 0) return [];
+    let list = [...allEmployees];
+    if (filters.employeeNameSearch) {
+      const q = filters.employeeNameSearch.toLowerCase();
+      list = list.filter((e) => e.name.toLowerCase().includes(q));
+    }
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [allEmployees, filters.employeeNameSearch]);
+
+  const listHolidayYears = useMemo(() => {
+    const firstDate = sortedDates.at(-1);
+    const lastDate = sortedDates[0];
+    if (!firstDate || !lastDate) return [];
+    return getYearsInRange(firstDate, lastDate);
+  }, [sortedDates]);
+
+  const listHolidayQueries = useQueries({
+    queries: listHolidayYears.map((year) => ({
+      queryKey: ['leave-holidays', orgSlug, year, 'attendance-list'],
+      queryFn: async () => {
+        const res = await fetchHolidaysAction({
+          orgSlug,
+          memberId,
+          year,
+          pageSize: LIST_HOLIDAY_FETCH_SIZE,
+        });
+        return res.items;
+      },
+      enabled: !!orgSlug && !!memberId && viewMode === 'list' && showEmployeeColumn,
+      staleTime: 60_000,
+    })),
+  });
+
+  const listHolidayNames = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const query of listHolidayQueries) {
+      for (const holiday of query.data ?? []) {
+        if (holiday.isHoliday) {
+          map.set(holiday.holidayDate, holiday.name);
+        }
+      }
+    }
+    return map;
+  }, [listHolidayQueries]);
+
+  const listRows = useMemo<AttendanceListRow[]>(() => {
+    if (!allEmployees || allEmployees.length === 0) return [];
+
+    return sortedDates.flatMap((date) =>
+      sortedEmployeeList
+        .filter((emp) => {
+          if (!filters.status) return true;
+          const record = dateEmployeeMap.get(date)?.get(emp.member_id);
+          return record && record.status === filters.status;
+        })
+        .map((emp) => {
+          const record = dateEmployeeMap.get(date)?.get(emp.member_id) ?? null;
+          return {
+            key: `${date}:${emp.member_id}`,
+            date,
+            employeeId: emp.member_id,
+            employeeName: emp.name,
+            record,
+          };
+        }),
+    );
+  }, [allEmployees, dateEmployeeMap, filters.status, sortedDates, sortedEmployeeList]);
+
+  const totalListRows = listRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalListRows / pageSize));
+  const pagedListRows = useMemo(() => {
+    const safePage = Math.min(Math.max(currentPage, 1), totalPages);
+    const start = (safePage - 1) * pageSize;
+    return listRows.slice(start, start + pageSize);
+  }, [currentPage, listRows, pageSize, totalPages]);
+
+  useEffect(() => {
+    if (viewMode !== 'list' || currentPage <= totalPages) return;
+    onFiltersChange({ ...filters, page: totalPages });
+  }, [currentPage, filters, onFiltersChange, totalPages, viewMode]);
 
   // Fetch holidays and leaves for pivot views
   const pivotYear = pivotAnchor.getFullYear();
@@ -403,68 +534,88 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
               }
 
               return (
-                <>
-                  {/* Header */}
-                  <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3">
-                    {showEmployeeColumn && (
-                      <div className="flex-1 text-left pl-6 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</div>
-                    )}
-                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Date</div>
-                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock In</div>
-                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock Out</div>
-                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Work Time</div>
-                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</div>
-                    <div className="flex-1 text-center text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Work Log</div>
-                  </div>
-
-                  {/* Body */}
-                  {isLoading ? (
-                    <div className="flex flex-col bg-surface">
-                      {SKELETON_IDS.slice(0, pageSize).map((id) => (
-                        <div key={id} className="flex justify-around items-center border-b border-black/4 py-3">
-                          {showEmployeeColumn && (
-                            <div className="flex-1 flex justify-start pl-6">
-                              <Skeleton className="h-3 w-14" />
-                            </div>
-                          )}
-                          <div className="flex-1 flex justify-center">
-                            <Skeleton className="h-3 w-12" />
-                          </div>
-                          <div className="flex-1 flex justify-center">
-                            <Skeleton className="h-3 w-10" />
-                          </div>
-                          <div className="flex-1 flex justify-center">
-                            <Skeleton className="h-3 w-10" />
-                          </div>
-                          <div className="flex-1 flex justify-center">
-                            <Skeleton className="h-3 w-7" />
-                          </div>
-                          <div className="flex-1 flex justify-center">
-                            <Skeleton className="h-5 w-12 rounded-full" />
-                          </div>
-                          <div className="flex-1 flex justify-center">
+                <div className="overflow-x-auto w-full">
+                <table className="w-full border-collapse bg-surface table-fixed">
+                  <colgroup>
+                    {showEmployeeColumn && <col className="w-[28%]" style={{ minWidth: 180 }} />}
+                    <col style={{ minWidth: 110 }} />
+                    <col style={{ minWidth: 100 }} />
+                    <col style={{ minWidth: 100 }} />
+                    <col style={{ minWidth: 90 }} />
+                    <col style={{ minWidth: 110 }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-black/[0.04] bg-canvas/50">
+                      {showEmployeeColumn && (
+                        <th className="text-left pl-6 py-3 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</th>
+                      )}
+                      <th className="text-center py-3 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Date</th>
+                      <th className="text-center py-3 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock In</th>
+                      <th className="text-center py-3 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Clock Out</th>
+                      <th className="text-center py-3 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Work Time</th>
+                      <th className="text-center py-3 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading ? (
+                      SKELETON_IDS.slice(0, pageSize).map((id) => (
+                        <tr key={id} className="border-b border-black/4">
+                          <td className="pl-6 py-3">
                             <Skeleton className="h-3 w-14" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : items.length === 0 ? (
-                    <div className="bg-surface py-16 text-center text-sm text-neutral-400">
-                      No attendance records found.
-                    </div>
-                  ) : (
-                    <div className="flex flex-col bg-surface">
-                      {items.map((record) => (
+                          </td>
+                          <td className="text-center py-3">
+                            <Skeleton className="h-3 w-12 mx-auto" />
+                          </td>
+                          <td className="text-center py-3">
+                            <Skeleton className="h-3 w-10 mx-auto" />
+                          </td>
+                          <td className="text-center py-3">
+                            <Skeleton className="h-3 w-10 mx-auto" />
+                          </td>
+                          <td className="text-center py-3">
+                            <Skeleton className="h-3 w-7 mx-auto" />
+                          </td>
+                          <td className="text-center py-3">
+                            <Skeleton className="h-5 w-12 rounded-full mx-auto" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : items.length === 0 && (!allEmployees || allEmployees.length === 0) ? (
+                      <tr>
+                        <td colSpan={6} className="py-16 text-center text-sm text-neutral-400">
+                          No attendance records found.
+                        </td>
+                      </tr>
+                    ) : allEmployees && allEmployees.length > 0 ? (
+                      pagedListRows.map((row) => (
                         <AttendanceRow
-                          key={record.id}
-                          record={record}
-                          showEmployeeColumn={showEmployeeColumn}
-                          onViewWorkLog={(id) => setWorkLogRecordId(id)}
+                          key={row.key}
+                          record={row.record}
+                          employeeName={row.employeeName}
+                          date={row.date}
+                          holidayName={listHolidayNames.get(row.date)}
                         />
-                      ))}
-                    </div>
-                  )}
-                </>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="py-16 text-center text-sm text-neutral-400">
+                          Loading employees…
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                  <div className="px-6 py-4 border-t border-black/[0.04]">
+                    <EmployeePagination
+                      page={currentPage}
+                      totalPages={totalPages}
+                      total={totalListRows}
+                      pageSize={pageSize}
+                      onPageChange={(p) => onFiltersChange({ ...filters, page: p })}
+                      onPageSizeChange={(s) => onFiltersChange({ ...filters, page: 1, pageSize: s })}
+                    />
+                  </div>
+                </div>
               );
             }
 
@@ -487,14 +638,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
         </div>
       </div>
 
-      {/* Work log detail dialog — org scope list view */}
-      <AttendanceWorkLogDialog
-        orgSlug={orgSlug}
-        memberId={memberId}
-        attendanceRecordId={workLogRecordId}
-        open={workLogRecordId !== null}
-        onOpenChange={(open) => { if (!open) setWorkLogRecordId(null); }}
-      />
     </div>
   );
 }

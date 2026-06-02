@@ -21,32 +21,25 @@ interface EmployeePaginationProps {
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 function buildPageNumbers(current: number, total: number): (number | '...')[] {
-  if (total <= 7) {
+  if (total <= 5) {
     return Array.from({ length: total }, (_, i) => i + 1);
   }
 
   const pages: (number | '...')[] = [];
 
-  // Always show first page
   pages.push(1);
 
-  if (current > 4) {
-    pages.push('...');
-  }
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
 
-  // Window around current page
-  const start = Math.max(2, current - 2);
-  const end = Math.min(total - 1, current + 2);
+  if (start > 2) pages.push('...');
 
   for (let i = start; i <= end; i++) {
     pages.push(i);
   }
 
-  if (current < total - 3) {
-    pages.push('...');
-  }
+  if (end < total - 1) pages.push('...');
 
-  // Always show last page
   pages.push(total);
 
   return pages;

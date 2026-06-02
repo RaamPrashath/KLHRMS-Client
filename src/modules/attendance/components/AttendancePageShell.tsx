@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import {
     isOperativeScope,
 } from "@/modules/attendance/utils/attendancePermissions";
 import {
+    attendanceQueryKeys,
     useAttendanceQuery,
     useMemberPermissionsQuery,
     useMyAttendanceQuery,
@@ -53,7 +55,7 @@ function buildDefaultFilters(): AttendanceFiltersState {
         targetMemberId: undefined,
         employeeNameSearch: undefined,
         page: 1,
-        pageSize: 20,
+        pageSize: 50,
     };
 }
 
@@ -62,6 +64,7 @@ export function AttendancePageShell({
     memberId,
 }: Readonly<AttendancePageShellProps>) {
     const shouldReduceMotion = useReducedMotion();
+    const queryClient = useQueryClient();
 
     // ── Permission resolution ──────────────────────────────────────────────────
     const { data: rawPermissions, isLoading: permissionsLoading } =
@@ -74,15 +77,60 @@ export function AttendancePageShell({
     const [filters, setFilters] = useState<AttendanceFiltersState>(buildDefaultFilters);
 
     // ── Query selection ────────────────────────────────────────────────────────
-    const orgQuery = useAttendanceQuery(orgSlug, memberId, filters);
-    const myQuery = useMyAttendanceQuery(orgSlug, memberId, filters);
+    const orgPageQuery = useAttendanceQuery(orgSlug, memberId, filters, {
+        enabled: !permissionsLoading && isOrgScope,
+    });
+    const backgroundFilters = useMemo(
+        () => ({
+            timePreset: filters.timePreset,
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo,
+            status: filters.status,
+            targetMemberId: filters.targetMemberId,
+            employeeNameSearch: filters.employeeNameSearch,
+            page: 1,
+            pageSize: 5000,
+        }),
+        [
+            filters.dateFrom,
+            filters.dateTo,
+            filters.employeeNameSearch,
+            filters.status,
+            filters.targetMemberId,
+            filters.timePreset,
+        ],
+    );
+    const orgBackgroundQuery = useAttendanceQuery(
+        orgSlug,
+        memberId,
+        backgroundFilters,
+        {
+            enabled: !permissionsLoading && isOrgScope && orgPageQuery.data != null && !orgPageQuery.isFetching,
+            staleTime: 60_000,
+        },
+    );
+    const myQuery = useMyAttendanceQuery(orgSlug, memberId, filters, {
+        enabled: !permissionsLoading && isOperativeScope(permissions.view) && !isOrgScope,
+    });
+
+    useEffect(() => {
+        if (!isOrgScope || !orgPageQuery.isFetching) return;
+        void queryClient.cancelQueries({
+            queryKey: attendanceQueryKeys.attendance(orgSlug, memberId, backgroundFilters),
+        });
+    }, [backgroundFilters, isOrgScope, memberId, orgPageQuery.isFetching, orgSlug, queryClient]);
 
     const {
         data: queryData,
         isLoading,
         isError,
         refetch,
-    } = isOrgScope ? orgQuery : myQuery;
+    } = isOrgScope
+        ? {
+            ...orgPageQuery,
+            data: orgBackgroundQuery.data ?? orgPageQuery.data,
+        }
+        : myQuery;
 
     // ── Delete state ───────────────────────────────────────────────────────────
     const [deleteTarget, setDeleteTarget] = useState<AttendanceRecord | null>(null);
