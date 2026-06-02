@@ -83,6 +83,7 @@ export function MaintenanceIssueDialog({
               <div className="grid gap-3 md:grid-cols-2">
                 <DetailRow label="Issue Type" value={humanize(issue.maintenanceType)} />
                 <DetailRow label="Raised By" value={issue.raisedByName} />
+                <DetailRow label="Email" value={issue.raisedByEmail} />
                 <DetailRow label="Date" value={formatIssueDate(issue.createdAt)} />
                 <DetailRow label="Asset Status" value={issue.assetLifecycleStatusLabel} />
               </div>

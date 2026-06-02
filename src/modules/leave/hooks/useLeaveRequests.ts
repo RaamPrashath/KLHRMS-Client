@@ -8,6 +8,7 @@ export function useLeaveRequests(
   orgSlug: string,
   memberId: string,
   filters: LeaveRequestFiltersState,
+  options?: { enabled?: boolean },
 ) {
   return useQuery<LeaveRequestListResponse, Error>({
     queryKey: ['leave-requests', orgSlug, filters],
@@ -26,6 +27,6 @@ export function useLeaveRequests(
           pageSize: filters.pageSize,
         },
       }),
-    enabled: !!orgSlug && !!memberId,
+    enabled: (options?.enabled ?? true) && !!orgSlug && !!memberId,
   });
 }
