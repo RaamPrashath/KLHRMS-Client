@@ -81,6 +81,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
     "departments": Network,
     "permissions": ShieldCheck,
     "attendance": CalendarClock,
+    "attendance-report": FileText,
     "weekly-plan": CalendarDays,
     "projects": FolderKanban,
     "timesheet": ClipboardList,

@@ -34,6 +34,7 @@ const MODULE_LABELS: Record<string, string> = {
   departments:        'Departments',
   permission:         'Permissions',
   attendance:         'Attendance',
+  attendanceReport:   'Attendance Report',
   leaves:             'Leaves',
   timesheet:          'Timesheet',
   projects:           'Projects',
@@ -60,7 +61,7 @@ const MODULE_LABELS: Record<string, string> = {
 // Section groupings for visual separation
 const SECTIONS: { label: string; modules: string[] }[] = [
   { label: 'People',            modules: ['employees', 'organization', 'departments', 'permission'] },
-  { label: 'Time & Attendance', modules: ['attendance', 'leaves', 'timesheet', 'projects', 'weeklyPlan'] },
+  { label: 'Time & Attendance', modules: ['attendance', 'attendanceReport', 'leaves', 'timesheet', 'projects', 'weeklyPlan'] },
   { label: 'Recruitment',       modules: ['jobs', 'candidates', 'interviews', 'offers'] },
   { label: 'Lifecycle',         modules: ['onboarding', 'documentCollection', 'offboarding', 'knowledgeTransfer'] },
   { label: 'Payroll & Finance', modules: ['salaryStructures', 'payroll', 'payslips', 'tax', 'procurement'] },
