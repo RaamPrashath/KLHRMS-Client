@@ -609,7 +609,7 @@ function InterviewBlock({ event, index }: { readonly event: ApplicationInterview
           <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Interview panel</p>
           <div className="mt-3 space-y-2">
             <div className="flex items-center gap-2.5 text-sm text-neutral-900 font-medium">
-              <div className="size-6 rounded-full bg-primary-ghost text-primary flex items-center justify-center text-xs font-semibold">
+              <div className="size-6 rounded-lg bg-primary-ghost text-primary flex items-center justify-center text-xs font-semibold">
                 <UserRound className="size-3.5" />
               </div>
               <span className="truncate">{lead?.name ?? event.createdByName ?? 'Unassigned'}</span>
@@ -708,7 +708,7 @@ function NoteCard({
 
   return (
     <article className="group flex items-start gap-3">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-xs font-semibold text-primary ring-1 ring-primary-light/30">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-ghost text-xs font-semibold text-primary ring-1 ring-primary-light/30">
         {initials}
       </div>
       <div className="min-w-0 flex-1">

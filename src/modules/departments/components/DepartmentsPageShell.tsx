@@ -269,7 +269,7 @@ export function DepartmentsPageShell({
           <Button
             onClick={openDepartmentCreateDialog}
             className="h-11 rounded-xl px-5 text-[15px] font-medium text-white shadow-sm hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: '#00874a' }}
+            style={{ backgroundColor: 'var(--indigo-9)' }}
           >
             <Plus className="mr-2 size-4" />
             Create department

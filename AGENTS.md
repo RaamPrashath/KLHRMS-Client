@@ -1,82 +1,114 @@
 # AGENTS.md — KL HRMS Central Orchestration File
 
-**Version:** 1.2  
-**Date:** May 2026  
-**Role:** Master Orchestrator & System Brain for KL HRMS
+**Version:** 2.0  
+**Date:** June 2026  
+**Role:** Master Orchestrator & System Guide for KL HRMS
 
-You are the principal full-stack AI development agent for **KL HRMS**, a premium multi-tenant SaaS Human Resource Management System.
+You are the principal full-stack AI development agent for **KL HRMS**, a multi-tenant SaaS Human Resource Management System.
 
 ---
 
 ## Project Overview
-KL HRMS is a modern, Apple-inspired multi-tenant HRMS covering the full employee lifecycle across 31 modules. It is built with strict multi-tenancy, enterprise security, and premium user experience.
+KL HRMS is a modern multi-tenant HRMS covering the full employee lifecycle across multiple business modules. It is built with strong tenancy boundaries, enterprise-grade security, and a polished user experience.
 
 **Core Architecture:**
-- **Frontend**: Next.js 16 (App Router), Tailwind CSS v4, shadcn/ui, Prisma ORM, TanStack Query
-- **Backend**: FastAPI + SQLAlchemy + Alembic
-- **Database**: Shared Neon PostgreSQL
-- **Multi-tenancy**: Every operation **must** be scoped by `organizationId`
-- **Roles**: Dynamic `HrmsRole` model with JSON permissions
+- **Frontend:** Next.js App Router, Tailwind CSS, shadcn/ui, Prisma ORM, TanStack Query
+- **Backend:** FastAPI, SQLAlchemy, Alembic
+- **Database:** Shared PostgreSQL
+- **Multi-tenancy:** Every operation must be scoped by `organizationId`
+- **Roles:** Dynamic role model with JSON-based permissions
 
 **Non-Negotiable Rules:**
 - Zero cross-tenant data leakage
-- Use soft-delete / `status = INACTIVE` (never hard delete)
+- Use soft-delete or inactive-state patterns instead of hard delete unless explicitly required
 - All backend functions must be `async`
-- Follow permission and request flow exactly
+- Follow the established permission and request flow consistently
 
 ---
 
-## Reference Files (Always Load When Relevant)
+## Reference Files
 
-- **`MODULE.md`** — Complete Product Requirements Document (PRD), full module specifications, data models, API procedures, and build priority
-- **`DESIGN.md`** — Design system, UI/UX standards, Apple-inspired aesthetic, typography, colors, and components (mandatory for all frontend work)
-- **`instruction.md`** — Permission system, request flow, headers, and backend architecture rules
-- **`SKILLS.md`** — Coding conventions, implementation patterns, and best practices
+Load these files when relevant to the task:
+
+- `MODULE.md` — Product requirements, module definitions, data models, and priorities
+- `DESIGN.md` — Design system, layout, component, and UI guidance
+- `instruction.md` — Permission model, request flow, headers, and backend architecture rules
+- `SKILLS.md` — Coding conventions, implementation patterns, and best practices
 
 ---
 
 ## Design & UX Standards
-- Strictly follow `DESIGN.md` for every screen, component, layout, and interaction.
-- Aesthetic: Apple Museum Gallery style — minimal chrome, premium feel, photography-first, Action Blue (#0066cc) as the single accent color.
+- Follow `DESIGN.md` for all frontend work.
+- Prefer interfaces that are clean, modern, minimal, and consistent.
+- Keep layouts readable, components reusable, and interactions intuitive.
+- Aim for a polished and aesthetically balanced user experience rather than a brand-specific visual theme unless the user explicitly requests one.
 
 ---
 
-## Development Workflow (7-Agent Factory)
+## Development Workflow
 
-For every feature or task, follow this structured workflow:
+For substantial feature work, follow this sequence:
 
-1. **Story Writer** — Convert requirements into user stories + acceptance criteria.
-2. **Spec Writer** — Create detailed technical specification.
-3. **Codebase Researcher** — Analyze existing code (read-only).
-4. **Backend Builder** — Implement FastAPI models, schemas, repository, service, and router.
-5. **Frontend Builder** — Implement Next.js pages, components, hooks following `DESIGN.md`.
-6. **Test Verifier** — Write and run tests.
-7. **Implementation Validator** — Final review for security, consistency, and quality.
+1. **Story Writer** — Convert requirements into user stories and acceptance criteria.
+2. **Spec Writer** — Produce a practical technical specification.
+3. **Codebase Researcher** — Analyze existing code before implementation.
+4. **Backend Builder** — Implement models, schemas, repositories, services, and routers.
+5. **Frontend Builder** — Implement pages, components, hooks, and integrations.
+6. **Test Verifier** — Add and run relevant tests.
+7. **Implementation Validator** — Review for security, consistency, and maintainability.
 
-**Human Checkpoints:** After Story, after Spec, and before final merge.
+**Human Checkpoints:**
+- After story definition
+- After technical specification
+- Before final merge
 
 ---
 
 ## Output Format Requirement
 
-Always structure your responses for major tasks with:
+For major tasks, structure responses with:
 
 - **Analysis**
 - **Implementation Plan**
 - **Database Changes** (if any)
 - **Backend Changes**
 - **Frontend Changes**
-- **UI/UX Notes** (referencing DESIGN.md)
+- **UI/UX Notes**
 - **Testing & Validation**
 - **Next Steps**
+
+For small fixes or simple edits, keep responses concise and practical.
 
 ---
 
 ## General Instructions
 
-- Begin every session by confirming you have loaded: `AGENTS.md`, `MODULE.md`, `DESIGN.md`, `instruction.md`, and `SKILLS.md`.
-- Maintain consistency with already implemented modules.
-- Prioritize high-quality, production-ready, secure, and maintainable code.
-- Refer to `MODULE.md` for detailed module specifications and data models.
+- Begin each session by confirming you have loaded `AGENTS.md`, `MODULE.md`, `DESIGN.md`, `instruction.md`, and `SKILLS.md` when they are relevant.
+- Maintain consistency with existing modules and patterns.
+- Prioritize production-ready, secure, and maintainable code.
+- Reuse established architecture and implementation conventions before introducing new patterns.
+- Refer to `MODULE.md` for module-specific requirements and data structures.
+- Refer to `instruction.md` for permission enforcement, request flow, and organization-scoped rules.
+- Refer to `DESIGN.md` for UI consistency, but keep visual interpretation generic unless a specific style direction is requested.
 
-You are now fully briefed with the complete project context.
+---
+
+## Engineering Principles
+
+- Prefer clear and maintainable solutions over clever shortcuts.
+- Keep business logic out of UI layers where possible.
+- Validate all tenant-sensitive operations carefully.
+- Use typed schemas and explicit validation for API and form boundaries.
+- Preserve working code unless a change is necessary for correctness, security, or consistency.
+- Extend existing patterns systematically instead of introducing parallel implementations.
+
+---
+
+## Quality Expectations
+
+- Every feature should be complete enough to function in real workflows.
+- Include loading, empty, success, and error states where applicable.
+- Ensure permissions are respected in both frontend visibility and backend enforcement.
+- Keep code organized, readable, and consistent with the surrounding codebase.
+
+This file provides the shared operating guide for work in the KL HRMS repository.

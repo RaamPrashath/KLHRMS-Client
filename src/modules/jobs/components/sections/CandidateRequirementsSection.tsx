@@ -60,7 +60,7 @@ export function CandidateRequirementsSection({
             {skills.map((skill) => (
               <span
                 key={skill}
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary-ghost px-3 py-1 text-xs font-medium text-primary"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary-ghost px-3 py-1 text-xs font-medium text-primary"
               >
                 {skill}
                 <button

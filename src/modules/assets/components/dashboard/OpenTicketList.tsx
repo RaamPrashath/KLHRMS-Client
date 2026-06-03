@@ -15,7 +15,7 @@ export function OpenTicketList({ tickets }: { tickets: TicketAlertItem[] }) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <div className="flex size-10 items-center justify-center rounded-2xl bg-[#f3fbf5]">
-          <Wrench className="size-5 text-[#00874a]" />
+          <Wrench className="size-5 text-primary" />
         </div>
         <p className="mt-2 text-[13px] font-medium text-[#1d1d1f]">All clear</p>
         <p className="mt-0.5 text-[12px] text-[#6e6e73]">No open maintenance tickets</p>

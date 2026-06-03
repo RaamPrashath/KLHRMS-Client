@@ -212,7 +212,7 @@ export function LeaveSidebar({
                   className={cn(
                     'flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium transition-colors duration-150',
                     active
-                      ? 'bg-[#00874A]/[0.05] text-[#72e3a5]'
+                      ? 'bg-primary/[0.05] text-[#72e3a5]'
                       : 'text-neutral-400 hover:bg-white/[0.04] hover:text-white',
                   )}
                 >

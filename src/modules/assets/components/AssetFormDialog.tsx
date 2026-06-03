@@ -72,7 +72,7 @@ function DynamicFieldRenderer({
         <div className="grid gap-1.5">
           <Label className="text-[13px] font-medium text-[#4b5563]">{fieldDef.fieldName}</Label>
           <Select value={value || undefined} onValueChange={(v) => onChange(v)}>
-            <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
+            <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-primary focus:border-transparent">
               <SelectValue placeholder={`Select ${fieldDef.fieldName.toLowerCase()}`} />
             </SelectTrigger>
             <SelectContent>
@@ -253,7 +253,7 @@ export function AssetFormDialog({
                       <div className="grid gap-1.5">
                         <Label className="text-[13px] font-medium text-[#4b5563]">Category</Label>
                         <Select value={selectedCategoryId || undefined} onValueChange={handleCategorySelect}>
-                          <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
+                          <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-primary focus:border-transparent">
                             <SelectValue placeholder="Select a category" />
                           </SelectTrigger>
                           <SelectContent>
@@ -271,7 +271,7 @@ export function AssetFormDialog({
                         <div className="grid gap-1.5">
                           <Label className="text-[13px] font-medium text-[#4b5563]">Asset ID / Code</Label>
                           <Select value={assetCode || undefined} onValueChange={handleAssetCodeSelect}>
-                            <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
+                            <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-primary focus:border-transparent">
                               <SelectValue placeholder="Auto-filled from category" />
                             </SelectTrigger>
                             <SelectContent>
@@ -292,13 +292,13 @@ export function AssetFormDialog({
                             value={assetCode}
                             onChange={(e) => setAssetCode(e.target.value)}
                             placeholder="e.g. AST-LAP"
-                            className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+                            className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
                           />
                           {useCustomAssetCode && uniqueAssetCodes.length > 0 && (
                             <button
                               type="button"
                               onClick={() => { setUseCustomAssetCode(false); setAssetCode(''); }}
-                              className="text-left text-[12px] text-[#00874a] hover:underline"
+                              className="text-left text-[12px] text-primary hover:underline"
                             >
                               Back to predefined codes
                             </button>
@@ -367,7 +367,7 @@ export function AssetFormDialog({
                             <Label className="text-[13px] font-medium text-[#4b5563]">Serial #{i + 1}</Label>
                             <div className="flex items-center gap-1.5">
                               <Input value={serial} onChange={(e) => updateSerial(i, e.target.value)}
-                                placeholder={`Serial for unit ${i + 1}`} className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent" />
+                                placeholder={`Serial for unit ${i + 1}`} className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent" />
                               {serials.length > 1 && (
                                 <button type="button" onClick={() => { setSerials(serials.filter((_, j) => j !== i)); setQuantity(quantity - 1); }}
                                   className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-transparent text-[#9ca3af] hover:border-red-100 hover:bg-red-50 hover:text-[#b3261e] transition-colors">

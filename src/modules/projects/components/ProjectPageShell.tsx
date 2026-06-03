@@ -200,8 +200,7 @@ export function ProjectPageShell({
         {canManageProjects && (
           <Button
             onClick={openCreateDialog}
-            className="h-11 rounded-xl px-5 text-[15px] font-medium text-white shadow-sm hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: '#00874a' }}
+            className="h-11 rounded-lg px-5 text-[15px] font-medium bg-primary hover:bg-primary-hover text-primary-foreground shadow-sm transition-colors"
           >
             <Plus className="mr-2 size-4" />
             Create project
@@ -246,7 +245,7 @@ export function ProjectPageShell({
                       id="project-name"
                       value={projectForm.name}
                       onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
@@ -256,7 +255,7 @@ export function ProjectPageShell({
                       id="project-client"
                       value={projectForm.clientName || ''}
                       onChange={(e) => setProjectForm({ ...projectForm, clientName: e.target.value })}
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
                 </div>
@@ -311,7 +310,7 @@ export function ProjectPageShell({
                     id="project-description"
                     value={projectForm.description || ''}
                     onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
-                    className="min-h-20 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+                    className="min-h-20 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                   />
                 </div>
 
@@ -342,8 +341,7 @@ export function ProjectPageShell({
                   <Button
                     onClick={() => void handleSaveProject()}
                     disabled={mutations.createProject.isPending || mutations.updateProject.isPending}
-                    style={{ backgroundColor: '#00874a' }}
-                    className="h-10 rounded-xl px-6 text-white"
+                    className="h-10 rounded-lg px-6 bg-primary hover:bg-primary-hover text-primary-foreground"
                   >
                     {mutations.createProject.isPending || mutations.updateProject.isPending
                       ? 'Saving…'

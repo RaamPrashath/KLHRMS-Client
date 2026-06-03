@@ -56,7 +56,7 @@ export function OrganizationSwitcher({
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="mx-auto mt-1 flex h-[38px] w-[38px] items-center justify-center rounded-[12px] bg-gradient-to-br from-[#6366f1] to-[#06b6d4] text-[14px] font-[800] text-white shadow-[0_4px_10px_rgba(99,102,241,0.2)] transition-transform hover:scale-[1.02]"
+                className="mx-auto mt-1 flex h-[38px] w-[38px] items-center justify-center rounded-[12px] bg-gradient-to-br from-[var(--indigo-9)] to-[#06b6d4] text-[14px] font-[800] text-white shadow-[0_4px_10px_rgba(99,102,241,0.2)] transition-transform hover:scale-[1.02]"
                 aria-label="Open organization switcher"
             >
                 {getInitials(currentOrg.name)}
@@ -74,7 +74,7 @@ export function OrganizationSwitcher({
                     )}
                 >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] text-[14px] font-[800] text-white bg-gradient-to-br from-[#6366f1] to-[#06b6d4] shadow-[0_4px_10px_rgba(99,102,241,0.2)]">
+                        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] text-[14px] font-[800] text-white bg-gradient-to-br from-[var(--indigo-9)] to-[#06b6d4] shadow-[0_4px_10px_rgba(99,102,241,0.2)]">
                             {getInitials(currentOrg.name)}
                         </div>
 

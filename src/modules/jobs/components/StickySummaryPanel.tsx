@@ -72,7 +72,7 @@ export function StickySummaryPanel({
           <div className="mb-4 px-1">
             <div className="h-1.5 overflow-hidden rounded-full bg-neutral-200/60">
               <div
-                className="h-full rounded-full bg-primary transition-all duration-200"
+                className="h-full rounded-lg bg-primary transition-all duration-200"
                 style={{ width: `${progress}%` }}
               />
             </div>

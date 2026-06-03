@@ -208,7 +208,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
       {/* Header with week navigator and export */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <CalendarDays className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="flex flex-col">

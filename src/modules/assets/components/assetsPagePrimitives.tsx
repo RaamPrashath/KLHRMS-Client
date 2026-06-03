@@ -95,7 +95,7 @@ export function FieldSelect({
   return (
     <div className="grid gap-1.5">
       <Label className="text-[13px] font-medium text-[#4b5563]">{label}</Label>
-      <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
+      <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus:ring-1 focus:ring-primary focus:border-transparent">
         {children}
       </SelectTrigger>
     </div>
@@ -118,7 +118,7 @@ export function DateField({
         type="date"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+        className="h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
       />
     </div>
   );
@@ -141,7 +141,7 @@ export function NumberField({
         min={0}
         value={value ?? ''}
         onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
-        className="h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+        className="h-10 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
       />
     </div>
   );
@@ -162,7 +162,7 @@ export function TextAreaField({
       <Textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-24 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+        className="min-h-24 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
       />
     </div>
   );
@@ -274,7 +274,7 @@ export function InputField({
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+        className="h-9 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
       />
     </div>
   );

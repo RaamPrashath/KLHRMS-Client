@@ -10,7 +10,7 @@ const CONFIG: Record<
 > = {
   PRESENT: {
     label: 'Present',
-    className: 'bg-[#00874A]/10 text-[#00874A] border border-[#00874A]/20',
+    className: 'bg-primary/10 text-primary border border-primary/20',
   },
   ABSENT: {
     label: 'Absent',

@@ -352,7 +352,7 @@ function LeaveRequestRow({
   return (
     <div className="flex items-center justify-between gap-4 border-b border-black/4 px-5 py-3.5 last:border-0">
       <div className="min-w-0 flex items-center gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-[11px] font-medium text-primary">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-[11px] font-medium text-primary">
           {memberName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "U"}
         </div>
         <div className="min-w-0">
@@ -452,7 +452,7 @@ function QuickShortcutsCard({ orgSlug }: { readonly orgSlug: string }) {
       label: "Timesheet",
       icon: FileText,
       iconBg: "bg-[#eef2ff]",
-      iconColor: "text-[#4f46e5]",
+      iconColor: "text-[var(--indigo-10)]",
     },
     {
       href: `/${orgSlug}/leaves/requests`,

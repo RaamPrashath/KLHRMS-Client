@@ -380,7 +380,7 @@ export function AtsJobOverviewDashboard({
             {dashboard.recentActivity.map((activity) => (
               <div key={activity.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-ghost text-primary">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-ghost text-primary">
                     <UserCheck className="size-4" />
                   </div>
                   <p className="truncate text-sm font-medium text-neutral-900">{activity.label}</p>

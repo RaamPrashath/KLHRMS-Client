@@ -782,14 +782,14 @@ export function AttendanceClockCard({
                         {elapsedDisplay}
                       </p>
                       <div className="relative flex h-2 w-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00874A] opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00874A]" />
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-lg bg-primary opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-lg bg-primary" />
                       </div>
                     </div>
                   )}
                   {isDashboard && (
                     <div className="flex items-center gap-2 mr-2">
-                      <span className="font-mono font-bold text-black dark:text-[#818cf8] text-3xl tracking-tight select-none">
+                      <span className="font-mono font-bold text-black dark:text-[var(--indigo-8)] text-3xl tracking-tight select-none">
                         {elapsedDisplay}
                       </span>
                     </div>

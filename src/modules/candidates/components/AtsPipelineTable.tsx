@@ -296,7 +296,7 @@ export function AtsPipelineTable({
         cell: ({ row }) => (
           <div className="flex flex-wrap items-center gap-1.5">
             {row.original.aiScore !== null ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary-ghost px-2 py-0.5 font-mono text-xs font-medium text-primary">
+              <span className="inline-flex items-center gap-1 rounded-lg bg-primary-ghost px-2 py-0.5 font-mono text-xs font-medium text-primary">
                 {row.original.aiScore}
               </span>
             ) : row.original.aiAnalysisStatus ? (

@@ -145,7 +145,7 @@ function TabSlider({
           className={cn(
             'inline-flex items-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg relative z-10 transition-colors duration-200',
             activeMode === mode
-              ? 'text-[#00874A]'
+              ? 'text-primary'
               : 'text-neutral-500 hover:text-neutral-900',
           )}
         >

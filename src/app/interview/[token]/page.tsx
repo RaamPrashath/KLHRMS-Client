@@ -179,7 +179,7 @@ export default function InterviewSlotPickerPage({
                     {formatSlotTime(slot.startTime, slot.endTime)}
                   </span>
                   {selectedSlotId === slot.id && (
-                    <span className="flex size-5 items-center justify-center rounded-full bg-primary text-white">
+                    <span className="flex size-5 items-center justify-center rounded-lg bg-primary text-white">
                       <Check className="size-3" />
                     </span>
                   )}

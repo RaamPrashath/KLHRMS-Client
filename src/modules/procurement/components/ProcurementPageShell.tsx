@@ -87,7 +87,7 @@ const PROCUREMENT_TAB_STYLES =
   'inline-flex h-9 items-center rounded-xl border border-transparent bg-transparent px-3 text-[13px] font-medium whitespace-nowrap text-[#6b7280] shadow-none transition-all duration-200 ease-out hover:text-[#111827]';
 
 const PROCUREMENT_TAB_ACTIVE_STYLES =
-  'border-[#d8eadf] bg-white text-[#00874a] shadow-[0_2px_8px_rgba(0,0,0,0.05)]';
+  'border-[#e0e7ff] bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.05)]';
 const PROCUREMENT_SECTION_CARD_CLASSNAME =
   'w-full rounded-[28px] border border-[#e5e7eb] bg-white p-6';
 const PROCUREMENT_FORM_GRID_CLASSNAME = 'grid gap-5 md:grid-cols-2';
@@ -95,7 +95,7 @@ const PROCUREMENT_FIELD_CLASSNAME = 'grid gap-2';
 const PROCUREMENT_LABEL_CLASSNAME =
   'text-[14px] font-semibold leading-5 text-[#374151]';
 const PROCUREMENT_FORM_CONTROL_CLASSNAME =
-  'box-border h-[52px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-base leading-6 text-[#111827] shadow-none outline-none transition-[border-color,box-shadow] placeholder:text-[#9ca3af] focus-visible:border-[#00874a] focus-visible:ring-3 focus-visible:ring-[#00874a]/15 disabled:h-[52px] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#64748b] disabled:opacity-100 read-only:bg-[#f8fafc]';
+  'box-border h-[52px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-base leading-6 text-[#111827] shadow-none outline-none transition-[border-color,box-shadow] placeholder:text-[#9ca3af] focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/15 disabled:h-[52px] disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#64748b] disabled:opacity-100 read-only:bg-[#f8fafc]';
 const PROCUREMENT_SELECT_TRIGGER_CLASSNAME = cn(
   PROCUREMENT_FORM_CONTROL_CLASSNAME,
   'flex items-center justify-between gap-3 py-0 pr-3 data-[size=default]:h-[52px] [&_svg]:self-center [&_svg]:text-[#94a3b8] [&_[data-slot=select-value]]:flex [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:items-center [&_[data-slot=select-value]]:text-base [&_[data-slot=select-value]]:leading-6',
@@ -103,7 +103,7 @@ const PROCUREMENT_SELECT_TRIGGER_CLASSNAME = cn(
 const PROCUREMENT_DATE_FIELD_CLASSNAME =
   '[&::-webkit-calendar-picker-indicator]:my-auto [&::-webkit-calendar-picker-indicator]:cursor-pointer';
 const PROCUREMENT_TEXTAREA_CLASSNAME =
-  'box-border w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base leading-6 text-[#111827] shadow-none outline-none transition-[border-color,box-shadow] placeholder:text-[#9ca3af] focus-visible:border-[#00874a] focus-visible:ring-3 focus-visible:ring-[#00874a]/15 disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#64748b] disabled:opacity-100 read-only:bg-[#f8fafc]';
+  'box-border w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base leading-6 text-[#111827] shadow-none outline-none transition-[border-color,box-shadow] placeholder:text-[#9ca3af] focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:bg-[#f8fafc] disabled:text-[#64748b] disabled:opacity-100 read-only:bg-[#f8fafc]';
 const REQUISITION_TABLE_SKELETON_IDS = Array.from({ length: 6 }, (_, index) => `procurement-skeleton-${index}`);
 const REQUISITION_COLUMN_WIDTHS = ['26%', '12%', '15%', '12%', '14%', '11%', '10%', '6%'] as const;
 const requisitionColumnHelper = createColumnHelper<ProcurementRequisitionRecord>();
@@ -509,7 +509,7 @@ export function ProcurementPageShell({
               type="button"
               onClick={openComposerDialog}
               disabled={approvedRequisitions.length === 0}
-              className="h-11 rounded-full bg-[#0066cc] px-5 text-[13px] font-medium text-white hover:bg-[#0057ad] disabled:bg-[#c7d2e5] disabled:text-white"
+              className="h-11 rounded-lg px-5 text-[13px] font-medium"
             >
               <FileText className="mr-2 size-4" />
               Open PO Composer
@@ -637,10 +637,10 @@ export function ProcurementPageShell({
               </FormField>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <Button variant="outline" className="rounded-full" onClick={() => void createBulk(true)} disabled={mutations.createBulk.isPending || mutations.submit.isPending}>
+                <Button variant="outline" className="rounded-lg" onClick={() => void createBulk(true)} disabled={mutations.createBulk.isPending || mutations.submit.isPending}>
                   Save Draft
                 </Button>
-                <Button className="rounded-full bg-[#00874a] hover:bg-[#007241]" onClick={() => void createBulk(false)} disabled={mutations.createBulk.isPending || mutations.submit.isPending}>
+                <Button className="rounded-lg bg-primary hover:bg-primary-hover" onClick={() => void createBulk(false)} disabled={mutations.createBulk.isPending || mutations.submit.isPending}>
                   <Send className="mr-2 size-4" />
                   Submit to Finance
                 </Button>
@@ -686,7 +686,7 @@ export function ProcurementPageShell({
 
               <div className="mt-5 rounded-3xl border border-[#e5e7eb] bg-[#fbfbfc] p-5">
                 <div className="mb-4 flex items-center gap-2 text-[15px] font-semibold text-[#111827]">
-                  <ShoppingCart className="size-4 text-[#00874a]" />
+                  <ShoppingCart className="size-4 text-primary" />
                   Ticket Proof
                 </div>
                 {selectedTicket ? (
@@ -759,10 +759,10 @@ export function ProcurementPageShell({
               </FormField>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <Button variant="outline" className="rounded-full" onClick={() => void createReplacement(true)} disabled={mutations.createReplacement.isPending || mutations.submit.isPending}>
+                <Button variant="outline" className="rounded-lg" onClick={() => void createReplacement(true)} disabled={mutations.createReplacement.isPending || mutations.submit.isPending}>
                   Save Draft
                 </Button>
-                <Button className="rounded-full bg-[#00874a] hover:bg-[#007241]" onClick={() => void createReplacement(false)} disabled={mutations.createReplacement.isPending || mutations.submit.isPending}>
+                <Button className="rounded-lg bg-primary hover:bg-primary-hover" onClick={() => void createReplacement(false)} disabled={mutations.createReplacement.isPending || mutations.submit.isPending}>
                   <Send className="mr-2 size-4" />
                   Submit to Finance
                 </Button>
@@ -1006,7 +1006,7 @@ function RequisitionDetailDialog({
                         className={cn(
                           'relative py-3.5 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none cursor-pointer',
                           isActive
-                            ? 'text-[#00874a] border-b-2 border-[#00874a] -mb-[2px]'
+                            ? 'text-primary border-b-2 border-primary -mb-[2px]'
                             : 'text-[#9ca3af] hover:text-[#111827]',
                         )}
                       >
@@ -1112,7 +1112,7 @@ function RequisitionDetailDialog({
                           <Button
                             onClick={onApprove}
                             disabled={isApproving}
-                            className="h-11 w-full rounded-xl bg-[#00874a] hover:bg-[#007241]"
+                            className="h-11 w-full rounded-lg bg-primary hover:bg-primary-hover"
                           >
                             <CheckCircle2 className="mr-2 size-4" />
                             {isApproving ? 'Approving...' : 'Approve'}
@@ -1121,7 +1121,7 @@ function RequisitionDetailDialog({
                             onClick={onReject}
                             disabled={isRejecting}
                             variant="outline"
-                            className="h-11 w-full rounded-xl border-[#f5c2c2] text-[#b3261e] hover:bg-[#fff6f6] hover:text-[#b3261e]"
+                            className="h-11 w-full rounded-lg border-[#f5c2c2] text-[#b3261e] hover:bg-[#fff6f6] hover:text-[#b3261e]"
                           >
                             <XCircle className="mr-2 size-4" />
                             {isRejecting ? 'Rejecting...' : 'Reject'}
@@ -1132,7 +1132,7 @@ function RequisitionDetailDialog({
                       <div className="space-y-4">
                         <div className="rounded-[18px] border border-[#d8eadf] bg-[#f6fbf8] p-4">
                           <div className="flex items-start gap-3">
-                            <div className="flex size-10 items-center justify-center rounded-2xl bg-white text-[#00874a]">
+                            <div className="flex size-10 items-center justify-center rounded-2xl bg-white text-primary">
                               <FileText className="size-4" />
                             </div>
                             <div>
@@ -1143,7 +1143,7 @@ function RequisitionDetailDialog({
                             </div>
                           </div>
                         </div>
-                        <Button asChild className="h-11 w-full rounded-xl bg-[#0066cc] hover:bg-[#0055aa]">
+                        <Button asChild className="h-11 w-full rounded-lg bg-primary hover:bg-primary-hover">
                           <Link href={`/${orgSlug}/procurement/purchase-orders/${requisition.id}`}>
                             <FileText className="mr-2 size-4" />
                             Open PO Composer

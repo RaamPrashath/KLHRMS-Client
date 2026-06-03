@@ -172,7 +172,7 @@ function NavSearch({
                     "h-10 w-full rounded-[10px] pl-9 pr-9 text-[13.5px] font-[550]",
                     "border border-[var(--border)] bg-[#f8fafc] dark:border-white/5 dark:bg-zinc-950/40",
                     "text-[var(--color-foreground)] placeholder:text-[var(--color-sidebar-foreground)]",
-                    "focus:border-[#6366f1] focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-[#6366f1]/8 dark:focus:border-white/10 dark:focus:bg-white/10",
+                    "focus:border-primary focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-primary/8 dark:focus:border-white/10 dark:focus:bg-white/10",
                     "transition-all duration-200",
                 )}
             />
