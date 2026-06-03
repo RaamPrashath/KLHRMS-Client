@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { requireOrgMembership } from '@/lib/organizations';
 import { requireServerSession } from '@/lib/server-session';
@@ -19,5 +20,15 @@ export default async function AttendanceReportPage({
     redirect('/organizations');
   }
 
-  return <AttendanceReportPageShell orgSlug={orgSlug} memberId={memberId!} />;
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-full bg-canvas p-7">
+          <div className="h-96 animate-pulse rounded-xl bg-neutral-100" />
+        </main>
+      }
+    >
+      <AttendanceReportPageShell orgSlug={orgSlug} memberId={memberId!} />
+    </Suspense>
+  );
 }
