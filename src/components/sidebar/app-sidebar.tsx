@@ -88,6 +88,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
     "leaves": CalendarOff,
     "jobs": Briefcase,
     "candidates": UserSearch,
+    "resume-parser": FileText,
     "interviews": Calendar,
     "offers": FileText,
     "onboarding": UserPlus,

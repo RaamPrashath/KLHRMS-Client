@@ -74,6 +74,7 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
         items: [
             { title: "Jobs",               urlSuffix: "jobs",                permissionKey: "jobs"        },
             { title: "Candidates",         urlSuffix: "candidates",          permissionKey: "candidates"  },
+            { title: "Resume Parser",      urlSuffix: "resume-parser",       permissionKey: "jobs", minAction: "view" },
             { title: "Interviews",         urlSuffix: "interviews",          permissionKey: "interviews"  },
             { title: "Offers",             urlSuffix: "offers",              permissionKey: "offers"      },
         ],
