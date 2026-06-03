@@ -14,6 +14,7 @@ export const HRMS_MODULES = [
   'permission',
   // Time & Attendance
   'attendance',
+  'attendanceReport',
   'leaves',
   'timesheet',
   'projects',

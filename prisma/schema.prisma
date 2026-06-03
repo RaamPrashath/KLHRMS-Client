@@ -2,11 +2,11 @@ generator client {
     provider = "prisma-client"
     output   = "../generated/prisma"
 }
-
+ 
 datasource db {
     provider = "postgresql"
 }
-
+ 
 model User {
     id                      String               @id @default(uuid())
     email                   String               @unique
@@ -20,10 +20,10 @@ model User {
     accounts                Account[]
     members                 Member[]
     sentOrganizationInvites OrganizationInvite[]
-
+ 
     @@map("user")
 }
-
+ 
 model Session {
     id        String   @id @default(uuid())
     expiresAt DateTime
@@ -34,12 +34,12 @@ model Session {
     userAgent String?
     userId    String
     user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+ 
     @@unique([token])
     @@index([userId])
     @@map("session")
 }
-
+ 
 model Account {
     id                    String    @id @default(uuid())
     accountId             String
@@ -55,11 +55,11 @@ model Account {
     password              String?
     createdAt             DateTime  @default(now())
     updatedAt             DateTime  @updatedAt
-
+ 
     @@index([userId])
     @@map("account")
 }
-
+ 
 model Verification {
     id         String   @id @default(uuid())
     identifier String
@@ -67,11 +67,11 @@ model Verification {
     expiresAt  DateTime
     createdAt  DateTime @default(now())
     updatedAt  DateTime @updatedAt
-
+ 
     @@index([identifier])
     @@map("verification")
 }
-
+ 
 model Organization {
     id         String   @id @default(uuid())
     name       String
@@ -83,10 +83,10 @@ model Organization {
     members    Member[]
     roles      Role[]
     invites    OrganizationInvite[]
-
+ 
     @@map("organization")
 }
-
+ 
 model OrganizationInvite {
     id              String   @id @default(uuid())
     organizationId  String
@@ -99,14 +99,14 @@ model OrganizationInvite {
     organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     role            Role         @relation(fields: [organizationId, roleId], references: [organizationId, id])
     invitedByUser   User         @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
-
+ 
     @@unique([organizationId, email])
     @@index([email])
     @@index([organizationId])
     @@index([status])
     @@map("organization_invite")
 }
-
+ 
 model Member {
     id             String   @id @default(uuid())
     organizationId String
@@ -117,13 +117,13 @@ model Member {
     organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
     role           Role?        @relation(fields: [organizationId, roleId], references: [organizationId, id])
-
+ 
     @@unique([organizationId, userId])
     @@index([organizationId])
     @@index([userId])
     @@map("member")
 }
-
+ 
 model Role {
     id             String   @id @default(uuid())
     organizationId String
@@ -134,7 +134,7 @@ model Role {
     organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     members        Member[]
     invites        OrganizationInvite[]
-
+ 
     @@unique([organizationId, id])
     @@unique([organizationId, name])
     @@index([organizationId])

@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import type { RefetchOptions } from '@tanstack/react-query';
 import {
   fetchAttendanceAction,
   fetchAttendanceClockContextAction,
@@ -41,12 +42,14 @@ export function useAttendanceQuery(
   orgSlug: string,
   memberId: string,
   filters?: Partial<AttendanceFiltersState>,
+  options?: { enabled?: boolean; staleTime?: number },
 ): {
   data: AttendanceListResponse | undefined;
   isLoading: boolean;
+  isFetching: boolean;
   isError: boolean;
   error: Error | null;
-  refetch: () => void;
+  refetch: (options?: RefetchOptions) => void;
 } {
   const query = useQuery<AttendanceListResponse, Error>({
     queryKey: attendanceQueryKeys.attendance(orgSlug, memberId, filters),
@@ -64,12 +67,14 @@ export function useAttendanceQuery(
           page_size: filters?.pageSize,
         },
       }),
-    enabled: !!orgSlug && !!memberId,
+    enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
+    staleTime: options?.staleTime,
   });
 
   return {
     data: query.data,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isError: query.isError,
     error: query.error,
     refetch: query.refetch,
@@ -80,12 +85,14 @@ export function useMyAttendanceQuery(
   orgSlug: string,
   memberId: string,
   filters?: Partial<AttendanceFiltersState>,
+  options?: { enabled?: boolean; staleTime?: number },
 ): {
   data: AttendanceListResponse | undefined;
   isLoading: boolean;
+  isFetching: boolean;
   isError: boolean;
   error: Error | null;
-  refetch: () => void;
+  refetch: (options?: RefetchOptions) => void;
 } {
   const query = useQuery<AttendanceListResponse, Error>({
     queryKey: attendanceQueryKeys.attendanceMe(orgSlug, memberId, filters),
@@ -101,12 +108,14 @@ export function useMyAttendanceQuery(
           page_size: filters?.pageSize,
         },
       }),
-    enabled: !!orgSlug && !!memberId,
+    enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
+    staleTime: options?.staleTime,
   });
 
   return {
     data: query.data,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isError: query.isError,
     error: query.error,
     refetch: query.refetch,

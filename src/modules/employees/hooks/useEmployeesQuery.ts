@@ -16,11 +16,12 @@ export function useEmployeesQuery(
   orgSlug: string,
   memberId: string,
   filters: Partial<EmployeeFiltersInput>,
+  options?: { enabled?: boolean },
 ) {
   return useQuery<EmployeeListResponse, Error>({
     queryKey: ['employees', orgSlug, filters],
     queryFn: () => fetchEmployeesAction({ orgSlug, memberId, filters }),
-    enabled: !!orgSlug && !!memberId,
+    enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
     staleTime: 30_000,
   });
 }

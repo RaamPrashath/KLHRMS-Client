@@ -52,6 +52,7 @@ export function OrgSidebarShell({
     const isOfferRoute = pathname.includes("/offer");
     const isDRoute = pathname.includes("/")
     const isProcurementRoute = pathname.includes("/procurement")
+    const isResumeParserRoute = pathname.includes("/resume-parser")
     
     const isFullWidthRoute = 
         isLeaveRoute || 
@@ -71,7 +72,8 @@ export function OrgSidebarShell({
         isHelpdeskRoute ||
         isOfferRoute ||
         isDRoute ||
-        isProcurementRoute
+        isProcurementRoute ||
+        isResumeParserRoute
 
     return (
         <div className="fixed inset-0 flex overflow-hidden bg-canvas">
@@ -88,7 +90,7 @@ export function OrgSidebarShell({
                     className={cn(
                         "w-full",
                         isFullWidthRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
-                        isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute || isResumeParserRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
                         isOfferRoute && "h-full min-h-0 overflow-hidden",
                     )}
                 >

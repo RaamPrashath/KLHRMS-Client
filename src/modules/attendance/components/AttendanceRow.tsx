@@ -2,23 +2,30 @@ import {
   formatDate,
   formatTime,
 } from '@/modules/attendance/utils/attendanceFormatters';
+import { PLAN_LOCATION_THEMES } from '@/modules/weekly-plan/locations';
 import type { AttendanceRecord, AttendanceStatus } from '@/modules/attendance/types/attendanceTypes';
-import { FileText } from 'lucide-react';
 
 interface AttendanceRowProps {
-  record: AttendanceRecord;
-  showEmployeeColumn: boolean;
-  onViewWorkLog?: (attendanceRecordId: string) => void;
+  record: AttendanceRecord | null;
+  employeeName: string;
+  date: string;
+  holidayName?: string;
 }
 
-function getStatusInfo(status: AttendanceStatus) {
+const holidayTheme = PLAN_LOCATION_THEMES.HOLIDAY;
+
+function getStatusInfo(status: AttendanceStatus, isRemote: boolean) {
+  if (status === 'PRESENT' && isRemote) return { text: 'Present', color: '#0066CC' };
   if (status === 'PRESENT') return { text: 'Present', color: '#00874A' };
   if (status === 'ABSENT') return { text: 'Absent', color: '#EA4335' };
   if (status === 'HALF_DAY') return { text: 'Half Day', color: '#FBBC05' };
   return { text: status, color: '#6E6E73' };
 }
 
-function StatusDot({ status }: { readonly status: AttendanceStatus }) {
+function StatusDot({ status, isRemote }: { readonly status: AttendanceStatus; readonly isRemote: boolean }) {
+  if (status === 'PRESENT' && isRemote) {
+    return <span className="size-2 rounded-full bg-[#0066CC]" />;
+  }
   if (status === 'PRESENT') {
     return <span className="size-2 rounded-full bg-[#00874A]" />;
   }
@@ -41,65 +48,70 @@ function StatusDot({ status }: { readonly status: AttendanceStatus }) {
 
 export function AttendanceRow({
   record,
-  showEmployeeColumn,
-  onViewWorkLog,
+  employeeName,
+  date,
+  holidayName,
 }: Readonly<AttendanceRowProps>) {
-  const statusInfo = getStatusInfo(record.status);
+  const isHoliday = holidayName != null;
 
   return (
-    <div className="flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3">
-      {showEmployeeColumn && (
-        <div className="flex-1 flex justify-start pl-6">
-          <span className="block truncate text-sm font-medium text-neutral-900" title={record.employeeName ?? undefined}>
-            {record.employeeName ?? '—'}
-          </span>
-        </div>
-      )}
-
-      <div className="flex-1 flex justify-center">
-        <span className="text-sm text-neutral-700">{formatDate(record.date)}</span>
-      </div>
-
-      <div className="flex-1 flex justify-center">
-        <span className="text-sm text-neutral-700">{formatTime(record.clockIn) || '—'}</span>
-      </div>
-
-      <div className="flex-1 flex justify-center">
-        <span className="text-sm text-neutral-700">{formatTime(record.clockOut) || '—'}</span>
-      </div>
-
-      <div className="flex-1 flex justify-center">
-        <span className="text-sm font-semibold text-neutral-900">
-          {record.totalHours != null ? `${record.totalHours.toFixed(1)}h` : '—'}
+    <tr className="border-b border-black/4 transition-colors hover:bg-black/[0.02]">
+      <td className="pl-6 py-3">
+        <span className="block text-sm font-medium text-neutral-900 truncate" title={employeeName}>
+          {employeeName}
         </span>
-      </div>
+      </td>
 
-      <div className="flex-1 flex justify-center">
-        <div
-          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-medium"
-          style={{ backgroundColor: `${statusInfo.color}0D`, color: statusInfo.color }}
-        >
-          <StatusDot status={record.status} />
-          {statusInfo.text}
-        </div>
-      </div>
+      <td className="text-center py-3">
+        <span className="text-sm text-neutral-700">
+          {record ? formatDate(record.date) : formatDate(date)}
+        </span>
+      </td>
 
-      {/* Work Log column */}
-      <div className="flex-1 flex justify-center">
-        {record.status === 'PRESENT' || record.status === 'HALF_DAY' ? (
-          <button
-            type="button"
-            onClick={() => onViewWorkLog?.(record.id)}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-foreground transition-all duration-150 hover:bg-primary/5 hover:text-primary"
-            aria-label={`View work log for ${formatDate(record.date)}`}
+      <td className="text-center py-3">
+        <span className="text-sm text-neutral-700">
+          {record ? (formatTime(record.clockIn) || '—') : '—'}
+        </span>
+      </td>
+
+      <td className="text-center py-3">
+        <span className="text-sm text-neutral-700">
+          {record ? (formatTime(record.clockOut) || '—') : '—'}
+        </span>
+      </td>
+
+      <td className="text-center py-3">
+        <span className="text-sm font-semibold text-neutral-900">
+          {record && record.totalHours != null ? `${record.totalHours.toFixed(1)}h` : '—'}
+        </span>
+      </td>
+
+      <td className="text-center py-3">
+        {isHoliday ? (
+          <div
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-medium ${holidayTheme.bg} ${holidayTheme.text}`}
+            title={holidayName}
           >
-            <FileText className="size-3.5" strokeWidth={1.5} />
-            View Log
-          </button>
+            <span className={`size-2 rounded-full ${holidayTheme.dot}`} />
+            Holiday
+          </div>
+        ) : record ? (
+          (() => {
+            const statusInfo = getStatusInfo(record.status, record.isRemote);
+            return (
+              <div
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-medium"
+                style={{ backgroundColor: `${statusInfo.color}0D`, color: statusInfo.color }}
+              >
+                <StatusDot status={record.status} isRemote={record.isRemote} />
+                {statusInfo.text}
+              </div>
+            );
+          })()
         ) : (
-          <span className="text-sm text-neutral-300">—</span>
+          <span className="text-sm text-neutral-400">—</span>
         )}
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }

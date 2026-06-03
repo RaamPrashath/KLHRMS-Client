@@ -109,7 +109,7 @@ export function AttendanceFilters({
       targetMemberId: undefined,
       employeeNameSearch: undefined,
       page: 1,
-      pageSize: 20,
+      pageSize: 50,
     });
   }
 

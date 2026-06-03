@@ -6,6 +6,10 @@ import { Resend } from "resend";
 import { getAuthAllowedHosts, getPublicAppUrl, getTrustedOrigins } from "@/lib/deployment-env";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const resendFromEmail =
+    process.env.RESEND_FROM_EMAIL ||
+    process.env.EMAIL_FROM ||
+    "Kovan Labs <onboarding@resend.dev>";
 
 export const auth = betterAuth({
     baseURL: {
@@ -51,7 +55,7 @@ export const auth = betterAuth({
         emailOTP({
             async sendVerificationOTP({ email, otp }) {
                 await resend.emails.send({
-                    from: process.env.EMAIL_FROM || "onboarding@resend.dev",
+                    from: resendFromEmail,
                     to: email,
                     subject: "Verify your email",
                     html: `<!DOCTYPE html>

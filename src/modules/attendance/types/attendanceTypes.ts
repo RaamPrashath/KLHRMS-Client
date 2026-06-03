@@ -15,6 +15,7 @@ export interface AttendanceRecord {
   totalHours: number | null;
   overtimeHours: number | null;
   status: AttendanceStatus;
+  isRemote: boolean;
   enteredByManagerId: string | null;
   createdAt: string;
   /** Populated for org-scope list queries; null for self-scope. */
