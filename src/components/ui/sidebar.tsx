@@ -94,7 +94,7 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        "h-full px-4 py-4 hidden md:flex md:flex-col shrink-0",
+        "h-full px-4 py-6 hidden md:flex md:flex-col shrink-0",
         className
       )}
       animate={{
@@ -186,17 +186,17 @@ export const SidebarLink = ({
       href={link.href}
       onClick={onClick}
       className={cn(
-        "flex items-center justify-start gap-3 group/sidebar py-2 px-3 rounded-xl transition-all duration-200 relative overflow-hidden",
+        "flex items-center justify-start gap-3 group/sidebar py-2.5 px-3 rounded-xl transition-all duration-200 relative overflow-hidden text-[14.2px] font-semibold",
         isActive
-          ? "bg-white/10 text-white font-medium"
-          : "text-white/50 hover:text-white hover:bg-white/5",
+          ? "bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-text)] font-bold"
+          : "text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-hover)] hover:bg-[var(--color-sidebar-accent)]",
         className
       )}
       {...props}
     >
       <div className={cn(
-        "shrink-0 transition-colors duration-200",
-        isActive ? "text-primary" : "text-white/40 group-hover/sidebar:text-white/70"
+        "shrink-0 transition-all duration-150 group-hover/sidebar:translate-x-[1px]",
+        isActive ? "text-[var(--color-sidebar-active-text)]" : "text-[var(--color-sidebar-text)] group-hover/sidebar:text-[var(--color-sidebar-text-hover)]"
       )}>
         {link.icon}
       </div>
@@ -221,7 +221,7 @@ export const SidebarLink = ({
                 width: { duration: 0.22, delay: 0.06, ease: [0.4, 0, 0.2, 1] },
               }
         }
-        className="text-[13.5px] truncate tracking-tight overflow-hidden inline-block"
+        className="truncate tracking-tight overflow-hidden inline-block"
       >
         {link.label}
       </motion.span>
@@ -260,7 +260,7 @@ export const SidebarLabel = ({
             }
       }
       className={cn(
-        "overflow-hidden px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/30",
+        "overflow-hidden px-3 pt-4 pb-1 text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-sidebar-label)]",
         className
       )}
     >

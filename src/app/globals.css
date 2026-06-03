@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@radix-ui/colors/green.css";
+@import "@radix-ui/colors/green-dark.css";
 
 /* ============================================================
    KOVAN LABS — DESIGN TOKENS (Tailwind v4 + shadcn compatible)
@@ -90,6 +92,16 @@
     --color-primary-ghost: #edfaf4;
 
     /* ----------------------------------------------------------
+       RADIX GREEN SCALE — soft hover/active surfaces
+       (light: green/3 wash, green/4 hover; text: green/11)
+    ---------------------------------------------------------- */
+    --color-green-subtle: var(--green-3);
+    --color-green-subtle-hover: var(--green-4);
+    --color-green-subtle-press: var(--green-5);
+    --color-green-text: var(--green-11);
+    --color-green-border: var(--green-7);
+
+    /* ----------------------------------------------------------
        SEMANTIC STATUS COLORS (Logo Colors)
        Use ONLY as status signals — never decorative fills.
     ---------------------------------------------------------- */
@@ -146,14 +158,14 @@
        SIDEBAR TOKENS
        Dark column, single green accent for active state
     ---------------------------------------------------------- */
-    --color-sidebar-bg: #1d1d1f;
-    --color-sidebar-text: #aeaeb2;
-    --color-sidebar-text-hover: #f5f5f7;
-    --color-sidebar-active-bg: rgba(0, 135, 74, 0.18);
-    --color-sidebar-active-text: #34c47a;
-    --color-sidebar-active-border: #00874a;
-    --color-sidebar-divider: rgba(255, 255, 255, 0.06);
-    --color-sidebar-label: #6e6e73;
+    --color-sidebar-bg: var(--sidebar);
+    --color-sidebar-text: var(--sidebar-foreground);
+    --color-sidebar-text-hover: var(--sidebar-accent-foreground);
+    --color-sidebar-active-bg: var(--sidebar-active-bg);
+    --color-sidebar-active-text: var(--sidebar-active-text);
+    --color-sidebar-active-border: var(--sidebar-active-border);
+    --color-sidebar-divider: var(--sidebar-border);
+    --color-sidebar-label: var(--sidebar-label);
 
     /* ----------------------------------------------------------
        SPACING
@@ -268,12 +280,12 @@
     /* Sidebar (shadcn sidebar primitives) */
     --color-sidebar: var(--color-sidebar-bg);
     --color-sidebar-foreground: var(--color-sidebar-text);
-    --color-sidebar-primary: #1d1d1f;
-    --color-sidebar-primary-foreground: #aeaeb2;
-    --color-sidebar-accent: rgba(255, 255, 255, 0.05); /* Hover lift only */
-    --color-sidebar-accent-foreground: var(--color-sidebar-text-hover);
-    --color-sidebar-border: var(--color-sidebar-divider);
-    --color-sidebar-ring: var(--color-sidebar-active-border);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
 
     /* Charts */
     --color-chart-1: var(--color-primary);
@@ -344,19 +356,19 @@
     --radius: 0.5rem; /* 8px — inputs & buttons */
 
     /* Sidebar */
-    --sidebar: #1d1d1f;
-    --sidebar-foreground: #aeaeb2;
-    --sidebar-primary: #1d1d1f;
-    --sidebar-primary-foreground: #aeaeb2;
-    --sidebar-accent: rgba(
-        255,
-        255,
-        255,
-        0.05
-    ); /* Subtle hover lift — not green */
-    --sidebar-accent-foreground: #f5f5f7;
-    --sidebar-border: rgba(255, 255, 255, 0.06);
-    --sidebar-ring: #00874a;
+    --sidebar: #ffffff;
+    --sidebar-foreground: #64748b;
+    --sidebar-primary: #6366f1;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #f1f5f9;
+    --sidebar-accent-foreground: #0f172a;
+    --sidebar-border: #f1f5f9;
+    --sidebar-ring: #6366f1;
+
+    --sidebar-active-bg: #eef2ff;
+    --sidebar-active-text: #6366f1;
+    --sidebar-active-border: #6366f1;
+    --sidebar-label: #94a3b8;
 }
 
 /* ============================================================
@@ -404,6 +416,11 @@
     --sidebar-accent-foreground: #f5f5f7;
     --sidebar-border: rgba(255, 255, 255, 0.06);
     --sidebar-ring: #34c47a;
+
+    --sidebar-active-bg: rgba(0, 135, 74, 0.18);
+    --sidebar-active-text: #34c47a;
+    --sidebar-active-border: #00874a;
+    --sidebar-label: #6e6e73;
 }
 
 /* ============================================================
@@ -488,5 +505,20 @@
 @keyframes shimmer {
     100% {
         transform: translateX(100%);
+    }
+}
+
+@keyframes pulse-indicator {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
     }
 }

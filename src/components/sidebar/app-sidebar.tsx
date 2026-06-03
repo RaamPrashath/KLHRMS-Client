@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 import {
     type RolePermissions,
     filterNavByPermissions,
@@ -127,6 +128,18 @@ function NavSearch({
     const { open, setOpen } = useSidebar();
     const inputRef = useRef<HTMLInputElement>(null);
 
+    useEffect(() => {
+        function handleKeyDown(e: KeyboardEvent) {
+            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+                e.preventDefault();
+                setOpen(true);
+                setTimeout(() => inputRef.current?.focus(), 240);
+            }
+        }
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [setOpen]);
+
     function handleCollapsedClick() {
         setOpen(true);
         setTimeout(() => inputRef.current?.focus(), 240);
@@ -138,7 +151,7 @@ function NavSearch({
                 onClick={handleCollapsedClick}
                 aria-label="Search navigation"
                 suppressHydrationWarning
-                className="mx-auto flex h-9 w-9 items-center justify-center rounded-full text-white/40 transition-all duration-200 hover:bg-white/10 hover:text-white active:scale-95"
+                className="mx-auto flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-sidebar-text)] transition-all duration-200 hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-text-hover)] active:scale-95"
             >
                 <MagnifyingGlassIcon className="h-4 w-4" />
             </button>
@@ -146,20 +159,20 @@ function NavSearch({
     }
 
     return (
-        <div className="relative group px-1">
-            <MagnifyingGlassIcon className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40 group-focus-within:text-white" />
+        <div className="relative group px-1 mb-2">
+            <MagnifyingGlassIcon className="pointer-events-none absolute left-4.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-sidebar-text)] group-focus-within:text-[var(--color-sidebar-text-hover)]" />
             <input
                 ref={inputRef}
                 type="text"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                placeholder="Search"
+                placeholder="Search navigation..."
                 aria-label="Search navigation"
                 className={cn(
-                    "h-9 w-full rounded-lg pl-9 pr-8 text-[13px]",
-                    "border border-white/5 bg-white/5",
-                    "text-white placeholder:text-white/30",
-                    "focus:border-white/10 focus:bg-white/10 focus:outline-none",
+                    "h-10 w-full rounded-[10px] pl-9 pr-9 text-[13.5px] font-[550]",
+                    "border border-[var(--border)] bg-[#f8fafc] dark:border-white/5 dark:bg-zinc-950/40",
+                    "text-[var(--color-foreground)] placeholder:text-[var(--color-sidebar-foreground)]",
+                    "focus:border-[#6366f1] focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-[#6366f1]/8 dark:focus:border-white/10 dark:focus:bg-white/10",
                     "transition-all duration-200",
                 )}
             />
@@ -167,9 +180,9 @@ function NavSearch({
                 <button
                     onClick={() => onChange("")}
                     aria-label="Clear search"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 transition-colors hover:text-white"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-sidebar-text)] transition-colors hover:text-[var(--color-sidebar-text-hover)]"
                 >
-                    <span className="text-[14px] leading-none">x</span>
+                    <span className="text-[14px] leading-none">×</span>
                 </button>
             )}
         </div>
@@ -178,7 +191,7 @@ function NavSearch({
 
 function RoleBadge({ roleName }: { readonly roleName: string }) {
     return (
-        <span className="inline-flex items-center rounded-full border border-white/5 bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none text-white/50">
+        <span className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--color-surface-subtle)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none text-[var(--color-sidebar-text)] dark:border-white/5 dark:bg-white/10 dark:text-white/50">
             {roleName}
         </span>
     );
@@ -212,7 +225,12 @@ function SidebarNavigation({
 
     return (
         <>
-            {showSearch && <NavSearch value={search} onChange={setSearch} />}
+            {showSearch && (
+                <>
+                    <div className="mx-1 h-px bg-[var(--color-sidebar-divider)]" aria-hidden="true" />
+                    <NavSearch value={search} onChange={setSearch} />
+                </>
+            )}
 
             {navGroups.length === 0 ? (
                 <div className="px-2 pb-4 text-center text-xs leading-relaxed text-[var(--color-sidebar-label)]">
@@ -324,22 +342,27 @@ function UserFooter({
     };
 
     return (
-        <div ref={dropdownRef} className="relative border-t border-white/5 pt-4">
+        <div ref={dropdownRef} className="relative border-t border-[var(--color-sidebar-border)] pt-4 flex items-center justify-between gap-1">
             <button
-                onClick={() => setDropdownOpen((v) => !v)}
+                onClick={!open ? () => setDropdownOpen((v) => !v) : undefined}
                 suppressHydrationWarning
                 className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/5 active:scale-[0.98]",
-                    dropdownOpen && "bg-white/5 shadow-inner",
+                    "flex flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left min-w-0 select-none",
+                    !open
+                        ? cn(
+                            "transition-all duration-200 hover:bg-[var(--color-sidebar-accent)] active:scale-[0.98] cursor-pointer",
+                            dropdownOpen && "bg-[var(--color-sidebar-accent)] shadow-inner"
+                          )
+                        : "cursor-default"
                 )}
                 aria-expanded={dropdownOpen}
                 aria-haspopup="menu"
             >
                 {user.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.image} className="h-8 w-8 shrink-0 rounded-full border border-white/10" alt={displayName} />
+                    <img src={user.image} className="h-8 w-8 shrink-0 rounded-full border border-[var(--border)] dark:border-white/10" alt={displayName} />
                 ) : (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/5 bg-white/10 text-[11px] font-bold text-white/90">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#10b981] to-[#3b82f6] text-[11px] font-[800] text-white shadow-[0_4px_10px_rgba(16,185,129,0.15)]">
                         {initials}
                     </div>
                 )}
@@ -351,32 +374,34 @@ function UserFooter({
                     className="flex min-w-0 flex-1 flex-col overflow-hidden"
                     aria-hidden={!open}
                 >
-                    <span className="truncate text-[13.5px] font-medium capitalize leading-tight text-white">
+                    <span className="truncate text-[13.5px] font-bold capitalize leading-tight text-[var(--color-sidebar-accent-foreground)]">
                         {displayName}
                     </span>
-                    <div className="mt-0.5 flex items-center gap-1.5">
-                        {roleName ? (
-                            <RoleBadge roleName={roleName} />
-                        ) : (
-                            user.email && (
-                                <span className="truncate text-[11px] leading-tight text-white/40">
-                                    {user.email}
-                                </span>
-                            )
-                        )}
-                    </div>
-                </motion.div>
-
-                <motion.div
-                    initial={false}
-                    animate={{ opacity: open ? 1 : 0, width: open ? "auto" : 0 }}
-                    transition={labelTransition}
-                    className="shrink-0 overflow-hidden"
-                    aria-hidden={!open}
-                >
-                    <DotsHorizontalIcon className="h-4 w-4 text-white/30" />
+                    <span className="truncate text-[11px] font-medium leading-tight text-[var(--color-sidebar-foreground)] mt-0.5">
+                        {roleName ?? user.email ?? "Employee"}
+                    </span>
                 </motion.div>
             </button>
+
+            <AnimatePresence>
+                {open && (
+                    <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.15 }}
+                        type="button"
+                        onClick={() => setDropdownOpen((v) => !v)}
+                        className="settings-btn p-2 rounded-lg transition-all duration-150 text-[var(--color-sidebar-foreground)] hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-accent-foreground)] hover:rotate-12 active:scale-95 shrink-0"
+                        aria-label="Settings panel"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                    </motion.button>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {dropdownOpen && (
@@ -387,13 +412,13 @@ function UserFooter({
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                         role="menu"
                         className={cn(
-                            "absolute bottom-full z-50 mb-3 overflow-hidden rounded-2xl border border-white/10 bg-[#2a2a2c] p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)]",
+                            "absolute bottom-full z-50 mb-3 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--color-surface)] p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-[#2a2a2c] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]",
                             open ? "left-0 right-0" : "left-0 w-56",
                         )}
                     >
                         <div className="mb-1 px-3 py-3">
-                            <p className="truncate text-[13px] font-semibold text-white">{displayName}</p>
-                            <p className="mt-0.5 truncate text-[11px] text-white/40">{user.email}</p>
+                            <p className="truncate text-[13px] font-semibold text-[var(--color-foreground)]">{displayName}</p>
+                            <p className="mt-0.5 truncate text-[11px] text-[var(--color-sidebar-text)]">{user.email}</p>
                         </div>
 
                         <div className="space-y-0.5">
@@ -401,7 +426,7 @@ function UserFooter({
                                 href={`/${orgSlug}/settings/account`}
                                 role="menuitem"
                                 onClick={() => setDropdownOpen(false)}
-                                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+                                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-sidebar-text)] transition-colors hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-text-hover)]"
                             >
                                 <GearIcon className="h-4 w-4 shrink-0" />
                                 Account Settings
@@ -411,18 +436,18 @@ function UserFooter({
                                     href={`/${orgSlug}/settings`}
                                     role="menuitem"
                                     onClick={() => setDropdownOpen(false)}
-                                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+                                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-sidebar-text)] transition-colors hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-text-hover)]"
                                 >
                                     <Building2 className="h-4 w-4 shrink-0" />
                                     Organization Settings
                                 </Link>
                             )}
-                            <div className="mx-2 my-1 h-px bg-white/5" />
+                            <div className="mx-2 my-1 h-px bg-[var(--color-sidebar-border)]" />
                             <button
                                 role="menuitem"
                                 onClick={handleSignOut}
                                 disabled={isSigningOut}
-                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-sidebar-text)] transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                             >
                                 <ExitIcon className="h-4 w-4 shrink-0" />
                                 {isSigningOut ? "Signing out..." : "Log out"}
@@ -457,6 +482,7 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
             <SidebarBody className="justify-between gap-4 border-r border-[var(--color-sidebar-divider)] bg-[var(--color-sidebar-bg)]">
                 <div className="flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto no-scrollbar">
                     <OrganizationSwitcher currentOrgSlug={orgSlug} organizations={organizations} />
+                    <Separator className="bg-[var(--color-sidebar-border)] opacity-85 px-1.5" />
                     <SidebarNavigation
                         key={showSearch ? "with-search" : "without-search"}
                         allNavGroups={allNavGroups}
