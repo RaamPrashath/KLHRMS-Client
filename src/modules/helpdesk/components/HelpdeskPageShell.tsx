@@ -72,7 +72,7 @@ function EmptyTickets() {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#d7dce2] bg-white py-14 text-center">
       <div className="flex size-11 items-center justify-center rounded-xl bg-[#f3f7f5]">
-        <TicketCheck className="size-5 text-[#00874a]" />
+        <TicketCheck className="size-5 text-primary" />
       </div>
       <p className="mt-3 text-[15px] font-semibold text-[#1d1d1f]">No tickets yet</p>
       <p className="mt-1 text-[13px] text-[#6e6e73]">Submitted asset issues and help requests will appear here.</p>
@@ -361,7 +361,7 @@ export function HelpdeskPageShell({ orgSlug, memberId }: { orgSlug: string; memb
               className={cn(
                 'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
                 isActive
-                  ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                  ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
                   : 'text-neutral-500 hover:text-neutral-900',
               )}
             >
@@ -441,7 +441,7 @@ export function HelpdeskPageShell({ orgSlug, memberId }: { orgSlug: string; memb
           <section className="rounded-xl border border-[#e5e7eb] bg-white p-5">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#e9f6ef]">
-                <LifeBuoy className="size-4.5 text-[#00874a]" />
+                <LifeBuoy className="size-4.5 text-primary" />
               </div>
               <div>
                 <h2 className="text-[17px] font-semibold text-[#1d1d1f]">General Help Request</h2>

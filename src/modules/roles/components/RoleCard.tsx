@@ -64,7 +64,7 @@ export function RoleCard({ role, assignees = [], onEdit }: Readonly<RoleCardProp
   const remainingAssigneeCount = Math.max(assignees.length - visibleAssignees.length, 0);
 
   return (
-    <div className="group flex items-center justify-between gap-6 px-6 py-6 transition-colors hover:bg-[#00874A]/[0.02]">
+    <div className="group flex items-center justify-between gap-6 px-6 py-6 transition-colors hover:bg-primary/[0.02]">
       <div className="flex min-w-0 items-center gap-4">
         <div className="min-w-0">
           <h3 className="truncate font-sans text-[15px] font-medium text-neutral-900">
@@ -79,7 +79,7 @@ export function RoleCard({ role, assignees = [], onEdit }: Readonly<RoleCardProp
             <div className="flex items-center gap-3">
               <Avatar size="sm" className="ring-1 ring-black/[0.04]">
                 <AvatarImage src={assignees[0].image ?? undefined} alt={assignees[0].name} />
-                <AvatarFallback className="bg-[#00874A]/[0.08] text-[11px] font-medium text-primary">
+                <AvatarFallback className="bg-primary/[0.08] text-[11px] font-medium text-primary">
                   {getInitials(assignees[0].name)}
                 </AvatarFallback>
               </Avatar>
@@ -91,7 +91,7 @@ export function RoleCard({ role, assignees = [], onEdit }: Readonly<RoleCardProp
                 {visibleAssignees.map((assignee) => (
                   <Avatar key={assignee.memberId} size="sm" className="ring-1 ring-white">
                     <AvatarImage src={assignee.image ?? undefined} alt={assignee.name} />
-                    <AvatarFallback className="bg-[#00874A]/[0.08] text-[11px] font-medium text-primary">
+                    <AvatarFallback className="bg-primary/[0.08] text-[11px] font-medium text-primary">
                       {getInitials(assignee.name)}
                     </AvatarFallback>
                   </Avatar>
@@ -114,7 +114,7 @@ export function RoleCard({ role, assignees = [], onEdit }: Readonly<RoleCardProp
         <button
           type="button"
           onClick={() => onEdit(role)}
-          className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-medium text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] transition-all hover:bg-[#00874A]/[0.05] hover:text-primary focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+          className="inline-flex items-center rounded-lg bg-white px-4 py-2 text-sm font-medium text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] transition-all hover:bg-primary/[0.05] hover:text-primary focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
         >
           Edit Role
         </button>

@@ -10,7 +10,7 @@ export function BulkAttendanceLegend() {
       </div>
       <div className="flex items-center gap-1.5">
         <div
-          className="size-1.5 rounded-full bg-primary"
+          className="size-1.5 rounded-lg bg-primary"
         />
         <span className="text-xs text-muted-foreground">Current time</span>
       </div>

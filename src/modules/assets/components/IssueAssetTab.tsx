@@ -561,7 +561,7 @@ export function IssueAssetTab({
                 inputValue={employeeQuery}
                 onInputValueChange={setEmployeeQuery}
               >
-                <div className="flex items-center border-b-[1.5px] border-[#d1d5db] focus-within:border-[#00874a] transition-colors duration-150 bg-transparent">
+                <div className="flex items-center border-b-[1.5px] border-[#d1d5db] focus-within:border-primary transition-colors duration-150 bg-transparent">
                   <User className="mr-2 size-4 shrink-0 text-[#6b7280]" />
                   <ComboboxInput
                     placeholder="Search employee name or email..."
@@ -626,7 +626,7 @@ export function IssueAssetTab({
                       setEmployeeQuery(memberDisplayName(me));
                     }
                   }}
-                  className="mt-1.5 text-[12px] font-medium text-[#00874a] hover:text-[#006e3c] transition-colors"
+                  className="mt-1.5 text-[12px] font-medium text-primary hover:text-[var(--indigo-10)] transition-colors"
                 >
                   Assign to myself
                 </button>
@@ -652,7 +652,7 @@ export function IssueAssetTab({
                 inputValue={groupQuery}
                 onInputValueChange={setGroupQuery}
               >
-                <div className="flex items-center border-b-[1.5px] border-[#d1d5db] focus-within:border-[#00874a] transition-colors duration-150 bg-transparent">
+                <div className="flex items-center border-b-[1.5px] border-[#d1d5db] focus-within:border-primary transition-colors duration-150 bg-transparent">
                   <LaptopMinimal className="mr-2 size-4 shrink-0 text-[#6b7280]" />
                   <ComboboxInput
                     placeholder="Search asset name, code, or model..."
@@ -712,7 +712,7 @@ export function IssueAssetTab({
               type="button"
               onClick={() => void handleIssue()}
               disabled={!selectedEmployeeMemberId || !selectedGroup || isIssuing || !canManageAssets}
-              className="rounded-lg bg-[#00874a] px-5 py-2 text-[13px] font-medium text-white hover:bg-[#006e3c] disabled:opacity-40"
+              className="rounded-lg bg-primary px-5 py-2 text-[13px] font-medium text-white hover:bg-[var(--indigo-10)] disabled:opacity-40"
             >
               {isIssuing ? (
                 <span className="flex items-center gap-2">

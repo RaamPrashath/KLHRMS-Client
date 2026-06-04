@@ -27,8 +27,8 @@ function ClockMarkerLine({
   const topPercent = Math.max(0, Math.min(100, (relativeHour / totalHours) * 100));
 
   const isClockIn = type === 'clock-in';
-  const colorClass = isClockIn ? 'bg-emerald-500' : 'bg-rose-500';
-  const labelColorClass = isClockIn ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+  const colorClass = isClockIn ? 'bg-sky-dot' : 'bg-rose-500';
+  const labelColorClass = isClockIn ? 'text-sky-text dark:text-sky-dot' : 'text-rose-600 dark:text-rose-400';
   const timeStr = format(time, 'HH:mm');
 
   return (

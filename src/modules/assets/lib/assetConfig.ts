@@ -27,7 +27,7 @@ import type {
 } from '@/modules/assets/schema/assetSchemas';
 import type { AssetMaintenanceSummary, AssetReportType } from '@/modules/assets/types/assetTypes';
 
-export const ACTION_GREEN = '#00874a';
+export const ACTION_GREEN = 'var(--indigo-9)';
 
 export type AssetTabValue = 'dashboard' | 'register' | 'categories' | 'provide' | 'returned' | 'access-control' | 'inventory' | 'reports';
 

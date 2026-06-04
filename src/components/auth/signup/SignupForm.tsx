@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
 import NeumorphButton from "@/components/ui/neumorph-button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
@@ -191,19 +190,13 @@ export function SignupForm() {
 
                 <NeumorphButton
                     type="submit"
-                    intent="default"
-                    className="mt-5 h-11 w-full rounded-2xl !bg-[#1d1d1f] hover:enabled:!bg-[#0a0a0f] active:enabled:!bg-black !text-white !shadow-[inset_0px_-2px_0px_0px_rgba(0,0,0,0.6),_0px_2px_8px_rgba(0,0,0,0.2)] hover:enabled:!shadow-[inset_0px_-2.5px_0px_0px_rgba(0,0,0,0.8),_0px_4px_12px_rgba(0,0,0,0.3)]"
-                    disabled={isSubmitting}
+                    intent="primary"
+                    fullWidth
+                    loading={isSubmitting}
+                    className="mt-5"
                     aria-busy={isSubmitting}
                 >
-                    {isSubmitting ? (
-                        <span className="flex items-center justify-center gap-2">
-                            <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-                            <span>Creating account...</span>
-                        </span>
-                    ) : (
-                        "Create account"
-                    )}
+                    Create account
                 </NeumorphButton>
             </form>
 

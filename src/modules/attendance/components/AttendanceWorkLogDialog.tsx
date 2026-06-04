@@ -55,7 +55,7 @@ export function AttendanceWorkLogDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
               <FileText className="size-5 text-primary" strokeWidth={1.5} />
             </div>
             <div>

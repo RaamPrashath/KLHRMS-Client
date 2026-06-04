@@ -37,7 +37,7 @@ import { useMyTicketsQuery, type MyTicket } from '@/modules/assets/hooks/useMyTi
 const statusStyle: Record<string, { dot: string; label: string }> = {
   OPEN: { dot: '#dc2626', label: 'Open' },
   IN_PROGRESS: { dot: '#d97706', label: 'In Progress' },
-  COMPLETED: { dot: '#00874a', label: 'Completed' },
+  COMPLETED: { dot: 'var(--indigo-9)', label: 'Completed' },
   CANCELLED: { dot: '#6b7280', label: 'Cancelled' },
 };
 

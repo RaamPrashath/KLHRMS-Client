@@ -80,7 +80,7 @@ export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardP
                 onClick={() => setSelectedReq(req)}
                 className="flex items-center gap-4 border-b border-black/4 dark:border-white/4 py-3.5 text-left transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.02] last:border-0 w-full"
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-subtle">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-subtle">
                   <Briefcase className="size-5 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -89,7 +89,7 @@ export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardP
                     {req.departmentName ?? "No department"} · {req.openings} opening{req.openings > 1 ? "s" : ""} · {req.employmentType.replaceAll("_", " ")}
                   </p>
                 </div>
-                <Badge className="shrink-0 rounded-full bg-[#00874A]/[0.08] text-[#00874A] border border-[#00874A]/10 text-[11px] font-semibold uppercase px-2.5 py-0.5">
+                <Badge className="shrink-0 rounded-lg bg-primary/[0.08] text-primary border border-primary/10 text-[11px] font-semibold uppercase px-2.5 py-0.5">
                   Open
                 </Badge>
               </button>
@@ -104,7 +104,7 @@ export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardP
             <div className="p-6">
               <DialogTitle className="text-xl font-semibold text-neutral-900 mb-4">{selectedReq.title}</DialogTitle>
 
-              <Badge className="mb-4 inline-flex rounded-full bg-[#00874A]/[0.08] text-[#00874A] border border-[#00874A]/10 text-[11px] font-semibold uppercase">
+              <Badge className="mb-4 inline-flex rounded-lg bg-primary/[0.08] text-primary border border-primary/10 text-[11px] font-semibold uppercase">
                 {selectedReq.employmentType.replaceAll("_", " ")}
               </Badge>
 

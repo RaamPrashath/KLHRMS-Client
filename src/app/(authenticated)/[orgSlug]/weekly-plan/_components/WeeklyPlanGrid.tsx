@@ -185,7 +185,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                   <p
                     className={cn(
                       "mt-0.5 text-[18px] font-semibold leading-none",
-                      today ? "text-[#00874a]" : "text-foreground",
+                      today ? "text-primary" : "text-foreground",
                     )}
                   >
                     {dayNumber}
@@ -234,7 +234,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                             : cn(
                                 "rounded-lg border-border bg-[#f8f8fa] text-transparent",
                                 isCurrentDay
-                                  ? "border-[#00874a]/45 bg-[#f4fbf7]"
+                                  ? "border-primary/45 bg-[#f4fbf7]"
                                   : "hover:border-[#d8d8de] hover:bg-[#f2f2f5]",
                               ),
                           isProtected && "opacity-80 cursor-not-allowed",
@@ -265,7 +265,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                         onClick={() => handleSelect(item.date, rowLocation)}
                         disabled={isProtected}
                         className={cn(
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00874a]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
                           isProtected && "cursor-not-allowed"
                         )}
                         aria-pressed={isSelected}
@@ -317,7 +317,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                   onClick={onSave}
                   disabled={!isDirty || isSaving}
                   className="h-10 rounded-lg px-5 text-sm font-medium"
-                  style={{ backgroundColor: '#00874a' }}
+                  style={{ backgroundColor: 'var(--indigo-9)' }}
                 >
                   {isSaving ? "Saving..." : "Save plan"}
                 </Button>

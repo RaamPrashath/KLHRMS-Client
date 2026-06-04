@@ -287,7 +287,7 @@ export function CandidateCard({
       {!compact && (application.aiScore !== null || aiStatus || application.isFlaggedForCheating) ? (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {application.aiScore !== null ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary-ghost px-2 py-0.5 font-mono text-xs font-medium text-primary">
+            <span className="inline-flex items-center gap-1 rounded-lg bg-primary-ghost px-2 py-0.5 font-mono text-xs font-medium text-primary">
               <Gauge className="size-3.5" />
               AI {application.aiScore}
             </span>

@@ -442,7 +442,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
 
             <Button
               type="button"
-              className="h-9 rounded-xl bg-primary text-primary-foreground px-5 text-xs font-semibold capitalize tracking-wider transition-colors hover:bg-primary-hover active:bg-primary-press shadow-xs focus-visible:ring-2 focus-visible:ring-primary/20"
+              className="h-9 rounded-lg bg-primary text-primary-foreground px-5 text-xs font-semibold capitalize tracking-wider transition-colors hover:bg-primary-hover active:bg-primary-press shadow-xs focus-visible:ring-2 focus-visible:ring-primary/20"
               onClick={handleSave}
               disabled={!isDirty || saveMutation.isPending || isMonthLoading}
             >

@@ -198,14 +198,14 @@ export function ProjectPageShell({
       <div className="flex items-center justify-between ml-7 mt-7 mr-7">
         <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">Projects</h1>
         {canManageProjects && (
-          <Button
+          <button
+            type="button"
             onClick={openCreateDialog}
-            className="h-11 rounded-xl px-5 text-[15px] font-medium text-white shadow-sm hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: '#00874a' }}
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer"
           >
             <Plus className="mr-2 size-4" />
             Create project
-          </Button>
+          </button>
         )}
       </div>
 
@@ -246,7 +246,7 @@ export function ProjectPageShell({
                       id="project-name"
                       value={projectForm.name}
                       onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
@@ -256,7 +256,7 @@ export function ProjectPageShell({
                       id="project-client"
                       value={projectForm.clientName || ''}
                       onChange={(e) => setProjectForm({ ...projectForm, clientName: e.target.value })}
-                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+                      className="h-10 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
                 </div>
@@ -311,7 +311,7 @@ export function ProjectPageShell({
                     id="project-description"
                     value={projectForm.description || ''}
                     onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
-                    className="min-h-20 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+                    className="min-h-20 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                   />
                 </div>
 
@@ -342,8 +342,7 @@ export function ProjectPageShell({
                   <Button
                     onClick={() => void handleSaveProject()}
                     disabled={mutations.createProject.isPending || mutations.updateProject.isPending}
-                    style={{ backgroundColor: '#00874a' }}
-                    className="h-10 rounded-xl px-6 text-white"
+                    className="h-10 rounded-lg px-6 bg-primary hover:bg-primary-hover text-primary-foreground"
                   >
                     {mutations.createProject.isPending || mutations.updateProject.isPending
                       ? 'Saving…'

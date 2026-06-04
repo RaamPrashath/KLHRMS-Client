@@ -42,7 +42,7 @@ interface DepartmentsTableProps {
 
 function formatStatus(status: DepartmentStatus) {
   return status === 'ACTIVE'
-    ? 'bg-[#00874A]/[0.08] text-[#00874A] border border-[#00874A]/10'
+    ? 'bg-primary/[0.08] text-primary border border-primary/10'
     : 'bg-neutral-100 text-neutral-500 border border-neutral-200';
 }
 

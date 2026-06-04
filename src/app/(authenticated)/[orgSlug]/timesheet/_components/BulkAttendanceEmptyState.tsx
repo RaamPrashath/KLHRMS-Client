@@ -7,7 +7,7 @@ interface BulkAttendanceEmptyStateProps {
 export function BulkAttendanceEmptyState({ onAddLog }: Readonly<BulkAttendanceEmptyStateProps>) {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-4">
-      <div className="size-14 rounded-full bg-primary/10 flex items-center justify-center">
+      <div className="size-14 rounded-lg bg-primary/10 flex items-center justify-center">
         <CalendarDays className="size-7 text-primary" strokeWidth={1.5} />
       </div>
       

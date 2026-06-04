@@ -317,7 +317,7 @@ export function CategoryTab({
                 </span>
               ))}
               {overflow > 0 && (
-                <span className="inline-flex items-center rounded-md bg-[#eaf7f1] border border-emerald-100 px-2 py-0.5 text-[11.5px] font-semibold text-[#00874a]">
+                <span className="inline-flex items-center rounded-md bg-[#eaf7f1] border border-emerald-100 px-2 py-0.5 text-[11.5px] font-semibold text-primary">
                   +{overflow} more
                 </span>
               )}
@@ -336,11 +336,11 @@ export function CategoryTab({
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.02)] border",
                 isProduction 
-                  ? "bg-emerald-50/20 text-[#00874a] border-emerald-100" 
+                  ? "bg-emerald-50/20 text-primary border-emerald-100" 
                   : "bg-zinc-50/60 text-zinc-500 border-zinc-200"
               )}
             >
-              <span className={cn("size-1.5 rounded-full", isProduction ? "bg-[#00874a] animate-pulse" : "bg-zinc-400")} />
+              <span className={cn("size-1.5 rounded-full", isProduction ? "bg-primary animate-pulse" : "bg-zinc-400")} />
               {isProduction ? 'Production' : 'Inactive Draft'}
             </span>
           );
@@ -363,7 +363,7 @@ export function CategoryTab({
                   setCatFieldRequired(false);
                 }}
                 title="Add Field"
-                className="flex size-7.5 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:border-emerald-200 hover:bg-emerald-50 hover:text-[#00874a] shadow-sm transition-all duration-150"
+                className="flex size-7.5 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:border-emerald-200 hover:bg-emerald-50 hover:text-primary shadow-sm transition-all duration-150"
               >
                 <Plus className="size-4" />
               </button>
@@ -440,7 +440,7 @@ export function CategoryTab({
                 setCatFieldType('TEXT');
                 setCatFieldRequired(false);
               }}
-              className="h-8 rounded-lg text-[11.5px] font-medium border-zinc-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-[#00874a] transition-all"
+              className="h-8 rounded-lg text-[11.5px] font-medium border-zinc-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-primary transition-all"
             >
               <Plus className="mr-1 size-3.5" />
               Add custom field

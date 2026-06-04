@@ -393,7 +393,7 @@ export function SchedulingModal({
       <DialogContent className="max-h-[88vh] w-[min(94vw,680px)] overflow-hidden gap-0 rounded-2xl border border-neutral-100 bg-surface p-0 shadow-[var(--shadow-4)] sm:max-w-[680px]">
         <DialogHeader className="border-b border-neutral-100 bg-canvas/50 px-6 pt-6 pb-5 sm:px-7">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-ghost text-primary">
+            <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-ghost text-primary">
               <CalendarDays className="size-5" />
             </div>
             <div className="min-w-0 space-y-1">

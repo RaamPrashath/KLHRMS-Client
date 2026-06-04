@@ -251,7 +251,7 @@ function EmployeeCell({ name }: { readonly name: string }) {
 
   return (
     <div className="flex items-center gap-2.5 min-w-0">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary text-[10px] font-bold">
         {initials}
       </div>
       <div className="flex flex-col min-w-0 overflow-hidden">

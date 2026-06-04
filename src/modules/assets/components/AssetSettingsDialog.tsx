@@ -78,7 +78,7 @@ function FieldRow({
           value={field.fieldName}
           onChange={(e) => onUpdate(index, { ...field, fieldName: e.target.value })}
           placeholder="Field name"
-          className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+          className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
         />
         <Select
           value={field.fieldType}
@@ -86,7 +86,7 @@ function FieldRow({
             onUpdate(index, { ...field, fieldType: v as AssetCategoryFieldCreateInput['fieldType'] })
           }
         >
-          <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
+          <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm focus:ring-1 focus:ring-primary focus:border-transparent">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -102,7 +102,7 @@ function FieldRow({
             type="checkbox"
             checked={field.isRequired}
             onChange={(e) => onUpdate(index, { ...field, isRequired: e.target.checked })}
-            className="size-4 rounded border-[#d8dde5] accent-[#00874a]"
+            className="size-4 rounded border-[#d8dde5] accent-[var(--indigo-9)]"
           />
           Required
         </label>
@@ -164,13 +164,13 @@ function AddFieldDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Serial Number"
-              className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+              className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
             />
           </div>
           <div className="grid gap-1.5">
             <Label className="text-[13px] font-medium text-[#4b5563]">Field Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as AssetCategoryFieldCreateInput['fieldType'])}>
-              <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm focus:ring-1 focus:ring-[#00874a] focus:border-transparent">
+              <SelectTrigger className="w-full h-10 rounded-lg border-[#e5e7eb] text-sm focus:ring-1 focus:ring-primary focus:border-transparent">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -185,7 +185,7 @@ function AddFieldDialog({
               type="checkbox"
               checked={required}
               onChange={(e) => setRequired(e.target.checked)}
-              className="size-4 rounded border-[#d8dde5] accent-[#00874a]"
+              className="size-4 rounded border-[#d8dde5] accent-[var(--indigo-9)]"
             />
             Required field
           </label>
@@ -254,7 +254,7 @@ function EditCategoryDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Category name"
-              className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+              className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
             />
           </div>
           <div className="grid gap-1.5">
@@ -263,7 +263,7 @@ function EditCategoryDialog({
               value={assetCode}
               onChange={(e) => setAssetCode(e.target.value)}
               placeholder="e.g. AST-LAP"
-              className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+              className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
             />
           </div>
         </div>
@@ -628,7 +628,7 @@ export function AssetSettingsDialog({
                         value={catName}
                         onChange={(e) => setCatName(e.target.value)}
                         placeholder="e.g. Laptop, Accessories"
-                        className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+                        className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
                       />
                     </div>
                     <div className="grid gap-1.5">
@@ -637,7 +637,7 @@ export function AssetSettingsDialog({
                         value={catAssetCode}
                         onChange={(e) => setCatAssetCode(e.target.value)}
                         placeholder="e.g. AST-LAP (reusable for all assets in this category)"
-                        className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-[#00874a] focus-visible:border-transparent"
+                        className="h-10 rounded-lg border-[#e5e7eb] text-sm focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
                       />
                       <p className="text-[11px] text-[#9ca3af]">This code will be reused by all physical assets in this category. Not required to be unique.</p>
                     </div>

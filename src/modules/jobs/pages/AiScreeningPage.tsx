@@ -228,7 +228,7 @@ export function AiScreeningPage({ orgSlug, memberId, requisitionId }: Readonly<A
                       <span className="font-mono text-xs text-neutral-500">{band.label}</span>
                       <div className="h-2 overflow-hidden rounded-full bg-neutral-50">
                         <div
-                          className="h-full rounded-full bg-primary"
+                          className="h-full rounded-lg bg-primary"
                           style={{ width: `${(band.count / maxBandCount) * 100}%` }}
                         />
                       </div>

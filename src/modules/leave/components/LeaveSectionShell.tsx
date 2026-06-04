@@ -207,7 +207,7 @@ export function LeaveSectionShell({
                   className={cn(
                     'inline-flex items-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg transition-all duration-200 ease-out',
                     isActive
-                      ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                      ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
                       : 'text-neutral-500 hover:text-neutral-900',
                   )}
                 >

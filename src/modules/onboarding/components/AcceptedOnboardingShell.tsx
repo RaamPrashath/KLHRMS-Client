@@ -193,7 +193,7 @@ export function AcceptedOnboardingShell({
 
         <div className="flex flex-wrap items-center gap-2">
           {selectedApplicationIds.size > 0 ? (
-            <span className="rounded-full bg-primary-ghost px-3 py-1 text-xs font-medium text-primary">
+            <span className="rounded-lg bg-primary-ghost px-3 py-1 text-xs font-medium text-primary">
               {selectedApplicationIds.size} selected
             </span>
           ) : null}

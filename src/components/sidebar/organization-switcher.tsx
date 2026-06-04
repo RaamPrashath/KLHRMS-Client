@@ -56,7 +56,7 @@ export function OrganizationSwitcher({
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="mx-auto mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,rgba(98,86,255,0.96),rgba(88,74,243,0.9))] text-xs font-semibold text-white shadow-[0_10px_22px_rgba(73,61,214,0.34)] transition-transform hover:scale-[1.02]"
+                className="mx-auto mt-1 flex h-[42px] w-[42px] items-center justify-center rounded-[12px] bg-[#4f46e5] dark:bg-indigo-600 text-[15px] font-[700] text-white shadow-[0_2px_8px_rgba(79,70,229,0.15)] transition-transform hover:scale-[1.02]"
                 aria-label="Open organization switcher"
             >
                 {getInitials(currentOrg.name)}
@@ -65,59 +65,51 @@ export function OrganizationSwitcher({
     }
 
     return (
-        <div className="py-2">
+        <div className="pt-2 pb-1">
             <Popover open={isOpen} onOpenChange={setIsOpen}>
-                <div
-                    className={cn(
-                        "flex w-full items-center justify-between rounded-[18px] px-3.5 py-3.5 text-left transition-all duration-200",
-                        isOpen && "bg-white/5",
-                    )}
-                >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[17px] font-bold text-white shadow-[0_10px_22px_rgba(73,61,214,0.34)]">
-                            {getInitials(currentOrg.name)}
-                        </div>
-
-                        <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-[1.02rem] font-semibold leading-tight tracking-[-0.02em] text-white break-words">
-                                {currentOrg.name}
-                            </p>
-                            <p className="pt-1 text-[0.84rem] font-medium leading-tight text-white/52 break-words">
-                                {currentOrg.roleName ?? "Employee Workspace"}
-                            </p>
-                        </div>
-                    </div>
-
-                    <PopoverTrigger asChild>
-                        <button
-                            type="button"
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-                            aria-expanded={isOpen}
-                            aria-label="Open organization switcher"
-                        >
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl">
-                                <ChevronsUpDown className="h-4 w-4" />
+                <PopoverTrigger asChild>
+                    <button
+                        type="button"
+                        className={cn(
+                            "flex w-full items-center justify-between rounded-[16px] p-2 text-left transition-all duration-200 outline-none hover:bg-[var(--sidebar-accent)] dark:hover:bg-zinc-900 cursor-pointer select-none",
+                            isOpen && "bg-[var(--sidebar-accent)] dark:bg-zinc-900",
+                        )}
+                    >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                            <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] text-[15px] font-[700] text-white bg-[#4f46e5] dark:bg-indigo-600 shadow-[0_2px_8px_rgba(79,70,229,0.15)]">
+                                {getInitials(currentOrg.name)}
                             </div>
-                        </button>
-                    </PopoverTrigger>
-                </div>
+
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-[15px] font-[700] leading-[1.2] text-slate-900 dark:text-white truncate">
+                                    {currentOrg.name}
+                                </h3>
+                                <span className="block pt-0.5 text-[12.5px] font-normal text-slate-500 dark:text-zinc-400 truncate">
+                                    {currentOrg.roleName ?? "Employee"}
+                                </span>
+                            </div>
+                        </div>
+
+                        <ChevronsUpDown className="h-4 w-4 shrink-0 text-slate-400 hover:text-slate-600" />
+                    </button>
+                </PopoverTrigger>
 
                 <PopoverContent 
-                    className="w-(--radix-popover-trigger-width) min-w-60 rounded-2xl border border-white/10 bg-[#1C1C1E] p-1.5 text-white shadow-[0_24px_64px_rgba(0,0,0,0.65)] backdrop-blur-md" 
+                    className="w-(--radix-popover-trigger-width) min-w-60 rounded-2xl border border-[var(--border)] bg-[var(--color-surface)] p-1.5 text-[var(--color-foreground)] shadow-[0_24px_64px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-[#1C1C1E] dark:text-white dark:shadow-[0_24px_64px_rgba(0,0,0,0.65)]" 
                     align="start"
                     sideOffset={6}
                 >
-                    <Command className="bg-transparent text-white border-none shadow-none">
+                    <Command className="bg-transparent text-[var(--color-foreground)] border-none shadow-none">
                         <CommandInput
                             placeholder="Search..."
-                            className="border-0 text-white placeholder:text-white/35 focus:ring-0 focus-visible:outline-none"
+                            className="border-0 text-[var(--color-foreground)] placeholder:text-[var(--color-neutral-400)] dark:placeholder:text-white/35 focus:ring-0 focus-visible:outline-none"
                         />
                         <CommandList className="max-h-60 mt-2 no-scrollbar">
-                            <CommandEmpty className="py-4 text-xs text-white/45 text-center">
+                            <CommandEmpty className="py-4 text-xs text-[var(--color-sidebar-text)] text-center">
                                 No organizations found.
                             </CommandEmpty>
                             
-                            <CommandGroup heading="Your organizations" className="text-white/40 px-1 py-1">
+                            <CommandGroup heading="Your organizations" className="text-[var(--color-sidebar-text)] px-1 py-1">
                                 {organizations.map((org) => {
                                     const isSelected = org.slug === currentOrgSlug;
                                     return (
@@ -130,28 +122,28 @@ export function OrganizationSwitcher({
                                                 router.refresh();
                                             }}
                                             className={cn(
-                                                "flex items-center justify-between rounded-xl px-3 py-2.5 text-white/85 transition-colors cursor-pointer aria-selected:bg-white/8 aria-selected:text-white",
-                                                isSelected && "bg-white/5 text-white"
+                                                "flex items-center justify-between rounded-xl px-3 py-2.5 text-[var(--color-sidebar-accent-foreground)] transition-colors cursor-pointer aria-selected:bg-[var(--color-sidebar-accent)] aria-selected:text-[var(--color-sidebar-accent-foreground)]",
+                                                isSelected && "bg-[var(--color-sidebar-accent)] text-[var(--color-sidebar-accent-foreground)]"
                                             )}
                                         >
                                             <div className="flex min-w-0 items-center gap-3">
-                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/8 text-[10px] font-semibold text-white/80 border border-white/5">
+                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-sidebar-accent)] text-[10px] font-semibold text-[var(--color-sidebar-accent-foreground)] border border-[var(--border)] dark:bg-white/8 dark:text-white/80 dark:border-white/5">
                                                     {getInitials(org.name)}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="truncate text-sm font-semibold">{org.name}</p>
-                                                    <p className="truncate text-[11px] text-white/45">{org.roleName ?? "Employee Workspace"}</p>
+                                                    <p className="truncate text-[11px] text-[var(--color-sidebar-text)]">{org.roleName ?? "Employee Workspace"}</p>
                                                 </div>
                                             </div>
                                             {isSelected && (
-                                                <Check className="h-4 w-4 shrink-0 text-white" />
+                                                <Check className="h-4 w-4 shrink-0 text-[var(--color-sidebar-accent-foreground)]" />
                                             )}
                                         </CommandItem>
                                     );
                                 })}
                             </CommandGroup>
                             
-                            <CommandSeparator className="my-2 bg-white/5" />
+                            <CommandSeparator className="my-2 bg-[var(--color-sidebar-border)]" />
                             
                             <CommandGroup className="px-1 py-1">
                                 <CommandItem
@@ -161,15 +153,15 @@ export function OrganizationSwitcher({
                                         router.push("/create-organization");
                                         router.refresh();
                                     }}
-                                    className="rounded-xl border border-dashed border-white/10 px-3 py-2.5 text-white/85 transition-colors cursor-pointer aria-selected:bg-white/8 aria-selected:text-white"
+                                    className="rounded-xl border border-dashed border-[var(--border)] dark:border-white/10 px-3 py-2.5 text-[var(--color-sidebar-accent-foreground)] transition-colors cursor-pointer aria-selected:bg-[var(--color-sidebar-accent)] aria-selected:text-[var(--color-sidebar-accent-foreground)]"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 shrink-0">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-sidebar-accent)] text-[var(--color-sidebar-accent-foreground)] shrink-0">
                                             <Plus className="h-4 w-4" />
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold">Create organization</p>
-                                            <p className="text-[11px] text-white/45">Start a new workspace</p>
+                                            <p className="text-[11px] text-[var(--color-sidebar-text)]">Start a new workspace</p>
                                         </div>
                                     </div>
                                 </CommandItem>

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@radix-ui/colors/green.css";
+@import "@radix-ui/colors/green-dark.css";
+@import "@radix-ui/colors/indigo.css";
+@import "@radix-ui/colors/indigo-dark.css";
+@import "@radix-ui/colors/slate.css";
+@import "@radix-ui/colors/slate-dark.css";
 
 /* ============================================================
    KOVAN LABS — DESIGN TOKENS (Tailwind v4 + shadcn compatible)
@@ -79,15 +85,25 @@
         "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
     /* ----------------------------------------------------------
-       BRAND — PRIMARY GREEN SCALE
+       BRAND — PRIMARY INDIGO/LAVENDER SCALE (Radix Primitives)
        Mapped to shadcn's --primary / --color-primary
     ---------------------------------------------------------- */
-    --color-primary: #00874a;
-    --color-primary-hover: #006e3c;
-    --color-primary-press: #00522d;
-    --color-primary-light: #34c47a;
-    --color-primary-subtle: #d4f5e4;
-    --color-primary-ghost: #edfaf4;
+    --color-primary: var(--indigo-9);
+    --color-primary-hover: var(--indigo-10);
+    --color-primary-press: var(--indigo-11);
+    --color-primary-light: var(--indigo-8);
+    --color-primary-subtle: var(--indigo-3);
+    --color-primary-ghost: var(--indigo-2);
+
+    /* ----------------------------------------------------------
+       RADIX GREEN SCALE — soft hover/active surfaces
+       (light: green/3 wash, green/4 hover; text: green/11)
+    ---------------------------------------------------------- */
+    --color-green-subtle: var(--green-3);
+    --color-green-subtle-hover: var(--green-4);
+    --color-green-subtle-press: var(--green-5);
+    --color-green-text: var(--green-11);
+    --color-green-border: var(--green-7);
 
     /* ----------------------------------------------------------
        SEMANTIC STATUS COLORS (Logo Colors)
@@ -146,14 +162,14 @@
        SIDEBAR TOKENS
        Dark column, single green accent for active state
     ---------------------------------------------------------- */
-    --color-sidebar-bg: #1d1d1f;
-    --color-sidebar-text: #aeaeb2;
-    --color-sidebar-text-hover: #f5f5f7;
-    --color-sidebar-active-bg: rgba(0, 135, 74, 0.18);
-    --color-sidebar-active-text: #34c47a;
-    --color-sidebar-active-border: #00874a;
-    --color-sidebar-divider: rgba(255, 255, 255, 0.06);
-    --color-sidebar-label: #6e6e73;
+    --color-sidebar-bg: var(--sidebar);
+    --color-sidebar-text: var(--sidebar-foreground);
+    --color-sidebar-text-hover: var(--sidebar-accent-foreground);
+    --color-sidebar-active-bg: var(--sidebar-active-bg);
+    --color-sidebar-active-text: var(--sidebar-active-text);
+    --color-sidebar-active-border: var(--sidebar-active-border);
+    --color-sidebar-divider: var(--sidebar-border);
+    --color-sidebar-label: var(--sidebar-label);
 
     /* ----------------------------------------------------------
        SPACING
@@ -184,11 +200,11 @@
        SHADOWS / ELEVATION
        Soft, layered — never hard or dramatic
     ---------------------------------------------------------- */
-    --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.08);
-    --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.1);
-    --shadow-4: 0 20px 60px rgba(0, 0, 0, 0.18), 0 8px 20px rgba(0, 0, 0, 0.1);
-    --shadow-focus: 0 0 0 3px rgba(0, 135, 74, 0.12);
+    --shadow-1: 1px 1px 0px 0px var(--slate-8);
+    --shadow-2: 2px 2px 0px 0px var(--indigo-9);
+    --shadow-3: 3px 3px 0px 0px var(--indigo-9);
+    --shadow-4: 5px 5px 0px 0px var(--indigo-9);
+    --shadow-focus: 0 0 0 3px var(--indigo-4);
     --shadow-focus-error: 0 0 0 3px rgba(234, 67, 53, 0.12);
 
     /* ----------------------------------------------------------
@@ -268,12 +284,12 @@
     /* Sidebar (shadcn sidebar primitives) */
     --color-sidebar: var(--color-sidebar-bg);
     --color-sidebar-foreground: var(--color-sidebar-text);
-    --color-sidebar-primary: #1d1d1f;
-    --color-sidebar-primary-foreground: #aeaeb2;
-    --color-sidebar-accent: rgba(255, 255, 255, 0.05); /* Hover lift only */
-    --color-sidebar-accent-foreground: var(--color-sidebar-text-hover);
-    --color-sidebar-border: var(--color-sidebar-divider);
-    --color-sidebar-ring: var(--color-sidebar-active-border);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
 
     /* Charts */
     --color-chart-1: var(--color-primary);
@@ -313,16 +329,16 @@
 :root {
     color-scheme: light;
 
-    --background: #f5f5f7; /* Apple-grey canvas */
+    --background: var(--slate-2); /* Radix Slate App BG */
     --foreground: #1d1d1f;
 
-    --card: #ffffff;
+    --card: var(--slate-1); /* Radix Slate Surface */
     --card-foreground: #1d1d1f;
 
-    --popover: #ffffff;
+    --popover: var(--slate-1);
     --popover-foreground: #1d1d1f;
 
-    --primary: #00874a; /* Kovan green */
+    --primary: var(--indigo-9); /* Lavender/Indigo */
     --primary-foreground: #ffffff;
 
     --secondary: #f0f0f2;
@@ -337,26 +353,26 @@
     --destructive: #ea4335;
     --destructive-foreground: #ffffff;
 
-    --border: #e5e5ea;
-    --input: #d1d1d6;
-    --ring: #00874a;
+    --border: var(--slate-7); /* Crisp outlines */
+    --input: var(--slate-7);
+    --ring: var(--indigo-8);
 
     --radius: 0.5rem; /* 8px — inputs & buttons */
 
     /* Sidebar */
-    --sidebar: #1d1d1f;
-    --sidebar-foreground: #aeaeb2;
-    --sidebar-primary: #1d1d1f;
-    --sidebar-primary-foreground: #aeaeb2;
-    --sidebar-accent: rgba(
-        255,
-        255,
-        255,
-        0.05
-    ); /* Subtle hover lift — not green */
-    --sidebar-accent-foreground: #f5f5f7;
-    --sidebar-border: rgba(255, 255, 255, 0.06);
-    --sidebar-ring: #00874a;
+    --sidebar: #f1f5f9; /* Sleek Slate 100 for clean non-white background contrast */
+    --sidebar-foreground: #475569;
+    --sidebar-primary: var(--indigo-9);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e2e8f0; /* Slate 200 hover contrast */
+    --sidebar-accent-foreground: #0f172a;
+    --sidebar-border: #cbd5e1; /* Slate 300 divider border */
+    --sidebar-ring: var(--indigo-8);
+
+    --sidebar-active-bg: #e0e7ff; /* Defined active indigo background */
+    --sidebar-active-text: #4f46e5;
+    --sidebar-active-border: transparent;
+    --sidebar-label: #64748b;
 }
 
 /* ============================================================
@@ -367,17 +383,17 @@
 .dark {
     color-scheme: dark;
 
-    --background: #272729; /* Apple graphite canvas */
+    --background: var(--slate-2); /* Radix Slate Dark App BG */
     --foreground: #f5f5f7;
 
-    --card: #1c1c1e;
+    --card: var(--slate-1); /* Radix Slate Dark Surface */
     --card-foreground: #f5f5f7;
 
-    --popover: #1c1c1e;
+    --popover: var(--slate-1);
     --popover-foreground: #f5f5f7;
 
-    --primary: #34c47a; /* Lighter green for dark contrast */
-    --primary-foreground: #1d1d1f;
+    --primary: var(--indigo-9); /* Lighter Indigo for dark contrast */
+    --primary-foreground: #ffffff;
 
     --secondary: #3a3a3c;
     --secondary-foreground: #f5f5f7;
@@ -391,19 +407,24 @@
     --destructive: #ff6b5b;
     --destructive-foreground: #1d1d1f;
 
-    --border: rgba(255, 255, 255, 0.1);
-    --input: rgba(255, 255, 255, 0.15);
-    --ring: #34c47a;
+    --border: var(--slate-6); /* Crisp dark outlines */
+    --input: var(--slate-6);
+    --ring: var(--indigo-8);
 
     /* Sidebar stays dark in dark mode too — already dark themed */
-    --sidebar: #1d1d1f;
+    --sidebar: var(--slate-1); /* Dark Slate Sidebar */
     --sidebar-foreground: #aeaeb2;
-    --sidebar-primary: #34c47a;
-    --sidebar-primary-foreground: #1d1d1f;
-    --sidebar-accent: #3a3a3c;
-    --sidebar-accent-foreground: #f5f5f7;
-    --sidebar-border: rgba(255, 255, 255, 0.06);
-    --sidebar-ring: #34c47a;
+    --sidebar-primary: var(--indigo-9);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: rgba(255, 255, 255, 0.05);
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: var(--slate-5);
+    --sidebar-ring: var(--indigo-8);
+
+    --sidebar-active-bg: var(--indigo-3);
+    --sidebar-active-text: var(--indigo-11);
+    --sidebar-active-border: transparent;
+    --sidebar-label: #6e6e73;
 }
 
 /* ============================================================
@@ -488,5 +509,20 @@
 @keyframes shimmer {
     100% {
         transform: translateX(100%);
+    }
+}
+
+@keyframes pulse-indicator {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
     }
 }

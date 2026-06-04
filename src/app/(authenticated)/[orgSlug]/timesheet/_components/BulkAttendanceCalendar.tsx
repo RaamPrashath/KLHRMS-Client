@@ -193,7 +193,7 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
             e.stopPropagation();
             onAddLog(dateStr);
           }}
-          className="pointer-events-auto inline-flex h-7 items-center justify-center rounded-md border border-input bg-background/95 px-3 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-primary hover:text-primary-foreground hover:border-primary"
+          className="pointer-events-auto inline-flex h-7 items-center justify-center rounded-md border border-input bg-background/95 px-3 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-green-subtle hover:text-green-text hover:border-green-border"
           aria-label={`Add worklog for ${format(date, 'EEEE, MMMM d')}`}
         >
           <Plus className="size-3 mr-1.5" strokeWidth={2.5} />

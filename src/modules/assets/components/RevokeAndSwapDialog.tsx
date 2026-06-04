@@ -171,7 +171,7 @@ export function RevokeAndSwapDialog({
                     className={cn(
                       'rounded-2xl border p-4 text-left transition-colors',
                       replacementMode === option.mode
-                        ? 'border-[#00874a] bg-[#f4fbf6]'
+                        ? 'border-primary bg-[#f4fbf6]'
                         : 'border-[#e5e7eb] bg-white',
                     )}
                   >
@@ -261,7 +261,7 @@ export function RevokeAndSwapDialog({
           <Button
             onClick={() => void handleSubmit()}
             disabled={!canSubmit || mutations.revokeAndSwap.isPending}
-            className="rounded-full bg-[#00874a] px-5 text-white hover:bg-[#007241]"
+            className="rounded-lg bg-primary px-5 text-white hover:bg-[var(--indigo-10)]"
           >
             {mutations.revokeAndSwap.isPending ? 'Processing...' : 'Revoke And Assign'}
           </Button>

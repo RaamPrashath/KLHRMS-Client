@@ -80,14 +80,14 @@ function TabBar({
           onClick={() => onValueChange(tab.value)}
           className={cn(
             'inline-flex items-center justify-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg relative z-10 transition-colors duration-200',
-            value === tab.value ? 'text-[#00874A]' : 'text-neutral-500 hover:text-neutral-900',
+            value === tab.value ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
           )}
         >
           {tab.label}
           {tab.count !== undefined && (
             <span className={cn(
               'text-xs',
-              value === tab.value ? 'text-[#00874A]/70' : 'text-neutral-400',
+              value === tab.value ? 'text-primary/70' : 'text-neutral-400',
             )}>
               {tab.count}
             </span>
@@ -98,7 +98,7 @@ function TabBar({
   );
 }
 
-const ACTION_GREEN = '#00874a';
+const ACTION_GREEN = 'var(--indigo-9)';
 
 function statusBadge(status: ProjectStatus) {
   const map: Record<ProjectStatus, string> = {
@@ -490,14 +490,14 @@ export function ProjectViewDrawer({
                           setIsEditing(false);
                           form.reset();
                         }}
-                        className="flex-1 h-9 rounded-xl text-[13px]"
+                        className="flex-1 h-9 rounded-lg text-[13px]"
                       >
                         Cancel
                       </Button>
                       <Button
                         type="submit"
                         disabled={mutations.updateProject.isPending}
-                        className="flex-1 h-9 rounded-xl text-[13px] text-white"
+                        className="flex-1 h-9 rounded-lg text-[13px] text-white"
                         style={{ backgroundColor: ACTION_GREEN }}
                       >
                         {mutations.updateProject.isPending ? 'Saving…' : 'Save changes'}
@@ -617,12 +617,12 @@ export function ProjectViewDrawer({
                             }
                           }}
                           placeholder="Add a new task…"
-                          className="h-10 flex-1 rounded-xl border-[#e5e5ea] text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+                          className="h-10 flex-1 rounded-lg border-[#e5e5ea] text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                         />
                         <Button
                           onClick={() => void handleCreateTask()}
                           disabled={!newTaskName.trim() || mutations.createTask.isPending}
-                          className="h-10 rounded-xl px-4 text-white"
+                          className="h-10 rounded-lg px-4 text-white"
                           style={{ backgroundColor: ACTION_GREEN }}
                         >
                           <Plus className="size-4" />
@@ -692,7 +692,7 @@ export function ProjectViewDrawer({
                           value={assignedSearch}
                           onChange={(e) => setAssignedSearch(e.target.value)}
                           placeholder="Search assigned…"
-                          className="h-10 rounded-xl border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+                          className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                         />
                       </div>
 
@@ -733,7 +733,7 @@ export function ProjectViewDrawer({
                           value={unassignedSearch}
                           onChange={(e) => setUnassignedSearch(e.target.value)}
                           placeholder="Search employees…"
-                          className="h-10 rounded-xl border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-[#00874a]"
+                          className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                         />
                       </div>
 
@@ -757,13 +757,13 @@ export function ProjectViewDrawer({
                                 <label
                                   className={cn(
                                     'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f7]',
-                                    selectedIds.has(member.id) && 'bg-[#f0f9f4]',
+                                    selectedIds.has(member.id) && 'bg-primary/5',
                                   )}
                                 >
                                   <Checkbox
                                     checked={selectedIds.has(member.id)}
                                     onCheckedChange={() => toggleSelect(member.id)}
-                                    className="shrink-0 data-[state=checked]:border-[#00874a] data-[state=checked]:bg-[#00874a]"
+                                    className="shrink-0 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
                                     aria-label={`Select ${member.label}`}
                                   />
                                   <div className="min-w-0 flex-1">
@@ -787,7 +787,7 @@ export function ProjectViewDrawer({
                           <Button
                             onClick={() => void handleBulkAssign()}
                             disabled={mutations.bulkAssignMembers.isPending}
-                            className="h-10 w-full rounded-xl text-[14px] font-medium text-white"
+                            className="h-10 w-full rounded-lg text-[14px] font-medium text-white"
                             style={{ backgroundColor: ACTION_GREEN }}
                           >
                             <UserCheck className="mr-2 size-4" />
@@ -849,7 +849,7 @@ function TaskRow({
         />
         <button
           onClick={onEditSave}
-          className="shrink-0 rounded-xl p-1.5 text-[#00874a] transition-colors hover:bg-[#eef9f1]"
+          className="shrink-0 rounded-xl p-1.5 text-primary transition-colors hover:bg-primary/5"
           aria-label="Save"
         >
           <CheckCircle2 className="size-3.5" />

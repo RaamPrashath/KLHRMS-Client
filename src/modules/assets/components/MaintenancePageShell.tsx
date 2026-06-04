@@ -132,7 +132,7 @@ export function MaintenancePageShell({
               className={cn(
                 'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
                 viewMode === 'kanban'
-                  ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                  ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
                   : 'text-neutral-500 hover:text-neutral-900',
               )}
               title="Kanban view"
@@ -145,7 +145,7 @@ export function MaintenancePageShell({
               className={cn(
                 'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
                 viewMode === 'table'
-                  ? 'bg-white text-[#00874A] shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                  ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
                   : 'text-neutral-500 hover:text-neutral-900',
               )}
               title="Table view"

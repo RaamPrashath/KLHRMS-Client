@@ -210,7 +210,7 @@ export function RaiseTicketDialog({
                                   className={cn(
                                     'size-4 shrink-0',
                                     selectedAssetId === asset.id
-                                      ? 'text-[#00874a] opacity-100'
+                                      ? 'text-primary opacity-100'
                                       : 'opacity-0',
                                   )}
                                 />

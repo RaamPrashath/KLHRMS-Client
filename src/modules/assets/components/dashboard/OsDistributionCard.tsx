@@ -110,7 +110,7 @@ export function OsDistributionCard({
             <div className="flex items-center gap-3">
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#e9eef2]">
                 <div
-                  className="h-full rounded-full bg-[#00874a]"
+                  className="h-full rounded-lg bg-primary"
                   style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
                 />
               </div>
