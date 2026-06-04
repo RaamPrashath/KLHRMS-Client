@@ -266,14 +266,14 @@ export function DepartmentsPageShell({
       <div className="flex items-center justify-between ml-7 mt-7 mr-7">
         <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">Departments</h1>
         {canManageDepartments && (
-          <Button
+          <button
+            type="button"
             onClick={openDepartmentCreateDialog}
-            className="h-11 rounded-xl px-5 text-[15px] font-medium text-white shadow-sm hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: 'var(--indigo-9)' }}
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer"
           >
             <Plus className="mr-2 size-4" />
             Create department
-          </Button>
+          </button>
         )}
       </div>
 

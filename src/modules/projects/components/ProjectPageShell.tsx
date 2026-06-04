@@ -198,13 +198,14 @@ export function ProjectPageShell({
       <div className="flex items-center justify-between ml-7 mt-7 mr-7">
         <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">Projects</h1>
         {canManageProjects && (
-          <Button
+          <button
+            type="button"
             onClick={openCreateDialog}
-            className="h-11 rounded-lg px-5 text-[15px] font-medium bg-primary hover:bg-primary-hover text-primary-foreground shadow-sm transition-colors"
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer"
           >
             <Plus className="mr-2 size-4" />
             Create project
-          </Button>
+          </button>
         )}
       </div>
 

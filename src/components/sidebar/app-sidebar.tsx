@@ -52,7 +52,6 @@ import {
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
 import {
     type RolePermissions,
     filterNavByPermissions,
@@ -159,8 +158,8 @@ function NavSearch({
     }
 
     return (
-        <div className="relative group px-1 mb-2">
-            <MagnifyingGlassIcon className="pointer-events-none absolute left-4.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-sidebar-text)] group-focus-within:text-[var(--color-sidebar-text-hover)]" />
+        <div className="relative group px-1 mb-1.5">
+            <MagnifyingGlassIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-600 dark:text-zinc-500" />
             <input
                 ref={inputRef}
                 type="text"
@@ -169,10 +168,10 @@ function NavSearch({
                 placeholder="Search navigation..."
                 aria-label="Search navigation"
                 className={cn(
-                    "h-10 w-full rounded-[10px] pl-9 pr-9 text-[13.5px] font-[550]",
-                    "border border-[var(--border)] bg-[#f8fafc] dark:border-white/5 dark:bg-zinc-950/40",
-                    "text-[var(--color-foreground)] placeholder:text-[var(--color-sidebar-foreground)]",
-                    "focus:border-primary focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-primary/8 dark:focus:border-white/10 dark:focus:bg-white/10",
+                    "h-10 w-full rounded-[12px] pl-10 pr-9 text-[14px] font-[500]",
+                    "border border-[var(--color-sidebar-border)] bg-white dark:border-zinc-800/40 dark:bg-zinc-900/40",
+                    "text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-zinc-500",
+                    "focus:border-indigo-500/30 focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-indigo-500/5",
                     "transition-all duration-200",
                 )}
             />
@@ -180,7 +179,7 @@ function NavSearch({
                 <button
                     onClick={() => onChange("")}
                     aria-label="Clear search"
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-sidebar-text)] transition-colors hover:text-[var(--color-sidebar-text-hover)]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
                 >
                     <span className="text-[14px] leading-none">×</span>
                 </button>
@@ -226,10 +225,7 @@ function SidebarNavigation({
     return (
         <>
             {showSearch && (
-                <>
-                    <div className="mx-1 h-px bg-[var(--color-sidebar-divider)]" aria-hidden="true" />
-                    <NavSearch value={search} onChange={setSearch} />
-                </>
+                <NavSearch value={search} onChange={setSearch} />
             )}
 
             {navGroups.length === 0 ? (
@@ -241,9 +237,9 @@ function SidebarNavigation({
                     )}
                 </div>
             ) : (
-                <nav className="flex flex-col">
+                <nav className="flex flex-col gap-1">
                     {navGroups.map((group) => (
-                        <div key={group.title} className="flex flex-col gap-0.5">
+                        <div key={group.title} className="flex flex-col gap-1">
                             <SidebarLabel>{group.title}</SidebarLabel>
                             {group.items.map((item) => {
                                 const url = item.urlSuffix ? `/${orgSlug}/${item.urlSuffix}` : `/${orgSlug}`;
@@ -342,17 +338,14 @@ function UserFooter({
     };
 
     return (
-        <div ref={dropdownRef} className="relative border-t border-[var(--color-sidebar-border)] pt-4 flex items-center justify-between gap-1">
+        <div ref={dropdownRef} className="relative border-t border-[var(--color-sidebar-border)] dark:border-zinc-800/80 pt-4 flex items-center justify-between gap-1">
             <button
                 onClick={!open ? () => setDropdownOpen((v) => !v) : undefined}
                 suppressHydrationWarning
                 className={cn(
                     "flex flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left min-w-0 select-none",
                     !open
-                        ? cn(
-                            "transition-all duration-200 hover:bg-[var(--color-sidebar-accent)] active:scale-[0.98] cursor-pointer",
-                            dropdownOpen && "bg-[var(--color-sidebar-accent)] shadow-inner"
-                          )
+                        ? "transition-all duration-200 hover:bg-[var(--color-sidebar-accent)] dark:hover:bg-zinc-900 active:scale-[0.98] cursor-pointer"
                         : "cursor-default"
                 )}
                 aria-expanded={dropdownOpen}
@@ -360,9 +353,9 @@ function UserFooter({
             >
                 {user.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.image} className="h-8 w-8 shrink-0 rounded-full border border-[var(--border)] dark:border-white/10" alt={displayName} />
+                    <img src={user.image} className="h-10 w-10 shrink-0 rounded-full border border-slate-100 dark:border-zinc-800" alt={displayName} />
                 ) : (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#10b981] to-[#3b82f6] text-[11px] font-[800] text-white shadow-[0_4px_10px_rgba(16,185,129,0.15)]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white border border-[var(--color-sidebar-border)] dark:bg-zinc-800 text-[13px] font-[700] text-slate-700 dark:text-zinc-300">
                         {initials}
                     </div>
                 )}
@@ -374,10 +367,10 @@ function UserFooter({
                     className="flex min-w-0 flex-1 flex-col overflow-hidden"
                     aria-hidden={!open}
                 >
-                    <span className="truncate text-[13.5px] font-bold capitalize leading-tight text-[var(--color-sidebar-accent-foreground)]">
+                    <span className="truncate text-[14px] font-bold text-slate-800 dark:text-zinc-100 leading-tight">
                         {displayName}
                     </span>
-                    <span className="truncate text-[11px] font-medium leading-tight text-[var(--color-sidebar-foreground)] mt-0.5">
+                    <span className="truncate text-[12px] font-medium text-slate-400 dark:text-zinc-500 mt-0.5 leading-none">
                         {roleName ?? user.email ?? "Employee"}
                     </span>
                 </motion.div>
@@ -392,13 +385,10 @@ function UserFooter({
                         transition={{ duration: 0.15 }}
                         type="button"
                         onClick={() => setDropdownOpen((v) => !v)}
-                        className="settings-btn p-2 rounded-lg transition-all duration-150 text-[var(--color-sidebar-foreground)] hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-accent-foreground)] hover:rotate-12 active:scale-95 shrink-0"
+                        className="p-2 rounded-lg transition-colors text-slate-400 hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-text-hover)] dark:hover:bg-zinc-900 active:scale-95 shrink-0"
                         aria-label="Settings panel"
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <circle cx="12" cy="12" r="3" />
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                        </svg>
+                        <GearIcon className="h-5 w-5" />
                     </motion.button>
                 )}
             </AnimatePresence>
@@ -482,7 +472,6 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
             <SidebarBody className="justify-between gap-4 border-r border-[var(--color-sidebar-divider)] bg-[var(--color-sidebar-bg)]">
                 <div className="flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto no-scrollbar">
                     <OrganizationSwitcher currentOrgSlug={orgSlug} organizations={organizations} />
-                    <Separator className="bg-[var(--color-sidebar-border)] opacity-85 px-1.5" />
                     <SidebarNavigation
                         key={showSearch ? "with-search" : "without-search"}
                         allNavGroups={allNavGroups}

@@ -12,7 +12,7 @@ import {
   type SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { CheckCircle2, ChevronDown, ChevronUp, Download, FileText, MoreHorizontal, Search, Send, ShoppingCart, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Download, FileText, MoreHorizontal, Send, ShoppingCart, XCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -246,7 +246,6 @@ export function ProcurementPageShell({
   const [activeTab, setActiveTab] = useState<PageTab>(
     canCreateProcurement ? 'bulk' : canApproveProcurement ? 'pending' : 'history',
   );
-  const [search, setSearch] = useState('');
   const [bulkForm, setBulkForm] = useState<BulkProcurementInput>(() => buildBulkDefault());
   const [replacementForm, setReplacementForm] = useState<ReplacementProcurementInput>(() => buildReplacementDefault());
   const [selectedRequisition, setSelectedRequisition] = useState<ProcurementRequisitionRecord | null>(null);
@@ -270,35 +269,17 @@ export function ProcurementPageShell({
     [meta?.categories, bulkForm.categoryDefinitionId],
   );
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return requisitions;
-    return requisitions.filter((item) =>
-      [
-        item.requestLabel,
-        item.assetName,
-        item.assetCode,
-        item.raisedByName,
-        item.maintenanceTicketId,
-        item.status,
-        item.requestType,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(q)),
-    );
-  }, [requisitions, search]);
-
   const myRequisitions = useMemo(
-    () => filtered.filter((item) => item.raisedByMemberId === memberId),
-    [filtered, memberId],
+    () => requisitions.filter((item) => item.raisedByMemberId === memberId),
+    [requisitions, memberId],
   );
   const pendingRequisitions = useMemo(
-    () => filtered.filter((item) => item.status === 'PENDING_FINANCE_APPROVAL'),
-    [filtered],
+    () => requisitions.filter((item) => item.status === 'PENDING_FINANCE_APPROVAL'),
+    [requisitions],
   );
   const historyRequisitions = useMemo(
-    () => filtered.filter((item) => item.status !== 'PENDING_FINANCE_APPROVAL'),
-    [filtered],
+    () => requisitions.filter((item) => item.status !== 'PENDING_FINANCE_APPROVAL'),
+    [requisitions],
   );
   const approvedRequisitions = useMemo(
     () => requisitions.filter((item) => item.status === 'APPROVED'),
@@ -315,23 +296,6 @@ export function ProcurementPageShell({
     [initialLinkAcknowledged, initialRequisitionId, requisitions],
   );
   const dialogRequisition = selectedRequisition ?? deepLinkedRequisition;
-  const filteredPurchaseOrders = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return purchaseOrders;
-    return purchaseOrders.filter((item) =>
-      [
-        item.poNumber,
-        item.requestLabel,
-        item.assetName,
-        item.generatedByName,
-        item.recipientName,
-        item.recipientEmail,
-        item.status,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(q)),
-    );
-  }, [purchaseOrders, search]);
 
   const bulkComputedTotal =
     bulkForm.estimatedQuantity && bulkForm.estimatedUnitCost != null
@@ -470,21 +434,13 @@ export function ProcurementPageShell({
             </p>
           </div>
 
-          <div className="flex h-11 w-full max-w-sm items-center gap-2.5 rounded-full border border-[#e5e7eb] bg-white px-4">
-            <Search className="size-4 text-[#9ca3af]" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search procurement records..."
-              className="h-auto border-0 bg-transparent px-0 py-0 text-[14px] shadow-none focus-visible:ring-0"
-            />
-          </div>
+
         </div>
       </div>
 
       <div className="space-y-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="overflow-x-auto pb-1">
+          <div className="overflow-x-auto lg:pb-0 pb-1">
             <div className="inline-flex min-w-fit items-center gap-1 rounded-2xl border border-black/4 bg-neutral-50 p-1">
               {tabOptions.map(([value, label]) => {
                 const isActive = activeTab === value;
@@ -505,15 +461,18 @@ export function ProcurementPageShell({
             </div>
           </div>
           {canApproveProcurement ? (
-            <Button
+            <motion.button
               type="button"
               onClick={openComposerDialog}
               disabled={approvedRequisitions.length === 0}
-              className="h-11 rounded-lg px-5 text-[13px] font-medium"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] outline-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
+              whileHover={{ scale: 1.02, boxShadow: "0 6px 20px rgba(56, 98, 246, 0.25)" }}
+              whileTap={{ scale: 0.98, boxShadow: "0 4px 10px rgba(56, 98, 246, 0.15)" }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
               <FileText className="mr-2 size-4" />
               Open PO Composer
-            </Button>
+            </motion.button>
           ) : null}
         </div>
 
@@ -812,7 +771,7 @@ export function ProcurementPageShell({
 
         {activeTab === 'purchaseOrders' && canApproveProcurement ? (
           <PurchaseOrderTable
-            rows={filteredPurchaseOrders}
+            rows={purchaseOrders}
             isLoading={purchaseOrderListQuery.isLoading}
             onDownload={handleDownloadPurchaseOrder}
             isDownloading={mutations.downloadPurchaseOrder.isPending}
@@ -869,22 +828,27 @@ export function ProcurementPageShell({
           </div>
 
           <DialogFooter>
-            <Button
+            <motion.button
               type="button"
-              variant="outline"
-              className="rounded-full"
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-4 text-[13px] font-medium text-slate-700 outline-none"
               onClick={() => setIsComposerDialogOpen(false)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
               Cancel
-            </Button>
-            <Button
+            </motion.button>
+            <motion.button
               type="button"
-              className="rounded-full bg-[#0066cc] text-white hover:bg-[#0057ad]"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56, 98, 246, 0.15)] outline-none"
               onClick={handleOpenComposerWorkspace}
+              whileHover={{ scale: 1.02, boxShadow: "0 6px 20px rgba(56, 98, 246, 0.25)" }}
+              whileTap={{ scale: 0.98, boxShadow: "0 4px 10px rgba(56, 98, 246, 0.15)" }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
               <FileText className="mr-2 size-4" />
               Open Composer
-            </Button>
+            </motion.button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

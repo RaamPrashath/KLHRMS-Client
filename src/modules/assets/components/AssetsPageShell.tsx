@@ -439,13 +439,14 @@ export function AssetsPageShell({
               </div>
             </div>
 
-            <Button
+            <button
+              type="button"
               onClick={openCreateAssetDialog}
-              className="h-8 shrink-0 bg-primary px-4 text-[13px] font-medium text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] self-start sm:self-auto"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0 self-start sm:self-auto"
             >
               <PackagePlus className="mr-1.5 size-3.5" />
               Add New Asset
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -522,14 +523,14 @@ export function AssetsPageShell({
               />
             </div>
             {canManageAssets && (
-              <Button
+              <button
+                type="button"
                 onClick={() => { setSettingsTab('create'); setSettingsOpen(true); }}
-                className="h-9 shrink-0 rounded-lg px-4 text-[13px] font-medium text-white shadow-sm"
-                style={{ backgroundColor: ACTION_GREEN }}
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0"
               >
                 <Plus className="mr-1.5 size-4" />
                 Create Category
-              </Button>
+              </button>
             )}
           </div>
           <CategoryTab

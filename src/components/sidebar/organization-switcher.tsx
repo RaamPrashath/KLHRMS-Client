@@ -56,7 +56,7 @@ export function OrganizationSwitcher({
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="mx-auto mt-1 flex h-[38px] w-[38px] items-center justify-center rounded-[12px] bg-gradient-to-br from-[var(--indigo-9)] to-[#06b6d4] text-[14px] font-[800] text-white shadow-[0_4px_10px_rgba(99,102,241,0.2)] transition-transform hover:scale-[1.02]"
+                className="mx-auto mt-1 flex h-[42px] w-[42px] items-center justify-center rounded-[12px] bg-[#4f46e5] dark:bg-indigo-600 text-[15px] font-[700] text-white shadow-[0_2px_8px_rgba(79,70,229,0.15)] transition-transform hover:scale-[1.02]"
                 aria-label="Open organization switcher"
             >
                 {getInitials(currentOrg.name)}
@@ -65,42 +65,34 @@ export function OrganizationSwitcher({
     }
 
     return (
-        <div className="py-2">
+        <div className="pt-2 pb-1">
             <Popover open={isOpen} onOpenChange={setIsOpen}>
-                <div
-                    className={cn(
-                        "flex w-full items-center justify-between rounded-[18px] px-2.5 text-left transition-all duration-200",
-                        isOpen && "bg-[var(--color-sidebar-accent)]",
-                    )}
-                >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] text-[14px] font-[800] text-white bg-gradient-to-br from-[var(--indigo-9)] to-[#06b6d4] shadow-[0_4px_10px_rgba(99,102,241,0.2)]">
-                            {getInitials(currentOrg.name)}
-                        </div>
-
-                        <div className="min-w-0 flex-1 pr-2">
-                            <h3 className="text-[15px] font-[750] leading-[1.2] tracking-[-0.02em] text-[var(--color-sidebar-accent-foreground)] truncate">
-                                {currentOrg.name}
-                            </h3>
-                            <span className="block pt-0.5 text-[11px] font-[600] uppercase tracking-[0.05em] text-[var(--color-sidebar-label)] truncate">
-                                {currentOrg.roleName ?? "Employee Workspace"}
-                            </span>
-                        </div>
-                    </div>
-
-                    <PopoverTrigger asChild>
-                        <button
-                            type="button"
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--color-sidebar-text)] transition-colors hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-text-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-sidebar-ring)]"
-                            aria-expanded={isOpen}
-                            aria-label="Open organization switcher"
-                        >
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl">
-                                <ChevronsUpDown className="h-4 w-4" />
+                <PopoverTrigger asChild>
+                    <button
+                        type="button"
+                        className={cn(
+                            "flex w-full items-center justify-between rounded-[16px] p-2 text-left transition-all duration-200 outline-none hover:bg-[var(--sidebar-accent)] dark:hover:bg-zinc-900 cursor-pointer select-none",
+                            isOpen && "bg-[var(--sidebar-accent)] dark:bg-zinc-900",
+                        )}
+                    >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                            <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] text-[15px] font-[700] text-white bg-[#4f46e5] dark:bg-indigo-600 shadow-[0_2px_8px_rgba(79,70,229,0.15)]">
+                                {getInitials(currentOrg.name)}
                             </div>
-                        </button>
-                    </PopoverTrigger>
-                </div>
+
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-[15px] font-[700] leading-[1.2] text-slate-900 dark:text-white truncate">
+                                    {currentOrg.name}
+                                </h3>
+                                <span className="block pt-0.5 text-[12.5px] font-normal text-slate-500 dark:text-zinc-400 truncate">
+                                    {currentOrg.roleName ?? "Employee"}
+                                </span>
+                            </div>
+                        </div>
+
+                        <ChevronsUpDown className="h-4 w-4 shrink-0 text-slate-400 hover:text-slate-600" />
+                    </button>
+                </PopoverTrigger>
 
                 <PopoverContent 
                     className="w-(--radix-popover-trigger-width) min-w-60 rounded-2xl border border-[var(--border)] bg-[var(--color-surface)] p-1.5 text-[var(--color-foreground)] shadow-[0_24px_64px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-[#1C1C1E] dark:text-white dark:shadow-[0_24px_64px_rgba(0,0,0,0.65)]" 
