@@ -8,7 +8,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DepartmentSummary } from '@/modules/departments/types/departmentTypes';
 
@@ -32,9 +31,7 @@ interface DepartmentDetailDialogProps {
   isOpen: boolean;
   canManage: boolean;
   onClose: () => void;
-  onCreateTeam: () => void;
   onDelete: () => void;
-  onViewTeams: () => void;
 }
 
 export function DepartmentDetailDialog({
@@ -42,9 +39,7 @@ export function DepartmentDetailDialog({
   isOpen,
   canManage,
   onClose,
-  onCreateTeam,
   onDelete,
-  onViewTeams,
 }: DepartmentDetailDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -84,7 +79,6 @@ export function DepartmentDetailDialog({
               <div className="grid grid-cols-2 gap-x-12 gap-y-0">
                 <OverviewField label="Department lead" value={department.headMemberName || 'Not assigned'} />
                 <OverviewField label="Parent department" value={department.parentDepartmentId || 'Top-level'} />
-                <OverviewField label="Teams" value={`${department.teamCount}`} />
                 <OverviewField label="People" value={`${department.memberCount}`} />
                 <OverviewField label="Projects" value={`${department.projectCount}`} />
                 <OverviewField label="Status" value={department.status} />
@@ -92,32 +86,16 @@ export function DepartmentDetailDialog({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-t border-[#e5e5ea] px-8 py-4">
-              <Button
-                variant="outline"
-                className="rounded-lg border-[#e5e5ea] px-5 text-[14px] font-medium text-[#1d1d1f]"
-                onClick={onViewTeams}
-              >
-                View teams
-                <ChevronRight className="ml-1 size-4" />
-              </Button>
               {canManage && (
-                <>
+                <div className="ml-auto">
                   <Button
+                    variant="destructive"
                     className="rounded-lg px-5 text-[14px] font-medium"
-                    onClick={onCreateTeam}
+                    onClick={onDelete}
                   >
-                    Add team
+                    Remove
                   </Button>
-                  <div className="ml-auto">
-                    <Button
-                      variant="destructive"
-                      className="rounded-lg px-5 text-[14px] font-medium"
-                      onClick={onDelete}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </>
+                </div>
               )}
             </div>
           </>

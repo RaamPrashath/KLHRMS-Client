@@ -2,11 +2,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  assignTeamMemberAction,
   createDepartmentAction,
-  createTeamAction,
   deleteDepartmentAction,
-  removeTeamMemberAction,
   updateDepartmentAction,
 } from '@/modules/departments/api/departmentServerActions';
 
@@ -31,21 +28,6 @@ export function useDepartmentMutations(orgSlug: string, memberId: string) {
     }),
     deleteDepartment: useMutation({
       mutationFn: (departmentId: string) => deleteDepartmentAction({ orgSlug, memberId, departmentId }),
-      onSuccess: invalidateAll,
-    }),
-    createTeam: useMutation({
-      mutationFn: ({ departmentId, data }: { departmentId: string; data: Parameters<typeof createTeamAction>[0]['data'] }) =>
-        createTeamAction({ orgSlug, memberId, departmentId, data }),
-      onSuccess: invalidateAll,
-    }),
-    assignTeamMember: useMutation({
-      mutationFn: ({ teamId, data }: { teamId: string; data: Parameters<typeof assignTeamMemberAction>[0]['data'] }) =>
-        assignTeamMemberAction({ orgSlug, memberId, teamId, data }),
-      onSuccess: invalidateAll,
-    }),
-    removeTeamMember: useMutation({
-      mutationFn: ({ teamId, targetMemberId }: { teamId: string; targetMemberId: string }) =>
-        removeTeamMemberAction({ orgSlug, memberId, teamId, targetMemberId }),
       onSuccess: invalidateAll,
     }),
   };

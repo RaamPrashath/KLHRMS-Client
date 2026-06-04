@@ -48,7 +48,6 @@ const defaultProjectForm: ProjectInput = {
   name: '',
   description: '',
   clientName: '',
-  teamId: '',
   status: 'ACTIVE',
   startDate: '',
   endDate: '',
@@ -262,28 +261,6 @@ export function ProjectPageShell({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label>Team</Label>
-                    <Select
-                      value={projectForm.teamId || 'none'}
-                      onValueChange={(value) =>
-                        setProjectForm({ ...projectForm, teamId: value === 'none' ? '' : value })
-                      }
-                    >
-                      <SelectTrigger className="h-10 w-full rounded-lg border-[#e5e5ea] shadow-none">
-                        <SelectValue placeholder="Select team" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Not linked</SelectItem>
-                        {metaQuery.data?.teams.map((team) => (
-                          <SelectItem key={team.id} value={team.id}>
-                            {team.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   <div className="grid gap-2">
                     <Label>Status</Label>
                     <Select

@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
-    DotsHorizontalIcon,
     GearIcon,
     ExitIcon,
     MagnifyingGlassIcon,
@@ -50,7 +49,9 @@ import {
     SidebarLabel,
     useSidebar,
 } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { authClient } from "@/lib/auth-client";
+import { getHrmsApiUrl } from "@/lib/deployment-env";
 import { cn } from "@/lib/utils";
 import {
     type RolePermissions,
@@ -119,6 +120,13 @@ function getInitials(name?: string | null, email?: string | null) {
     return "US";
 }
 
+function toAbsoluteApiUrl(url?: string | null): string | null {
+    if (!url || url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+        return url ?? null;
+    }
+    return `${getHrmsApiUrl().replace(/\/$/, "")}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
 function NavSearch({
     value,
     onChange,
@@ -160,20 +168,20 @@ function NavSearch({
     }
 
     return (
-        <div className="relative group px-1 mb-1.5">
+        <div className="relative group px-1 mb-2">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-600 dark:text-zinc-500" />
             <input
                 ref={inputRef}
                 type="text"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                placeholder="Search navigation..."
+                placeholder="Search"
                 aria-label="Search navigation"
                 className={cn(
-                    "h-10 w-full rounded-[12px] pl-10 pr-9 text-[14px] font-[500]",
-                    "border border-[var(--color-sidebar-border)] bg-white dark:border-zinc-800/40 dark:bg-zinc-900/40",
-                    "text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-zinc-500",
-                    "focus:border-indigo-500/30 focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-indigo-500/5",
+                    "h-9 w-full rounded-xl pl-10 pr-10 text-[13px] font-medium",
+                    "border-none bg-slate-100/70 hover:bg-slate-100/90 dark:bg-zinc-900/50 dark:hover:bg-zinc-900/80",
+                    "text-slate-800 placeholder:text-slate-400 dark:text-zinc-200 dark:placeholder:text-zinc-500",
+                    "focus:bg-slate-100 dark:focus:bg-zinc-900 focus:outline-none",
                     "transition-all duration-200",
                 )}
             />
@@ -181,20 +189,12 @@ function NavSearch({
                 <button
                     onClick={() => onChange("")}
                     aria-label="Clear search"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
                 >
-                    <span className="text-[14px] leading-none">×</span>
+                    <span className="text-[13px] leading-none">×</span>
                 </button>
             )}
         </div>
-    );
-}
-
-function RoleBadge({ roleName }: { readonly roleName: string }) {
-    return (
-        <span className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--color-surface-subtle)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none text-[var(--color-sidebar-text)] dark:border-white/5 dark:bg-white/10 dark:text-white/50">
-            {roleName}
-        </span>
     );
 }
 
@@ -239,10 +239,12 @@ function SidebarNavigation({
                     )}
                 </div>
             ) : (
-                <nav className="flex flex-col gap-1">
-                    {navGroups.map((group) => (
-                        <div key={group.title} className="flex flex-col gap-1">
-                            <SidebarLabel>{group.title}</SidebarLabel>
+                <nav className="flex flex-col gap-0.5">
+                    {navGroups.map((group, idx) => (
+                        <div key={group.title} className={cn("flex flex-col gap-0.5", idx > 0 && "mt-1.5")}>
+                            {group.title.toLowerCase() !== "main" && (
+                                <SidebarLabel>{group.title}</SidebarLabel>
+                            )}
                             {group.items.map((item) => {
                                 const url = item.urlSuffix ? `/${orgSlug}/${item.urlSuffix}` : `/${orgSlug}`;
                                 const isActive = url === `/${orgSlug}`
@@ -262,8 +264,8 @@ function SidebarNavigation({
                                                     className={cn(
                                                         ic,
                                                         isActive
-                                                            ? "text-(--color-sidebar-active-text)"
-                                                            : "text-(--color-sidebar-text)",
+                                                            ? "text-indigo-600 dark:text-indigo-400"
+                                                            : "text-slate-400 group-hover/sidebar:text-slate-600 dark:text-zinc-500 dark:group-hover/sidebar:text-zinc-300",
                                                     )}
                                                 />
                                             ) : null,
@@ -304,6 +306,7 @@ function UserFooter({
 
     const displayName = user.name ?? user.email ?? "User";
     const initials = getInitials(user.name, user.email);
+    const imageUrl = toAbsoluteApiUrl(user.image);
 
     const labelTransition = shouldReduceMotion
         ? { duration: 0 }
@@ -340,27 +343,24 @@ function UserFooter({
     };
 
     return (
-        <div ref={dropdownRef} className="relative border-t border-[var(--color-sidebar-border)] dark:border-zinc-800/80 pt-4 flex items-center justify-between gap-1">
+        <div ref={dropdownRef} className="relative w-full border-t-0 mt-auto">
             <button
-                onClick={!open ? () => setDropdownOpen((v) => !v) : undefined}
+                onClick={() => setDropdownOpen((v) => !v)}
                 suppressHydrationWarning
                 className={cn(
-                    "flex flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left min-w-0 select-none",
-                    !open
-                        ? "transition-all duration-200 hover:bg-[var(--color-sidebar-accent)] dark:hover:bg-zinc-900 active:scale-[0.98] cursor-pointer"
-                        : "cursor-default"
+                    "flex w-full items-center gap-2.5 rounded-[12px] px-2.5 py-2 text-left min-w-0 select-none transition-all duration-200 cursor-pointer",
+                    "bg-indigo-50/50 hover:bg-indigo-50/80 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40",
+                    dropdownOpen && "bg-indigo-100/70 dark:bg-indigo-950/50"
                 )}
                 aria-expanded={dropdownOpen}
                 aria-haspopup="menu"
             >
-                {user.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.image} className="h-10 w-10 shrink-0 rounded-full border border-slate-100 dark:border-zinc-800" alt={displayName} />
-                ) : (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white border border-[var(--color-sidebar-border)] dark:bg-zinc-800 text-[13px] font-[700] text-slate-700 dark:text-zinc-300">
+                <Avatar className="h-8 w-8 shrink-0 border border-slate-100 dark:border-zinc-800">
+                    <AvatarImage src={imageUrl ?? undefined} alt={displayName} />
+                    <AvatarFallback className="bg-white text-[11px] font-[700] text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
                         {initials}
-                    </div>
-                )}
+                    </AvatarFallback>
+                </Avatar>
 
                 <motion.div
                     initial={false}
@@ -369,31 +369,14 @@ function UserFooter({
                     className="flex min-w-0 flex-1 flex-col overflow-hidden"
                     aria-hidden={!open}
                 >
-                    <span className="truncate text-[14px] font-bold text-slate-800 dark:text-zinc-100 leading-tight">
+                    <span className="truncate text-[13.5px] font-bold text-slate-800 dark:text-zinc-100 leading-tight">
                         {displayName}
                     </span>
-                    <span className="truncate text-[12px] font-medium text-slate-400 dark:text-zinc-500 mt-0.5 leading-none">
-                        {roleName ?? user.email ?? "Employee"}
+                    <span className="truncate text-[11.5px] font-semibold text-indigo-600 dark:text-indigo-400 mt-0.5 leading-none">
+                        {roleName}
                     </span>
                 </motion.div>
             </button>
-
-            <AnimatePresence>
-                {open && (
-                    <motion.button
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.15 }}
-                        type="button"
-                        onClick={() => setDropdownOpen((v) => !v)}
-                        className="p-2 rounded-lg transition-colors text-slate-400 hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-text-hover)] dark:hover:bg-zinc-900 active:scale-95 shrink-0"
-                        aria-label="Settings panel"
-                    >
-                        <GearIcon className="h-5 w-5" />
-                    </motion.button>
-                )}
-            </AnimatePresence>
 
             <AnimatePresence>
                 {dropdownOpen && (
@@ -404,13 +387,13 @@ function UserFooter({
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                         role="menu"
                         className={cn(
-                            "absolute bottom-full z-50 mb-3 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--color-surface)] p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-[#2a2a2c] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]",
+                            "absolute bottom-full z-50 mb-2 overflow-hidden rounded-2xl border border-slate-100 bg-white p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]",
                             open ? "left-0 right-0" : "left-0 w-56",
                         )}
                     >
-                        <div className="mb-1 px-3 py-3">
-                            <p className="truncate text-[13px] font-semibold text-[var(--color-foreground)]">{displayName}</p>
-                            <p className="mt-0.5 truncate text-[11px] text-[var(--color-sidebar-text)]">{user.email}</p>
+                        <div className="mb-1 px-3 py-2.5">
+                            <p className="truncate text-[13px] font-semibold text-slate-850 dark:text-white">{displayName}</p>
+                            <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-zinc-400">{user.email}</p>
                         </div>
 
                         <div className="space-y-0.5">
@@ -418,7 +401,7 @@ function UserFooter({
                                 href={`/${orgSlug}/settings/account`}
                                 role="menuitem"
                                 onClick={() => setDropdownOpen(false)}
-                                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-sidebar-text)] transition-colors hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-text-hover)]"
+                                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-slate-650 dark:text-zinc-350 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-zinc-800 dark:hover:text-white"
                             >
                                 <GearIcon className="h-4 w-4 shrink-0" />
                                 Account Settings
@@ -428,18 +411,18 @@ function UserFooter({
                                     href={`/${orgSlug}/settings`}
                                     role="menuitem"
                                     onClick={() => setDropdownOpen(false)}
-                                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-sidebar-text)] transition-colors hover:bg-[var(--color-sidebar-accent)] hover:text-[var(--color-sidebar-text-hover)]"
+                                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-slate-650 dark:text-zinc-350 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-zinc-800 dark:hover:text-white"
                                 >
                                     <Building2 className="h-4 w-4 shrink-0" />
                                     Organization Settings
                                 </Link>
                             )}
-                            <div className="mx-2 my-1 h-px bg-[var(--color-sidebar-border)]" />
+                            <div className="mx-2 my-1 h-px bg-slate-100 dark:bg-zinc-800" />
                             <button
                                 role="menuitem"
                                 onClick={handleSignOut}
                                 disabled={isSigningOut}
-                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-sidebar-text)] transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-slate-650 dark:text-zinc-350 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                             >
                                 <ExitIcon className="h-4 w-4 shrink-0" />
                                 {isSigningOut ? "Signing out..." : "Log out"}
@@ -471,8 +454,8 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
 
     return (
         <Sidebar open={open} setOpen={setOpen} animate={true}>
-            <SidebarBody className="justify-between gap-4 border-r border-[var(--color-sidebar-divider)] bg-[var(--color-sidebar-bg)]">
-                <div className="flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto no-scrollbar">
+            <SidebarBody className="justify-between gap-4 border-r-0 bg-white dark:bg-zinc-950 px-3 py-4 pt-3 md:py-4 md:pt-3">
+                <div className="flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     <OrganizationSwitcher currentOrgSlug={orgSlug} organizations={organizations} />
                     <SidebarNavigation
                         key={showSearch ? "with-search" : "without-search"}

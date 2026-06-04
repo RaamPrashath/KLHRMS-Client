@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useCallback, useTransition } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { getScope, type RolePermissions } from '@/lib/hrms-roles';
 import { useDeactivateEmployeeMutation, useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
-import { ChangeEmployeeRoleDialog } from './ChangeEmployeeRoleDialog';
 import { DeactivateEmployeeDialog } from './DeactivateEmployeeDialog';
 import { EmployeeTable } from './EmployeeTable';
+import { updateEmployeeRoleAction } from '@/app/actions/organizationActions';
 import type { AttendanceTodayStatus } from '@/modules/employees/types/employeeTypes';
 
 interface EmployeePageShellProps {
@@ -24,17 +26,39 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // ── Role editing state ──────────────────────────────────────────────────────
-  const [editTarget, setEditTarget] = useState<{ memberId: string; currentRoleName: string | null } | null>(null);
+  // ── Role editing ───────────────────────────────────────────────────────────
+  const queryClient = useQueryClient();
 
   const [deactivateTarget, setDeactivateTarget] = useState<{ memberId: string; name: string } | null>(null);
   const deactivateMutation = useDeactivateEmployeeMutation(orgSlug, memberId);
 
   const canEditRole = permissions ? getScope(permissions, 'employees', 'edit') !== 'none' : false;
 
-  const handleEditRole = useCallback((targetMemberId: string, currentRoleName: string | null) => {
-    setEditTarget({ memberId: targetMemberId, currentRoleName });
-  }, []);
+  const handleUpdateRole = useCallback(
+    async (targetMemberId: string, newRoleId: string) => {
+      const formData = new FormData();
+      formData.append('memberId', targetMemberId);
+      formData.append('roleId', newRoleId);
+
+      const promise = updateEmployeeRoleAction(orgSlug, formData).then(
+        async (result) => {
+          if (result.success) {
+            await queryClient.invalidateQueries({ queryKey: ['employees', orgSlug] });
+            return 'Employee role updated';
+          } else {
+            throw new Error(result.error ?? 'Failed to update role');
+          }
+        }
+      );
+
+      toast.promise(promise, {
+        loading: 'Updating role...',
+        success: (data) => data,
+        error: (err) => err.message,
+      });
+    },
+    [orgSlug, queryClient],
+  );
 
   const handleDeactivate = useCallback((targetMemberId: string, name: string) => {
     setDeactivateTarget({ memberId: targetMemberId, name });
@@ -133,17 +157,8 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
         onAttendanceStatusChange={handleAttendanceStatusChange}
         onClearAll={handleClearAll}
         canEditRole={canEditRole}
-        onEditRole={handleEditRole}
+        onUpdateRole={handleUpdateRole}
         onDeactivate={canEditRole ? handleDeactivate : undefined}
-      />
-
-      <ChangeEmployeeRoleDialog
-        open={editTarget !== null}
-        onOpenChange={(open) => { if (!open) setEditTarget(null); }}
-        orgSlug={orgSlug}
-        memberId={editTarget?.memberId ?? ''}
-        currentRoleName={editTarget?.currentRoleName ?? null}
-        roles={roles}
       />
 
       <DeactivateEmployeeDialog

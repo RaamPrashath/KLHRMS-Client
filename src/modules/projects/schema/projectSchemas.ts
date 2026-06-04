@@ -5,7 +5,6 @@ export const projectStatusOptions = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLE
 export const projectSchema = z
   .object({
     name: z.string().trim().min(1, 'Project name is required').max(255),
-    teamId: z.string().optional().or(z.literal('')),
     clientName: z.string().trim().max(255).optional().or(z.literal('')),
     budget: z.coerce.number().min(0).optional().nullable(),
     budgetedHours: z.coerce.number().min(0).optional().nullable(),

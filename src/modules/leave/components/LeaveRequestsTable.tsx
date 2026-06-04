@@ -16,7 +16,7 @@ import type { LeaveRequestRecord } from '@/modules/leave/types/leaveTypes';
 
 type SortOption = 'pending-first' | 'latest' | 'oldest';
 type FilterOption = 'today' | 'this-week' | 'this-month' | 'all-time';
-type LeavePermissionScope = 'none' | 'self' | 'team' | 'department' | 'organization';
+type LeavePermissionScope = 'none' | 'self' | 'department' | 'organization';
 
 interface LeaveRequestsTableProps {
   requests: LeaveRequestRecord[];

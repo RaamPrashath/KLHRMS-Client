@@ -21,16 +21,13 @@ interface WorkLogFiltersBarProps {
   dateFrom: string;
   dateTo: string;
   departmentId: string;
-  teamId: string;
   employeeName: string;
   employeeSuggestions: Option[];
   departmentOptions: Option[];
-  teamOptions: Option[];
   onPresetChange: (value: WorkLogPreset) => void;
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onDepartmentChange: (value: string) => void;
-  onTeamChange: (value: string) => void;
   onEmployeeNameChange: (value: string) => void;
 }
 
@@ -39,16 +36,13 @@ export function WorkLogFiltersBar({
   dateFrom,
   dateTo,
   departmentId,
-  teamId,
   employeeName,
   employeeSuggestions,
   departmentOptions,
-  teamOptions,
   onPresetChange,
   onDateFromChange,
   onDateToChange,
   onDepartmentChange,
-  onTeamChange,
   onEmployeeNameChange,
 }: Readonly<WorkLogFiltersBarProps>) {
   return (
@@ -87,17 +81,6 @@ export function WorkLogFiltersBar({
         </SelectTrigger>
         <SelectContent>
           {departmentOptions.map((opt) => (
-            <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={teamId} onValueChange={onTeamChange}>
-        <SelectTrigger className="h-11 w-[200px] rounded-xl border-border/60 bg-background shadow-none">
-          <SelectValue placeholder="All teams" />
-        </SelectTrigger>
-        <SelectContent>
-          {teamOptions.map((opt) => (
             <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
           ))}
         </SelectContent>

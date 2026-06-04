@@ -5,6 +5,7 @@ import { type RoleResponse, type ApiError } from '@/modules/roles/types/role';
 import {
   roleCreateSchema,
   roleUpdateSchema,
+  normalizePermissionScopes,
   type RoleCreateInput,
   type RoleUpdateInput,
 } from '@/modules/roles/schema/roleSchemas';
@@ -65,7 +66,10 @@ export async function createRoleAction(params: {
   const { orgSlug, memberId, data } = params;
 
   // Validate before sending
-  const parsed = roleCreateSchema.safeParse(data);
+  const parsed = roleCreateSchema.safeParse({
+    ...data,
+    permissions: normalizePermissionScopes(data.permissions),
+  });
   if (!parsed.success) {
     const error: ApiError = {
       status: 400,
@@ -91,7 +95,11 @@ export async function updateRoleAction(params: {
   const { orgSlug, memberId, roleId, data } = params;
 
   // Validate before sending
-  const parsed = roleUpdateSchema.safeParse(data);
+  const parsed = roleUpdateSchema.safeParse(
+    data.permissions
+      ? { ...data, permissions: normalizePermissionScopes(data.permissions) }
+      : data,
+  );
   if (!parsed.success) {
     const error: ApiError = {
       status: 400,

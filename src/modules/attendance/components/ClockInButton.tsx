@@ -20,8 +20,7 @@ export function ClockInButton({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-      aria-label="Clock in"
-      className="relative overflow-hidden rounded-lg bg-[#17c79b] px-7 py-3.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(23,199,155,0.22)] transition-all disabled:pointer-events-none disabled:opacity-60"
+      className="btn-primary-grad disabled:pointer-events-none disabled:opacity-60"
     >
       <span className="relative z-10 flex items-center justify-center gap-2.5">
         {isPending ? (

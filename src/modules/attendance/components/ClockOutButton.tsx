@@ -15,8 +15,7 @@ export function ClockOutButton({ onClockOut, isPending }: Readonly<ClockOutButto
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-      aria-label="Clock out"
-      className="inline-flex items-center justify-center gap-2 bg-[#17c79b] text-white hover:bg-neutral-800 text-sm font-medium px-8 py-3 rounded-xl transition-colors duration-200 shadow-none disabled:opacity-60 disabled:pointer-events-none cursor-pointer"
+      className="inline-flex items-center justify-center gap-2 btn-clockout-border text-sm px-8 py-3 disabled:opacity-60 disabled:pointer-events-none cursor-pointer"
     >
       {isPending ? (
         <svg

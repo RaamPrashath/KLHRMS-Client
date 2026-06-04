@@ -54,7 +54,6 @@ export async function fetchWorkLogReportsAction(params: {
     date_from: filters.date_from,
     date_to: filters.date_to,
     department_id: filters.department_id,
-    team_id: filters.team_id,
     employee_id: filters.employee_id,
     employee_name: filters.employee_name,
     page: filters.page,
@@ -93,7 +92,6 @@ export async function exportWorkLogReportsAction(params: {
     date_from: filters.date_from,
     date_to: filters.date_to,
     department_id: filters.department_id,
-    team_id: filters.team_id,
     employee_id: filters.employee_id,
     employee_name: filters.employee_name,
   });

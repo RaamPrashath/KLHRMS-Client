@@ -2,7 +2,7 @@ import type { LeavePermissionScope, LeavePermissions } from '@/modules/leave/typ
 
 function normalizeScope(value: string | undefined): LeavePermissionScope {
   if (value === 'org') return 'organization';
-  if (value === 'self' || value === 'organization' || value === 'team' || value === 'department') {
+  if (value === 'self' || value === 'organization' || value === 'department') {
     return value;
   }
   return 'none';

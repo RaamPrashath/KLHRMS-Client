@@ -13,7 +13,7 @@ import {
 import { useBulkAttendancePermissions } from '@/modules/attendance/hooks/queries/attendance';
 import { useWorkLogReportsQuery } from '@/modules/attendance/hooks/queries/workLogReports';
 import { getTodayIST } from '@/modules/attendance/utils/attendanceFormatters';
-import { useDepartmentMetaQuery, useDepartmentsQuery } from '@/modules/departments/hooks/useDepartmentsQuery';
+import { useDepartmentMetaQuery } from '@/modules/departments/hooks/useDepartmentsQuery';
 import { TimesheetSubnav } from './TimesheetSubnav';
 import { WorkLogDetailDialog } from './WorkLogDetailDialog';
 import { WorkLogDirectoryTable } from './WorkLogDirectoryTable';
@@ -41,7 +41,6 @@ export function WorkLogDirectoryPageShell({
   const [customDateFrom, setCustomDateFrom] = useState(today);
   const [customDateTo, setCustomDateTo] = useState(today);
   const [departmentId, setDepartmentId] = useState('');
-  const [teamId, setTeamId] = useState('');
   const [employeeName, setEmployeeName] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -49,7 +48,6 @@ export function WorkLogDirectoryPageShell({
 
   const permissionsQuery = useBulkAttendancePermissions(orgSlug, memberId);
   const departmentMetaQuery = useDepartmentMetaQuery(orgSlug, memberId, permissionsQuery.permissions.view === 'organization');
-  const departmentsQuery = useDepartmentsQuery(orgSlug, memberId, { page: 1, pageSize: 100 });
 
   const dateFrom = preset === 'today' ? today : preset === 'last7' ? subtractDays(today, 6) : customDateFrom;
   const dateTo = preset === 'today' ? today : preset === 'last7' ? today : customDateTo;
@@ -59,27 +57,16 @@ export function WorkLogDirectoryPageShell({
     [departmentMetaQuery.data?.departments],
   );
 
-  const teamOptions = useMemo(() => {
-    const departments = departmentsQuery.data?.items ?? [];
-    const flattened = departments.flatMap((department) =>
-      department.teams
-        .filter(() => !departmentId || department.id === departmentId)
-        .map((team) => ({ id: team.id, label: `${team.name}${department.name ? ` — ${department.name}` : ''}` })),
-    );
-    return flattened.sort((a, b) => a.label.localeCompare(b.label));
-  }, [departmentId, departmentsQuery.data?.items]);
-
   const filters = useMemo(
     () => ({
       date_from: dateFrom,
       date_to: dateTo,
       department_id: departmentId || undefined,
-      team_id: teamId || undefined,
       employee_name: employeeName.trim() || undefined,
       page,
       page_size: pageSize,
     }),
-    [dateFrom, dateTo, departmentId, employeeName, page, pageSize, teamId],
+    [dateFrom, dateTo, departmentId, employeeName, page, pageSize],
   );
 
   const reportQuery = useWorkLogReportsQuery(
@@ -158,11 +145,9 @@ export function WorkLogDirectoryPageShell({
           dateFrom={dateFrom}
           dateTo={dateTo}
           departmentId={departmentId}
-          teamId={teamId}
           employeeName={employeeName}
           employeeSuggestions={(departmentMetaQuery.data?.members ?? []).map((member) => ({ id: member.id, label: member.label }))}
           departmentOptions={departmentOptions}
-          teamOptions={teamOptions}
           onPresetChange={(value) => {
             setPreset(value);
             setPage(1);
@@ -177,11 +162,6 @@ export function WorkLogDirectoryPageShell({
           }}
           onDepartmentChange={(value) => {
             setDepartmentId(value);
-            setTeamId('');
-            setPage(1);
-          }}
-          onTeamChange={(value) => {
-            setTeamId(value);
             setPage(1);
           }}
           onEmployeeNameChange={(value) => {

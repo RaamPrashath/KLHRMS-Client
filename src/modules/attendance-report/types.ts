@@ -25,7 +25,6 @@ export interface AttendanceReportRow {
   clockOut: string | null;
   totalHours: number | null;
   departmentName: string | null;
-  teamName: string | null;
   projectName: string | null;
   taskName: string | null;
   clockOutDescription: string | null;

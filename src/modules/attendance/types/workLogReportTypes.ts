@@ -7,7 +7,6 @@ export interface WorkLogReportRow {
   clockOut: string | null;
   totalHours: number | null;
   departmentName: string | null;
-  teamName: string | null;
   projectName: string | null;
   taskName: string | null;
   dailyWorkLogPreview: string | null;
@@ -38,7 +37,6 @@ export interface WorkLogReportDetailResponse {
   clockOut: string | null;
   totalHours: number | null;
   departmentName: string | null;
-  teamName: string | null;
   projectName: string | null;
   taskName: string | null;
   dailyWorkLog: string | null;
@@ -48,7 +46,6 @@ export interface WorkLogReportFilters {
   date_from?: string;
   date_to?: string;
   department_id?: string;
-  team_id?: string;
   employee_id?: string;
   employee_name?: string;
   page?: number;

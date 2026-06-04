@@ -19,7 +19,6 @@ interface ScopeConfig {
 const SCOPE_CONFIG: Record<ScopeValue, ScopeConfig> = {
   none:         { label: '—',    classes: 'text-neutral-300 bg-transparent border border-dashed border-neutral-200 hover:border-neutral-300 hover:text-neutral-400' },
   self:         { label: 'Self', classes: 'bg-info-bg text-info-text border border-info-border' },
-  team:         { label: 'Team', classes: 'bg-warning-bg text-warning-text border border-warning-border' },
   department:   { label: 'Dept', classes: 'bg-primary-subtle text-primary border border-primary-subtle' },
   organization: { label: 'Org',  classes: 'bg-success-bg text-success-text border border-success-border' },
 };
@@ -140,6 +139,7 @@ export function RolePermissionsGrid({
   function getCurrentScope(module: string, action: string): ScopeValue {
     const scope = value[module]?.[action];
     if (!scope || scope === 'none') return 'none';
+    if (scope === 'team') return 'department';
     return scope as ScopeValue;
   }
 

@@ -13,6 +13,14 @@ interface MicrosoftSettingsTabProps {
   memberId: string;
 }
 
+const MASKED_CREDENTIAL = "xxxx";
+
+function formatDateTime(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
+}
+
 export function MicrosoftSettingsTab({ orgSlug, memberId }: MicrosoftSettingsTabProps) {
   const { data: settings, isLoading: settingsLoading, refetch: refetchSettings } = useMicrosoftSettings(orgSlug, memberId);
   const { data: syncStatus, refetch: refetchStatus } = useMicrosoftSyncStatus(orgSlug, memberId);
@@ -38,12 +46,20 @@ export function MicrosoftSettingsTab({ orgSlug, memberId }: MicrosoftSettingsTab
   }, [settings]);
 
   const isConfigured = syncStatus?.is_configured ?? false;
-  const lastSync = syncStatus?.last_sync_at ? new Date(syncStatus.last_sync_at + "Z").toLocaleString() : null;
+  const lastSync = formatDateTime(syncStatus?.last_sync_at);
   const summary = syncStatus?.last_sync_summary;
 
   const testPassed = testResult?.ok === true;
   const canSave = testPassed && !saveMutation.isPending;
   const currentSecret = tenantId.trim() + clientId.trim() + clientSecret.trim();
+
+  function isMask(value: string): boolean {
+    return value.trim() === MASKED_CREDENTIAL;
+  }
+
+  function shouldUseStoredCredentials(): boolean {
+    return isMask(tenantId) && isMask(clientId) && isMask(clientSecret);
+  }
 
   async function handleTestConnection(e: React.FormEvent) {
     e.preventDefault();
@@ -53,7 +69,9 @@ export function MicrosoftSettingsTab({ orgSlug, memberId }: MicrosoftSettingsTab
       const { testMicrosoftConnectionAction } = await import("@/modules/microsoft-graph/api/microsoftGraphServerActions");
       const result = await testMicrosoftConnectionAction({
         orgSlug, memberId,
-        credentials: { tenant_id: tenantId.trim(), client_id: clientId.trim(), client_secret: clientSecret.trim() },
+        credentials: shouldUseStoredCredentials()
+          ? undefined
+          : { tenant_id: tenantId.trim(), client_id: clientId.trim(), client_secret: clientSecret.trim() },
       });
       if (result.connected) {
         setTestResult({ ok: true, msg: `Connected to ${result.tenant_name}` });

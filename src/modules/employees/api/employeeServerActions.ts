@@ -48,6 +48,13 @@ function buildQuery(
   return s ? `?${s}` : '';
 }
 
+function toAbsoluteApiUrl(url: string | null): string | null {
+  if (!url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  return `${getApiUrl().replace(/\/$/, '')}${url.startsWith('/') ? url : `/${url}`}`;
+}
+
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 export async function fetchEmployeesAction(params: {
@@ -71,7 +78,14 @@ export async function fetchEmployeesAction(params: {
     cache: 'no-store',
   });
 
-  return handleResponse<EmployeeListResponse>(res);
+  const data = await handleResponse<EmployeeListResponse>(res);
+  return {
+    ...data,
+    items: data.items.map((employee) => ({
+      ...employee,
+      image: toAbsoluteApiUrl(employee.image),
+    })),
+  };
 }
 
 export async function fetchEmployeeRolesAction(params: {

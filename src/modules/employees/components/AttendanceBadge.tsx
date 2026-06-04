@@ -1,42 +1,88 @@
 import type { AttendanceTodayStatus } from '@/modules/employees/types/employeeTypes';
 
 interface AttendanceBadgeProps {
-  status: AttendanceTodayStatus;
+  status: AttendanceTodayStatus | 'HOLIDAY';
 }
 
 const CONFIG: Record<
-  AttendanceTodayStatus,
-  { label: string; className: string }
+  AttendanceTodayStatus | 'HOLIDAY',
+  { label: string; color: string }
 > = {
   PRESENT: {
     label: 'Present',
-    className: 'bg-primary/10 text-primary border border-primary/20',
-  },
-  ABSENT: {
-    label: 'Absent',
-    className: 'bg-[#EA4335]/10 text-[#EA4335] border border-[#EA4335]/20',
+    color: '#00874A',
   },
   WORK_FROM_HOME: {
     label: 'WFH',
-    className: 'bg-[#4285F4]/10 text-[#4285F4] border border-[#4285F4]/20',
+    color: '#0066CC',
   },
   HALF_DAY: {
     label: 'Half Day',
-    className: 'bg-[#FBBC05]/10 text-[#FBBC05] border border-[#FBBC05]/20',
+    color: '#FBBC05',
+  },
+  ABSENT: {
+    label: 'Absent',
+    color: '#EA4335',
+  },
+  HOLIDAY: {
+    label: 'Holiday',
+    color: '#EA4335',
   },
   NO_RECORD: {
     label: 'No Record',
-    className: 'bg-neutral-100 text-neutral-500 border border-neutral-200',
+    color: '#6E6E73',
   },
 };
 
-export function AttendanceBadge({ status }: AttendanceBadgeProps) {
-  const { label, className } = CONFIG[status] ?? CONFIG.NO_RECORD;
-  return (
-    <div className="flex items-center justify-end">
+export function AttendanceBadge({ status }: Readonly<AttendanceBadgeProps>) {
+  const { label, color } = CONFIG[status] ?? CONFIG.NO_RECORD;
+
+  const renderDot = () => {
+    if (status === 'PRESENT' || status === 'WORK_FROM_HOME' || status === 'HOLIDAY') {
+      return (
+        <span
+          className="size-1.5 rounded-full shrink-0"
+          style={{ backgroundColor: color }}
+        />
+      );
+    }
+    if (status === 'HALF_DAY') {
+      return (
+        <span
+          className="size-1.5 rounded-full border shrink-0"
+          style={{
+            borderColor: color,
+            background: `linear-gradient(to top, ${color} 50%, transparent 50%)`,
+          }}
+        />
+      );
+    }
+    if (status === 'ABSENT') {
+      return (
+        <span
+          className="size-1.5 rounded-full border shrink-0"
+          style={{ borderColor: color }}
+        />
+      );
+    }
+    return (
       <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${className}`}
+        className="size-1.5 rounded-full shrink-0"
+        style={{ backgroundColor: '#6E6E73' }}
+      />
+    );
+  };
+
+  return (
+    <div className="flex items-center justify-center">
+      <span
+        className="inline-flex items-center justify-center gap-1.5 rounded-full text-[11px] font-semibold w-[90px] h-[24px] select-none"
+        style={{
+          backgroundColor: `${color}0D`,
+          color: color,
+        }}
       >
+        {renderDot()}
         {label}
       </span>
     </div>

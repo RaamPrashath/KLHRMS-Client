@@ -23,7 +23,6 @@ function normalizeOptionalString(value?: string): string | null {
 function normalizeProjectPayload(data: ProjectInput): Record<string, unknown> {
   return {
     ...data,
-    teamId: normalizeOptionalString(data.teamId),
     clientName: normalizeOptionalString(data.clientName),
     startDate: normalizeOptionalString(data.startDate),
     endDate: normalizeOptionalString(data.endDate),

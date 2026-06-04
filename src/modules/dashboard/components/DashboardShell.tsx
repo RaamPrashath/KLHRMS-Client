@@ -432,7 +432,7 @@ function EmployeeHeroBanner({
   roleName,
 }: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName">>) {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800/60 dark:bg-[#0A0A0C] px-6 py-4.5 shadow-sm hover:shadow-md transition-all duration-300">
+    <section className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#0A0A0C] px-6 py-4.5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300">
       <DashboardClockWidget orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
     </section>
   );

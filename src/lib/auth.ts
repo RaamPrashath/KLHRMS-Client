@@ -39,6 +39,7 @@ export const auth = betterAuth({
         microsoft: {
             clientId: process.env.MICROSOFT_CLIENT_ID!,
             clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
+            scope: ["User.Read"],
         },
         github: {
             clientId: process.env.GITHUB_CLIENT_ID!,
@@ -116,6 +117,40 @@ export const auth = betterAuth({
                             where: { id: user.id },
                             data: { onboarded: true },
                         });
+                    }
+                },
+            },
+        },
+        session: {
+            create: {
+                after: async (session) => {
+                    try {
+                        const user = await prisma.user.findUnique({
+                            where: { id: session.userId },
+                            include: { accounts: true },
+                        });
+                        if (user && !user.image) {
+                            const microsoftAccount = user.accounts.find(
+                                (acc) => acc.providerId === "microsoft" && acc.accessToken
+                            );
+                            if (microsoftAccount?.accessToken) {
+                                const response = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+                                    headers: {
+                                        Authorization: `Bearer ${microsoftAccount.accessToken}`,
+                                    },
+                                });
+                                if (response.ok) {
+                                    const buffer = await response.arrayBuffer();
+                                    const base64 = Buffer.from(buffer).toString("base64");
+                                    await prisma.user.update({
+                                        where: { id: user.id },
+                                        data: { image: `data:image/jpeg;base64,${base64}` },
+                                    });
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch Microsoft photo in session hook", e);
                     }
                 },
             },

@@ -3,13 +3,9 @@
 import { getHrmsApiUrl } from '@/lib/deployment-env';
 import {
   departmentSchema,
-  teamMemberSchema,
-  teamSchema,
   type DepartmentInput,
-  type TeamInput,
-  type TeamMemberInput,
 } from '@/modules/departments/schema/departmentSchemas';
-import type { DepartmentListResponse, DepartmentMetaResponse, DepartmentSummary, TeamSummary } from '@/modules/departments/types/departmentTypes';
+import type { DepartmentListResponse, DepartmentMetaResponse, DepartmentSummary } from '@/modules/departments/types/departmentTypes';
 
 function getApiUrl(): string {
   return getHrmsApiUrl();
@@ -56,16 +52,6 @@ function normalizeDepartment(data: DepartmentInput) {
     ...parsed.data,
     headMemberId: parsed.data.headMemberId || null,
     parentDepartmentId: parsed.data.parentDepartmentId || null,
-  };
-}
-
-function normalizeTeam(data: TeamInput) {
-  const parsed = teamSchema.safeParse(data);
-  if (!parsed.success) throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
-  return {
-    ...parsed.data,
-    description: parsed.data.description || null,
-    leadMemberId: parsed.data.leadMemberId || null,
   };
 }
 
@@ -133,45 +119,3 @@ export async function deleteDepartmentAction(params: { orgSlug: string; memberId
   return handleResponse<void>(res);
 }
 
-export async function createTeamAction(params: {
-  orgSlug: string;
-  memberId: string;
-  departmentId: string;
-  data: TeamInput;
-}): Promise<DepartmentSummary> {
-  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/teams`, {
-    method: 'POST',
-    headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify(normalizeTeam(params.data)),
-  });
-  return handleResponse<DepartmentSummary>(res);
-}
-
-export async function assignTeamMemberAction(params: {
-  orgSlug: string;
-  memberId: string;
-  teamId: string;
-  data: TeamMemberInput;
-}): Promise<TeamSummary> {
-  const parsed = teamMemberSchema.safeParse(params.data);
-  if (!parsed.success) throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
-  const res = await fetch(`${getApiUrl()}/departments/teams/${params.teamId}/members`, {
-    method: 'POST',
-    headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify({ memberId: parsed.data.memberId, role: parsed.data.role || null }),
-  });
-  return handleResponse<TeamSummary>(res);
-}
-
-export async function removeTeamMemberAction(params: {
-  orgSlug: string;
-  memberId: string;
-  teamId: string;
-  targetMemberId: string;
-}): Promise<TeamSummary> {
-  const res = await fetch(`${getApiUrl()}/departments/teams/${params.teamId}/members/${params.targetMemberId}`, {
-    method: 'DELETE',
-    headers: buildHeaders(params.orgSlug, params.memberId),
-  });
-  return handleResponse<TeamSummary>(res);
-}

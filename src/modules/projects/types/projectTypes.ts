@@ -11,8 +11,6 @@ export interface ProjectCapacitySummary {
 export interface ProjectSummary {
   id: string;
   name: string;
-  teamId: string | null;
-  teamName: string | null;
   clientName: string | null;
   budget: number | null;
   budgetedHours: number | null;
@@ -76,7 +74,6 @@ export interface ProjectLookupOption {
 export interface ProjectMetaResponse {
   members: ProjectLookupOption[];
   departments: ProjectLookupOption[];
-  teams: ProjectLookupOption[];
 }
 
 export interface ProjectFiltersState {

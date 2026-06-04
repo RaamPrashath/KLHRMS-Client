@@ -8,7 +8,7 @@ The permission system is built on three core concepts:
 
 1. **Modules** — Feature areas (e.g., `attendance`, `leaves`, `payroll`)
 2. **Actions** — Operations within a module (e.g., `view`, `create`, `edit`, `delete`)
-3. **Scopes** — Access breadth (e.g., `none`, `self`, `team`, `department`, `organization`)
+3. **Scopes** — Access breadth (e.g., `none`, `self`, `department`, `organization`)
 
 ## Permission JSON Structure
 
@@ -35,14 +35,13 @@ Permissions are stored as JSON in the `Role.permissions` field:
 Scopes form an ordered hierarchy from most restrictive to least:
 
 ```
-none < self < team < department < organization
+none < self < department < organization
 ```
 
 | Scope | Access Level |
 |-------|-------------|
 | `none` | No access — action is completely blocked |
 | `self` | Only the member's own records |
-| `team` | Records belonging to members in the same team |
 | `department` | Records belonging to members in the same department |
 | `organization` | All records across the entire organization |
 
@@ -116,7 +115,7 @@ All available modules are defined in `schema/roleSchemas.ts`:
 The main UI for editing permissions. Displays a matrix of modules × actions with clickable scope badges that cycle through the hierarchy.
 
 **Features:**
-- Click any badge to cycle: `none → self → team → department → organization → none`
+- Click any badge to cycle: `none -> self -> department -> organization -> none`
 - Visual color coding for each scope level
 - Separate section for domain-specific actions
 - Keyboard accessible (Enter/Space to activate)

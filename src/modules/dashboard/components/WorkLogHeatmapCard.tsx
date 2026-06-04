@@ -265,9 +265,6 @@ export function WorkLogHeatmapCard({
           >
             Heatmap
           </h2>
-          <p className={cn(isEmployeeVariant ? "text-[14px] font-medium text-[#8a96aa]" : "text-[13px] text-[#7e8faa]")}>
-            Your recent metrics summary
-          </p>
         </div>
         <div
           className={cn(
@@ -348,7 +345,7 @@ export function WorkLogHeatmapCard({
                   return (
                     <div
                       key={dateStr}
-                      className={cn(isEmployeeVariant ? "aspect-square min-h-[3.8rem]" : "aspect-square min-h-[2.65rem]")}
+                      className="aspect-square w-full"
                       aria-hidden="true"
                     />
                   );
@@ -367,10 +364,10 @@ export function WorkLogHeatmapCard({
                     onClick={() => handleDayClick(day)}
                     aria-label={`${format(day, "PPP")}, ${tone.legendLabel}`}
                     className={cn(
-                      "relative flex aspect-square w-full items-center justify-center rounded-[16px] border border-transparent text-sm font-medium transition-transform duration-150 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      "relative flex aspect-square w-full items-center justify-center border border-transparent text-sm font-medium transition-transform duration-150 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       isEmployeeVariant
-                        ? "min-h-[3.8rem] rounded-[18px] border border-[#dfe7f2] text-[21px] font-semibold shadow-[0_10px_24px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.5)]"
-                        : "min-h-[2.65rem] rounded-[9px] border border-[#e5ebf3] text-[12px] font-medium shadow-none",
+                        ? "rounded-[18px] border border-[#dfe7f2] text-[21px] font-semibold shadow-[0_10px_24px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.5)]"
+                        : "rounded-[9px] border border-[#e5ebf3] text-[12px] font-medium shadow-none",
                       tone.backgroundClassName,
                       !isEmployeeVariant && isCurrentDay && !isSelected ? "border-[#5b57ff] bg-white text-[#0f172a] shadow-[inset_0_0_0_2px_#5b57ff]" : "",
                       isCurrentDay && isEmployeeVariant && !isSelected ? "shadow-[inset_0_0_0_1.5px_rgba(76,132,255,0.65)]" : "",

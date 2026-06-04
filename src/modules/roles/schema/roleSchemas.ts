@@ -55,13 +55,12 @@ export const HRMS_ACTIONS = ['view', 'create', 'edit', 'delete', 'approve'] as c
 export const MODULE_SPECIFIC_ACTIONS: Record<string, readonly string[]> = {} as const;
 
 /**
- * Scope hierarchy: none → self → team → department → organization → none (cycles)
+ * Scope hierarchy: none -> self -> department -> organization -> none (cycles)
  * Each scope defines how broadly an action applies.
  */
 export const SCOPE_CYCLE = [
   'none',
   'self',
-  'team',
   'department',
   'organization',
 ] as const;
@@ -71,6 +70,22 @@ export const SCOPE_CYCLE = [
 export type ScopeValue = (typeof SCOPE_CYCLE)[number];
 export type HrmsModule = (typeof HRMS_MODULES)[number];
 export type HrmsAction = (typeof HRMS_ACTIONS)[number];
+
+export function normalizePermissionScopes(
+  permissions: Record<string, Record<string, string>>,
+): Record<string, Record<string, string>> {
+  return Object.fromEntries(
+    Object.entries(permissions).map(([module, actions]) => [
+      module,
+      Object.fromEntries(
+        Object.entries(actions).map(([action, scope]) => [
+          action,
+          scope === 'team' ? 'department' : scope,
+        ]),
+      ),
+    ]),
+  );
+}
 
 // ─── Pure Helpers ─────────────────────────────────────────────────────────────
 

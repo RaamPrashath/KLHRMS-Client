@@ -646,7 +646,7 @@ export function AttendanceClockCard({
           "relative overflow-hidden w-full",
           isDashboard
             ? "bg-transparent shadow-none border-none flex flex-col"
-            : "rounded-2xl bg-white border border-zinc-200/80 dark:border-zinc-800/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:bg-[#0A0A0C]",
+            : "rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:bg-[#0A0A0C]",
         )}
       >
         <div
@@ -676,30 +676,9 @@ export function AttendanceClockCard({
               <>
                 {isDashboard ? (
                   <div className="min-w-0">
-                    <h1 className="max-w-136 text-balance font-sans text-xl md:text-[21px] font-extrabold tracking-[-0.02em] text-neutral-900 dark:text-neutral-100" title={greeting}>
+                    <h1 className="max-w-136 text-balance greeting-title" title={greeting}>
                       {greeting}
                     </h1>
-                    <p className="mt-2 text-[13.5px] font-[550] text-neutral-500 dark:text-neutral-400 flex items-center flex-wrap gap-2 leading-none">
-                      <span>{roleName ?? "Employee"}</span>
-                      <span className="text-zinc-300 dark:text-zinc-700">•</span>
-                      {widgetState === "CLOCKED_IN" ? (
-                        <Badge className="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 uppercase text-[10px] font-extrabold tracking-[0.04em] leading-none h-auto px-2 py-0.5 rounded-full border-none hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
-                          <span className="relative flex h-1.5 w-1.5 mr-1.5">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
-                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          </span>
-                          Clocked in
-                        </Badge>
-                      ) : widgetState === "COMPLETED" ? (
-                        <Badge className="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 uppercase text-[10px] font-extrabold tracking-[0.04em] leading-none h-auto px-2 py-0.5 rounded-full border-none hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
-                          Done for today
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive" className="uppercase text-[10px] font-extrabold tracking-[0.04em] leading-none h-auto px-2 py-0.5 rounded-full border-none hover:bg-rose-50/10 dark:hover:bg-rose-950/20">
-                          Not clocked in
-                        </Badge>
-                      )}
-                    </p>
                   </div>
                 ) : (
                   <>
@@ -744,7 +723,7 @@ export function AttendanceClockCard({
                       type="button"
                       onClick={handleOpenClockInDialog}
                       disabled={clockInMutation.isPending || isClockContextLoading}
-                      className="clock-btn flex items-center justify-center gap-2 bg-[#10b981] hover:bg-[#059669] text-white text-sm font-bold px-6 py-3 rounded-[12px] transition-all duration-200 shadow-[0_4px_12px_rgba(16,185,129,0.15)] hover:shadow-[0_6px_16px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none cursor-pointer"
+                      className="clock-btn btn-primary-grad disabled:opacity-60 disabled:pointer-events-none cursor-pointer"
                     >
                       {clockInMutation.isPending || isClockContextLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -776,7 +755,7 @@ export function AttendanceClockCard({
                   {!isDashboard && (
                     <div className="flex items-center gap-3">
                       <p
-                        className="font-sans text-3xl font-light tracking-tight text-neutral-900 tabular-nums"
+                        className="font-clock text-3xl tracking-tight text-neutral-900 dark:text-neutral-100 select-none"
                         aria-live="polite"
                       >
                         {elapsedDisplay}
@@ -789,7 +768,7 @@ export function AttendanceClockCard({
                   )}
                   {isDashboard && (
                     <div className="flex items-center gap-2 mr-2">
-                      <span className="font-mono font-bold text-black dark:text-[var(--indigo-8)] text-3xl tracking-tight select-none">
+                      <span className="font-clock text-neutral-900 dark:text-neutral-100 text-3xl tracking-tight select-none">
                         {elapsedDisplay}
                       </span>
                     </div>
@@ -800,7 +779,7 @@ export function AttendanceClockCard({
                         type="button"
                         onClick={handleOpenClockOutDialog}
                         disabled={clockOutMutation.isPending}
-                        className="clock-btn active flex items-center justify-center gap-2 bg-[#f43f5e] hover:bg-[#e11d48] text-white text-sm font-bold px-6 py-3 rounded-[12px] transition-all duration-200 shadow-[0_4px_12px_rgba(244,63,94,0.15)] hover:shadow-[0_6px_16px_rgba(244,63,94,0.25)] hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                        className="clock-btn active flex items-center justify-center gap-2 btn-clockout-border text-sm px-6 py-3 disabled:opacity-60 cursor-pointer"
                       >
                         {clockOutMutation.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
