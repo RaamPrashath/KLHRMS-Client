@@ -21,6 +21,14 @@ export interface DepartmentMemberSummary {
   email: string | null;
 }
 
+export interface DepartmentHeadSummary {
+  id: string;
+  memberId: string;
+  name: string | null;
+  email: string | null;
+  assignedAt: string;
+}
+
 export interface DepartmentSummary {
   id: string;
   name: string;
@@ -31,6 +39,7 @@ export interface DepartmentSummary {
   memberCount: number;
   projectCount: number;
   members: DepartmentMemberSummary[];
+  heads: DepartmentHeadSummary[];
   projects: DepartmentProjectSummary[];
   createdAt: string;
   updatedAt: string;

@@ -119,3 +119,84 @@ export async function deleteDepartmentAction(params: { orgSlug: string; memberId
   return handleResponse<void>(res);
 }
 
+export async function fetchDepartmentByIdAction(params: {
+  orgSlug: string;
+  memberId: string;
+  departmentId: string;
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<DepartmentSummary>(res);
+}
+
+export async function addDepartmentMemberAction(params: {
+  orgSlug: string;
+  memberId: string;
+  departmentId: string;
+  targetMemberId: string;
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/members`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ headMemberId: params.targetMemberId }),
+  });
+  return handleResponse<DepartmentSummary>(res);
+}
+
+export async function bulkAssignDepartmentMembersAction(params: {
+  orgSlug: string;
+  memberId: string;
+  departmentId: string;
+  memberIds: string[];
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/members/bulk`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ memberIds: params.memberIds }),
+  });
+  return handleResponse<DepartmentSummary>(res);
+}
+
+export async function removeDepartmentMemberAction(params: {
+  orgSlug: string;
+  memberId: string;
+  departmentId: string;
+  targetMemberId: string;
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/members/${params.targetMemberId}`, {
+    method: 'DELETE',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<DepartmentSummary>(res);
+}
+
+export async function assignDepartmentHeadAction(params: {
+  orgSlug: string;
+  memberId: string;
+  departmentId: string;
+  headMemberId: string;
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/heads`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ headMemberId: params.headMemberId }),
+  });
+  return handleResponse<DepartmentSummary>(res);
+}
+
+export async function removeDepartmentHeadAction(params: {
+  orgSlug: string;
+  memberId: string;
+  departmentId: string;
+  headMemberId: string;
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/heads/${params.headMemberId}`, {
+    method: 'DELETE',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<DepartmentSummary>(res);
+}
+

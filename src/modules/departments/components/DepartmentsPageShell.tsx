@@ -32,8 +32,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DepartmentsTable } from './DepartmentsTable';
-import { DepartmentDetailDialog } from './DepartmentDetailDialog';
-import { useDepartmentsQuery, useDepartmentMetaQuery } from '@/modules/departments/hooks/useDepartmentsQuery';
+import { DepartmentViewDrawer } from './DepartmentViewDrawer';
+import { useDepartmentsQuery, useDepartmentMetaQuery, useDepartmentDetailQuery } from '@/modules/departments/hooks/useDepartmentsQuery';
 import { useDepartmentMutations } from '@/modules/departments/hooks/useDepartmentMutations';
 import type { DepartmentInput } from '@/modules/departments/schema/departmentSchemas';
 import type { DepartmentSummary, DepartmentStatus } from '@/modules/departments/types/departmentTypes';
@@ -75,9 +75,10 @@ export function DepartmentsPageShell({
 
   // ── Dialog state ────────────────────────────────────────────────────────────
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentSummary | null>(null);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
+  const [selectedDepartmentSnapshot, setSelectedDepartmentSnapshot] = useState<DepartmentSummary | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [departmentForm, setDepartmentForm] = useState<DepartmentInput>(defaultDepartmentForm);
 
   // ── Data queries ────────────────────────────────────────────────────────────
@@ -87,8 +88,11 @@ export function DepartmentsPageShell({
     pageSize,
   });
 
-  const metaQuery = useDepartmentMetaQuery(orgSlug, memberId, canManageDepartments);
+  const metaQuery = useDepartmentMetaQuery(orgSlug, memberId, true);
+  const detailQuery = useDepartmentDetailQuery(orgSlug, memberId, selectedDepartmentId);
   const mutations = useDepartmentMutations(orgSlug, memberId);
+
+  const selectedDepartment = detailQuery.data ?? selectedDepartmentSnapshot ?? undefined;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleSearchChange = useCallback((value: string) => {
@@ -125,8 +129,9 @@ export function DepartmentsPageShell({
   }, []);
 
   const handleRowClick = useCallback((department: DepartmentSummary) => {
-    setSelectedDepartment(department);
-    setDetailOpen(true);
+    setSelectedDepartmentId(department.id);
+    setSelectedDepartmentSnapshot(null);
+    setDrawerOpen(true);
   }, []);
 
   function openDepartmentCreateDialog() {
@@ -137,9 +142,10 @@ export function DepartmentsPageShell({
   async function handleSaveDepartment() {
     try {
       const created = await mutations.createDepartment.mutateAsync(departmentForm);
-      setSelectedDepartment(created);
+      setSelectedDepartmentId(created.id);
+      setSelectedDepartmentSnapshot(created);
       setDepartmentDialogOpen(false);
-      setDetailOpen(true);
+      setDrawerOpen(true);
       setDepartmentForm(defaultDepartmentForm);
       toast.success('Department created');
     } catch (error) {
@@ -152,7 +158,7 @@ export function DepartmentsPageShell({
     try {
       await mutations.deleteDepartment.mutateAsync(deleteId);
       setDeleteId(null);
-      setDetailOpen(false);
+      setDrawerOpen(false);
       toast.success('Department removed');
     } catch (error) {
       toast.error(readError(error, 'Failed to remove department'));
@@ -301,18 +307,19 @@ export function DepartmentsPageShell({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Detail dialog ────────────────────────────────────────────────────── */}
-      <DepartmentDetailDialog
+      {/* ── Detail drawer ────────────────────────────────────────────────────── */}
+      <DepartmentViewDrawer
+        key={selectedDepartmentId ?? 'department-drawer'}
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         department={selectedDepartment}
-        isOpen={detailOpen}
+        isLoading={detailQuery.isLoading}
         canManage={canManageDepartments}
-        onClose={() => setDetailOpen(false)}
-        onDelete={() => {
-          setDeleteId(selectedDepartment?.id ?? null);
-          setDetailOpen(false);
-        }}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        allOrgMembers={metaQuery.data?.members ?? []}
+        departmentOptions={metaQuery.data?.departments ?? []}
       />
-
     </div>
   );
 }

@@ -5,6 +5,11 @@ import { requireOrgMembership } from '@/lib/organizations';
 import { DepartmentsPageShell } from '@/modules/departments/components/DepartmentsPageShell';
 import { requireServerSession } from '@/lib/server-session';
 
+function hasOrgOrDeptScope(permissions: RolePermissions, module: string, action: string): boolean {
+  const scope = getScope(permissions, module, action);
+  return scope === 'organization' || scope === 'department';
+}
+
 export default async function DepartmentsPage({
   params,
 }: Readonly<{
@@ -28,9 +33,10 @@ export default async function DepartmentsPage({
   if (!permissions || !hasPermission(permissions, 'departments')) redirect(`/${orgSlug}`);
 
   const canManageDepartments =
-    getScope(permissions, 'departments', 'create') === 'organization' ||
-    getScope(permissions, 'departments', 'edit') === 'organization' ||
-    getScope(permissions, 'departments', 'delete') === 'organization';
+    hasOrgOrDeptScope(permissions, 'departments', 'create') ||
+    hasOrgOrDeptScope(permissions, 'departments', 'edit') ||
+    hasOrgOrDeptScope(permissions, 'departments', 'delete') ||
+    hasOrgOrDeptScope(permissions, 'departments', 'approve');
 
   return (
     <div className="min-h-full bg-canvas">
