@@ -271,6 +271,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
   const presetLabels: Record<string, string> = {
     today: 'Today', yesterday: 'Yesterday',
+    this_week: 'This Week', last_calendar_week: 'Last Week',
     last_week: 'Last 7 Days', last_month: 'Last 30 Days',
     all_time: 'All Time', custom: 'Custom Range',
   };
@@ -500,6 +501,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
               filters={filters}
               onFiltersChange={onFiltersChange}
               showMemberFilter={showEmployeeColumn}
+              selfScope={!showEmployeeColumn}
             />
           )}
         </div>
@@ -530,7 +532,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
             if (viewMode === 'list') {
               // Self-scope: show week-based view instead of paginated list
               if (!showEmployeeColumn) {
-                return <SelfAttendanceWeekView orgSlug={orgSlug} memberId={memberId} />;
+                return <SelfAttendanceWeekView orgSlug={orgSlug} memberId={memberId} filters={filters} />;
               }
 
               return (

@@ -20,6 +20,23 @@ interface AttendanceFiltersProps {
   filters: AttendanceFiltersState;
   onFiltersChange: (f: AttendanceFiltersState) => void;
   showMemberFilter: boolean;
+  selfScope?: boolean;
+}
+
+function getMondayOfWeekIST(): Date {
+  const parts = getTodayIST().split('-').map(Number);
+  const today = new Date(parts[0]!, (parts[1] ?? 1) - 1, parts[2] ?? 1);
+  const dow = today.getDay();
+  const offset = dow === 0 ? 6 : dow - 1;
+  today.setDate(today.getDate() - offset);
+  return today;
+}
+
+function toYmdLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function getPresetRange(preset: AttendanceTimePreset): {
@@ -33,32 +50,41 @@ function getPresetRange(preset: AttendanceTimePreset): {
   }
 
   if (preset === 'yesterday') {
-    const d = new Date(today);
-    d.setDate(d.getDate() - 1);
-    const ymd = d.toISOString().slice(0, 10);
-    return { dateFrom: ymd, dateTo: ymd };
+    const parts = today.split('-').map(Number);
+    const d = new Date(parts[0]!, (parts[1] ?? 1) - 1, (parts[2] ?? 1) - 1);
+    return { dateFrom: toYmdLocal(d), dateTo: toYmdLocal(d) };
+  }
+
+  if (preset === 'this_week') {
+    const monday = getMondayOfWeekIST();
+    return { dateFrom: toYmdLocal(monday), dateTo: today };
+  }
+
+  if (preset === 'last_calendar_week') {
+    const thisMonday = getMondayOfWeekIST();
+    const lastMonday = new Date(thisMonday);
+    lastMonday.setDate(lastMonday.getDate() - 7);
+    const lastSunday = new Date(thisMonday);
+    lastSunday.setDate(lastSunday.getDate() - 1);
+    return { dateFrom: toYmdLocal(lastMonday), dateTo: toYmdLocal(lastSunday) };
   }
 
   if (preset === 'last_week') {
-    const end = new Date(today);
+    const parts = today.split('-').map(Number);
+    const end = new Date(parts[0]!, (parts[1] ?? 1) - 1, (parts[2] ?? 1) - 1);
     end.setDate(end.getDate() - 1);
-    const start = new Date(today);
-    start.setDate(start.getDate() - 7);
-    return {
-      dateFrom: start.toISOString().slice(0, 10),
-      dateTo: end.toISOString().slice(0, 10),
-    };
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+    return { dateFrom: toYmdLocal(start), dateTo: toYmdLocal(end) };
   }
 
   if (preset === 'last_month') {
-    const end = new Date(today);
+    const parts = today.split('-').map(Number);
+    const end = new Date(parts[0]!, (parts[1] ?? 1) - 1, (parts[2] ?? 1) - 1);
     end.setDate(end.getDate() - 1);
-    const start = new Date(today);
-    start.setDate(start.getDate() - 30);
-    return {
-      dateFrom: start.toISOString().slice(0, 10),
-      dateTo: end.toISOString().slice(0, 10),
-    };
+    const start = new Date(end);
+    start.setDate(start.getDate() - 29);
+    return { dateFrom: toYmdLocal(start), dateTo: toYmdLocal(end) };
   }
 
   return { dateFrom: undefined, dateTo: undefined };
@@ -74,6 +100,12 @@ const PRESET_OPTIONS: { value: AttendanceTimePreset; label: string }[] = [
   { value: 'last_month', label: 'Last 30 Days' },
 ];
 
+const SELF_PRESET_OPTIONS: { value: AttendanceTimePreset; label: string }[] = [
+  { value: 'all_time', label: 'All Time' },
+  { value: 'this_week', label: 'This Week' },
+  { value: 'last_calendar_week', label: 'Last Week' },
+];
+
 const STATUS_OPTIONS: { value: AttendanceStatus; label: string }[] = [
   { value: 'PRESENT', label: 'Present' },
   { value: 'HALF_DAY', label: 'Half Day' },
@@ -84,7 +116,11 @@ export function AttendanceFilters({
   filters,
   onFiltersChange,
   showMemberFilter,
+  selfScope = false,
 }: Readonly<AttendanceFiltersProps>) {
+  const presetOptions = selfScope ? SELF_PRESET_OPTIONS : PRESET_OPTIONS;
+  const neutralPreset: AttendanceTimePreset = selfScope ? 'this_week' : 'all_time';
+
   function update(patch: Partial<AttendanceFiltersState>) {
     onFiltersChange({ ...filters, ...patch, page: 1 });
   }
@@ -101,6 +137,20 @@ export function AttendanceFilters({
   }
 
   function handleClear() {
+    if (selfScope) {
+      const range = getPresetRange('this_week');
+      onFiltersChange({
+        timePreset: 'this_week',
+        dateFrom: range.dateFrom,
+        dateTo: range.dateTo,
+        status: undefined,
+        targetMemberId: undefined,
+        employeeNameSearch: undefined,
+        page: 1,
+        pageSize: 50,
+      });
+      return;
+    }
     onFiltersChange({
       timePreset: 'all_time',
       dateFrom: undefined,
@@ -114,7 +164,7 @@ export function AttendanceFilters({
   }
 
   const hasActiveFilters =
-    filters.timePreset !== 'all_time' ||
+    filters.timePreset !== neutralPreset ||
     filters.status != null ||
     filters.employeeNameSearch != null;
 
@@ -136,10 +186,10 @@ export function AttendanceFilters({
           onValueChange={handlePresetChange}
         >
           <SelectTrigger className="h-9 w-[150px] text-sm border-0 bg-canvas">
-            <SelectValue placeholder="All Time" />
+            <SelectValue placeholder={selfScope ? 'This Week' : 'All Time'} />
           </SelectTrigger>
           <SelectContent>
-            {PRESET_OPTIONS.map((o) => (
+            {presetOptions.map((o) => (
               <SelectItem key={o.value} value={o.value} className="text-sm">
                 {o.label}
               </SelectItem>

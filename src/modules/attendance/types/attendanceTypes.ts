@@ -52,7 +52,15 @@ export interface AttendanceClockContext {
   } | null;
 }
 
-export type AttendanceTimePreset = 'today' | 'yesterday' | 'last_week' | 'last_month' | 'all_time' | 'custom';
+export type AttendanceTimePreset =
+  | 'today'
+  | 'yesterday'
+  | 'this_week'
+  | 'last_week'
+  | 'last_calendar_week'
+  | 'last_month'
+  | 'all_time'
+  | 'custom';
 
 export interface AttendanceFiltersState {
   timePreset: AttendanceTimePreset;
