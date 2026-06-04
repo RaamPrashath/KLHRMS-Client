@@ -134,3 +134,26 @@ export interface LeaveCalendarFiltersState {
   year: number;
   month: number;
 }
+
+export interface LeaveSummaryRequestItem {
+  id: string;
+  leaveTypeName: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+}
+
+export interface EmployeeLeaveSummary {
+  memberId: string;
+  name: string | null;
+  email: string | null;
+  totalDays: number;
+  items: LeaveSummaryRequestItem[];
+}
+
+export interface LeaveSummaryListResponse {
+  items: EmployeeLeaveSummary[];
+  total: number;
+  page: number;
+  page_size: number;
+}

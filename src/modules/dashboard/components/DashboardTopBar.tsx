@@ -2,18 +2,13 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { Bell, Circle } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useMyTicketsQuery } from "@/modules/assets/hooks/useMyTicketsQuery";
-import { useMaintenanceTicketsQuery } from "@/modules/assets/hooks/useMaintenanceTicketsQuery";
-import { humanize } from "@/modules/assets/lib/assetUtils";
-import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
-
-type DashboardNotificationMode = "admin" | "employee";
+import { useMarkNotificationRead, useNotificationsQuery, useNotificationUnreadCountQuery } from "@/modules/notifications/hooks/useNotifications";
 
 function formatNotificationDate(dateString: string) {
   const value = new Date(dateString);
@@ -27,22 +22,12 @@ function formatNotificationDate(dateString: string) {
   }).format(value);
 }
 
-function formatLeaveRange(startDate: string, endDate: string, days: number): string {
-  const start = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate}T00:00:00`);
-  const range = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" });
-  if (startDate === endDate) return `${range.format(start)} - ${days} day${days === 1 ? "" : "s"}`;
-  return `${range.format(start)}-${range.format(end)} - ${days} day${days === 1 ? "" : "s"}`;
-}
-
 export function DashboardTopBar({
   orgSlug,
   memberId,
-  mode,
 }: Readonly<{
   orgSlug: string;
   memberId: string;
-  mode: DashboardNotificationMode;
 }>) {
   const formattedDate = useMemo(
     () =>
@@ -54,58 +39,12 @@ export function DashboardTopBar({
       }).format(new Date()),
     [],
   );
-  const isAdminMode = mode === "admin";
-  const maintenanceTicketsQuery = useMaintenanceTicketsQuery(orgSlug, memberId, { enabled: isAdminMode });
-  const myTicketsQuery = useMyTicketsQuery(orgSlug, memberId, { enabled: !isAdminMode });
-  const leaveApprovalsQuery = useLeaveRequests(
-    orgSlug,
-    memberId,
-    { status: "APPROVED", page: 1, pageSize: 10 },
-    { enabled: !isAdminMode },
-  );
-
-  const notifications = useMemo(() => {
-    if (isAdminMode) {
-      return (maintenanceTicketsQuery.data ?? [])
-        .filter((ticket) => ticket.ticketMode === "GENERAL_HELP_REQUEST")
-        .filter((ticket) => ticket.status === "OPEN" || ticket.status === "IN_PROGRESS")
-        .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
-        .map((ticket) => ({
-          id: `admin-issue-${ticket.id}`,
-          href: `/${orgSlug}/maintenance`,
-          title: ticket.subject?.trim() || humanize(ticket.maintenanceType),
-          meta: `${ticket.loggedByName || "Unknown employee"} | ${ticket.ticketId}`,
-          date: ticket.createdAt,
-        }));
-    }
-
-    const resolvedIssueNotifications = (myTicketsQuery.data ?? [])
-      .filter((ticket) => ticket.ticketMode === "GENERAL_HELP_REQUEST")
-      .filter((ticket) => ticket.status === "COMPLETED")
-      .map((ticket) => ({
-        id: `employee-issue-${ticket.id}`,
-        href: `/${orgSlug}/helpdesk`,
-        title: ticket.subject?.trim() || `${humanize(ticket.maintenanceType)} resolved`,
-        meta: `Resolved | ${ticket.ticketId}`,
-        date: ticket.updatedAt || ticket.createdAt,
-      }));
-
-    const leaveNotifications = (leaveApprovalsQuery.data?.items ?? []).map((request) => ({
-      id: `leave-approved-${request.id}`,
-      href: `/${orgSlug}/leaves/requests`,
-      title: `${request.leaveType.name} approved`,
-      meta: `${request.approver?.name || "Admin"} | ${formatLeaveRange(request.startDate, request.endDate, request.days)}`,
-      date: request.updatedAt,
-    }));
-
-    return [...resolvedIssueNotifications, ...leaveNotifications]
-      .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
-  }, [isAdminMode, leaveApprovalsQuery.data?.items, maintenanceTicketsQuery.data, myTicketsQuery.data, orgSlug]);
-
-  const visibleNotifications = notifications.slice(0, 4);
-
-  const notificationCount = notifications.length;
-  const isLoading = isAdminMode ? maintenanceTicketsQuery.isLoading : myTicketsQuery.isLoading || leaveApprovalsQuery.isLoading;
+  const notificationsQuery = useNotificationsQuery(orgSlug, memberId, { status: "all", limit: 5 });
+  const unreadCountQuery = useNotificationUnreadCountQuery(orgSlug, memberId);
+  const markReadMutation = useMarkNotificationRead(orgSlug, memberId);
+  const visibleNotifications = notificationsQuery.data?.items ?? [];
+  const notificationCount = unreadCountQuery.data?.unreadCount ?? notificationsQuery.data?.unreadCount ?? 0;
+  const isLoading = notificationsQuery.isLoading || unreadCountQuery.isLoading;
 
   return (
     <div className="flex min-h-10 items-center justify-end border-b border-[#dbe4ef] px-8 text-[#365887]">
@@ -114,7 +53,7 @@ export function DashboardTopBar({
           <PopoverTrigger asChild>
             <button
               type="button"
-              aria-label="Open issue notifications"
+              aria-label="Open notifications"
               className="relative inline-flex size-8 items-center justify-center border-0 bg-transparent px-0 text-[#365887] shadow-none"
             >
               <Bell className="size-4" />
@@ -129,7 +68,7 @@ export function DashboardTopBar({
             side="bottom"
             align="end"
             sideOffset={10}
-            className="w-[22rem] rounded-2xl border border-[#dbe4ef] bg-white p-2 shadow-[0_20px_60px_rgba(0,0,0,0.14)]"
+            className="w-[23rem] rounded-2xl border border-[#dbe4ef] bg-white p-2 shadow-[0_20px_60px_rgba(0,0,0,0.14)]"
           >
             {isLoading ? (
               <div className="space-y-2 p-2">
@@ -139,34 +78,68 @@ export function DashboardTopBar({
               </div>
             ) : visibleNotifications.length > 0 ? (
               <div>
-                {visibleNotifications.map((ticket, index) => (
-                  <div key={ticket.id}>
+                {visibleNotifications.map((notification, index) => (
+                  <div key={notification.id}>
                     <Link
-                      href={ticket.href}
+                      href={notification.actionUrl || `/${orgSlug}/notifications`}
+                      onClick={() => {
+                        if (notification.status === "UNREAD") {
+                          markReadMutation.mutate(notification.id);
+                        }
+                      }}
                       className="block rounded-xl bg-white px-3 py-3 transition-colors hover:bg-neutral-50"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="min-w-0 truncate text-[13px] font-medium text-neutral-900">
-                          {ticket.title}
-                        </p>
-                        <p className="shrink-0 text-[11px] text-neutral-400">
-                          {formatNotificationDate(ticket.date)}
-                        </p>
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#eef5fd] text-[#3d5f88]">
+                          <Bell className="size-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="min-w-0 truncate text-[13px] font-medium text-neutral-900">
+                              {notification.title}
+                            </p>
+                            <p className="shrink-0 text-[11px] text-neutral-400">
+                              {formatNotificationDate(notification.createdAt)}
+                            </p>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-[12px] text-neutral-500">
+                            {notification.message}
+                          </p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="rounded-full bg-[#f2f6fb] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#56769f]">
+                              {notification.category}
+                            </span>
+                            {notification.status === "UNREAD" ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-[#1f5fa5]">
+                                <Circle className="size-2 fill-current" />
+                                New
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
                       </div>
-                      <p className="mt-1 text-[12px] text-neutral-500">
-                        {ticket.meta}
-                      </p>
                     </Link>
                     {index < visibleNotifications.length - 1 ? (
                       <div className="mx-3 h-px bg-[#e8edf3]" />
                     ) : null}
                   </div>
                 ))}
+                <div className="px-2 pb-1 pt-2">
+                  <Link
+                    href={`/${orgSlug}/notifications`}
+                    className="flex items-center justify-center rounded-xl border border-[#dce6f1] bg-[#fafcff] px-3 py-2 text-[12px] font-semibold text-[#365887] transition-colors hover:bg-[#f3f8fe]"
+                  >
+                    View all notifications
+                  </Link>
+                </div>
               </div>
             ) : (
-              <p className="p-3 text-[13px] text-neutral-400">
-                {isAdminMode ? "No general issues raised yet." : "No new notifications yet."}
-              </p>
+              <div className="p-4 text-center">
+                <p className="text-[13px] font-medium text-neutral-700">No notifications yet</p>
+                <p className="mt-1 text-[12px] text-neutral-400">
+                  New approvals and request updates will appear here automatically.
+                </p>
+              </div>
             )}
           </PopoverContent>
         </Popover>

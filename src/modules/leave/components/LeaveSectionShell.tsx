@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { CalendarDays, Landmark, PlaneTakeoff, Sparkles } from 'lucide-react';
+import { BarChart3, CalendarDays, History, Landmark, PlaneTakeoff, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -53,7 +53,7 @@ interface LeaveShellContextValue {
 
 const LeaveShellContext = createContext<LeaveShellContextValue | null>(null);
 
-export type LeaveSection = 'requests' | 'balances' | 'leave-types' | 'holidays';
+export type LeaveSection = 'requests' | 'balances' | 'leave-types' | 'holidays' | 'summary' | 'history';
 
 interface TabItem {
   key: LeaveSection;
@@ -67,6 +67,8 @@ const TABS: TabItem[] = [
   { key: 'balances', label: 'Balances', icon: Landmark },
   { key: 'leave-types', label: 'Leave Types', icon: Sparkles, adminOnly: true },
   { key: 'holidays', label: 'Holidays', icon: CalendarDays, adminOnly: true },
+  { key: 'summary', label: 'Summary', icon: BarChart3, adminOnly: true },
+  { key: 'history', label: 'History', icon: History },
 ];
 
 const SECTION_COPY: Record<LeaveSection, { title: string; description: string }> = {
@@ -86,9 +88,19 @@ const SECTION_COPY: Record<LeaveSection, { title: string; description: string }>
     title: 'Holidays',
     description: 'Keep public holidays visible in one place so planning feels predictable.',
   },
+  summary: {
+    title: 'Leave Summary',
+    description: 'Overview of approved leave days taken by each employee.',
+  },
+  history: {
+    title: 'Leave History',
+    description: 'Complete record of all leave requests across the organization.',
+  },
 };
 
 function resolveSection(pathname: string): LeaveSection {
+  if (pathname.includes('/leaves/history')) return 'history';
+  if (pathname.includes('/leaves/summary')) return 'summary';
   if (pathname.includes('/leaves/balances')) return 'balances';
   if (pathname.includes('/leaves/leave-types')) return 'leave-types';
   if (pathname.includes('/leaves/holidays')) return 'holidays';
@@ -219,7 +231,7 @@ export function LeaveSectionShell({
           </div>
           {canCreate && (
             <Button
-              className="h-9 shrink-0 bg-primary px-4 text-[13px] font-medium text-white shadow-[0_12px_30px_rgba(0,135,74,0.20)] hover:bg-primary-hover"
+              className="h-9 shrink-0 rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)]"
               onClick={() => setApplyOpen(true)}
             >
               Apply Leave

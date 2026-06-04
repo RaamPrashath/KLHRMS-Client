@@ -234,7 +234,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                             : cn(
                                 "rounded-lg border-border bg-[#f8f8fa] text-transparent",
                                 isCurrentDay
-                                  ? "border-primary/45 bg-[#f4fbf7]"
+                                  ? "border-primary/45 bg-indigo-50/60"
                                   : "hover:border-[#d8d8de] hover:bg-[#f2f2f5]",
                               ),
                           isProtected && "opacity-80 cursor-not-allowed",

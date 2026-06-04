@@ -15,8 +15,12 @@ export function useApproveLeaveRequest(orgSlug: string, memberId: string) {
         queryClient.invalidateQueries({ queryKey: ['leave-request', orgSlug, variables.leaveRequestId] }),
         queryClient.invalidateQueries({ queryKey: ['leave-balances', orgSlug] }),
         queryClient.invalidateQueries({ queryKey: ['leave-calendar', orgSlug] }),
+        queryClient.invalidateQueries({ queryKey: ['leave-summary', orgSlug] }),
       ]);
-      await queryClient.refetchQueries({ queryKey: ['leave-balances', orgSlug], type: 'active' });
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['leave-balances', orgSlug], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['leave-summary', orgSlug], type: 'active' }),
+      ]);
     },
   });
 }

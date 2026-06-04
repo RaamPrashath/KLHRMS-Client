@@ -49,6 +49,32 @@ function sumLogHours(logs: WorkLogWithTimeRange[]): number {
   }, 0);
 }
 
+function buildFallbackLogFromAttendance(args: {
+  date: Date;
+  clockIn: Date | null;
+  clockOut: Date | null;
+  sourceLog?: LocalWorkLog | null;
+}): LocalWorkLog {
+  const { date, clockIn, clockOut, sourceLog } = args;
+  const start = clockIn ?? sourceLog?.startTime ?? new Date(date.getFullYear(), date.getMonth(), date.getDate(), 9, 0, 0, 0);
+  const end = clockOut && clockOut > start
+    ? clockOut
+    : sourceLog?.endTime && sourceLog.endTime > start
+      ? sourceLog.endTime
+      : new Date(start.getTime() + 60 * 60_000);
+
+  return {
+    id: sourceLog?.id ?? crypto.randomUUID(),
+    startTime: start,
+    endTime: end,
+    projectId: sourceLog?.projectId ?? null,
+    projectTaskId: sourceLog?.projectTaskId ?? null,
+    title: sourceLog?.title ?? null,
+    notes: sourceLog?.notes ?? null,
+    isOptimistic: sourceLog?.isOptimistic ?? true,
+  };
+}
+
 function chunkDays(days: Date[]): Date[][] {
   const weeks: Date[][] = [];
   for (let index = 0; index < days.length; index += 7) {
@@ -57,7 +83,7 @@ function chunkDays(days: Date[]): Date[][] {
   return weeks;
 }
 
-function getDayTone(totalHours: number, isOffDay: boolean, isPastDay: boolean) {
+function getDayTone(totalHours: number, isOffDay: boolean) {
   if (isOffDay) {
     return {
       backgroundClassName: "bg-[#ffe9ec] text-[#bf3e4d]",
@@ -148,10 +174,12 @@ export function WorkLogHeatmapCard({
   const dayTotals = useMemo(() => {
     const totals = new Map<string, number>();
     for (const day of rangeData?.days ?? []) {
-      totals.set(day.date, sumLogHours(day.logs ?? []));
+      const logHours = sumLogHours(day.logs ?? []);
+      totals.set(day.date, logHours > 0 ? logHours : (day.totalHours ?? 0));
     }
     for (const [date, day] of dayMap.entries()) {
-      totals.set(date, sumLogHours(day?.logs ?? []));
+      const logHours = sumLogHours(day?.logs ?? []);
+      totals.set(date, logHours > 0 ? logHours : (day?.totalHours ?? 0));
     }
     return totals;
   }, [dayMap, rangeData]);
@@ -177,22 +205,22 @@ export function WorkLogHeatmapCard({
   function handleDayClick(day: Date) {
     if (!isSameMonth(day, month)) return;
     const dateStr = format(day, "yyyy-MM-dd");
-    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0, 0, 0);
-    const end = new Date(start.getTime() + 60 * 60_000);
+    const currentDay = dayMap.get(dateStr) ?? null;
+    const rangeDay = rangeDaysByDate.get(dateStr);
+    const rangeLogs = (rangeDay?.logs ?? []).map(hydrateLocalWorkLog);
+    const existingLogs = currentDay?.logs ?? rangeLogs;
+    const sourceLog = existingLogs[0] ?? null;
+    const preparedLog = buildFallbackLogFromAttendance({
+      date: day,
+      clockIn: currentDay?.clockIn ?? (rangeDay?.clockIn ? new Date(rangeDay.clockIn) : null),
+      clockOut: currentDay?.clockOut ?? (rangeDay?.clockOut ? new Date(rangeDay.clockOut) : null),
+      sourceLog,
+    });
     setDialogState({
       open: true,
-      mode: "create",
+      mode: sourceLog ? "edit" : "create",
       date: dateStr,
-      log: {
-        id: crypto.randomUUID(),
-        startTime: start,
-        endTime: end,
-        projectId: null,
-        projectTaskId: null,
-        title: null,
-        notes: null,
-        isOptimistic: true,
-      },
+      log: preparedLog,
     });
   }
 
@@ -206,7 +234,10 @@ export function WorkLogHeatmapCard({
       const snapshot = currentDay ? { ...currentDay, logs: [...(currentDay.logs ?? [])] } : null;
 
       const newLog: LocalWorkLog = {
-        id: crypto.randomUUID(),
+        id:
+          dialogState.mode === "edit" && dialogState.log
+            ? dialogState.log.id
+            : crypto.randomUUID(),
         startTime: values.startTime,
         endTime: values.endTime,
         projectId: values.projectId,
@@ -216,9 +247,15 @@ export function WorkLogHeatmapCard({
         isOptimistic: true,
       };
 
-      const finalLogs = [...existingLogs, newLog].sort(
-        (left, right) => left.startTime.getTime() - right.startTime.getTime(),
-      );
+      const finalLogs = (
+        dialogState.mode === "edit" && dialogState.log
+          ? (
+              existingLogs.some((log) => log.id === dialogState.log!.id)
+                ? existingLogs.map((log) => (log.id === dialogState.log!.id ? newLog : log))
+                : [newLog]
+            )
+          : [...existingLogs, newLog]
+      ).sort((left, right) => left.startTime.getTime() - right.startTime.getTime());
 
       optimisticUpdateDay(date, () => ({
         date,
@@ -242,7 +279,7 @@ export function WorkLogHeatmapCard({
         setIsSavingDialog(false);
       }
     },
-    [dayMap, optimisticUpdateDay, rangeDaysByDate, rollbackDay, saveDayLogs],
+    [dayMap, dialogState.log, dialogState.mode, optimisticUpdateDay, rangeDaysByDate, rollbackDay, saveDayLogs],
   );
 
   return (
@@ -357,8 +394,7 @@ export function WorkLogHeatmapCard({
                 const isSelected = dialogState.open && dialogState.date === dateStr;
                 const isCurrentDay = isToday(day);
                 const totalHours = dayTotals.get(dateStr) ?? 0;
-                const isPastDay = dateStr < format(new Date(), "yyyy-MM-dd") && !isCurrentDay;
-                const tone = getDayTone(totalHours, offDayDates.has(dateStr), isPastDay);
+                const tone = getDayTone(totalHours, offDayDates.has(dateStr));
 
                 return (
                   <button

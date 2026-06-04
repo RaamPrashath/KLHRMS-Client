@@ -1,21 +1,29 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  createColumnHelper,
-  flexRender,
-} from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, CalendarDays, FileDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown, Search } from "lucide-react";
 import { toast } from "sonner";
+import { isToday, parseISO } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useTeamWeeklyPlanQuery } from "@/hooks/queries/weekly_plan";
 import { useApiClient } from "@/hooks/useApiClient";
+import { useEmployeesQuery } from "@/modules/employees/hooks/useEmployeesQuery";
 import { getCurrentWeekState, getWeekDays, getWeekRangeLabel, getWeekStart, shiftWeek } from "@/modules/weekly-plan/date";
 import { PLAN_LOCATION_MAP, PLAN_LOCATION_THEMES } from "@/modules/weekly-plan/locations";
 import type { WeeklyPlanEntry } from "@/hooks/functions/weekly_plan";
 import type { PlanLocationValue } from "@/modules/weekly-plan/locations";
 import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 15;
 
 interface ManagePeoplePanelProps {
   orgSlug: string;
@@ -44,23 +52,44 @@ function groupTeamByUser(entries: WeeklyPlanEntry[]): Record<string, { name: str
   return result;
 }
 
-function buildRows(entries: WeeklyPlanEntry[], weekDays: { iso: string }[]): EmployeeWeekRow[] {
+function buildRows(entries: WeeklyPlanEntry[], weekDays: { iso: string }[], allEmployees?: { member_id: string; name: string }[]): EmployeeWeekRow[] {
   const grouped = groupTeamByUser(entries);
-  return Object.entries(grouped).map(([userId, data]) => ({
-    userId,
-    name: data.name,
-    mon: data.byDate.get(weekDays[0]?.iso ?? "") ?? null,
-    tue: data.byDate.get(weekDays[1]?.iso ?? "") ?? null,
-    wed: data.byDate.get(weekDays[2]?.iso ?? "") ?? null,
-    thu: data.byDate.get(weekDays[3]?.iso ?? "") ?? null,
-    fri: data.byDate.get(weekDays[4]?.iso ?? "") ?? null,
-  }));
+  const map = new Map<string, EmployeeWeekRow>();
+
+  if (allEmployees) {
+    for (const emp of allEmployees) {
+      map.set(emp.member_id, {
+        userId: emp.member_id,
+        name: emp.name || "Unknown",
+        mon: null, tue: null, wed: null, thu: null, fri: null,
+      });
+    }
+  }
+
+  for (const [userId, data] of Object.entries(grouped)) {
+    if (!map.has(userId)) {
+      map.set(userId, {
+        userId,
+        name: data.name,
+        mon: null, tue: null, wed: null, thu: null, fri: null,
+      });
+    }
+    const row = map.get(userId)!;
+    row.name = data.name;
+    row.mon = data.byDate.get(weekDays[0]?.iso ?? "") ?? null;
+    row.tue = data.byDate.get(weekDays[1]?.iso ?? "") ?? null;
+    row.wed = data.byDate.get(weekDays[2]?.iso ?? "") ?? null;
+    row.thu = data.byDate.get(weekDays[3]?.iso ?? "") ?? null;
+    row.fri = data.byDate.get(weekDays[4]?.iso ?? "") ?? null;
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function LocationBadge({ location }: { location: PlanLocationValue | null }) {
   if (!location) {
     return (
-      <span className="inline-flex items-center justify-center rounded-md bg-canvas px-2 py-1 text-[11px] font-medium text-ink-muted-48">
+      <span className="inline-flex items-center justify-center rounded-md bg-neutral-100 px-2 py-1 text-[11px] font-medium text-neutral-400">
         —
       </span>
     );
@@ -74,6 +103,37 @@ function LocationBadge({ location }: { location: PlanLocationValue | null }) {
     </span>
   );
 }
+
+function EmployeeCell({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
+
+  return (
+    <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary text-[10px] font-bold">
+        {initials}
+      </div>
+      <div className="flex flex-col min-w-0 overflow-hidden">
+        <span className="text-[13px] font-medium text-neutral-900 leading-tight truncate" title={name}>
+          {name}
+        </span>
+        <span className="text-[11px] text-neutral-400 leading-tight">No Dept</span>
+      </div>
+    </div>
+  );
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const DAY_ABBR = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 // ─── CSV Export ───────────────────────────────────────────────────────────────
 
@@ -99,10 +159,17 @@ function triggerDownload(content: string, filename: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-const columnHelper = createColumnHelper<EmployeeWeekRow>();
+function countByLocation(rows: EmployeeWeekRow[], loc: PlanLocationValue): number {
+  return rows.reduce((sum, r) => {
+    const vals = [r.mon, r.tue, r.wed, r.thu, r.fri];
+    return sum + vals.filter((v) => v === loc).length;
+  }, 0);
+}
 
 export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePanelProps) {
   const [weekState, setWeekState] = useState(getCurrentWeekState);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const auth = useApiClient(orgId);
 
   const teamQuery = useTeamWeeklyPlanQuery(
@@ -114,18 +181,29 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
     true,
   );
 
+  const { data: employeeData } = useEmployeesQuery(orgSlug, memberId, { pageSize: 200 });
+
   const weekDays = useMemo(() => getWeekDays(weekState.year, weekState.week), [weekState.year, weekState.week]);
-  const monthLabel = getWeekStart(weekState.year, weekState.week).toLocaleString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
 
   const rows = useMemo(() => {
-    return buildRows(teamQuery.data ?? [], weekDays);
-  }, [teamQuery.data, weekDays]);
+    return buildRows(teamQuery.data ?? [], weekDays, employeeData?.items);
+  }, [teamQuery.data, weekDays, employeeData]);
+
+  const filteredRows = useMemo(() => {
+    if (!search.trim()) return rows;
+    const q = search.toLowerCase();
+    return rows.filter((r) => r.name.toLowerCase().includes(q));
+  }, [rows, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredRows.slice(start, start + PAGE_SIZE);
+  }, [filteredRows, page]);
 
   function changeWeek(delta: number) {
     setWeekState((current) => shiftWeek(current.year, current.week, delta));
+    setPage(1);
   }
 
   function handleExportCsv() {
@@ -138,210 +216,225 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
     toast.success("CSV exported");
   }
 
-  const columns = useMemo(
-    () => [
-      columnHelper.accessor("name", {
-        header: "Name",
-        cell: (info) => (
-          <span className="text-[14px] font-semibold text-neutral-900">{info.getValue()}</span>
-        ),
-      }),
-      columnHelper.accessor("mon", {
-        header: () => (
-          <div className="text-center">
-            <div className="text-[11px] font-bold uppercase tracking-widest text-ink-muted-48">Mon</div>
-            <div className="text-[13px] font-semibold text-ink">{weekDays[0] ? new Date(weekDays[0].iso).getDate() : ""}</div>
-          </div>
-        ),
-        cell: (info) => <div className="flex justify-center"><LocationBadge location={info.getValue()} /></div>,
-      }),
-      columnHelper.accessor("tue", {
-        header: () => (
-          <div className="text-center">
-            <div className="text-[11px] font-bold uppercase tracking-widest text-ink-muted-48">Tue</div>
-            <div className="text-[13px] font-semibold text-ink">{weekDays[1] ? new Date(weekDays[1].iso).getDate() : ""}</div>
-          </div>
-        ),
-        cell: (info) => <div className="flex justify-center"><LocationBadge location={info.getValue()} /></div>,
-      }),
-      columnHelper.accessor("wed", {
-        header: () => (
-          <div className="text-center">
-            <div className="text-[11px] font-bold uppercase tracking-widest text-ink-muted-48">Wed</div>
-            <div className="text-[13px] font-semibold text-ink">{weekDays[2] ? new Date(weekDays[2].iso).getDate() : ""}</div>
-          </div>
-        ),
-        cell: (info) => <div className="flex justify-center"><LocationBadge location={info.getValue()} /></div>,
-      }),
-      columnHelper.accessor("thu", {
-        header: () => (
-          <div className="text-center">
-            <div className="text-[11px] font-bold uppercase tracking-widest text-ink-muted-48">Thu</div>
-            <div className="text-[13px] font-semibold text-ink">{weekDays[3] ? new Date(weekDays[3].iso).getDate() : ""}</div>
-          </div>
-        ),
-        cell: (info) => <div className="flex justify-center"><LocationBadge location={info.getValue()} /></div>,
-      }),
-      columnHelper.accessor("fri", {
-        header: () => (
-          <div className="text-center">
-            <div className="text-[11px] font-bold uppercase tracking-widest text-ink-muted-48">Fri</div>
-            <div className="text-[13px] font-semibold text-ink">{weekDays[4] ? new Date(weekDays[4].iso).getDate() : ""}</div>
-          </div>
-        ),
-        cell: (info) => <div className="flex justify-center"><LocationBadge location={info.getValue()} /></div>,
-      }),
-    ],
-    [weekDays],
-  );
-
-  const table = useReactTable({
-    data: rows,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
   const isLoading = teamQuery.isLoading || !auth;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header with week navigator and export */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <CalendarDays className="h-4 w-4" aria-hidden="true" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-semibold text-neutral-900 leading-tight tracking-tight">
-              {monthLabel}
-            </span>
-            <span className="text-[11px] font-medium text-neutral-400 mt-0.5">
-              Week {weekState.week} · {getWeekRangeLabel(weekState.year, weekState.week)}
-            </span>
+    <div className="flex flex-col flex-1">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+        {/* Top bar — matching attendance table header style */}
+        <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative flex-1 max-w-[280px]">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Search employee…"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
+              />
+            </div>
+
+            {/* Stats */}
+            {!isLoading && rows.length > 0 && (
+              <div className="flex items-center gap-4 flex-wrap">
+                <p className="text-[13px] font-medium text-neutral-500 whitespace-nowrap">
+                  <span className="font-semibold text-neutral-900">{filteredRows.length}</span> team member{filteredRows.length === 1 ? "" : "s"}
+                </p>
+                <div className="h-4 w-px bg-neutral-200" />
+                {(["OFFICE", "WFH", "LEAVE", "HOLIDAY"] as PlanLocationValue[]).map((loc) => {
+                  const theme = PLAN_LOCATION_THEMES[loc];
+                  const count = countByLocation(filteredRows, loc);
+                  return (
+                    <div key={loc} className="flex items-center gap-1.5">
+                      <span className={cn("size-1.5 rounded-full", theme.dot)} />
+                      <span className="text-[12px] font-medium text-neutral-500">
+                        {PLAN_LOCATION_MAP[loc].short_label}
+                      </span>
+                      <span className="text-[12px] font-bold tabular-nums text-neutral-900">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Spacer to push next section right */}
+            <div className="flex-1" />
+
+            {/* Week nav + Export */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => changeWeek(-1)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none"
+                  aria-label="Previous week"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-[13px] font-semibold text-neutral-800 min-w-[120px] text-center tabular-nums">
+                  Week {weekState.week} · {getWeekRangeLabel(weekState.year, weekState.week)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => changeWeek(1)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none"
+                  aria-label="Next week"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mx-1 h-5 w-px bg-neutral-200" />
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={rows.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.95] disabled:opacity-40 disabled:pointer-events-none"
+                aria-label="Export team plans as CSV"
+              >
+                <FileDown className="size-3.5" aria-hidden="true" />
+                Export CSV
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => changeWeek(-1)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none"
-              aria-label="Previous week"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => changeWeek(1)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none"
-              aria-label="Next week"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="mx-1 h-5 w-px bg-hairline" />
-
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            disabled={rows.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.95] disabled:opacity-40 disabled:pointer-events-none"
-            aria-label="Export team plans as CSV"
-          >
-            <FileDown className="size-3.5" aria-hidden="true" />
-            Export CSV
-          </button>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px]">
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="border-b border-black/[0.04] bg-canvas/50">
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className={cn(
-                        "px-4 py-3 text-left text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider",
-                        header.id !== "name" && "text-center",
-                      )}
+        {/* Pivot table */}
+        <div className="overflow-x-auto w-full">
+          <Table style={{ minWidth: 640 }}>
+            <TableHeader>
+              <TableRow className="bg-canvas/60 border-b border-neutral-200 hover:bg-canvas/60">
+                <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap w-[200px] max-w-[200px] sticky left-0 bg-[#f5f5f7] z-10">
+                  Employee
+                </TableHead>
+                {weekDays.map((d) => {
+                  const date = parseISO(d.iso);
+                  const today = isToday(date);
+                  return (
+                    <TableHead
+                      key={d.iso}
+                      className="px-2 py-2.5 text-center whitespace-nowrap min-w-[72px]"
                     >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className={cn("text-[10px] font-semibold uppercase tracking-wider", today ? "text-primary" : "text-neutral-500")}>
+                          {`${MONTH_NAMES[date.getMonth()]!.slice(0, 3)} ${date.getDate()}`}
+                        </span>
+                        <span className={cn("text-[9px] font-medium uppercase tracking-widest", today ? "text-primary/70" : "text-neutral-400")}>
+                          {DAY_ABBR[date.getDay()]}
+                        </span>
+                      </div>
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-hairline last:border-0">
-                    {Array.from({ length: 6 }).map((_, j) => (
-                      <td key={j} className="px-4 py-4">
-                        <div className="h-5 animate-pulse rounded-md bg-canvas" />
-                      </td>
+                  <TableRow key={i} className={cn("border-b border-neutral-100", i % 2 === 0 && "bg-neutral-50/30")}>
+                    <TableCell className="px-4 py-3 sticky left-0 bg-white z-10 min-w-[180px]">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="h-3 w-20 animate-pulse rounded bg-neutral-100" />
+                        <div className="h-2 w-10 animate-pulse rounded bg-neutral-100" />
+                      </div>
+                    </TableCell>
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <TableCell key={j} className="px-2 py-3 text-center">
+                        <div className="h-5 w-12 animate-pulse rounded-md bg-neutral-100 mx-auto" />
+                      </TableCell>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-16 text-center">
-                    <p className="text-sm text-neutral-400">No team plans found.</p>
-                  </td>
-                </tr>
+              ) : filteredRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-16 text-center text-sm text-neutral-400">
+                    {search ? "No team members match your search." : "No team plans found."}
+                  </TableCell>
+                </TableRow>
               ) : (
-                table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-black/4 last:border-0 transition-colors hover:bg-black/[0.02]"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className={cn(
-                          "px-4 py-3.5",
-                          cell.column.id !== "name" && "text-center",
-                        )}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
+                pagedRows.map((row) => (
+                  <TableRow key={row.userId} className="hover:bg-canvas/60 transition-colors duration-100">
+                    <TableCell className="px-4 py-3 sticky left-0 bg-white z-10 border-r border-neutral-100 w-[200px] max-w-[200px] overflow-hidden">
+                      <EmployeeCell name={row.name} />
+                    </TableCell>
+                    {[
+                      { key: "mon", value: row.mon },
+                      { key: "tue", value: row.tue },
+                      { key: "wed", value: row.wed },
+                      { key: "thu", value: row.thu },
+                      { key: "fri", value: row.fri },
+                    ].map(({ key, value }) => {
+                      const idx = ["mon", "tue", "wed", "thu", "fri"].indexOf(key);
+                      const date = parseISO(weekDays[idx]?.iso ?? "");
+                      const today = isToday(date);
+                      return (
+                        <TableCell
+                          key={key}
+                          className={cn("px-2 py-3 text-center text-[13px] tabular-nums", today && "bg-primary/3")}
+                        >
+                          <LocationBadge location={value} />
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 
-      {/* Summary footer */}
-      {!isLoading && rows.length > 0 && (
-        <div className="flex items-center justify-between rounded-2xl bg-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-5 py-3">
+      {/* Pagination */}
+      {!isLoading && filteredRows.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
           <p className="text-[13px] font-medium text-neutral-500">
-            Showing <span className="font-semibold text-neutral-900">{rows.length}</span> team member{rows.length === 1 ? "" : "s"}
+            Showing <span className="font-semibold text-neutral-900">{(page - 1) * PAGE_SIZE + 1}</span>–<span className="font-semibold text-neutral-900">{Math.min(page * PAGE_SIZE, filteredRows.length)}</span> of <span className="font-semibold text-neutral-900">{filteredRows.length}</span>
           </p>
-          <div className="flex items-center gap-4">
-            {(["OFFICE", "WFH", "LEAVE", "HOLIDAY"] as PlanLocationValue[]).map((loc) => {
-              const theme = PLAN_LOCATION_THEMES[loc];
-              const count = rows.reduce((sum, r) => {
-                const vals = [r.mon, r.tue, r.wed, r.thu, r.fri];
-                return sum + vals.filter((v) => v === loc).length;
-              }, 0);
-              return (
-                <div key={loc} className="flex items-center gap-1.5">
-                  <span className={cn("size-1.5 rounded-full", theme.dot)} />
-                  <span className="text-[12px] font-medium text-neutral-500">
-                    {PLAN_LOCATION_MAP[loc].short_label}
-                  </span>
-                  <span className="text-[12px] font-bold tabular-nums text-neutral-900">{count}</span>
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center gap-1">
+              {(() => {
+                const pages: (number | "...")[] = [];
+                const startPage = Math.max(1, page - 2);
+                const endPage = Math.min(totalPages, page + 2);
+                if (startPage > 1) pages.push(1);
+                if (startPage > 2) pages.push("...");
+                for (let i = startPage; i <= endPage; i++) pages.push(i);
+                if (endPage < totalPages - 1) pages.push("...");
+                if (endPage < totalPages) pages.push(totalPages);
+                return pages.map((p, i) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${i}`} className="px-2 text-[13px] text-neutral-400">…</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={page === p ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPage(p)}
+                      className={cn("min-w-9", page === p && "bg-primary text-white")}
+                    >
+                      {p}
+                    </Button>
+                  ),
+                );
+              })()}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
           </div>
         </div>
       )}

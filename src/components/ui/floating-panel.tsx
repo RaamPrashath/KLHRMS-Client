@@ -148,17 +148,22 @@ export function FloatingPanelTrigger({
 interface FloatingPanelContentProps {
   children: React.ReactNode
   className?: string
+  align?: 'center' | 'end'
+  closeOnOutsideClick?: boolean
 }
 
 export function FloatingPanelContent({
   children,
   className,
+  align = 'center',
+  closeOnOutsideClick = true,
 }: FloatingPanelContentProps) {
   const { isOpen, closeFloatingPanel, uniqueId, triggerRect, title } =
     useFloatingPanel()
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (!closeOnOutsideClick) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (
         contentRef.current &&
@@ -180,9 +185,15 @@ export function FloatingPanelContent({
   }, [closeFloatingPanel])
 
   const variants: Variants = {
-    hidden: { opacity: 0, scale: 0.9, x: "-50%", y: "calc(-50% + 10px)" },
-    visible: { opacity: 1, scale: 1, x: "-50%", y: "-50%" },
+    hidden: { opacity: 0, scale: 0.9, x: align === 'end' ? 0 : '-50%', y: 'calc(-50% + 10px)' },
+    visible: { opacity: 1, scale: 1, x: align === 'end' ? '-100%' : '-50%', y: '-50%' },
   }
+
+  const leftStyle = triggerRect
+    ? align === 'end'
+      ? `max(1rem, ${triggerRect.left}px)`
+      : `max(1rem, min(${triggerRect.left + triggerRect.width / 2}px, calc(100vw - 1rem)))`
+    : '50%';
 
   return (
     <AnimatePresence>
@@ -203,9 +214,7 @@ export function FloatingPanelContent({
             )}
             style={{
               borderRadius: 12,
-              left: triggerRect
-                ? `max(1rem, min(${triggerRect.left + triggerRect.width / 2}px, calc(100vw - 1rem)))`
-                : "50%",
+              left: leftStyle,
               top: triggerRect
                 ? `max(1rem, min(${triggerRect.top + triggerRect.height / 2}px, calc(100vh - 1rem)))`
                 : "50%",
