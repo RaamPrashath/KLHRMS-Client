@@ -11,6 +11,7 @@ export function useCancelLeaveRequest(orgSlug: string, memberId: string) {
       queryClient.invalidateQueries({ queryKey: ['leave-requests', orgSlug] });
       queryClient.invalidateQueries({ queryKey: ['leave-request', orgSlug, leaveRequestId] });
       queryClient.invalidateQueries({ queryKey: ['leave-calendar', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['leave-summary', orgSlug] });
     },
   });
 }

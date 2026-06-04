@@ -194,7 +194,7 @@ export function LeaveBalanceAssignmentSheet({
             type="submit"
             form="assign-leave-balance-form"
             disabled={mutation.isPending || projectedRemaining < 0}
-            className="flex-1 bg-primary text-white hover:bg-primary-hover"
+            className="flex-1 rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)]"
           >
             {mutation.isPending ? 'Saving...' : 'Save Balance'}
           </Button>

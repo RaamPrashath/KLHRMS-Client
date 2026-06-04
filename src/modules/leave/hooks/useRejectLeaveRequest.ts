@@ -13,6 +13,7 @@ export function useRejectLeaveRequest(orgSlug: string, memberId: string) {
       queryClient.invalidateQueries({ queryKey: ['leave-requests', orgSlug] });
       queryClient.invalidateQueries({ queryKey: ['leave-request', orgSlug, variables.leaveRequestId] });
       queryClient.invalidateQueries({ queryKey: ['leave-calendar', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['leave-summary', orgSlug] });
     },
   });
 }

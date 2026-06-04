@@ -516,13 +516,10 @@ function MainDashboardLayout({
   orgSlug,
   memberId,
   roleName,
-  notificationMode,
-}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName"> & {
-  notificationMode: "admin" | "employee";
-}>) {
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName">>) {
   return (
     <>
-      <DashboardTopBar orgSlug={orgSlug} memberId={memberId} mode={notificationMode} />
+      <DashboardTopBar orgSlug={orgSlug} memberId={memberId} />
       <EmployeeHeroBanner orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-5">
@@ -555,7 +552,7 @@ function AdminDashboardContent({
 
   return (
     <div className="flex flex-col gap-5 p-3">
-      <MainDashboardLayout orgSlug={orgSlug} memberId={memberId} roleName={roleName} notificationMode="admin" />
+      <MainDashboardLayout orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
       <div className="flex flex-col gap-6">
         {canViewOrgAttendance ? <AttendanceOverviewSection orgSlug={orgSlug} orgId={orgId} memberId={memberId} /> : null}
         {showAdminControlPanel ? (
@@ -636,7 +633,7 @@ function DefaultDashboardContent({
 }: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName">>) {
   return (
     <div className="flex flex-col gap-5 p-3">
-      <MainDashboardLayout orgSlug={orgSlug} memberId={memberId} roleName={roleName} notificationMode="employee" />
+      <MainDashboardLayout orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
     </div>
   );
 }

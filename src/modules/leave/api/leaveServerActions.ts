@@ -23,6 +23,7 @@ import type {
   LeavePageContext,
   LeaveRequestListResponse,
   LeaveRequestRecord,
+  LeaveSummaryListResponse,
   LeaveTypeRecord,
 } from '@/modules/leave/types/leaveTypes';
 
@@ -430,6 +431,18 @@ export async function fetchLeaveCalendarAction(params: {
     cache: 'no-store',
   });
   return handleResponse<LeaveCalendarResponse>(res);
+}
+
+export async function fetchLeaveSummaryAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<LeaveSummaryListResponse> {
+  const res = await fetch(`${getApiUrl()}/leaves/summary`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<LeaveSummaryListResponse>(res);
 }
 
 export interface HolidaySyncResult {

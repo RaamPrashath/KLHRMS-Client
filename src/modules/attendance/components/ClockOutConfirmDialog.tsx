@@ -15,6 +15,7 @@ interface ClockOutConfirmDialogProps {
   activeClockIn: string | null;
   elapsedDisplay: string;
   workLogText: string;
+  existingWorkSummary?: string | null;
   isPending: boolean;
   onOpenChange: (open: boolean) => void;
   onWorkLogChange: (value: string) => void;
@@ -44,12 +45,15 @@ export function ClockOutConfirmDialog({
   activeClockIn,
   elapsedDisplay,
   workLogText,
+  existingWorkSummary = null,
   isPending,
   onOpenChange,
   onWorkLogChange,
   onConfirm,
   error,
 }: Readonly<ClockOutConfirmDialogProps>) {
+  const shouldAskForWorkSummary = !existingWorkSummary?.trim();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
@@ -77,24 +81,40 @@ export function ClockOutConfirmDialog({
             </div>
           </div>
 
-          <div>
-            <label htmlFor="clock-out-work-log" className="text-[14px] font-medium block mb-2">
-              Daily work log
-            </label>
-            <Textarea
-              id="clock-out-work-log"
-              value={workLogText}
-              onChange={(event) => onWorkLogChange(event.target.value)}
-              rows={3}
-              placeholder="What did you accomplish today? (optional)"
-              className="resize-none border-hairline bg-canvas/30 text-sm text-ink placeholder:text-ink-muted-48/50"
-            />
-            {error ? (
-              <p className="mt-1.5 text-sm text-destructive-text" role="alert">
-                {error}
+          {shouldAskForWorkSummary ? (
+            <div>
+              <label htmlFor="clock-out-work-log" className="text-[14px] font-medium block mb-2">
+                Work summary
+              </label>
+              <Textarea
+                id="clock-out-work-log"
+                value={workLogText}
+                onChange={(event) => onWorkLogChange(event.target.value)}
+                rows={3}
+                placeholder="Add your work summary for today"
+                className="resize-none border-hairline bg-canvas/30 text-sm text-ink placeholder:text-ink-muted-48/50"
+              />
+              {error ? (
+                <p className="mt-1.5 text-sm text-destructive-text" role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-hairline bg-canvas/30 p-4">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-ink-muted-48">
+                Work summary
               </p>
-            ) : null}
-          </div>
+              <p className="mt-1.5 text-sm text-ink">
+                {existingWorkSummary}
+              </p>
+              {error ? (
+                <p className="mt-2 text-sm text-destructive-text" role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+          )}
         </div>
 
         <DialogFooter className="sm:justify-center">

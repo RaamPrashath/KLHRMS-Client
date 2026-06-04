@@ -178,7 +178,7 @@ export function LeavePageShell({ orgSlug, memberId }: Readonly<LeavePageShellPro
               <p className="mt-1 text-[14px] text-neutral-500">Requests, balances, holidays, and policy controls in one place.</p>
             </div>
             {canCreate ? (
-              <Button className="bg-primary text-white hover:bg-primary-hover" onClick={() => setApplyOpen(true)}>
+              <Button className="h-9 rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)]" onClick={() => setApplyOpen(true)}>
                 Apply Leave
               </Button>
             ) : null}
@@ -512,7 +512,7 @@ export function LeavePageShell({ orgSlug, memberId }: Readonly<LeavePageShellPro
                       <p className="text-sm text-neutral-500">Create and tune leave categories for this organization.</p>
                     </div>
                     <Button
-                      className="bg-primary text-white hover:bg-primary-hover"
+                      className="h-9 rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)]"
                       onClick={() => {
                         setSelectedLeaveType(null);
                         setLeaveTypeDialogOpen(true);
@@ -579,7 +579,7 @@ export function LeavePageShell({ orgSlug, memberId }: Readonly<LeavePageShellPro
                       <p className="text-sm text-neutral-500">Maintain your public holiday list for planning and leave calendars.</p>
                     </div>
                     <Button
-                      className="bg-primary text-white hover:bg-primary-hover"
+                      className="h-9 rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)]"
                       onClick={() => {
                         setSelectedHoliday(null);
                         setHolidayDialogOpen(true);

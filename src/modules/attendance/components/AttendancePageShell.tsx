@@ -74,7 +74,7 @@ function buildDefaultFilters(selfScope: boolean): AttendanceFiltersState {
             targetMemberId: undefined,
             employeeNameSearch: undefined,
             page: 1,
-            pageSize: 50,
+            pageSize: 15,
         };
     }
     return {
@@ -85,7 +85,7 @@ function buildDefaultFilters(selfScope: boolean): AttendanceFiltersState {
         targetMemberId: undefined,
         employeeNameSearch: undefined,
         page: 1,
-        pageSize: 50,
+        pageSize: 15,
     };
 }
 

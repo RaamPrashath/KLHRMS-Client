@@ -12,6 +12,7 @@ export interface AttendanceRecord {
   date: string;           // ISO date "YYYY-MM-DD"
   clockIn: string | null; // ISO datetime
   clockOut: string | null;
+  description: string | null;
   totalHours: number | null;
   overtimeHours: number | null;
   status: AttendanceStatus;

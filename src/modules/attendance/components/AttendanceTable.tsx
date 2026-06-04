@@ -255,7 +255,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
   }
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
-  const pageSize = filters.pageSize ?? 50;
+  const pageSize = filters.pageSize ?? 15;
   const today = getTodayIST();
   const currentPage = filters.page ?? 1;
 

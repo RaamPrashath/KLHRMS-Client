@@ -150,13 +150,6 @@ function getGreeting(name: string) {
   return pick.replace("{name}", name);
 }
 
-function getDashboardClockStatus(widgetState: WidgetState): string {
-  if (widgetState === "CLOCKED_IN") return "Clocked in";
-  if (widgetState === "COMPLETED") return "Done for today";
-  if (widgetState === "LOADING") return "Checking status";
-  return "Not clocked in";
-}
-
 function mapPlanLocationToChoice(planLocation: PlanLocation): ClockChoice | null {
   if (planLocation === "OFFICE") return "OFFICE";
   if (planLocation === "WFH") return "REMOTE";
@@ -405,6 +398,7 @@ export function AttendanceClockCard({
   const locationMatchesSelection =
     selectedLocation === detectedLocation && detectedLocation != null;
   const planMatchesSelection = !planChoice || selectedLocation === planChoice;
+  const existingWorkSummary = todayRecord?.description?.trim() || null;
   const canSubmitClockIn =
     !planBlocksClockIn &&
     geoState.status === "ready" &&
@@ -538,7 +532,7 @@ export function AttendanceClockCard({
     setSelectedLocation(planChoice ?? "OFFICE");
     setSelectedProjectId(null);
     setSelectedTaskId(null);
-    setClockInDescription("");
+    setClockInDescription(todayRecord?.description ?? "");
     setClockInFieldErrors({});
     requestCurrentLocation();
     setIsDialogOpen(true);
@@ -590,12 +584,12 @@ export function AttendanceClockCard({
 
   function handleOpenClockOutDialog() {
     setInlineError(null);
-    setClockOutWorkLogText("");
+    setClockOutWorkLogText(existingWorkSummary ? "" : (todayRecord?.description ?? ""));
     setIsClockOutDialogOpen(true);
   }
 
   function handleClockOutConfirm() {
-    const trimmedWorkLog = clockOutWorkLogText.trim();
+    const trimmedWorkLog = existingWorkSummary ? "" : clockOutWorkLogText.trim();
 
     setInlineError(null);
     clockOutMutation
@@ -622,8 +616,6 @@ export function AttendanceClockCard({
   }
 
   const todayLabel = formatTodayLabel();
-  const statusLabel = getDashboardClockStatus(widgetState);
-  const subtitle = roleName ? `${roleName} · ${statusLabel}` : statusLabel;
   const dialogStatus = getDialogStatusMessage({
     isClockContextLoading,
     geoState,
@@ -946,7 +938,7 @@ export function AttendanceClockCard({
 
             <div className="space-y-1.5">
               <label htmlFor="clock-in-description" className="text-[14px] font-semibold text-ink-muted-48">
-                Description
+                Work summary
               </label>
               <Textarea
                 id="clock-in-description"
@@ -958,7 +950,7 @@ export function AttendanceClockCard({
                   el.style.height = "auto";
                   el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
                 }}
-                placeholder="Additional details..."
+                placeholder="Add your work summary for today"
                 className="resize-none border-hairline bg-canvas/30 text-sm text-ink placeholder:text-ink-muted-48/50 min-h-[72px] max-h-[160px] overflow-y-auto"
               />
             </div>
@@ -980,6 +972,7 @@ export function AttendanceClockCard({
         activeClockIn={activeClockIn}
         elapsedDisplay={elapsedDisplay}
         workLogText={clockOutWorkLogText}
+        existingWorkSummary={existingWorkSummary}
         isPending={clockOutMutation.isPending}
         error={inlineError}
         onOpenChange={(open) => {
