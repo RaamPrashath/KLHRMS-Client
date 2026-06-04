@@ -40,13 +40,43 @@ import type {
     AttendanceFiltersState,
     ApiError,
 } from "@/modules/attendance/types/attendanceTypes";
+import { getTodayIST } from "@/modules/attendance/utils/attendanceFormatters";
 
 interface AttendancePageShellProps {
     orgSlug: string;
     memberId: string;
 }
 
-function buildDefaultFilters(): AttendanceFiltersState {
+function toYmdLocal(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function getMondayOfWeekIST(): Date {
+    const parts = getTodayIST().split('-').map(Number);
+    const today = new Date(parts[0]!, (parts[1] ?? 1) - 1, parts[2] ?? 1);
+    const dow = today.getDay();
+    const offset = dow === 0 ? 6 : dow - 1;
+    today.setDate(today.getDate() - offset);
+    return today;
+}
+
+function buildDefaultFilters(selfScope: boolean): AttendanceFiltersState {
+    if (selfScope) {
+        const monday = getMondayOfWeekIST();
+        return {
+            timePreset: 'this_week',
+            dateFrom: toYmdLocal(monday),
+            dateTo: getTodayIST(),
+            status: undefined,
+            targetMemberId: undefined,
+            employeeNameSearch: undefined,
+            page: 1,
+            pageSize: 50,
+        };
+    }
     return {
         timePreset: 'all_time',
         dateFrom: undefined,
@@ -72,9 +102,21 @@ export function AttendancePageShell({
 
     const permissions = resolveAttendancePermissions(rawPermissions ?? {});
     const isOrgScope = permissions.view === "organization";
+    const isOperative = isOperativeScope(permissions.view) && !isOrgScope;
 
     // ── Filter state ───────────────────────────────────────────────────────────
-    const [filters, setFilters] = useState<AttendanceFiltersState>(buildDefaultFilters);
+    const [filters, setFilters] = useState<AttendanceFiltersState>(() => buildDefaultFilters(false));
+
+    useEffect(() => {
+        if (permissionsLoading) return;
+        if (!isOperative) return;
+        setFilters((current) => {
+            if (current.timePreset !== 'all_time' || current.dateFrom != null || current.dateTo != null) {
+                return current;
+            }
+            return buildDefaultFilters(true);
+        });
+    }, [isOperative, permissionsLoading]);
 
     // ── Query selection ────────────────────────────────────────────────────────
     const orgPageQuery = useAttendanceQuery(orgSlug, memberId, filters, {

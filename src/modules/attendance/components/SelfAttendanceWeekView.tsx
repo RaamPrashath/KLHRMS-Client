@@ -1,14 +1,18 @@
 'use client';
 
 import { useMemo } from 'react';
-import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
+import { format, addDays, parseISO } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useMyAttendanceQuery } from '@/modules/attendance/hooks/queries/attendance';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
 import { formatTime } from '@/modules/attendance/utils/attendanceFormatters';
-import type { AttendanceRecord, AttendanceStatus } from '@/modules/attendance/types/attendanceTypes';
+import type {
+  AttendanceRecord,
+  AttendanceStatus,
+  AttendanceFiltersState,
+} from '@/modules/attendance/types/attendanceTypes';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -43,11 +47,57 @@ function StatusDot({ status, isLeave }: { readonly status: AttendanceStatus | nu
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+const ALL_TIME_DAY_CAP = 90;
+
+function toYmdLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getMondayOfWeek(d: Date): Date {
+  const dow = d.getDay();
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+interface DateRange {
+  from: Date;
+  to: Date;
+}
+
+function resolveDateRange(
+  preset: AttendanceFiltersState['timePreset'],
+  today: Date,
+): DateRange {
+  if (preset === 'last_calendar_week') {
+    const thisMonday = getMondayOfWeek(today);
+    const lastMonday = new Date(thisMonday);
+    lastMonday.setDate(lastMonday.getDate() - 7);
+    const lastSunday = new Date(thisMonday);
+    lastSunday.setDate(lastSunday.getDate() - 1);
+    return { from: lastMonday, to: lastSunday };
+  }
+
+  if (preset === 'all_time') {
+    const start = new Date(today);
+    start.setDate(start.getDate() - (ALL_TIME_DAY_CAP - 1));
+    return { from: start, to: today };
+  }
+
+  const monday = getMondayOfWeek(today);
+  return { from: monday, to: today };
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface SelfAttendanceWeekViewProps {
   orgSlug: string;
   memberId: string;
+  filters: AttendanceFiltersState;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -55,19 +105,20 @@ interface SelfAttendanceWeekViewProps {
 export function SelfAttendanceWeekView({
   orgSlug,
   memberId,
+  filters,
 }: Readonly<SelfAttendanceWeekViewProps>) {
   const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 0 });
-  const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
-  const fromStr = format(weekStart, 'yyyy-MM-dd');
-  const toStr = format(weekEnd, 'yyyy-MM-dd');
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const range = useMemo(() => resolveDateRange(filters.timePreset, today), [filters.timePreset, today]);
+  const fromStr = toYmdLocal(range.from);
+  const toStr = toYmdLocal(range.to);
 
   // ── Data fetching ──────────────────────────────────────────────────
   const { data, isLoading } = useMyAttendanceQuery(orgSlug, memberId, {
     dateFrom: fromStr,
     dateTo: toStr,
     page: 1,
-    pageSize: 7,
+    pageSize: 200,
   });
 
   const currentYear = today.getFullYear();
@@ -79,7 +130,7 @@ export function SelfAttendanceWeekView({
     fromDate: fromStr,
     toDate: toStr,
     page: 1,
-    pageSize: 10,
+    pageSize: 50,
   });
 
   // ── Build lookup maps ──────────────────────────────────────────────
@@ -104,8 +155,8 @@ export function SelfAttendanceWeekView({
   const leaveDaySet = useMemo(() => {
     const set = new Set<string>();
     for (const leave of leaveData?.items ?? []) {
-      const start = new Date(leave.startDate);
-      const end = new Date(leave.endDate);
+      const start = parseISO(leave.startDate);
+      const end = parseISO(leave.endDate);
       let cur = start;
       while (cur <= end) {
         set.add(format(cur, 'yyyy-MM-dd'));
@@ -115,15 +166,36 @@ export function SelfAttendanceWeekView({
     return set;
   }, [leaveData]);
 
-  // ── Build 7 day rows — today first, then backward through week ────
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const todayStr = format(today, 'yyyy-MM-dd');
-  const todayIdx = weekDays.findIndex((d) => format(d, 'yyyy-MM-dd') === todayStr);
-  const days = [
-    weekDays[todayIdx],
-    ...weekDays.slice(0, todayIdx).reverse(),
-    ...weekDays.slice(todayIdx + 1).reverse(),
-  ];
+  // ── Enumerate days in the range (descending) ───────────────────────
+  const enumeratedDays = useMemo(() => {
+    const days: Date[] = [];
+    for (let d = new Date(range.to); d >= range.from; d.setDate(d.getDate() - 1)) {
+      days.push(new Date(d));
+    }
+    return days;
+  }, [range.from, range.to]);
+
+  // ── Pin today to the top, then keep the rest in descending order ───
+  const orderedDays = useMemo(() => {
+    const todayIdx = enumeratedDays.findIndex((d) => format(d, 'yyyy-MM-dd') === todayStr);
+    if (todayIdx < 0) return enumeratedDays;
+    return [
+      enumeratedDays[todayIdx]!,
+      ...enumeratedDays.slice(0, todayIdx),
+      ...enumeratedDays.slice(todayIdx + 1),
+    ];
+  }, [enumeratedDays, todayStr]);
+
+  // ── Hide Saturday & Sunday unless the user clocked in ──────────────
+  const visibleDays = useMemo(() => {
+    return orderedDays.filter((d) => {
+      const dateStr = format(d, 'yyyy-MM-dd');
+      const dow = d.getDay();
+      const isWeekend = dow === 0 || dow === 6;
+      if (!isWeekend) return true;
+      return dayMap.has(dateStr);
+    });
+  }, [orderedDays, dayMap]);
 
   return (
     <div className="w-full">
@@ -139,7 +211,7 @@ export function SelfAttendanceWeekView({
       {/* Body */}
       {isLoading ? (
         <div className="flex flex-col bg-surface">
-          {Array.from({ length: 7 }, (_, i) => (
+          {Array.from({ length: visibleDays.length || 7 }, (_, i) => (
             <div key={i} className="flex items-center border-b border-black/4 py-3">
               <div className="flex-1 flex flex-col items-center gap-0.5">
                 <Skeleton className="h-3 w-11" />
@@ -162,7 +234,7 @@ export function SelfAttendanceWeekView({
         </div>
       ) : (
         <div className="flex flex-col bg-surface">
-          {days.map((day) => {
+          {visibleDays.map((day) => {
             const dateStr = format(day, 'yyyy-MM-dd');
             const record = dayMap.get(dateStr) ?? null;
             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
