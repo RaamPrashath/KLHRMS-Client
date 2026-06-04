@@ -147,7 +147,7 @@ export function AttendanceFilters({
         targetMemberId: undefined,
         employeeNameSearch: undefined,
         page: 1,
-        pageSize: 50,
+        pageSize: 15,
       });
       return;
     }
@@ -159,7 +159,7 @@ export function AttendanceFilters({
       targetMemberId: undefined,
       employeeNameSearch: undefined,
       page: 1,
-      pageSize: 50,
+      pageSize: 15,
     });
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, FileDown, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown, Search, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { isToday, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useTeamWeeklyPlanQuery } from "@/hooks/queries/weekly_plan";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useEmployeesQuery } from "@/modules/employees/hooks/useEmployeesQuery";
-import { getCurrentWeekState, getWeekDays, getWeekRangeLabel, getWeekStart, shiftWeek } from "@/modules/weekly-plan/date";
+import { useAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
+import type { AttendanceRecord } from "@/modules/attendance/types/attendanceTypes";
+import { getCurrentWeekState, getWeekDays, getWeekRangeLabel, shiftWeek } from "@/modules/weekly-plan/date";
 import { PLAN_LOCATION_MAP, PLAN_LOCATION_THEMES } from "@/modules/weekly-plan/locations";
 import type { WeeklyPlanEntry } from "@/hooks/functions/weekly_plan";
 import type { PlanLocationValue } from "@/modules/weekly-plan/locations";
@@ -52,14 +55,14 @@ function groupTeamByUser(entries: WeeklyPlanEntry[]): Record<string, { name: str
   return result;
 }
 
-function buildRows(entries: WeeklyPlanEntry[], weekDays: { iso: string }[], allEmployees?: { member_id: string; name: string }[]): EmployeeWeekRow[] {
+function buildRows(entries: WeeklyPlanEntry[], weekDays: { iso: string }[], allEmployees?: { member_id: string; user_id: string; name: string }[]): EmployeeWeekRow[] {
   const grouped = groupTeamByUser(entries);
   const map = new Map<string, EmployeeWeekRow>();
 
   if (allEmployees) {
     for (const emp of allEmployees) {
-      map.set(emp.member_id, {
-        userId: emp.member_id,
+      map.set(emp.user_id, {
+        userId: emp.user_id,
         name: emp.name || "Unknown",
         mon: null, tue: null, wed: null, thu: null, fri: null,
       });
@@ -88,18 +91,34 @@ function buildRows(entries: WeeklyPlanEntry[], weekDays: { iso: string }[], allE
 
 function LocationBadge({ location }: { location: PlanLocationValue | null }) {
   if (!location) {
-    return (
-      <span className="inline-flex items-center justify-center rounded-md bg-neutral-100 px-2 py-1 text-[11px] font-medium text-neutral-400">
-        —
-      </span>
-    );
+    return <span className="text-[10px] font-medium text-neutral-300">—</span>;
   }
   const theme = PLAN_LOCATION_THEMES[location];
   const label = PLAN_LOCATION_MAP[location].short_label;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold", theme.bg, theme.text)}>
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", theme.bg, theme.text)}>
       <span className={cn("size-1.5 rounded-full", theme.dot)} />
       {label}
+    </span>
+  );
+}
+
+function ActualLocationBadge({ record }: { record: AttendanceRecord | undefined }) {
+  if (!record) {
+    return <span className="text-[10px] font-medium text-neutral-300">—</span>;
+  }
+  if (record.isRemote) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-700">
+        <span className="size-1.5 rounded-full bg-blue-500" />
+        WFH
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-teal-50 text-teal-700">
+      <span className="size-1.5 rounded-full bg-teal-500" />
+      OFF
     </span>
   );
 }
@@ -159,11 +178,9 @@ function triggerDownload(content: string, filename: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-function countByLocation(rows: EmployeeWeekRow[], loc: PlanLocationValue): number {
-  return rows.reduce((sum, r) => {
-    const vals = [r.mon, r.tue, r.wed, r.thu, r.fri];
-    return sum + vals.filter((v) => v === loc).length;
-  }, 0);
+function isMismatch(planned: PlanLocationValue | null, actualStatus: string | null): boolean {
+  if (!planned || planned === "LEAVE" || planned === "HOLIDAY") return false;
+  return actualStatus === "ABSENT" || actualStatus === null;
 }
 
 export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePanelProps) {
@@ -183,7 +200,52 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
 
   const { data: employeeData } = useEmployeesQuery(orgSlug, memberId, { pageSize: 200 });
 
+  // Build user_id → member_id mapping for attendance lookup
+  const userIdToMemberId = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!employeeData?.items) return map;
+    for (const emp of employeeData.items) {
+      map.set(emp.user_id, emp.member_id);
+    }
+    return map;
+  }, [employeeData]);
+
   const weekDays = useMemo(() => getWeekDays(weekState.year, weekState.week), [weekState.year, weekState.week]);
+
+  // Fetch attendance for the week
+  const dateFrom = weekDays[0]?.iso ?? "";
+  const dateTo = weekDays[4]?.iso ?? "";
+  const attendanceQuery = useAttendanceQuery(orgSlug, memberId, {
+    dateFrom: dateFrom,
+    dateTo: dateTo,
+    page: 1,
+    pageSize: 500,
+  });
+
+  // Build attendance lookup: employeeId → Map<date, AttendanceRecord>
+  const attendanceByEmployee = useMemo(() => {
+    const map = new Map<string, Map<string, AttendanceRecord>>();
+    if (!attendanceQuery.data?.items) return map;
+    for (const rec of attendanceQuery.data.items) {
+      if (!map.has(rec.employeeId)) {
+        map.set(rec.employeeId, new Map());
+      }
+      map.get(rec.employeeId)!.set(rec.date, rec);
+    }
+    return map;
+  }, [attendanceQuery.data]);
+
+  // Build user_id → attendance lookup using the mapping
+  const attendanceByUserId = useMemo(() => {
+    const map = new Map<string, Map<string, AttendanceRecord>>();
+    for (const [userId, memberId] of userIdToMemberId) {
+      const memberAttendance = attendanceByEmployee.get(memberId);
+      if (memberAttendance) {
+        map.set(userId, memberAttendance);
+      }
+    }
+    return map;
+  }, [attendanceByEmployee, userIdToMemberId]);
 
   const rows = useMemo(() => {
     return buildRows(teamQuery.data ?? [], weekDays, employeeData?.items);
@@ -221,7 +283,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
   return (
     <div className="flex flex-col flex-1">
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
-        {/* Top bar — matching attendance table header style */}
+        {/* Top bar */}
         <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
           <div className="flex items-center gap-3">
             {/* Search */}
@@ -236,27 +298,11 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
               />
             </div>
 
-            {/* Stats */}
+            {/* Member count */}
             {!isLoading && rows.length > 0 && (
-              <div className="flex items-center gap-4 flex-wrap">
-                <p className="text-[13px] font-medium text-neutral-500 whitespace-nowrap">
-                  <span className="font-semibold text-neutral-900">{filteredRows.length}</span> team member{filteredRows.length === 1 ? "" : "s"}
-                </p>
-                <div className="h-4 w-px bg-neutral-200" />
-                {(["OFFICE", "WFH", "LEAVE", "HOLIDAY"] as PlanLocationValue[]).map((loc) => {
-                  const theme = PLAN_LOCATION_THEMES[loc];
-                  const count = countByLocation(filteredRows, loc);
-                  return (
-                    <div key={loc} className="flex items-center gap-1.5">
-                      <span className={cn("size-1.5 rounded-full", theme.dot)} />
-                      <span className="text-[12px] font-medium text-neutral-500">
-                        {PLAN_LOCATION_MAP[loc].short_label}
-                      </span>
-                      <span className="text-[12px] font-bold tabular-nums text-neutral-900">{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              <p className="text-[13px] font-medium text-neutral-500 whitespace-nowrap">
+                <span className="font-semibold text-neutral-900">{filteredRows.length}</span> team member{filteredRows.length === 1 ? "" : "s"}
+              </p>
             )}
 
             {/* Spacer to push next section right */}
@@ -314,7 +360,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                   return (
                     <TableHead
                       key={d.iso}
-                      className="px-2 py-2.5 text-center whitespace-nowrap min-w-[72px]"
+                      className="px-2 py-2.5 text-center whitespace-nowrap min-w-[80px]"
                     >
                       <div className="flex flex-col items-center gap-0.5">
                         <span className={cn("text-[10px] font-semibold uppercase tracking-wider", today ? "text-primary" : "text-neutral-500")}>
@@ -341,7 +387,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                     </TableCell>
                     {Array.from({ length: 5 }).map((_, j) => (
                       <TableCell key={j} className="px-2 py-3 text-center">
-                        <div className="h-5 w-12 animate-pulse rounded-md bg-neutral-100 mx-auto" />
+                        <div className="h-10 w-14 animate-pulse rounded-md bg-neutral-100 mx-auto" />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -353,91 +399,156 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                   </TableCell>
                 </TableRow>
               ) : (
-                pagedRows.map((row) => (
-                  <TableRow key={row.userId} className="hover:bg-canvas/60 transition-colors duration-100">
-                    <TableCell className="px-4 py-3 sticky left-0 bg-white z-10 border-r border-neutral-100 w-[200px] max-w-[200px] overflow-hidden">
-                      <EmployeeCell name={row.name} />
-                    </TableCell>
-                    {[
-                      { key: "mon", value: row.mon },
-                      { key: "tue", value: row.tue },
-                      { key: "wed", value: row.wed },
-                      { key: "thu", value: row.thu },
-                      { key: "fri", value: row.fri },
-                    ].map(({ key, value }) => {
-                      const idx = ["mon", "tue", "wed", "thu", "fri"].indexOf(key);
-                      const date = parseISO(weekDays[idx]?.iso ?? "");
-                      const today = isToday(date);
-                      return (
-                        <TableCell
-                          key={key}
-                          className={cn("px-2 py-3 text-center text-[13px] tabular-nums", today && "bg-primary/3")}
-                        >
-                          <LocationBadge location={value} />
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))
+                <TooltipProvider>
+                  {pagedRows.map((row) => {
+                    const employeeAttendance = attendanceByUserId.get(row.userId);
+                    const weekDates = ["mon", "tue", "wed", "thu", "fri"].map((key, idx) => ({
+                      key,
+                      planned: row[key as keyof Pick<EmployeeWeekRow, "mon" | "tue" | "wed" | "thu" | "fri">] as PlanLocationValue | null,
+                      date: weekDays[idx]?.iso ?? "",
+                    }));
+                    const hasMismatch = weekDates.some(({ planned, date }) => {
+                      const d = parseISO(date);
+                      const isFuture = d > new Date(new Date().setHours(0, 0, 0, 0));
+                      if (isFuture) return false;
+                      return isMismatch(planned, employeeAttendance?.get(date)?.status ?? null);
+                    });
+                    return [
+                      // Row 1: Employee name + Planned badges
+                      <tr
+                        key={`${row.userId}-plan`}
+                        className={cn(
+                          "transition-colors duration-100",
+                          hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60",
+                        )}
+                      >
+                        <td className="px-4 py-2 sticky left-0 bg-white z-10 border-r border-neutral-100 border-b border-neutral-200 w-[200px] max-w-[200px] overflow-hidden" rowSpan={2}>
+                          <div className="flex items-center gap-2">
+                            <EmployeeCell name={row.name} />
+                            {hasMismatch && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertCircle className="size-3.5 shrink-0 text-red-400" />
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="text-xs">
+                                  Plan vs Actual mismatch detected
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </td>
+                        {weekDates.map(({ key, planned }) => {
+                          return (
+                            <td
+                              key={key}
+                              className="px-2 py-2 text-center border-b border-neutral-200"
+                            >
+                              <div className="flex items-center justify-center">
+                                <LocationBadge location={planned} />
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>,
+                      // Row 2: Actual badges
+                      <tr
+                        key={`${row.userId}-actual`}
+                        className={cn(
+                          "transition-colors duration-100 border-b border-neutral-200",
+                          hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60",
+                        )}
+                      >
+                        {weekDates.map(({ key, date }) => {
+                          const d = parseISO(date);
+                          const today = isToday(d);
+                          const isFuture = d > new Date(new Date().setHours(0, 0, 0, 0));
+                          const actualRecord = employeeAttendance?.get(date);
+                          const planned = weekDates.find((w) => w.key === key)?.planned ?? null;
+                          const mismatch = !isFuture && isMismatch(planned, actualRecord?.status ?? null);
+                          return (
+                            <td
+                              key={key}
+                              className={cn(
+                                "px-2 py-2 text-center",
+                                today && "bg-primary/3",
+                              )}
+                            >
+                              {isFuture ? (
+                                <span className="text-[10px] font-medium text-neutral-200">—</span>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1">
+                                  <ActualLocationBadge record={actualRecord} />
+                                  {mismatch && (
+                                    <AlertCircle className="size-2.5 text-red-400 shrink-0" />
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>,
+                    ];
+                  })}
+                </TooltipProvider>
               )}
             </TableBody>
           </Table>
         </div>
-      </div>
 
-      {/* Pagination */}
-      {!isLoading && filteredRows.length > 0 && totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-[13px] font-medium text-neutral-500">
-            Showing <span className="font-semibold text-neutral-900">{(page - 1) * PAGE_SIZE + 1}</span>–<span className="font-semibold text-neutral-900">{Math.min(page * PAGE_SIZE, filteredRows.length)}</span> of <span className="font-semibold text-neutral-900">{filteredRows.length}</span>
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Previous
-            </Button>
-            <div className="flex items-center gap-1">
-              {(() => {
-                const pages: (number | "...")[] = [];
-                const startPage = Math.max(1, page - 2);
-                const endPage = Math.min(totalPages, page + 2);
-                if (startPage > 1) pages.push(1);
-                if (startPage > 2) pages.push("...");
-                for (let i = startPage; i <= endPage; i++) pages.push(i);
-                if (endPage < totalPages - 1) pages.push("...");
-                if (endPage < totalPages) pages.push(totalPages);
-                return pages.map((p, i) =>
-                  p === "..." ? (
-                    <span key={`ellipsis-${i}`} className="px-2 text-[13px] text-neutral-400">…</span>
-                  ) : (
-                    <Button
-                      key={p}
-                      variant={page === p ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setPage(p)}
-                      className={cn("min-w-9", page === p && "bg-primary text-white")}
-                    >
-                      {p}
-                    </Button>
-                  ),
-                );
-              })()}
+        {/* Pagination — inside the card */}
+        {!isLoading && filteredRows.length > 0 && totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-black/[0.04] flex items-center justify-between">
+            <p className="text-[13px] font-medium text-neutral-500">
+              Showing <span className="font-semibold text-neutral-900">{(page - 1) * PAGE_SIZE + 1}</span>–<span className="font-semibold text-neutral-900">{Math.min(page * PAGE_SIZE, filteredRows.length)}</span> of <span className="font-semibold text-neutral-900">{filteredRows.length}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {(() => {
+                  const pages: (number | "...")[] = [];
+                  const startPage = Math.max(1, page - 2);
+                  const endPage = Math.min(totalPages, page + 2);
+                  if (startPage > 1) pages.push(1);
+                  if (startPage > 2) pages.push("...");
+                  for (let i = startPage; i <= endPage; i++) pages.push(i);
+                  if (endPage < totalPages - 1) pages.push("...");
+                  if (endPage < totalPages) pages.push(totalPages);
+                  return pages.map((p, i) =>
+                    p === "..." ? (
+                      <span key={`ellipsis-${i}`} className="px-2 text-[13px] text-neutral-400">…</span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={page === p ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPage(p)}
+                        className={cn("min-w-9", page === p && "bg-primary text-white")}
+                      >
+                        {p}
+                      </Button>
+                    ),
+                  );
+                })()}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              Next
-            </Button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
