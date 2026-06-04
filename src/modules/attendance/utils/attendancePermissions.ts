@@ -17,7 +17,7 @@ export function resolveAttendancePermissions(
     val === 'org' ? 'organization' : val;
 
   const toScope = (val: string | undefined): PermissionScope => {
-    const valid: PermissionScope[] = ['none', 'self', 'team', 'department', 'organization'];
+    const valid: PermissionScope[] = ['none', 'self', 'department', 'organization'];
     const normalized = normalize(val);
     return valid.includes(normalized as PermissionScope) ? (normalized as PermissionScope) : 'none';
   };

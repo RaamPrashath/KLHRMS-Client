@@ -186,17 +186,17 @@ export const SidebarLink = ({
       href={link.href}
       onClick={onClick}
       className={cn(
-        "flex items-center justify-start gap-3 group/sidebar py-2 px-3 rounded-xl transition-all duration-200 relative overflow-hidden text-[14px]",
+        "flex items-center justify-start gap-3 group/sidebar py-2.5 px-3 rounded-[12px] transition-all duration-200 relative overflow-hidden text-[14px]",
         isActive
-          ? "bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-text)] font-semibold"
-          : "text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-hover)] hover:bg-[var(--color-sidebar-accent)] font-medium",
+          ? "bg-indigo-50/70 text-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400 font-semibold"
+          : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900/40 font-medium",
         className
       )}
       {...props}
     >
       <div className={cn(
         "shrink-0 transition-all duration-150 group-hover/sidebar:translate-x-[1px]",
-        isActive ? "text-[var(--color-sidebar-active-text)]" : "text-[var(--color-sidebar-text)] group-hover/sidebar:text-[var(--color-sidebar-text-hover)]"
+        isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 group-hover/sidebar:text-slate-600 dark:text-zinc-500 group-hover/sidebar:text-zinc-300"
       )}>
         {link.icon}
       </div>
@@ -260,7 +260,7 @@ export const SidebarLabel = ({
             }
       }
       className={cn(
-        "overflow-hidden px-3 pt-2 pb-1 text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-sidebar-label)]",
+        "overflow-hidden px-3 pt-1.5 pb-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-zinc-500",
         className
       )}
     >

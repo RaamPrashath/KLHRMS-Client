@@ -56,7 +56,7 @@ export function OrganizationSwitcher({
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="mx-auto mt-1 flex h-[42px] w-[42px] items-center justify-center rounded-[12px] bg-[#4f46e5] dark:bg-indigo-600 text-[15px] font-[700] text-white shadow-[0_2px_8px_rgba(79,70,229,0.15)] transition-transform hover:scale-[1.02]"
+                className="mx-auto mt-1 flex h-9 w-9 items-center justify-center rounded-[10px] bg-zinc-950 dark:bg-zinc-100 text-[13px] font-bold text-white dark:text-zinc-950 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-transform hover:scale-[1.02]"
                 aria-label="Open organization switcher"
             >
                 {getInitials(currentOrg.name)}
@@ -65,29 +65,20 @@ export function OrganizationSwitcher({
     }
 
     return (
-        <div className="pt-2 pb-1">
+        <div className="pt-1 pb-1">
             <Popover open={isOpen} onOpenChange={setIsOpen}>
                 <PopoverTrigger asChild>
                     <button
                         type="button"
                         className={cn(
-                            "flex w-full items-center justify-between rounded-[16px] p-2 text-left transition-all duration-200 outline-none hover:bg-[var(--sidebar-accent)] dark:hover:bg-zinc-900 cursor-pointer select-none",
-                            isOpen && "bg-[var(--sidebar-accent)] dark:bg-zinc-900",
+                            "flex w-full items-center justify-between rounded-xl p-2 px-3 text-left transition-all duration-200 outline-none hover:bg-slate-100/80 dark:hover:bg-zinc-900 cursor-pointer select-none",
+                            isOpen && "bg-slate-100/80 dark:bg-zinc-900",
                         )}
                     >
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                            <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px] text-[15px] font-[700] text-white bg-[#4f46e5] dark:bg-indigo-600 shadow-[0_2px_8px_rgba(79,70,229,0.15)]">
-                                {getInitials(currentOrg.name)}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                                <h3 className="text-[15px] font-[700] leading-[1.2] text-slate-900 dark:text-white truncate">
-                                    {currentOrg.name}
-                                </h3>
-                                <span className="block pt-0.5 text-[12.5px] font-normal text-slate-500 dark:text-zinc-400 truncate">
-                                    {currentOrg.roleName ?? "Employee"}
-                                </span>
-                            </div>
+                        <div className="flex min-w-0 flex-1 items-center">
+                            <h3 className="text-[19px] font-bold tracking-tight text-slate-800 dark:text-zinc-50 truncate pl-0.5">
+                                {currentOrg.name}
+                            </h3>
                         </div>
 
                         <ChevronsUpDown className="h-4 w-4 shrink-0 text-slate-400 hover:text-slate-600" />
@@ -95,7 +86,7 @@ export function OrganizationSwitcher({
                 </PopoverTrigger>
 
                 <PopoverContent 
-                    className="w-(--radix-popover-trigger-width) min-w-60 rounded-2xl border border-[var(--border)] bg-[var(--color-surface)] p-1.5 text-[var(--color-foreground)] shadow-[0_24px_64px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-[#1C1C1E] dark:text-white dark:shadow-[0_24px_64px_rgba(0,0,0,0.65)]" 
+                    className="w-(--radix-popover-trigger-width) min-w-60 rounded-2xl border border-slate-100 bg-white p-1.5 text-slate-900 shadow-[0_24px_64px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:shadow-[0_24px_64px_rgba(0,0,0,0.65)]" 
                     align="start"
                     sideOffset={6}
                 >

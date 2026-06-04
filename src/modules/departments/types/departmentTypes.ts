@@ -1,5 +1,4 @@
 export type DepartmentStatus = 'ACTIVE' | 'INACTIVE';
-export type TeamStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface LookupOption {
   id: string;
@@ -15,28 +14,19 @@ export interface DepartmentProjectSummary {
   memberCount: number;
 }
 
-export interface TeamMemberSummary {
+export interface DepartmentMemberSummary {
   id: string;
   memberId: string;
   name: string | null;
   email: string | null;
-  role: string | null;
 }
 
-export interface TeamSummary {
+export interface DepartmentHeadSummary {
   id: string;
-  departmentId: string;
-  name: string;
-  description: string | null;
-  leadMemberId: string | null;
-  leadMemberName: string | null;
-  status: TeamStatus;
-  memberCount: number;
-  projectCount: number;
-  members: TeamMemberSummary[];
-  projects: DepartmentProjectSummary[];
-  createdAt: string;
-  updatedAt: string;
+  memberId: string;
+  name: string | null;
+  email: string | null;
+  assignedAt: string;
 }
 
 export interface DepartmentSummary {
@@ -46,10 +36,11 @@ export interface DepartmentSummary {
   headMemberId: string | null;
   headMemberName: string | null;
   status: DepartmentStatus;
-  teamCount: number;
   memberCount: number;
   projectCount: number;
-  teams: TeamSummary[];
+  members: DepartmentMemberSummary[];
+  heads: DepartmentHeadSummary[];
+  projects: DepartmentProjectSummary[];
   createdAt: string;
   updatedAt: string;
 }

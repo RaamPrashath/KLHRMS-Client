@@ -1,4 +1,4 @@
-export type LeavePermissionScope = 'none' | 'self' | 'team' | 'department' | 'organization';
+export type LeavePermissionScope = 'none' | 'self' | 'department' | 'organization';
 export type LeaveRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
 export interface LeavePermissions {

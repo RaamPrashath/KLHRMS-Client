@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useTransition } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -32,14 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { DepartmentsTable } from './DepartmentsTable';
-import { DepartmentDetailDialog } from './DepartmentDetailDialog';
-import { DepartmentTeamsDialog } from './DepartmentTeamsDialog';
-import { useDepartmentsQuery, useDepartmentMetaQuery } from '@/modules/departments/hooks/useDepartmentsQuery';
+import { DepartmentViewDrawer } from './DepartmentViewDrawer';
+import { useDepartmentsQuery, useDepartmentMetaQuery, useDepartmentDetailQuery } from '@/modules/departments/hooks/useDepartmentsQuery';
 import { useDepartmentMutations } from '@/modules/departments/hooks/useDepartmentMutations';
-import type { DepartmentInput, TeamInput, TeamMemberInput } from '@/modules/departments/schema/departmentSchemas';
-import type { DepartmentSummary, DepartmentStatus, TeamSummary } from '@/modules/departments/types/departmentTypes';
+import type { DepartmentInput } from '@/modules/departments/schema/departmentSchemas';
+import type { DepartmentSummary, DepartmentStatus } from '@/modules/departments/types/departmentTypes';
 
 interface DepartmentsPageShellProps {
   orgSlug: string;
@@ -54,13 +51,6 @@ const defaultDepartmentForm: DepartmentInput = {
   status: 'ACTIVE',
 };
 
-const defaultTeamForm: TeamInput = {
-  name: '',
-  description: '',
-  leadMemberId: '',
-  status: 'ACTIVE',
-};
-
 function readError(error: unknown, fallback: string) {
   try {
     const parsed = JSON.parse((error as Error)?.message ?? '{}');
@@ -68,21 +58,6 @@ function readError(error: unknown, fallback: string) {
   } catch {
     return fallback;
   }
-}
-
-function updateDepartmentTeam(
-  department: DepartmentSummary | null,
-  nextTeam: TeamSummary,
-) {
-  if (!department) return department;
-  const nextTeams = department.teams.map((team) => (team.id === nextTeam.id ? nextTeam : team));
-  return {
-    ...department,
-    teams: nextTeams,
-    teamCount: nextTeams.length,
-    projectCount: nextTeams.reduce((sum, team) => sum + team.projectCount, 0),
-    memberCount: nextTeams.reduce((sum, team) => sum + team.memberCount, 0),
-  };
 }
 
 export function DepartmentsPageShell({
@@ -100,14 +75,11 @@ export function DepartmentsPageShell({
 
   // ── Dialog state ────────────────────────────────────────────────────────────
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
-  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [teamsOpen, setTeamsOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentSummary | null>(null);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
+  const [selectedDepartmentSnapshot, setSelectedDepartmentSnapshot] = useState<DepartmentSummary | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [departmentForm, setDepartmentForm] = useState<DepartmentInput>(defaultDepartmentForm);
-  const [teamForm, setTeamForm] = useState<TeamInput>(defaultTeamForm);
-  const [memberForms, setMemberForms] = useState<Record<string, TeamMemberInput>>({});
 
   // ── Data queries ────────────────────────────────────────────────────────────
   const { data, isLoading, isError, error } = useDepartmentsQuery(orgSlug, memberId, {
@@ -116,8 +88,11 @@ export function DepartmentsPageShell({
     pageSize,
   });
 
-  const metaQuery = useDepartmentMetaQuery(orgSlug, memberId, canManageDepartments);
+  const metaQuery = useDepartmentMetaQuery(orgSlug, memberId, true);
+  const detailQuery = useDepartmentDetailQuery(orgSlug, memberId, selectedDepartmentId);
   const mutations = useDepartmentMutations(orgSlug, memberId);
+
+  const selectedDepartment = detailQuery.data ?? selectedDepartmentSnapshot ?? undefined;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleSearchChange = useCallback((value: string) => {
@@ -154,8 +129,9 @@ export function DepartmentsPageShell({
   }, []);
 
   const handleRowClick = useCallback((department: DepartmentSummary) => {
-    setSelectedDepartment(department);
-    setDetailOpen(true);
+    setSelectedDepartmentId(department.id);
+    setSelectedDepartmentSnapshot(null);
+    setDrawerOpen(true);
   }, []);
 
   function openDepartmentCreateDialog() {
@@ -163,40 +139,17 @@ export function DepartmentsPageShell({
     setDepartmentDialogOpen(true);
   }
 
-  function openTeamCreateDialog(departmentId: string) {
-    setTeamForm(defaultTeamForm);
-    setTeamDialogOpen(true);
-  }
-
   async function handleSaveDepartment() {
     try {
       const created = await mutations.createDepartment.mutateAsync(departmentForm);
-      setSelectedDepartment(created);
+      setSelectedDepartmentId(created.id);
+      setSelectedDepartmentSnapshot(created);
       setDepartmentDialogOpen(false);
-      setDetailOpen(true);
+      setDrawerOpen(true);
       setDepartmentForm(defaultDepartmentForm);
       toast.success('Department created');
     } catch (error) {
       toast.error(readError(error, 'Failed to create department'));
-    }
-  }
-
-  async function handleSaveTeam() {
-    const departmentId = selectedDepartment?.id;
-    if (!departmentId) return;
-    try {
-      const updatedDepartment = await mutations.createTeam.mutateAsync({
-        departmentId,
-        data: teamForm,
-      });
-      setSelectedDepartment(updatedDepartment);
-      setTeamDialogOpen(false);
-      setTeamsOpen(true);
-      setDetailOpen(false);
-      setTeamForm(defaultTeamForm);
-      toast.success('Team created');
-    } catch (error) {
-      toast.error(readError(error, 'Failed to create team'));
     }
   }
 
@@ -205,34 +158,10 @@ export function DepartmentsPageShell({
     try {
       await mutations.deleteDepartment.mutateAsync(deleteId);
       setDeleteId(null);
-      setDetailOpen(false);
-      setTeamsOpen(false);
+      setDrawerOpen(false);
       toast.success('Department removed');
     } catch (error) {
       toast.error(readError(error, 'Failed to remove department'));
-    }
-  }
-
-  async function handleAssignMember(teamId: string) {
-    const teamMember = memberForms[teamId];
-    if (!teamMember?.memberId) return;
-    try {
-      const updatedTeam = await mutations.assignTeamMember.mutateAsync({ teamId, data: teamMember });
-      setSelectedDepartment((current) => updateDepartmentTeam(current, updatedTeam));
-      setMemberForms((current) => ({ ...current, [teamId]: { memberId: '', role: '' } }));
-      toast.success('Employee assigned');
-    } catch (error) {
-      toast.error(readError(error, 'Failed to assign employee'));
-    }
-  }
-
-  async function handleRemoveMember(teamId: string, targetMemberId: string) {
-    try {
-      const updatedTeam = await mutations.removeTeamMember.mutateAsync({ teamId, targetMemberId });
-      setSelectedDepartment((current) => updateDepartmentTeam(current, updatedTeam));
-      toast.success('Employee removed');
-    } catch (error) {
-      toast.error(readError(error, 'Failed to remove employee'));
     }
   }
 
@@ -302,7 +231,7 @@ export function DepartmentsPageShell({
               Create department
             </DialogTitle>
             <DialogDescription className="text-[14px] leading-6 text-[#6e6e73]">
-              Create the department and move straight into its team structure without waiting on a page reload.
+              Create the department and assign a department head without waiting on a page reload.
             </DialogDescription>
           </DialogHeader>
 
@@ -355,77 +284,6 @@ export function DepartmentsPageShell({
         </DialogContent>
       </Dialog>
 
-      {/* ── Create team dialog ───────────────────────────────────────────────── */}
-      <Dialog open={teamDialogOpen} onOpenChange={setTeamDialogOpen}>
-        <DialogContent className="max-w-2xl border border-[#e5e5ea] bg-white p-0 shadow-2xl rounded-[18px] overflow-hidden">
-          <DialogHeader className="border-b border-[#e5e5ea] px-6 py-5">
-            <DialogTitle className="text-[24px] font-semibold tracking-[-0.01em] text-[#1d1d1f]">
-              Create team
-            </DialogTitle>
-            <DialogDescription className="text-[14px] leading-6 text-[#6e6e73]">
-              Add a team under the selected department and continue directly into team staffing.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-5 px-6 py-6">
-            <div className="grid gap-2">
-              <Label htmlFor="team-name">Team name</Label>
-              <Input
-                id="team-name"
-                value={teamForm.name}
-                onChange={(event) => setTeamForm({ ...teamForm, name: event.target.value })}
-                className="h-11 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-[3px] focus-visible:ring-primary/10"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Team lead</Label>
-              <Select
-                value={teamForm.leadMemberId || 'none'}
-                onValueChange={(value) =>
-                  setTeamForm({ ...teamForm, leadMemberId: value === 'none' ? '' : value })
-                }
-              >
-                <SelectTrigger className="h-11 rounded-lg border-[#e5e5ea] shadow-none">
-                  <SelectValue placeholder="Select team lead" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Not assigned</SelectItem>
-                  {metaQuery.data?.members.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="team-description">Purpose</Label>
-              <Textarea
-                id="team-description"
-                value={teamForm.description || ''}
-                onChange={(event) => setTeamForm({ ...teamForm, description: event.target.value })}
-                className="min-h-28 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-[3px] focus-visible:ring-primary/10"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="border-t border-[#e5e5ea] px-6 py-4">
-            <Button variant="ghost" onClick={() => setTeamDialogOpen(false)} className="rounded-lg px-5">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveTeam}
-              disabled={mutations.createTeam.isPending}
-              className="rounded-lg px-6"
-            >
-              {mutations.createTeam.isPending ? 'Creating...' : 'Create and open'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* ── Delete confirmation ──────────────────────────────────────────────── */}
       <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent className="border border-[#e5e5ea] bg-white shadow-2xl rounded-[18px] overflow-hidden">
@@ -434,7 +292,7 @@ export function DepartmentsPageShell({
               Remove department
             </AlertDialogTitle>
             <AlertDialogDescription className="text-[14px] leading-6 text-[#6e6e73]">
-              This removes the department from active use. Teams and assignments should be reviewed before you continue.
+              This removes the department from active use. Review department membership before you continue.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="px-6 py-4">
@@ -449,34 +307,18 @@ export function DepartmentsPageShell({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Detail dialog ────────────────────────────────────────────────────── */}
-      <DepartmentDetailDialog
+      {/* ── Detail drawer ────────────────────────────────────────────────────── */}
+      <DepartmentViewDrawer
+        key={selectedDepartmentId ?? 'department-drawer'}
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         department={selectedDepartment}
-        isOpen={detailOpen}
+        isLoading={detailQuery.isLoading}
         canManage={canManageDepartments}
-        onClose={() => setDetailOpen(false)}
-        onDelete={() => {
-          setDeleteId(selectedDepartment?.id ?? null);
-          setDetailOpen(false);
-        }}
-        onCreateTeam={() => selectedDepartment && openTeamCreateDialog(selectedDepartment.id)}
-        onViewTeams={() => {
-          setDetailOpen(false);
-          setTeamsOpen(true);
-        }}
-      />
-
-      {/* ── Teams dialog ─────────────────────────────────────────────────────── */}
-      <DepartmentTeamsDialog
-        department={selectedDepartment}
-        isOpen={teamsOpen}
-        canManage={canManageDepartments}
-        members={metaQuery.data?.members ?? []}
-        memberForms={memberForms}
-        setMemberForms={setMemberForms}
-        onAssignMember={handleAssignMember}
-        onClose={() => setTeamsOpen(false)}
-        onRemoveMember={handleRemoveMember}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        allOrgMembers={metaQuery.data?.members ?? []}
+        departmentOptions={metaQuery.data?.departments ?? []}
       />
     </div>
   );

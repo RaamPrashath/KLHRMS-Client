@@ -27,11 +27,28 @@ function Avatar({
 
 function AvatarImage({
   className,
+  src,
+  onError,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+  const [hasError, setHasError] = React.useState(false)
+
+  React.useEffect(() => {
+    setHasError(false)
+  }, [src])
+
+  if (!src || hasError) {
+    return null
+  }
+
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
+      src={src}
+      onError={(event) => {
+        setHasError(true)
+        onError?.(event)
+      }}
       className={cn(
         "aspect-square size-full rounded-full object-cover",
         className

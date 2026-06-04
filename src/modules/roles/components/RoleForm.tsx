@@ -7,6 +7,7 @@ import {
   HRMS_MODULES,
   HRMS_ACTIONS,
   MODULE_SPECIFIC_ACTIONS,
+  normalizePermissionScopes,
   roleCreateSchema,
   type RoleFormValues,
 } from '@/modules/roles/schema/roleSchemas';
@@ -76,7 +77,7 @@ export function RoleForm({
     resolver: zodResolver(roleCreateSchema),
     defaultValues: {
       name: initialRole?.name ?? '',
-      permissions: initialRole?.permissions ?? buildEmptyPermissions(),
+      permissions: normalizePermissionScopes(initialRole?.permissions ?? buildEmptyPermissions()),
     },
   });
 
@@ -95,8 +96,12 @@ export function RoleForm({
   }
 
   function onSubmit(data: RoleFormValues) {
+    const normalizedData = {
+      ...data,
+      permissions: normalizePermissionScopes(data.permissions),
+    };
     if (mode === 'create') {
-      createRole.mutate(data, {
+      createRole.mutate(normalizedData, {
         onSuccess: () => {
           onSuccess?.();
           router.push(`/${orgSlug}/permissions`);
@@ -105,7 +110,7 @@ export function RoleForm({
       });
     } else if (initialRole) {
       updateRole.mutate(
-        { roleId: initialRole.id, data },
+        { roleId: initialRole.id, data: normalizedData },
         {
           onSuccess: () => {
             onSuccess?.();

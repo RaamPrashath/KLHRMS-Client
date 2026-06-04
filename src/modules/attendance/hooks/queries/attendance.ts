@@ -190,7 +190,6 @@ export function useBulkAttendanceRangeQuery(
 export function canUseBulkAttendance(createScope: PermissionScope): boolean {
   return (
     createScope === 'self' ||
-    createScope === 'team' ||
     createScope === 'department' ||
     createScope === 'organization'
   );

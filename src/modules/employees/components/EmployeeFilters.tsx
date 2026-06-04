@@ -49,9 +49,9 @@ export function EmployeeFilters({
     search || roleId || attendanceStatus;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 w-full">
       {/* Search — stretches to fill space left of the selects */}
-      <div className="relative w-full max-w-[280px]">
+      <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
         <Input
           placeholder="Who's in today?"

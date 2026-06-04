@@ -32,7 +32,6 @@ export function WorkLogDirectorySection({
   const [customDateFrom, setCustomDateFrom] = useState(today);
   const [customDateTo, setCustomDateTo] = useState(today);
   const [departmentId, setDepartmentId] = useState('');
-  const [teamId, setTeamId] = useState('');
   const [employeeName, setEmployeeName] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -55,7 +54,6 @@ export function WorkLogDirectorySection({
     date_from: dateFrom,
     date_to: dateTo,
     department_id: departmentId || undefined,
-    team_id: teamId || undefined,
     employee_name: employeeName.trim() || undefined,
     page,
     page_size: pageSize,
@@ -123,11 +121,9 @@ export function WorkLogDirectorySection({
           dateFrom={dateFrom}
           dateTo={dateTo}
           departmentId={departmentId}
-          teamId={teamId}
           employeeName={employeeName}
           employeeSuggestions={(departmentMetaQuery.data?.members ?? []).map((member) => ({ id: member.id, label: member.label }))}
           departmentOptions={(departmentMetaQuery.data?.departments ?? []).map((item) => ({ id: item.id, label: item.label }))}
-          teamOptions={[]}
           onPresetChange={(value) => {
             setPreset(value);
             setPage(1);
@@ -142,11 +138,6 @@ export function WorkLogDirectorySection({
           }}
           onDepartmentChange={(value) => {
             setDepartmentId(value);
-            setTeamId('');
-            setPage(1);
-          }}
-          onTeamChange={(value) => {
-            setTeamId(value);
             setPage(1);
           }}
           onEmployeeNameChange={(value) => {

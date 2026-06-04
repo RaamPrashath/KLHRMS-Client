@@ -3,13 +3,9 @@
 import { getHrmsApiUrl } from '@/lib/deployment-env';
 import {
   departmentSchema,
-  teamMemberSchema,
-  teamSchema,
   type DepartmentInput,
-  type TeamInput,
-  type TeamMemberInput,
 } from '@/modules/departments/schema/departmentSchemas';
-import type { DepartmentListResponse, DepartmentMetaResponse, DepartmentSummary, TeamSummary } from '@/modules/departments/types/departmentTypes';
+import type { DepartmentListResponse, DepartmentMetaResponse, DepartmentSummary } from '@/modules/departments/types/departmentTypes';
 
 function getApiUrl(): string {
   return getHrmsApiUrl();
@@ -56,16 +52,6 @@ function normalizeDepartment(data: DepartmentInput) {
     ...parsed.data,
     headMemberId: parsed.data.headMemberId || null,
     parentDepartmentId: parsed.data.parentDepartmentId || null,
-  };
-}
-
-function normalizeTeam(data: TeamInput) {
-  const parsed = teamSchema.safeParse(data);
-  if (!parsed.success) throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
-  return {
-    ...parsed.data,
-    description: parsed.data.description || null,
-    leadMemberId: parsed.data.leadMemberId || null,
   };
 }
 
@@ -133,45 +119,84 @@ export async function deleteDepartmentAction(params: { orgSlug: string; memberId
   return handleResponse<void>(res);
 }
 
-export async function createTeamAction(params: {
+export async function fetchDepartmentByIdAction(params: {
   orgSlug: string;
   memberId: string;
   departmentId: string;
-  data: TeamInput;
 }): Promise<DepartmentSummary> {
-  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/teams`, {
-    method: 'POST',
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}`, {
+    method: 'GET',
     headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify(normalizeTeam(params.data)),
+    cache: 'no-store',
   });
   return handleResponse<DepartmentSummary>(res);
 }
 
-export async function assignTeamMemberAction(params: {
+export async function addDepartmentMemberAction(params: {
   orgSlug: string;
   memberId: string;
-  teamId: string;
-  data: TeamMemberInput;
-}): Promise<TeamSummary> {
-  const parsed = teamMemberSchema.safeParse(params.data);
-  if (!parsed.success) throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
-  const res = await fetch(`${getApiUrl()}/departments/teams/${params.teamId}/members`, {
+  departmentId: string;
+  targetMemberId: string;
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/members`, {
     method: 'POST',
     headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify({ memberId: parsed.data.memberId, role: parsed.data.role || null }),
+    body: JSON.stringify({ headMemberId: params.targetMemberId }),
   });
-  return handleResponse<TeamSummary>(res);
+  return handleResponse<DepartmentSummary>(res);
 }
 
-export async function removeTeamMemberAction(params: {
+export async function bulkAssignDepartmentMembersAction(params: {
   orgSlug: string;
   memberId: string;
-  teamId: string;
+  departmentId: string;
+  memberIds: string[];
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/members/bulk`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ memberIds: params.memberIds }),
+  });
+  return handleResponse<DepartmentSummary>(res);
+}
+
+export async function removeDepartmentMemberAction(params: {
+  orgSlug: string;
+  memberId: string;
+  departmentId: string;
   targetMemberId: string;
-}): Promise<TeamSummary> {
-  const res = await fetch(`${getApiUrl()}/departments/teams/${params.teamId}/members/${params.targetMemberId}`, {
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/members/${params.targetMemberId}`, {
     method: 'DELETE',
     headers: buildHeaders(params.orgSlug, params.memberId),
   });
-  return handleResponse<TeamSummary>(res);
+  return handleResponse<DepartmentSummary>(res);
 }
+
+export async function assignDepartmentHeadAction(params: {
+  orgSlug: string;
+  memberId: string;
+  departmentId: string;
+  headMemberId: string;
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/heads`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ headMemberId: params.headMemberId }),
+  });
+  return handleResponse<DepartmentSummary>(res);
+}
+
+export async function removeDepartmentHeadAction(params: {
+  orgSlug: string;
+  memberId: string;
+  departmentId: string;
+  headMemberId: string;
+}): Promise<DepartmentSummary> {
+  const res = await fetch(`${getApiUrl()}/departments/${params.departmentId}/heads/${params.headMemberId}`, {
+    method: 'DELETE',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<DepartmentSummary>(res);
+}
+

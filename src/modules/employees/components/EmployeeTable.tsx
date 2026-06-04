@@ -19,6 +19,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { AttendanceBadge } from './AttendanceBadge';
 import { EmployeeFilters } from './EmployeeFilters';
 import { EmployeePagination } from './EmployeePagination';
@@ -52,7 +64,7 @@ interface EmployeeTableProps {
   onClearAll: () => void;
   // role editing
   canEditRole?: boolean;
-  onEditRole?: (memberId: string, currentRoleName: string | null) => void;
+  onUpdateRole?: (memberId: string, roleId: string) => Promise<void>;
   // deactivation
   onDeactivate?: (memberId: string, name: string) => void;
 }
@@ -72,7 +84,9 @@ function colWidth(id: string): string {
 }
 
 function colAlign(id: string): string {
-  return id === 'attendance' || id === 'actions' ? 'justify-end' : 'justify-start';
+  if (id === 'attendance' || id === 'source') return 'justify-center';
+  if (id === 'actions') return 'justify-end';
+  return 'justify-start';
 }
 
 function getInitials(name: string): string {
@@ -90,7 +104,8 @@ const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-
 
 function buildColumns(
   canEditRole: boolean,
-  onEditRole?: (memberId: string, currentRoleName: string | null) => void,
+  roles: EmployeeFilterOption[],
+  onUpdateRole?: (memberId: string, roleId: string) => Promise<void>,
   onDeactivate?: (memberId: string, name: string) => void,
 ): ColumnDef<EmployeeListItem>[] {
   const cols: ColumnDef<EmployeeListItem>[] = [
@@ -135,15 +150,31 @@ function buildColumns(
           ) : (
             <span className="text-neutral-400">—</span>
           )}
-          {canEditRole && onEditRole && (
-            <button
-              type="button"
-              onClick={() => onEditRole(row.original.member_id, row.original.role?.name ?? null)}
-              className="shrink-0 rounded p-0.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
-              title="Change role"
-            >
-              <Pencil className="size-3.5" />
-            </button>
+          {canEditRole && onUpdateRole && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <Select
+                    value={row.original.role?.id ?? ''}
+                    onValueChange={(value) => onUpdateRole(row.original.member_id, value)}
+                  >
+                    <SelectTrigger className="shrink-0 rounded p-0.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors border-0 bg-transparent shadow-none h-fit w-fit pr-0 pl-0 focus:ring-0 focus-visible:ring-0 focus:ring-offset-0 focus-visible:ring-offset-0 [&>svg:last-child]:hidden">
+                      <Pencil className="size-3.5" />
+                    </SelectTrigger>
+                    <SelectContent position="popper">
+                      {roles.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                Change role
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       ),
@@ -153,8 +184,8 @@ function buildColumns(
       header: 'Source',
       cell: ({ row }) => (
         row.original.microsoft_synced ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 border border-blue-200">
-            <svg className="size-3" viewBox="0 0 21 21" fill="none" aria-hidden="true">
+          <span className="inline-flex items-center justify-center gap-1.5 rounded-full bg-blue-50 text-blue-700 w-[90px] h-[24px] text-[11px] font-semibold select-none">
+            <svg className="size-3 shrink-0" viewBox="0 0 21 21" fill="none" aria-hidden="true">
               <rect x="1" y="1" width="9" height="9" fill="#f25022" />
               <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
               <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
@@ -163,7 +194,7 @@ function buildColumns(
             Microsoft
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+          <span className="inline-flex items-center justify-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 w-[90px] h-[24px] text-[11px] font-semibold select-none">
             Credentials
           </span>
         )
@@ -244,20 +275,25 @@ function EmployeeTableBody({
           key={row.id}
           className="border-black/4 transition-colors hover:bg-black/[0.02]"
         >
-          {row.getVisibleCells().map((cell) => (
-            <TableCell
-              key={cell.id}
-              className={cn(
-                colWidth(cell.column.id),
-                'px-3 py-3 whitespace-nowrap',
-                colAlign(cell.column.id) === 'justify-end' ? 'text-right' : 'text-left',
-              )}
-            >
-              <div className={cn('flex', colAlign(cell.column.id))}>
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </div>
-            </TableCell>
-          ))}
+          {row.getVisibleCells().map((cell, index) => {
+            const isFirst = index === 0;
+            const isLast = index === row.getVisibleCells().length - 1;
+            return (
+              <TableCell
+                key={cell.id}
+                className={cn(
+                  colWidth(cell.column.id),
+                  'py-3 whitespace-nowrap',
+                  isFirst ? 'pl-8 pr-3' : isLast ? 'pr-8 pl-3' : 'px-3',
+                  colAlign(cell.column.id) === 'justify-end' ? 'text-right' : colAlign(cell.column.id) === 'justify-center' ? 'text-center' : 'text-left',
+                )}
+              >
+                <div className={cn('flex', colAlign(cell.column.id))}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </div>
+              </TableCell>
+            );
+          })}
         </TableRow>
       ))}
     </ShadcnTableBody>
@@ -284,10 +320,10 @@ export function EmployeeTable({
   onAttendanceStatusChange,
   onClearAll,
   canEditRole = false,
-  onEditRole,
+  onUpdateRole,
   onDeactivate,
 }: Readonly<EmployeeTableProps>) {
-  const columns = useMemo(() => buildColumns(canEditRole, onEditRole, onDeactivate), [canEditRole, onEditRole, onDeactivate]);
+  const columns = useMemo(() => buildColumns(canEditRole, roles, onUpdateRole, onDeactivate), [canEditRole, roles, onUpdateRole, onDeactivate]);
 
   const table = useReactTable({
     data,
@@ -300,43 +336,48 @@ export function EmployeeTable({
   const columnCount = table.getAllLeafColumns().length;
 
   return (
-    <div className="flex flex-col flex-1 mx-7 mb-7">
-      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
-        {/* ── Layer 1: Top actions (filters) ──────────────────────────── */}
-        <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
-          <EmployeeFilters
-            search={search}
-            roleId={roleId}
-            attendanceStatus={attendanceStatus}
-            roles={roles}
-            onSearchChange={onSearchChange}
-            onRoleChange={onRoleChange}
-            onAttendanceStatusChange={onAttendanceStatusChange}
-            onClearAll={onClearAll}
-          />
-        </div>
+    <TooltipProvider>
+      <div className="flex flex-col flex-1 mx-7 mb-7">
+        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+          {/* ── Layer 1: Top actions (filters) ──────────────────────────── */}
+          <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
+            <EmployeeFilters
+              search={search}
+              roleId={roleId}
+              attendanceStatus={attendanceStatus}
+              roles={roles}
+              onSearchChange={onSearchChange}
+              onRoleChange={onRoleChange}
+              onAttendanceStatusChange={onAttendanceStatusChange}
+              onClearAll={onClearAll}
+            />
+          </div>
 
-        {/* ── Layer 2 & 3: Table (Flex) ─────────────────────────────────────────── */}
-        <div className="w-full">
-          <div className="px-4">
+          {/* ── Layer 2 & 3: Table (Flex) ─────────────────────────────────────────── */}
+          <div className="w-full">
             <Table className="table-fixed">
               <TableHeader className="bg-canvas/50">
                 {table.getHeaderGroups().map((hg) => (
                   <TableRow key={hg.id} className="border-black/[0.04] hover:bg-transparent">
-                    {hg.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className={cn(
-                          colWidth(header.id),
-                          'h-auto px-3 py-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
-                          colAlign(header.id) === 'justify-end' ? 'text-right' : 'text-left',
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? ''
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
+                    {hg.headers.map((header, index) => {
+                      const isFirst = index === 0;
+                      const isLast = index === hg.headers.length - 1;
+                      return (
+                        <TableHead
+                          key={header.id}
+                          className={cn(
+                            colWidth(header.id),
+                            'h-auto py-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
+                            isFirst ? 'pl-8 pr-3' : isLast ? 'pr-8 pl-3' : 'px-3',
+                            colAlign(header.id) === 'justify-end' ? 'text-right' : colAlign(header.id) === 'justify-center' ? 'text-center' : 'text-left',
+                          )}
+                        >
+                          {header.isPlaceholder
+                            ? ''
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      );
+                    })}
                   </TableRow>
                 ))}
               </TableHeader>
@@ -349,22 +390,22 @@ export function EmployeeTable({
               />
             </Table>
           </div>
-        </div>
 
-        {/* ── Pagination (below body) ────────────────────────── */}
-        {!isLoading && total > 0 && (
-          <div className="px-8 py-6 mt-auto border-t border-black/[0.04] bg-surface">
-            <EmployeePagination
-              page={page}
-              totalPages={totalPages}
-              total={total}
-              pageSize={pageSize}
-              onPageChange={onPageChange}
-              onPageSizeChange={onPageSizeChange}
-            />
-          </div>
-        )}
+          {/* ── Pagination (below body) ────────────────────────── */}
+          {!isLoading && total > 0 && (
+            <div className="px-8 py-6 mt-auto border-t border-black/[0.04] bg-surface">
+              <EmployeePagination
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                pageSize={pageSize}
+                onPageChange={onPageChange}
+                onPageSizeChange={onPageSizeChange}
+              />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

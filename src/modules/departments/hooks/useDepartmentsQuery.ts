@@ -1,8 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchDepartmentMetaAction, fetchDepartmentsAction } from '@/modules/departments/api/departmentServerActions';
-import type { DepartmentListResponse, DepartmentMetaResponse } from '@/modules/departments/types/departmentTypes';
+import { fetchDepartmentByIdAction, fetchDepartmentMetaAction, fetchDepartmentsAction } from '@/modules/departments/api/departmentServerActions';
+import type { DepartmentListResponse, DepartmentMetaResponse, DepartmentSummary } from '@/modules/departments/types/departmentTypes';
 
 export interface DepartmentFiltersInput {
   search?: string;
@@ -23,7 +23,7 @@ export function useDepartmentsQuery(orgSlug: string, memberId: string, filters: 
   });
 }
 
-export function useDepartmentMetaQuery(orgSlug: string, memberId: string, enabled: boolean) {
+export function useDepartmentMetaQuery(orgSlug: string, memberId: string, enabled: boolean = true) {
   return useQuery<DepartmentMetaResponse, Error>({
     queryKey: ['departments-meta', orgSlug],
     queryFn: () => fetchDepartmentMetaAction({ orgSlug, memberId }),
@@ -31,5 +31,15 @@ export function useDepartmentMetaQuery(orgSlug: string, memberId: string, enable
     staleTime: 300_000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+  });
+}
+
+export function useDepartmentDetailQuery(orgSlug: string, memberId: string, departmentId: string | null) {
+  return useQuery<DepartmentSummary, Error>({
+    queryKey: ['department', orgSlug, departmentId],
+    queryFn: () => fetchDepartmentByIdAction({ orgSlug, memberId, departmentId: departmentId! }),
+    enabled: !!orgSlug && !!memberId && !!departmentId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 }

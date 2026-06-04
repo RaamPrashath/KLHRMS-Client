@@ -75,25 +75,25 @@ export function createEmployeePermissions(): RolePermissions {
 }
 
 /**
- * Team Lead role — can manage their team members.
+ * Department Lead role - can manage department members.
  */
-export function createTeamLeadPermissions(): RolePermissions {
+export function createDepartmentLeadPermissions(): RolePermissions {
   const permissions = createEmployeePermissions();
   
-  // Upgrade to team scope for key modules
-  permissions.employees.view = 'team';
+  // Upgrade to department scope for key modules
+  permissions.employees.view = 'department';
   
-  permissions.attendance.view = 'team';
-  permissions.leaves.view = 'team';
-  permissions.leaves.approve = 'team'; // Can approve team leave requests
+  permissions.attendance.view = 'department';
+  permissions.leaves.view = 'department';
+  permissions.leaves.approve = 'department';
   
-  permissions.timesheet.view = 'team';
-  permissions.weeklyPlan.view = 'team';
+  permissions.timesheet.view = 'department';
+  permissions.weeklyPlan.view = 'department';
   
   permissions.performance = {
-    view: 'team',
-    create: 'team',
-    edit: 'team',
+    view: 'department',
+    create: 'department',
+    edit: 'department',
     delete: 'none',
   };
   
@@ -104,7 +104,7 @@ export function createTeamLeadPermissions(): RolePermissions {
  * Department Manager role — can manage their department.
  */
 export function createDepartmentManagerPermissions(): RolePermissions {
-  const permissions = createTeamLeadPermissions();
+  const permissions = createDepartmentLeadPermissions();
   
   // Upgrade to department scope
   permissions.employees.view = 'department';
@@ -351,9 +351,9 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
     permissions: createEmployeePermissions(),
   },
   {
-    name: 'Team Lead',
-    description: 'Can manage team members and approve team leave requests',
-    permissions: createTeamLeadPermissions(),
+    name: 'Department Lead',
+    description: 'Can manage department members and approve department leave requests',
+    permissions: createDepartmentLeadPermissions(),
   },
   {
     name: 'Department Manager',

@@ -52,10 +52,9 @@ const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-
 
 function colWidth(id: string): string {
   const map: Record<string, string> = {
-    project: 'w-[28%]',
-    client: 'w-[22%]',
-    team: 'w-[20%]',
-    people: 'w-[10%]',
+    project: 'w-[36%]',
+    client: 'w-[28%]',
+    people: 'w-[16%]',
     status: 'w-[14%]',
     actions: 'w-[6%]',
   };
@@ -63,7 +62,7 @@ function colWidth(id: string): string {
 }
 
 function colAlign(id: string): string {
-  return id === 'project' || id === 'client' || id === 'team' ? 'justify-start' : 'justify-center';
+  return id === 'project' || id === 'client' ? 'justify-start' : 'justify-center';
 }
 
 const columns: ColumnDef<ProjectSummary>[] = [
@@ -82,15 +81,6 @@ const columns: ColumnDef<ProjectSummary>[] = [
     cell: ({ row }) => (
       <span className="block truncate text-sm text-neutral-700">
         {row.original.clientName || 'Internal'}
-      </span>
-    ),
-  },
-  {
-    id: 'team',
-    header: 'Team',
-    cell: ({ row }) => (
-      <span className="block truncate text-sm text-neutral-700">
-        {row.original.teamName || 'Not linked'}
       </span>
     ),
   },
@@ -171,7 +161,7 @@ function ProjectsTableBody({
                 className={cn(
                   colWidth(cell.column.id),
                   'px-3 py-3 whitespace-nowrap',
-                  cell.column.id === 'project' || cell.column.id === 'client' || cell.column.id === 'team'
+                  cell.column.id === 'project' || cell.column.id === 'client'
                     ? 'text-left'
                     : 'text-center',
                 )}
@@ -255,7 +245,7 @@ export function ProjectsTable({
                         className={cn(
                           colWidth(header.id),
                           'h-auto px-3 py-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
-                          header.id === 'project' || header.id === 'client' || header.id === 'team'
+                          header.id === 'project' || header.id === 'client'
                             ? 'text-left'
                             : 'text-center',
                         )}

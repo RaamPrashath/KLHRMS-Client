@@ -2,7 +2,7 @@
 
 export type AttendanceStatus = 'PRESENT' | 'HALF_DAY' | 'ABSENT';
 export type ClockStatus = 'CLOCKED_IN' | 'CLOCKED_OUT' | 'NO_RECORD';
-export type PermissionScope = 'none' | 'self' | 'team' | 'department' | 'organization';
+export type PermissionScope = 'none' | 'self' | 'department' | 'organization';
 export type AttendanceWorkLocation = 'OFFICE' | 'REMOTE';
 
 export interface AttendanceRecord {

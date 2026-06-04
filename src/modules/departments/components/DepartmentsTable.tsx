@@ -51,11 +51,10 @@ const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-
 
 function colWidth(id: string): string {
   const map: Record<string, string> = {
-    department: 'w-[28%]',
-    lead: 'w-[22%]',
-    teams: 'w-[10%]',
-    people: 'w-[10%]',
-    projects: 'w-[10%]',
+    department: 'w-[34%]',
+    lead: 'w-[26%]',
+    people: 'w-[14%]',
+    projects: 'w-[14%]',
     status: 'w-[14%]',
     actions: 'w-[6%]',
   };
@@ -82,15 +81,6 @@ const columns: ColumnDef<DepartmentSummary>[] = [
     cell: ({ row }) => (
       <span className="block truncate text-sm text-neutral-700">
         {row.original.headMemberName || 'Not assigned'}
-      </span>
-    ),
-  },
-  {
-    id: 'teams',
-    header: 'Teams',
-    cell: ({ row }) => (
-      <span className="text-sm font-medium text-neutral-900">
-        {row.original.teamCount}
       </span>
     ),
   },
