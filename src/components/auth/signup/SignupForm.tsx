@@ -5,13 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import NeumorphButton from "@/components/ui/neumorph-button";
-import { Input } from "@/components/ui/input";
-import { Field, FieldLabel, FieldError } from "@/components/ui/field";
-import { AuthHeader } from "@/components/auth/shared/AuthHeader";
-import { AuthDivider } from "@/components/auth/shared/AuthDivider";
-import { AuthFooterLink } from "@/components/auth/shared/AuthFooterLink";
-import { SocialButtons } from "@/components/auth/shared/SocialButtons";
 import { PasswordInput } from "@/components/auth/shared/PasswordInput";
 import { PasswordRules } from "@/components/auth/shared/PasswordRules";
 import { signupSchema, type SignupInput } from "@/lib/schemas/auth";
@@ -20,6 +13,7 @@ import { authClient } from "@/lib/auth-client";
 export function SignupForm() {
     const router = useRouter();
     const [formError, setFormError] = useState<string | null>(null);
+    const [oauthLoading, setOauthLoading] = useState(false);
     const [passwordValue, setPasswordValue] = useState("");
     const emailRef = useRef<HTMLInputElement>(null);
     const passwordRef = useRef<HTMLInputElement>(null);
@@ -67,7 +61,6 @@ export function SignupForm() {
             });
 
             if (result.error) {
-                // Provide specific, actionable error messages
                 const errorMessages: Record<string, string> = {
                     "USER_ALREADY_EXISTS": "An account with this email already exists. Try signing in instead.",
                     "WEAK_PASSWORD": "This password is too weak. Please use a stronger password with at least 8 characters, including uppercase, lowercase, numbers, and symbols.",
@@ -88,129 +81,184 @@ export function SignupForm() {
             });
 
             router.replace(`/verify-email?email=${encodeURIComponent(data.email)}`);
-        } catch (error) {
+        } catch {
             setFormError(
                 "Unable to connect to the server. Please check your internet connection and try again."
             );
         }
     };
 
+    const handleMicrosoftLogin = async () => {
+        setOauthLoading(true);
+        setFormError(null);
+        try {
+            await authClient.signOut();
+            const result = await authClient.signIn.social({
+                provider: "microsoft",
+                callbackURL: "/post-auth",
+            });
+            if (result.error) {
+                throw new Error(result.error.message ?? "Microsoft login failed");
+            }
+        } catch (error) {
+            setFormError(error instanceof Error ? error.message : "Microsoft login failed");
+        } finally {
+            setOauthLoading(false);
+        }
+    };
+
     return (
-        <div className="w-full">
-            <AuthHeader
-                title="Create an account"
-                subtitle="Join Kovan Labs to start managing your team."
-            />
-
-            <SocialButtons onError={setFormError} />
-
-            <AuthDivider className="my-5" />
-
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4" aria-label="Sign up form">
-                {/* Error Summary */}
-                {(formError || Object.keys(errors).length > 0) && (
-                    <div
-                        role="alert"
-                        aria-live="polite"
-                        className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive animate-in fade-in zoom-in-95 duration-200"
-                    >
-                        {formError ? (
-                            formError
-                        ) : (
-                            <div>
-                                <p className="font-semibold mb-1">Please fix the following:</p>
-                                <ul className="list-disc list-inside space-y-0.5 opacity-90">
-                                    {errors.email && <li>Email: {errors.email.message}</li>}
-                                    {errors.password && <li>Password: {errors.password.message}</li>}
-                                    {errors.confirmPassword && <li>Confirm: {errors.confirmPassword.message}</li>}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div className="space-y-3.5">
-                    <Field>
-                        <FieldLabel htmlFor="signup-email">Email address</FieldLabel>
-                        <Input
-                            id="signup-email"
-                            type="email"
-                            placeholder="name@company.com"
-                            autoComplete="email"
-                            aria-invalid={!!errors.email}
-                            className="h-11 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
-                            {...register("email")}
-                            ref={(e) => {
-                                register("email").ref(e);
-                                emailRef.current = e;
-                            }}
-                        />
-                        {errors.email && <FieldError id="signup-email-error">{errors.email.message}</FieldError>}
-                    </Field>
-
-                    <Field>
-                        <FieldLabel htmlFor="signup-password">Password</FieldLabel>
-                        <PasswordInput
-                            id="signup-password"
-                            placeholder="••••••••"
-                            autoComplete="new-password"
-                            aria-invalid={!!errors.password}
-                            className="h-11 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
-                            showGenerator
-                            value={passwordValue}
-                            onChange={handlePasswordChange}
-                            onGenerate={handleGeneratePassword}
-                            ref={(e) => {
-                                passwordRef.current = e;
-                            }}
-                        />
-                        {errors.password && <FieldError id="signup-password-error">{errors.password.message}</FieldError>}
-                        {passwordValue.length > 0 ? (
-                            <div className="pt-1.5">
-                                <PasswordRules password={passwordValue} />
-                            </div>
-                        ) : null}
-                    </Field>
-
-                    <Field>
-                        <FieldLabel htmlFor="signup-confirm-password">Confirm password</FieldLabel>
-                        <PasswordInput
-                            id="signup-confirm-password"
-                            placeholder="••••••••"
-                            autoComplete="new-password"
-                            aria-invalid={!!errors.confirmPassword}
-                            className="h-11 rounded-xl border-border bg-secondary/50 focus:bg-white transition-all duration-200"
-                            {...register("confirmPassword")}
-                        />
-                        {errors.confirmPassword && (
-                            <FieldError id="signup-confirm-password-error">{errors.confirmPassword.message}</FieldError>
-                        )}
-                    </Field>
-                </div>
-
-                <NeumorphButton
-                    type="submit"
-                    intent="primary"
-                    fullWidth
-                    loading={isSubmitting}
-                    className="mt-5"
-                    aria-busy={isSubmitting}
-                >
-                    Create account
-                </NeumorphButton>
-            </form>
-
-            <div className="mt-8 text-center">
-                <AuthFooterLink
-                    text="Already have an account?"
-                    linkText="Sign in"
-                    href="/login"
-                />
+        <div className="w-full flex flex-col pt-6">
+            {/* Brand Logo */}
+            <div className="brand-logo-container">
+                <img src="/kovan-logo.svg" alt="Kovan Labs Logo" className="login-logo" />
             </div>
 
-            <div className="mt-3 text-center text-sm text-muted-foreground">
+            {/* Header */}
+            <div className="login-header">
+                <h2>Create an account</h2>
+                <p>Join Kovan Labs to start managing your team.</p>
+            </div>
+
+            {/* Form Error Summaries */}
+            {(formError || Object.keys(errors).length > 0) && (
+                <div
+                    role="alert"
+                    aria-live="polite"
+                    className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-4 animate-in fade-in zoom-in-95 duration-200"
+                >
+                    {formError ? (
+                        formError
+                        ) : (
+                        <div>
+                            <p className="font-semibold mb-1">Please fix the following:</p>
+                            <ul className="list-disc list-inside space-y-0.5 opacity-90">
+                                {errors.email && <li>Email: {errors.email.message}</li>}
+                                {errors.password && <li>Password: {errors.password.message}</li>}
+                                {errors.confirmPassword && <li>Confirm: {errors.confirmPassword.message}</li>}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Microsoft OAuth Button */}
+            <button
+                type="button"
+                className="btn-oauth-ms"
+                id="btn-ms-login"
+                onClick={handleMicrosoftLogin}
+                disabled={oauthLoading || isSubmitting}
+            >
+                {oauthLoading ? (
+                    <span className="size-4 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" aria-hidden="true" />
+                ) : (
+                    <svg className="ms-logo" viewBox="0 0 23 23" width="16" height="16">
+                        <rect x="0" y="0" width="10" height="10" fill="#F25022"/>
+                        <rect x="11" y="0" width="10" height="10" fill="#7FBA00"/>
+                        <rect x="0" y="11" width="10" height="10" fill="#00A4EF"/>
+                        <rect x="11" y="11" width="10" height="10" fill="#FFB900"/>
+                    </svg>
+                )}
+                <span>{oauthLoading ? "Connecting..." : "Continue with Microsoft"}</span>
+            </button>
+
+            {/* Divider */}
+            <div className="divider">
+                or sign up with email
+            </div>
+
+            {/* Credentials Form */}
+            <form
+                onSubmit={handleSubmit(onSubmit)}
+                noValidate
+                className="login-form"
+                aria-label="Sign up form"
+            >
+                {/* Email Input */}
+                <div className="form-group">
+                    <label className="form-label" htmlFor="signup-email">Email address</label>
+                    <input
+                        id="signup-email"
+                        className="form-input"
+                        type="email"
+                        placeholder="name@company.com"
+                        autoComplete="email"
+                        aria-invalid={!!errors.email}
+                        {...register("email")}
+                        ref={(e) => {
+                            register("email").ref(e);
+                            emailRef.current = e;
+                        }}
+                    />
+                    {errors.email && (
+                        <span className="text-xs text-red-500 mt-1 font-medium">{errors.email.message}</span>
+                    )}
+                </div>
+
+                {/* Password Input */}
+                <div className="form-group">
+                    <label className="form-label" htmlFor="signup-password">Password</label>
+                    <PasswordInput
+                        id="signup-password"
+                        placeholder="••••••••"
+                        autoComplete="new-password"
+                        aria-invalid={!!errors.password}
+                        showGenerator
+                        value={passwordValue}
+                        onChange={handlePasswordChange}
+                        onGenerate={handleGeneratePassword}
+                        ref={(e) => {
+                            passwordRef.current = e;
+                        }}
+                    />
+                    {errors.password && (
+                        <span className="text-xs text-red-500 mt-1 font-medium">{errors.password.message}</span>
+                    )}
+                    {passwordValue.length > 0 && (
+                        <div className="pt-1.5">
+                            <PasswordRules password={passwordValue} />
+                        </div>
+                    )}
+                </div>
+
+                {/* Confirm Password Input */}
+                <div className="form-group">
+                    <label className="form-label" htmlFor="signup-confirm-password">Confirm password</label>
+                    <PasswordInput
+                        id="signup-confirm-password"
+                        placeholder="••••••••"
+                        autoComplete="new-password"
+                        aria-invalid={!!errors.confirmPassword}
+                        {...register("confirmPassword")}
+                        ref={(e) => {
+                            confirmPasswordRef.current = e;
+                        }}
+                    />
+                    {errors.confirmPassword && (
+                        <span className="text-xs text-red-500 mt-1 font-medium">{errors.confirmPassword.message}</span>
+                    )}
+                </div>
+
+                {/* Submit Button */}
+                <button
+                    type="submit"
+                    className="btn-submit mt-4"
+                    id="btn-signup-submit"
+                    disabled={isSubmitting || oauthLoading}
+                >
+                    {isSubmitting ? "Creating account..." : "Create account"}
+                </button>
+            </form>
+
+            {/* Footer */}
+            <div className="login-footer mt-8">
+                Already have an account? <Link href="/login" id="link-signin">Sign in</Link>
+            </div>
+
+            <div className="mt-3 text-center text-xs text-muted-foreground">
                 Applying for a job?{" "}
-                <Link href="/careers" className="font-medium text-primary underline-offset-4 hover:underline">
+                <Link href="/careers" className="font-medium text-primary hover:underline underline-offset-4">
                     View careers
                 </Link>
             </div>

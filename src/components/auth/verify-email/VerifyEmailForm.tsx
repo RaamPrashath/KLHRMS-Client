@@ -4,10 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Field, FieldLabel, FieldError } from "@/components/ui/field";
-import { AuthHeader } from "@/components/auth/shared/AuthHeader";
 import { verifyEmailSchema, type VerifyEmailInput } from "@/lib/schemas/auth";
 import { authClient } from "@/lib/auth-client";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
@@ -90,88 +88,113 @@ export function VerifyEmailForm() {
     };
 
     return (
-        <div className="w-full">
-            <AuthHeader
-                title="Check your email"
-                subtitle={
-                    email
+        <div className="w-full flex flex-col pt-6">
+            {/* Brand Logo */}
+            <div className="brand-logo-container">
+                <img src="/kovan-logo.svg" alt="Kovan Labs Logo" className="login-logo" />
+            </div>
+
+            {/* Header */}
+            <div className="login-header">
+                <h2>Check your email</h2>
+                <p>
+                    {email
                         ? `We sent a 6-digit code to ${email}`
-                        : "We sent a 6-digit verification code to your email"
-                }
-            />
+                        : "We sent a 6-digit verification code to your email"}
+                </p>
+            </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
-                {formError && (
-                    <div
-                        role="alert"
-                        className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
-                    >
-                        {formError}
+            {/* Error/Status Displays */}
+            {formError && (
+                <div
+                    role="alert"
+                    className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-4 animate-in fade-in zoom-in-95 duration-200"
+                >
+                    {formError}
+                </div>
+            )}
+
+            {resendSuccess && (
+                <div
+                    role="status"
+                    className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 mb-4 animate-in"
+                >
+                    A new code has been sent to your email.
+                </div>
+            )}
+
+            {/* Credentials Form */}
+            <form
+                onSubmit={handleSubmit(onSubmit)}
+                noValidate
+                className="login-form"
+            >
+                {/* OTP input field group */}
+                <div className="form-group">
+                    <label className="form-label mb-2" htmlFor="otp">Verification code</label>
+                    <div className="flex justify-start">
+                        <Controller
+                            name="otp"
+                            control={control}
+                            render={({ field }) => (
+                                <InputOTP
+                                    id="otp"
+                                    maxLength={6}
+                                    pattern={REGEXP_ONLY_DIGITS}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    aria-invalid={!!errors.otp}
+                                >
+                                    <InputOTPGroup className="gap-2">
+                                        <InputOTPSlot index={0} className="h-12 w-12 border-border text-lg font-medium rounded-lg" />
+                                        <InputOTPSlot index={1} className="h-12 w-12 border-border text-lg font-medium rounded-lg" />
+                                        <InputOTPSlot index={2} className="h-12 w-12 border-border text-lg font-medium rounded-lg" />
+                                        <InputOTPSlot index={3} className="h-12 w-12 border-border text-lg font-medium rounded-lg" />
+                                        <InputOTPSlot index={4} className="h-12 w-12 border-border text-lg font-medium rounded-lg" />
+                                        <InputOTPSlot index={5} className="h-12 w-12 border-border text-lg font-medium rounded-lg" />
+                                    </InputOTPGroup>
+                                </InputOTP>
+                            )}
+                        />
                     </div>
-                )}
+                    {errors.otp && (
+                        <span className="text-xs text-red-500 mt-2 font-medium">{errors.otp.message}</span>
+                    )}
+                </div>
 
-                {resendSuccess && (
-                    <div
-                        role="status"
-                        className="rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400"
-                    >
-                        A new code has been sent to your email.
-                    </div>
-                )}
-
-                <Field>
-                    <FieldLabel htmlFor="otp">Verification code</FieldLabel>
-                    <Controller
-                        name="otp"
-                        control={control}
-                        render={({ field }) => (
-                            <InputOTP
-                                id="otp"
-                                maxLength={6}
-                                pattern={REGEXP_ONLY_DIGITS}
-                                value={field.value}
-                                onChange={field.onChange}
-                                aria-invalid={!!errors.otp}
-                            >
-                                <InputOTPGroup>
-                                    <InputOTPSlot index={0} />
-                                    <InputOTPSlot index={1} />
-                                    <InputOTPSlot index={2} />
-                                    <InputOTPSlot index={3} />
-                                    <InputOTPSlot index={4} />
-                                    <InputOTPSlot index={5} />
-                                </InputOTPGroup>
-                            </InputOTP>
-                        )}
-                    />
-                    {errors.otp && <FieldError>{errors.otp.message}</FieldError>}
-                </Field>
-
-                <Button
+                {/* Submit Button */}
+                <button
                     type="submit"
-                    className="w-full"
+                    className="btn-submit mt-4"
+                    id="btn-verify-submit"
                     disabled={isSubmitting}
                 >
                     {isSubmitting ? "Verifying..." : "Verify email"}
-                </Button>
+                </button>
             </form>
 
-            <div className="mt-5 text-center">
-                <p className="text-sm text-muted-foreground">
-                    Didn&apos;t receive the code?{" "}
-                    <button
-                        type="button"
-                        onClick={handleResend}
-                        disabled={resendCooldown > 0 || resendLoading || !email}
-                        className="font-medium text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        {resendLoading
-                            ? "Sending..."
-                            : resendCooldown > 0
-                              ? `Resend in ${resendCooldown}s`
-                              : "Resend code"}
-                    </button>
-                </p>
+            {/* Footer */}
+            <div className="login-footer mt-8">
+                Didn&apos;t receive the code?{" "}
+                <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendCooldown > 0 || resendLoading || !email}
+                    className="font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    {resendLoading
+                        ? "Sending..."
+                        : resendCooldown > 0
+                          ? `Resend in ${resendCooldown}s`
+                          : "Resend code"}
+                </button>
+            </div>
+
+            <div className="mt-3 text-center text-xs text-muted-foreground">
+                Wrong email address?{" "}
+                <Link href="/signup" className="font-medium text-primary hover:underline">
+                    Change email
+                </Link>
             </div>
         </div>
     );
