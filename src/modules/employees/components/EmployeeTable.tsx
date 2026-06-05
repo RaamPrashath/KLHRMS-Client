@@ -7,8 +7,9 @@ import {
   type ColumnDef,
   type Row,
 } from '@tanstack/react-table';
+import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
-import { Pencil, UserX } from 'lucide-react';
+import { ChevronRight, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -31,7 +32,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { AttendanceBadge } from './AttendanceBadge';
 import { EmployeeFilters } from './EmployeeFilters';
 import { EmployeePagination } from './EmployeePagination';
 import type {
@@ -59,33 +59,32 @@ interface EmployeeTableProps {
   attendanceStatus: AttendanceTodayStatus | undefined;
   roles: EmployeeFilterOption[];
   onSearchChange: (value: string) => void;
+  onClearSearch: () => void;
   onRoleChange: (value: string | undefined) => void;
   onAttendanceStatusChange: (value: AttendanceTodayStatus | undefined) => void;
   onClearAll: () => void;
-  // role editing
+  // role editing (inline)
   canEditRole?: boolean;
   onUpdateRole?: (memberId: string, roleId: string) => Promise<void>;
-  // deactivation
-  onDeactivate?: (memberId: string, name: string) => void;
+  // navigation
+  orgSlug?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function colWidth(id: string): string {
   const map: Record<string, string> = {
-    employee: 'w-[26%]',
-    email: 'w-[24%]',
-    role: 'w-[16%]',
+    employee: 'w-[28%]',
+    email: 'w-[26%]',
+    role: 'w-[18%]',
     source: 'w-[12%]',
-    attendance: 'w-[14%]',
-    actions: 'w-[8%]',
+    details: 'w-[8%]',
   };
   return map[id] ?? 'w-[120px]';
 }
 
 function colAlign(id: string): string {
-  if (id === 'attendance' || id === 'source') return 'justify-center';
-  if (id === 'actions') return 'justify-end';
+  if (id === 'source' || id === 'details') return 'justify-center';
   return 'justify-start';
 }
 
@@ -105,16 +104,17 @@ const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-
 function buildColumns(
   canEditRole: boolean,
   roles: EmployeeFilterOption[],
+  orgSlug: string | undefined,
   onUpdateRole?: (memberId: string, roleId: string) => Promise<void>,
-  onDeactivate?: (memberId: string, name: string) => void,
 ): ColumnDef<EmployeeListItem>[] {
   const cols: ColumnDef<EmployeeListItem>[] = [
     {
       id: 'employee',
       header: 'Name',
       cell: ({ row }) => {
-        const { name, email, image } = row.original;
-        return (
+        const { name, image, job_title, department } = row.original;
+        const subtitle = [job_title, department].filter(Boolean).join(' · ');
+        const content = (
           <div className="flex min-w-0 items-center gap-3">
             <Avatar className="size-8 shrink-0">
               <AvatarImage src={image ?? undefined} alt={name} />
@@ -122,27 +122,49 @@ function buildColumns(
                 {getInitials(name)}
               </AvatarFallback>
             </Avatar>
-            <p className="min-w-0 truncate text-sm font-medium text-neutral-900" title={name}>
-              {name}
-            </p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-neutral-900" title={name}>
+                {name}
+              </p>
+              {subtitle ? (
+                <p className="truncate text-xs text-neutral-500" title={subtitle}>
+                  {subtitle}
+                </p>
+              ) : null}
+            </div>
           </div>
         );
+        return content;
       },
     },
     {
       id: 'email',
       header: 'Email',
       cell: ({ row }) => (
-        <span className="block truncate text-sm text-neutral-700" title={row.original.email}>
-          {row.original.email}
-        </span>
+        <div className="min-w-0">
+          <span className="block truncate text-sm text-neutral-700" title={row.original.email}>
+            {row.original.email}
+          </span>
+          {row.original.user_principal_name &&
+          row.original.user_principal_name !== row.original.email ? (
+            <span
+              className="block truncate text-xs text-neutral-500"
+              title={row.original.user_principal_name}
+            >
+              {row.original.user_principal_name}
+            </span>
+          ) : null}
+        </div>
       ),
     },
     {
       id: 'role',
       header: 'Role',
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-2"
+          onClick={(event) => event.stopPropagation()}
+        >
           {row.original.role ? (
             <span className="truncate text-sm text-neutral-700" title={row.original.role.name}>
               {row.original.role.name}
@@ -201,30 +223,15 @@ function buildColumns(
       ),
     },
     {
-      id: 'attendance',
-      header: "Today's Attendance",
-      cell: ({ row }) => (
-        <AttendanceBadge status={row.original.attendance_today.status} />
+      id: 'details',
+      header: '',
+      cell: () => (
+        <span className="inline-flex items-center justify-center rounded-full border border-neutral-200 bg-white p-1 text-neutral-400 transition-colors group-hover/employee-row:border-neutral-300 group-hover/employee-row:text-neutral-700">
+          <ChevronRight className="size-4" />
+        </span>
       ),
     },
   ];
-
-  if (onDeactivate) {
-    cols.push({
-      id: 'actions',
-      header: '',
-      cell: ({ row }) => (
-        <button
-          type="button"
-          onClick={() => onDeactivate(row.original.member_id, row.original.name)}
-          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-medium text-red-600 hover:bg-red-50 transition-colors"
-          title="Deactivate employee"
-        >
-          <UserX className="size-3.5" />
-        </button>
-      ),
-    });
-  }
 
   return cols;
 }
@@ -234,6 +241,8 @@ interface EmployeeTableBodyProps {
   rows: Row<EmployeeListItem>[];
   pageSize: number;
   columnCount: number;
+  clickableRows: boolean;
+  onRowClick: (memberId: string) => void;
 }
 
 function EmployeeTableBody({
@@ -241,6 +250,8 @@ function EmployeeTableBody({
   rows,
   pageSize,
   columnCount,
+  clickableRows,
+  onRowClick,
 }: Readonly<EmployeeTableBodyProps>) {
   if (isLoading) {
     return (
@@ -273,7 +284,13 @@ function EmployeeTableBody({
       {rows.map((row) => (
         <TableRow
           key={row.id}
-          className="border-black/4 transition-colors hover:bg-black/[0.02]"
+          className={cn(
+            'group/employee-row border-black/4 transition-colors',
+            clickableRows && 'cursor-pointer hover:bg-black/[0.02]',
+          )}
+          onClick={() => {
+            if (clickableRows) onRowClick(row.original.member_id);
+          }}
         >
           {row.getVisibleCells().map((cell, index) => {
             const isFirst = index === 0;
@@ -316,14 +333,19 @@ export function EmployeeTable({
   attendanceStatus,
   roles,
   onSearchChange,
+  onClearSearch,
   onRoleChange,
   onAttendanceStatusChange,
   onClearAll,
   canEditRole = false,
   onUpdateRole,
-  onDeactivate,
+  orgSlug,
 }: Readonly<EmployeeTableProps>) {
-  const columns = useMemo(() => buildColumns(canEditRole, roles, onUpdateRole, onDeactivate), [canEditRole, roles, onUpdateRole, onDeactivate]);
+  const router = useRouter();
+  const columns = useMemo(
+    () => buildColumns(canEditRole, roles, orgSlug, onUpdateRole),
+    [canEditRole, roles, orgSlug, onUpdateRole],
+  );
 
   const table = useReactTable({
     data,
@@ -334,6 +356,7 @@ export function EmployeeTable({
   });
 
   const columnCount = table.getAllLeafColumns().length;
+  const clickableRows = !!orgSlug;
 
   return (
     <TooltipProvider>
@@ -347,6 +370,7 @@ export function EmployeeTable({
               attendanceStatus={attendanceStatus}
               roles={roles}
               onSearchChange={onSearchChange}
+              onClearSearch={onClearSearch}
               onRoleChange={onRoleChange}
               onAttendanceStatusChange={onAttendanceStatusChange}
               onClearAll={onClearAll}
@@ -387,6 +411,11 @@ export function EmployeeTable({
                 rows={table.getRowModel().rows}
                 pageSize={pageSize}
                 columnCount={columnCount}
+                clickableRows={clickableRows}
+                onRowClick={(memberId) => {
+                  if (!orgSlug) return;
+                  router.push(`/${orgSlug}/employees/${memberId}`);
+                }}
               />
             </Table>
           </div>

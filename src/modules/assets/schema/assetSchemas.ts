@@ -63,6 +63,7 @@ export const operationalCriticalityTierOptions = [
 export const assetReplacementModeOptions = [
   'PERMANENT_REPLACEMENT',
   'TEMPORARY_BACKUP',
+  'ANY_AVAILABLE',
 ] as const;
 
 export const assetReportTypeOptions = [
@@ -101,7 +102,6 @@ export const bulkAssetCreateSchema = z.object({
   name: z.string().trim().min(1, 'Asset name is required').max(255),
   categoryDefinitionId: z.string().optional().nullable(),
   brand: z.string().trim().max(120).optional().or(z.literal('')).nullable(),
-  model: z.string().trim().max(120).optional().or(z.literal('')).nullable(),
   condition: z.enum(assetConditionOptions),
   location: optionalTrimmedString(160),
   serialNumbers: z.array(z.string().trim().min(1, 'Serial number cannot be empty')).min(1, 'At least one serial number is required'),

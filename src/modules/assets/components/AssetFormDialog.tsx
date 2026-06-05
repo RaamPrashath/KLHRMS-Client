@@ -104,7 +104,6 @@ export function AssetFormDialog({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [assetCode, setAssetCode] = useState('');
   const [brand, setBrand] = useState('');
-  const [model, setModel] = useState('');
   const [condition, setCondition] = useState<AssetCondition>('GOOD');
   const [location, setLocation] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -177,7 +176,6 @@ export function AssetFormDialog({
       name: assetName.trim(),
       categoryDefinitionId: selectedCategoryId,
       brand: brand.trim() || null,
-      model: model.trim() || null,
       condition,
       location,
       serialNumbers: serials.filter((s) => s.trim()),
@@ -193,7 +191,6 @@ export function AssetFormDialog({
     setSelectedCategoryId(null);
     setAssetCode('');
     setBrand('');
-    setModel('');
     setCondition('GOOD');
     setLocation('');
     setQuantity(1);
@@ -312,7 +309,6 @@ export function AssetFormDialog({
                         </div>
                       )}
                       <InputField label="Brand" value={brand} onChange={(v) => setBrand(v)} placeholder="e.g. Dell, HP, Lenovo" />
-                      <InputField label="Model" value={model} onChange={(v) => setModel(v)} placeholder="e.g. ThinkPad X1 Carbon" />
                     </div>
                   </div>
 

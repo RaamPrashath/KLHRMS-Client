@@ -53,6 +53,7 @@ export function ClockOutConfirmDialog({
   error,
 }: Readonly<ClockOutConfirmDialogProps>) {
   const shouldAskForWorkSummary = !existingWorkSummary?.trim();
+  const isConfirmDisabled = isPending || (shouldAskForWorkSummary && !workLogText.trim());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,11 +118,22 @@ export function ClockOutConfirmDialog({
           )}
         </div>
 
-        <DialogFooter className="sm:justify-center">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+        <DialogFooter className="sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+            className="btn-clockout-border"
+          >
             Cancel
           </Button>
-          <Button type="button" onClick={onConfirm} disabled={isPending}>
+          <Button
+            type="button"
+            onClick={onConfirm}
+            disabled={isConfirmDisabled}
+            className="btn-primary-grad"
+          >
             {isPending ? 'Clocking out...' : 'Confirm Clock-Out'}
           </Button>
         </DialogFooter>

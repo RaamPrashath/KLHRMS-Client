@@ -24,7 +24,11 @@ export interface EmployeeListItem {
   name: string;
   email: string;
   image: string | null;
+  user_principal_name?: string | null;
   role: RoleBrief | null;
+  employee_id?: string | null;
+  department?: string | null;
+  job_title?: string | null;
   joined_at: string;
   attendance_today: AttendanceTodayInfo;
   microsoft_synced: boolean;

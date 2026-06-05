@@ -74,7 +74,7 @@ function buildDefaultFilters(selfScope: boolean): AttendanceFiltersState {
             targetMemberId: undefined,
             employeeNameSearch: undefined,
             page: 1,
-            pageSize: 15,
+            pageSize: 10,
         };
     }
     return {
@@ -85,7 +85,7 @@ function buildDefaultFilters(selfScope: boolean): AttendanceFiltersState {
         targetMemberId: undefined,
         employeeNameSearch: undefined,
         page: 1,
-        pageSize: 15,
+        pageSize: 10,
     };
 }
 
@@ -107,39 +107,36 @@ export function AttendancePageShell({
     // ── Filter state ───────────────────────────────────────────────────────────
     const [filters, setFilters] = useState<AttendanceFiltersState>(() => buildDefaultFilters(false));
 
-    useEffect(() => {
-        if (permissionsLoading) return;
-        if (!isOperative) return;
-        setFilters((current) => {
-            if (current.timePreset !== 'all_time' || current.dateFrom != null || current.dateTo != null) {
-                return current;
-            }
-            return buildDefaultFilters(true);
-        });
-    }, [isOperative, permissionsLoading]);
+    const effectiveFilters = (() => {
+        if (permissionsLoading || !isOperative) return filters;
+        if (filters.timePreset !== 'all_time' || filters.dateFrom != null || filters.dateTo != null) {
+            return filters;
+        }
+        return buildDefaultFilters(true);
+    })();
 
     // ── Query selection ────────────────────────────────────────────────────────
-    const orgPageQuery = useAttendanceQuery(orgSlug, memberId, filters, {
+    const orgPageQuery = useAttendanceQuery(orgSlug, memberId, effectiveFilters, {
         enabled: !permissionsLoading && isOrgScope,
     });
     const backgroundFilters = useMemo(
         () => ({
-            timePreset: filters.timePreset,
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
-            status: filters.status,
-            targetMemberId: filters.targetMemberId,
-            employeeNameSearch: filters.employeeNameSearch,
+            timePreset: effectiveFilters.timePreset,
+            dateFrom: effectiveFilters.dateFrom,
+            dateTo: effectiveFilters.dateTo,
+            status: effectiveFilters.status,
+            targetMemberId: effectiveFilters.targetMemberId,
+            employeeNameSearch: effectiveFilters.employeeNameSearch,
             page: 1,
             pageSize: 5000,
         }),
         [
-            filters.dateFrom,
-            filters.dateTo,
-            filters.employeeNameSearch,
-            filters.status,
-            filters.targetMemberId,
-            filters.timePreset,
+            effectiveFilters.dateFrom,
+            effectiveFilters.dateTo,
+            effectiveFilters.employeeNameSearch,
+            effectiveFilters.status,
+            effectiveFilters.targetMemberId,
+            effectiveFilters.timePreset,
         ],
     );
     const orgBackgroundQuery = useAttendanceQuery(
@@ -151,7 +148,7 @@ export function AttendancePageShell({
             staleTime: 60_000,
         },
     );
-    const myQuery = useMyAttendanceQuery(orgSlug, memberId, filters, {
+    const myQuery = useMyAttendanceQuery(orgSlug, memberId, effectiveFilters, {
         enabled: !permissionsLoading && isOperativeScope(permissions.view) && !isOrgScope,
     });
 
@@ -286,7 +283,7 @@ export function AttendancePageShell({
                             isLoading={isLoading}
                             isError={isError}
                             onRetry={refetch}
-                            filters={filters}
+                            filters={effectiveFilters}
                             onFiltersChange={setFilters}
                             canEdit={isOperativeScope(permissions.edit)}
                             canDelete={isOperativeScope(permissions.delete)}
