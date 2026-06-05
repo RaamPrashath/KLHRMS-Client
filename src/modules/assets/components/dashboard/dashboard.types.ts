@@ -65,6 +65,7 @@ export interface WarrantyExpirationFeedItem {
   assetCode: string;
   assetName: string;
   serialNumber: string | null;
+  brand: string | null;
   model: string | null;
   category: string;
   employeeMemberId: string;
@@ -87,6 +88,7 @@ export interface ReturnedAssetItem {
   assetCode: string;
   serialNumber: string | null;
   category: string;
+  brand: string | null;
   condition: string | null;
   employeeMemberId: string;
   employeeName: string | null;

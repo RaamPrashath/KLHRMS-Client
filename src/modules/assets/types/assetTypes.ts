@@ -89,6 +89,7 @@ export interface AvailableAssetGroup {
   categoryName: string | null;
   categoryDefinitionId: string | null;
   assetCode: string;
+  brand: string | null;
   model: string | null;
   availableQuantity: number;
 }
@@ -111,6 +112,8 @@ export interface BulkAssetCreateInput {
   assetCode: string;
   name: string;
   categoryDefinitionId: string | null;
+  brand: string | null;
+  model: string | null;
   condition: AssetCondition;
   location: string;
   serialNumbers: string[];
@@ -168,6 +171,7 @@ export interface AssetSummary {
   category: AssetCategory;
   categoryDefinitionId: string | null;
   serialNumber: string | null;
+  brand: string | null;
   model: string | null;
   purchaseDate: string | null;
   purchasePrice: number | null;
@@ -323,6 +327,7 @@ export interface AssetSwapPreview {
   currentCondition: AssetCondition | null;
   assignedMemberId: string | null;
   assignedMemberName: string | null;
+  brand: string | null;
   model: string | null;
   operationalCriticalityTier: OperationalCriticalityTier | null;
   estimatedDowntimeHours: number | null;

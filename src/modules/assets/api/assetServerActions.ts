@@ -447,6 +447,33 @@ export async function exportAssetsCsvAction(params: {
   return res.text();
 }
 
+export async function exportAssetsXlsxAction(params: {
+  orgSlug: string;
+  memberId: string;
+  reportType: AssetReportType;
+  memberIdFilter?: string;
+}): Promise<{ base64: string; fileName: string }> {
+  const query = buildQuery({
+    report_type: params.reportType,
+    member_id: params.memberIdFilter,
+  });
+  const res = await fetch(`${getApiUrl()}/assets/report.xlsx${query}`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    return handleResponse<{ base64: string; fileName: string }>(res);
+  }
+
+  const bytes = Buffer.from(await res.arrayBuffer());
+  return {
+    base64: bytes.toString('base64'),
+    fileName: `${params.reportType.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+  };
+}
+
 // ── Category CRUD Actions ─────────────────────────────────────────────────────
 
 export async function fetchAssetCategoriesAction(params: {
