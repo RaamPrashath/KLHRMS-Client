@@ -9,6 +9,7 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  Loader2,
   Search,
   X,
 } from 'lucide-react';
@@ -34,11 +35,13 @@ import {
 import { cn } from '@/lib/utils';
 import { useMemberPermissionsQuery } from '@/modules/attendance/hooks/queries/attendance';
 import { formatDate, formatHours } from '@/modules/attendance/utils/attendanceFormatters';
+import { exportAttendanceReportAction } from '@/modules/attendance-report/api';
 import {
   useAttendanceReportOptionsQuery,
   useAttendanceReportQuery,
 } from '@/modules/attendance-report/hooks';
 import type {
+  AttendanceReportExportFormat,
   AttendanceReportEmployeeOption,
   AttendanceReportFilters,
   AttendanceReportRow,
@@ -128,6 +131,37 @@ function groupByEmployee(rows: AttendanceReportRow[]) {
     group.total += row.totalHours ?? 0;
   }
   return Array.from(map.values()).sort((a, b) => a.employee.employeeName.localeCompare(b.employee.employeeName));
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportTitle(viewMode: ViewMode, periodMode: PeriodMode, dateFrom: string, dateTo: string): string {
+  const label = periodLabel(periodMode, dateFrom, dateTo);
+  if (viewMode === 'timesheet' && periodMode === 'monthly') {
+    const start = parseYMD(dateFrom);
+    return `${start.getFullYear()}-${MONTHS[start.getMonth()]!.slice(0, 3).toUpperCase()} MONTHLY REPORT`;
+  }
+  if (viewMode === 'timesheet') return `Timesheet - ${label}`;
+  if (periodMode === 'monthly') return `Monthly Report - ${label}`;
+  return `Weekly Report - ${label}`;
+}
+
+function exportFileName(viewMode: ViewMode, periodMode: PeriodMode, dateFrom: string, format: AttendanceReportExportFormat): string {
+  const start = parseYMD(dateFrom);
+  const stamp =
+    periodMode === 'monthly'
+      ? `${start.getFullYear()}-${MONTHS[start.getMonth()]!.slice(0, 3).toUpperCase()}`
+      : dateFrom;
+  return `${viewMode}-${periodMode}-${stamp}.${format}`;
 }
 
 function normalizeScope(value: string | undefined): string {
@@ -459,6 +493,7 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [force8, setForce8] = useState(false);
+  const [pendingExport, setPendingExport] = useState<AttendanceReportExportFormat | null>(null);
 
   function handleViewChange(next: ViewMode) {
     if (next === viewMode) return;
@@ -561,10 +596,6 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
     setProjectId(ALL_PROJECTS);
   }
 
-  function handleExportPlaceholder(label: string) {
-    toast.info(`${label} export is a placeholder for now.`);
-  }
-
   const rows = useMemo(() => reportQuery.data?.items ?? [], [reportQuery.data?.items]);
 
   const searchFilteredRows = useMemo(() => {
@@ -578,6 +609,56 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
     const allowed = new Set(searchFilteredEmployees);
     return eligibleEmployees.filter((employee) => allowed.has(employee.id));
   }, [eligibleEmployees, searchFilteredEmployees]);
+
+  const selectedVisibleEmployees = useMemo(() => {
+    const selectedSet = new Set(effectiveSelectedEmployeeIds);
+    if (viewMode === 'report') {
+      const visibleReportEmployeeIds = new Set(searchFilteredRows.map((row) => row.employeeId));
+      return visibleEmployeesForView.filter((employee) => selectedSet.has(employee.id) && visibleReportEmployeeIds.has(employee.id));
+    }
+    return visibleEmployeesForView.filter((employee) => selectedSet.has(employee.id));
+  }, [effectiveSelectedEmployeeIds, searchFilteredRows, viewMode, visibleEmployeesForView]);
+
+  const selectedVisibleRows = useMemo(() => {
+    const selectedSet = new Set(selectedVisibleEmployees.map((employee) => employee.id));
+    return searchFilteredRows.filter((row) => selectedSet.has(row.employeeId));
+  }, [searchFilteredRows, selectedVisibleEmployees]);
+
+  async function handleExport(format: AttendanceReportExportFormat) {
+    if (pendingExport || reportQuery.isLoading || optionsQuery.isLoading) return;
+    if (selectedVisibleEmployees.length === 0) {
+      toast.error('Select at least one visible employee to export.');
+      return;
+    }
+
+    setPendingExport(format);
+    try {
+      const title = exportTitle(viewMode, periodMode, dateRange.dateFrom, dateRange.dateTo);
+      const blob = await exportAttendanceReportAction({
+        orgSlug,
+        memberId,
+        payload: {
+          format,
+          mode: viewMode,
+          title,
+          periodLabel: periodLabel(periodMode, dateRange.dateFrom, dateRange.dateTo),
+          dateColumns: daysBetween(dateRange.dateFrom, dateRange.dateTo).map(toYMD),
+          employees: selectedVisibleEmployees.map((employee) => ({
+            id: employee.id,
+            name: employee.name,
+            email: employee.email,
+          })),
+          rows: selectedVisibleRows,
+          force8,
+        },
+      });
+      triggerDownload(blob, exportFileName(viewMode, periodMode, dateRange.dateFrom, format));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Export failed.');
+    } finally {
+      setPendingExport(null);
+    }
+  }
 
   if (permissionsQuery.isLoading) {
     return (
@@ -662,15 +743,16 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleExportPlaceholder('Excel')}
-                  className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium text-neutral-500 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 border border-transparent hover:border-black/[0.04]"
+                  onClick={() => handleExport('xlsx')}
+                  disabled={pendingExport !== null || reportQuery.isLoading || optionsQuery.isLoading}
+                  className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium text-neutral-500 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 border border-transparent hover:border-black/[0.04] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <FileSpreadsheet className="size-4" />
+                  {pendingExport === 'xlsx' ? <Loader2 className="size-4 animate-spin" /> : <FileSpreadsheet className="size-4" />}
                   Excel
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleExportPlaceholder('CSV')}
+                  onClick={() => toast.info('CSV export is ignored for now.')}
                   className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium text-neutral-500 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 border border-transparent hover:border-black/[0.04]"
                 >
                   <Download className="size-4" />
@@ -678,10 +760,11 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleExportPlaceholder('PDF')}
-                  className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium text-neutral-500 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 border border-transparent hover:border-black/[0.04]"
+                  onClick={() => handleExport('pdf')}
+                  disabled={pendingExport !== null || reportQuery.isLoading || optionsQuery.isLoading}
+                  className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium text-neutral-500 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 border border-transparent hover:border-black/[0.04] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <FileText className="size-4" />
+                  {pendingExport === 'pdf' ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
                   PDF
                 </button>
               </div>

@@ -2,6 +2,7 @@
 
 import { getHrmsApiUrl } from '@/lib/deployment-env';
 import type {
+  AttendanceReportExportPayload,
   AttendanceReportFilters,
   AttendanceReportListResponse,
   AttendanceReportOptionsResponse,
@@ -67,4 +68,29 @@ export async function fetchAttendanceReportAction(params: {
     cache: 'no-store',
   });
   return handleResponse<AttendanceReportListResponse>(res);
+}
+
+export async function exportAttendanceReportAction(params: {
+  orgSlug: string;
+  memberId: string;
+  payload: AttendanceReportExportPayload;
+}): Promise<Blob> {
+  const res = await fetch(`${getApiUrl()}/attendance-report/export`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.payload),
+  });
+
+  if (!res.ok) {
+    let message = `Export failed with status ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === 'string') message = body.detail;
+    } catch {
+      // keep default message
+    }
+    throw new Error(message);
+  }
+
+  return res.blob();
 }

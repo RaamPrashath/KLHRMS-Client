@@ -52,3 +52,23 @@ export interface AttendanceReportFilters {
   page?: number;
   page_size?: number;
 }
+
+export type AttendanceReportExportFormat = 'xlsx' | 'pdf';
+export type AttendanceReportExportMode = 'report' | 'timesheet';
+
+export interface AttendanceReportExportEmployee {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
+export interface AttendanceReportExportPayload {
+  format: AttendanceReportExportFormat;
+  mode: AttendanceReportExportMode;
+  title: string;
+  periodLabel: string;
+  dateColumns: string[];
+  employees: AttendanceReportExportEmployee[];
+  rows: AttendanceReportRow[];
+  force8: boolean;
+}

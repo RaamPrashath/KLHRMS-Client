@@ -59,6 +59,10 @@ function addMonths(d: Date, n: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + n, 1);
 }
 
+function leaveKey(employeeId: string, date: string): string {
+  return `${employeeId}:${date}`;
+}
+
 function getPivotRange(mode: PivotMode, anchor: Date): [string, string] {
   if (mode === 'weekly') {
     const monday = getMondayOfWeek(anchor);
@@ -431,8 +435,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
   // Fetch holidays and leaves for pivot views
   const pivotYear = pivotAnchor.getFullYear();
-  const pivotMonth = pivotAnchor.getMonth() + 1;
-  const { data: pivotHolidays = [] } = useHolidays(orgSlug, memberId, { year: pivotYear, month: pivotMonth });
+  const { data: pivotHolidays = [] } = useHolidays(orgSlug, memberId, { year: pivotYear });
 
   const pivotFrom = pivotDateColumns[0] ?? '';
   const pivotTo = pivotDateColumns[pivotDateColumns.length - 1] ?? '';
@@ -456,7 +459,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
         const start = new Date(leave.startDate);
         const end = new Date(leave.endDate);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          map.set(d.toISOString().split('T')[0], leave.leaveType.name);
+          map.set(leaveKey(leave.memberId, toYMD(d)), leave.leaveType.name);
         }
       }
     }
@@ -631,6 +634,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                 records={items}
                 isLoading={isLoading}
                 showEmployeeColumn={showEmployeeColumn}
+                currentMemberId={memberId}
                 allEmployees={allEmployees}
                 holidayNames={pivotHolidayNames}
                 leaveNames={pivotLeaveNames}

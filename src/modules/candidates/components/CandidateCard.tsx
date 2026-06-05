@@ -4,10 +4,9 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { AnimatePresence, motion } from 'framer-motion';
 import { isSameDay } from 'date-fns';
-import { CalendarDays, Check, CheckCircle2, Clock, Copy, Gauge, Play, ShieldAlert, Sparkles, X } from 'lucide-react';
+import { Check, CheckCircle2, Clock, Copy, Gauge, Play, ShieldAlert, Sparkles, X } from 'lucide-react';
 import { useState, type CSSProperties } from 'react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -74,7 +73,6 @@ export function CandidateCard({
   application,
   onOpen,
   meetingEnabled = false,
-  onScheduleInterview,
   onStartInterview,
   onCompleteInterview,
   onAcceptInterview,
@@ -111,14 +109,9 @@ export function CandidateCard({
   });
 
   const fullName = `${application.candidate.firstName} ${application.candidate.lastName}`;
-  const initials = `${application.candidate.firstName[0] ?? ''}${application.candidate.lastName[0] ?? ''}`.toUpperCase();
-  const imageSrc = application.candidate.image?.trim() || null;
-  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
-  const candidateImage = imageSrc && failedImageSrc !== imageSrc ? imageSrc : null;
   const meeting = application.interviewMeeting;
   const assignment = application.currentAssignment;
   const hasPendingAssignment = assignment !== null && meeting === null;
-  const canSchedule = !meeting || meeting.status === 'COMPLETED' || meeting.status === 'CANCELLED' || meeting.status === 'RESCHEDULED';
   const isOngoing = meeting?.status === 'ONGOING';
   const isPending = meeting?.status === 'PENDING';
   const isScheduledToday = meeting?.scheduledStartAt ? isSameDay(new Date(meeting.scheduledStartAt), new Date()) : false;
@@ -162,18 +155,6 @@ export function CandidateCard({
       {...(!isOverlay && canDrag ? attributes : {})}
     >
       <div className="flex items-start gap-3">
-        <Avatar className="size-9 shrink-0">
-          <AvatarImage
-            key={candidateImage ?? 'fallback'}
-            src={candidateImage ?? undefined}
-            alt={fullName}
-            referrerPolicy="no-referrer"
-            onError={() => setFailedImageSrc(imageSrc)}
-          />
-          <AvatarFallback className="bg-primary-ghost text-xs font-semibold text-primary">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-neutral-900">{fullName}</p>
           <p className="truncate text-xs text-neutral-500">{application.candidate.email}</p>
@@ -289,7 +270,7 @@ export function CandidateCard({
           {application.aiScore !== null ? (
             <span className="inline-flex items-center gap-1 rounded-lg bg-primary-ghost px-2 py-0.5 font-mono text-xs font-medium text-primary">
               <Gauge className="size-3.5" />
-              AI {application.aiScore}
+              {application.aiScore}
             </span>
           ) : null}
           {isAiRecommended ? (
@@ -378,21 +359,6 @@ export function CandidateCard({
               hasPendingAssignment || isPending ? 'grid-cols-2' : 'grid-cols-1',
             )}
           >
-            {hasPendingAssignment && onScheduleInterview ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs col-span-full"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onScheduleInterview?.(application);
-                }}
-              >
-                <CalendarDays className="size-3.5" />
-                Schedule interview
-              </Button>
-            ) : null}
             {hasPendingAssignment && assignment?.interviewer?.memberId === currentMemberId && onAcceptInterview && onRejectInterview ? (
               <div className="col-span-full flex gap-2">
                 <Button
@@ -422,36 +388,6 @@ export function CandidateCard({
                   Reject
                 </Button>
               </div>
-            ) : null}
-            {canSchedule && !hasPendingAssignment && onScheduleInterview ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onScheduleInterview?.(application);
-                }}
-              >
-                <CalendarDays className="size-3.5" />
-                {meeting?.status === 'COMPLETED' ? 'Schedule again' : 'Schedule'}
-              </Button>
-            ) : null}
-            {isPending && onScheduleInterview ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onScheduleInterview?.(application);
-                }}
-              >
-                <CalendarDays className="size-3.5" />
-                Reschedule
-              </Button>
             ) : null}
             {isPending ? (
               <TooltipProvider>

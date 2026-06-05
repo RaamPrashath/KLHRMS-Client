@@ -18,7 +18,6 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -27,8 +26,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { TimePicker } from '@/components/ui/time-picker';
 import { useCandidatesJobContext } from '@/modules/candidates/components/CandidatesJobContext';
+import { SchedulingModal } from '@/modules/candidates/components/SchedulingModal';
 import {
   Select,
   SelectContent,
@@ -49,11 +48,9 @@ import { authClient } from '@/lib/auth-client';
 import {
   useAcceptInterview,
   useCreatePipelineStage,
-  useCreateInterviewMeeting,
   useCompleteInterviewMeeting,
   useRejectInterview,
   useStartInterviewMeeting,
-  useUpdateInterviewMeeting,
   useDeletePipelineStage,
   useMoveApplicationStage,
   usePipelineBoard,
@@ -64,12 +61,11 @@ import {
   useImportPipeline as useImportRequisitionPipeline,
 } from '@/modules/jobs/hooks/usePipelineMutations';
 import type {
-  CreateInterviewMeetingInput,
-  UpdateInterviewMeetingInput,
+  AcceptInterviewInput,
   CreatePipelineStageInput,
   UpdatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
-import type { PipelineApplication, PipelineStage } from '@/modules/candidates/types/atsTypes';
+import type { MyInterview, PipelineApplication, PipelineStage } from '@/modules/candidates/types/atsTypes';
 import type { CreatePipelineStageInput as SetupCreatePipelineStageInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import type { RolePermissions } from '@/modules/roles/types/role';
 
@@ -82,8 +78,7 @@ const EMPTY_STAGES: PipelineStage[] = [];
 type PendingGoogleAction =
   | { kind: 'create-stage'; data: CreatePipelineStageInput }
   | { kind: 'update-stage'; stageId: string; data: UpdatePipelineStageInput }
-  | { kind: 'create-interview'; applicationId: string; data: CreateInterviewMeetingInput }
-  | { kind: 'reschedule-interview'; applicationId: string; eventId: string; data: UpdateInterviewMeetingInput };
+  | { kind: 'accept-interview'; applicationId: string; eventId: string };
 
 type AiCandidateFilter = 'all' | 'recommended' | 'flagged' | 'failed';
 
@@ -144,21 +139,19 @@ function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineSt
 }
 
 function actionNeedsGoogle(action: PendingGoogleAction): boolean {
-  return action.kind === 'create-interview' || action.kind === 'reschedule-interview';
+  return action.kind === 'accept-interview';
 }
 
-function requiredGoogleScope(_action: PendingGoogleAction): string {
+function requiredGoogleScope(): string {
   return GOOGLE_CALENDAR_SCOPE;
 }
 
 function permissionErrorForAction(action: PendingGoogleAction, permissions?: RolePermissions | null): string | null {
   if (!permissions) return null;
   const required =
-    action.kind === 'create-interview'
-      ? { module: 'interviews', action: 'create', label: 'schedule interviews' }
-      : action.kind === 'reschedule-interview'
-        ? { module: 'interviews', action: 'edit', label: 'reschedule interviews' }
-        : { module: 'candidates', action: 'edit', label: 'manage pipeline stages' };
+    action.kind === 'accept-interview'
+      ? { module: 'interviews', action: 'edit', label: 'accept interviews' }
+      : { module: 'candidates', action: 'edit', label: 'manage pipeline stages' };
 
   return permissions[required.module]?.[required.action] === 'organization'
     ? null
@@ -182,6 +175,28 @@ function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): 
     return account.scope.split(/[,\s]+/).filter(Boolean);
   }
   return [];
+}
+
+function schedulingInterviewFromApplication(application: PipelineApplication, eventId: string): MyInterview {
+  const assignment = application.currentAssignment;
+  return {
+    eventId,
+    applicationId: application.id,
+    stageId: application.pipelineStageId,
+    stageName: application.currentStage,
+    candidate: application.candidate,
+    jobTitle: '',
+    jobPostingId: application.jobPostingId,
+    jobSlug: null,
+    scheduledStartAt: assignment?.scheduledStartAt ?? application.interviewMeeting?.scheduledStartAt ?? null,
+    scheduledEndAt: assignment?.scheduledEndAt ?? application.interviewMeeting?.scheduledEndAt ?? null,
+    status: assignment?.status ?? 'PENDING',
+    role: 'INTERVIEWER',
+    isBackup: false,
+    meetingUrl: assignment?.meetLink ?? application.interviewMeeting?.meetingUrl ?? null,
+    stageDueDate: null,
+    proposedSlots: [],
+  };
 }
 
 function getStageReorderOrder(
@@ -347,8 +362,6 @@ export function AtsKanbanBoard({
   const createStage = useCreatePipelineStage(orgSlug, memberId, jobPostingId);
   const updateStage = useUpdatePipelineStage(orgSlug, memberId, jobPostingId);
   const deleteStage = useDeletePipelineStage(orgSlug, memberId, jobPostingId);
-  const createInterviewMeeting = useCreateInterviewMeeting(orgSlug, memberId, jobPostingId);
-  const updateInterviewMeeting = useUpdateInterviewMeeting(orgSlug, memberId, jobPostingId);
   const startInterviewMeeting = useStartInterviewMeeting(orgSlug, memberId, jobPostingId);
   const completeInterviewMeeting = useCompleteInterviewMeeting(orgSlug, memberId, jobPostingId);
   const acceptInterview = useAcceptInterview(orgSlug, memberId);
@@ -361,11 +374,7 @@ export function AtsKanbanBoard({
   const [pendingGoogleAction, setPendingGoogleAction] = useState<PendingGoogleAction | null>(null);
   const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
-  const [schedulingApplication, setSchedulingApplication] = useState<PipelineApplication | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedHour, setSelectedHour] = useState<string>('');
-  const [selectedMinute, setSelectedMinute] = useState<string>('');
-  const [durationMinutes, setDurationMinutes] = useState<number>(30);
+  const [schedulingRequest, setSchedulingRequest] = useState<{ application: PipelineApplication; eventId: string } | null>(null);
   const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
   const [completionNote, setCompletionNote] = useState('');
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
@@ -377,6 +386,16 @@ export function AtsKanbanBoard({
     () => jobPostings.find((posting) => posting.id === jobPostingId) ?? null,
     [jobPostingId, jobPostings],
   );
+  const allBoardApplications = useMemo(
+    () => boardQuery.data?.stages.flatMap((stage) => stage.applications) ?? [],
+    [boardQuery.data?.stages],
+  );
+  const schedulingInterview = useMemo(() => {
+    if (!schedulingRequest) return null;
+    const interview = schedulingInterviewFromApplication(schedulingRequest.application, schedulingRequest.eventId);
+    const stage = boardQuery.data?.stages.find((item) => item.id === schedulingRequest.application.pipelineStageId);
+    return { ...interview, jobTitle: currentPosting?.title ?? '', jobSlug: currentPosting?.slug ?? null, stageDueDate: stage?.dueDate ?? null };
+  }, [boardQuery.data?.stages, currentPosting?.slug, currentPosting?.title, schedulingRequest]);
   const setupRequisitionId = currentPosting?.requisitionId ?? '';
   const createDefaultPipeline = useCreateRequisitionDefaultPipeline(orgSlug, memberId, setupRequisitionId);
   const importPipeline = useImportRequisitionPipeline(orgSlug, memberId, setupRequisitionId);
@@ -416,7 +435,7 @@ export function AtsKanbanBoard({
       }
 
       if (!options?.skipGoogleCheck && actionNeedsGoogle(action)) {
-        const hasAccess = await hasGoogleAccess(requiredGoogleScope(action));
+        const hasAccess = await hasGoogleAccess(requiredGoogleScope());
         if (!hasAccess) {
           requestGoogleConnection(action);
           return;
@@ -430,24 +449,13 @@ export function AtsKanbanBoard({
           return;
         }
 
-        if (action.kind === 'create-interview') {
-          await createInterviewMeeting.mutateAsync({
-            applicationId: action.applicationId,
-            data: action.data,
-          });
-          setSchedulingApplication(null);
-          toast.success('Interview scheduled and email sent');
-          return;
-        }
-
-        if (action.kind === 'reschedule-interview') {
-          await updateInterviewMeeting.mutateAsync({
-            applicationId: action.applicationId,
-            eventId: action.eventId,
-            data: action.data,
-          });
-          setSchedulingApplication(null);
-          toast.success('Interview rescheduled and email sent');
+        if (action.kind === 'accept-interview') {
+          const application = allBoardApplications.find((item) => item.id === action.applicationId);
+          if (!application) {
+            toast.error('Candidate could not be found. Refresh the pipeline and try again.');
+            return;
+          }
+          setSchedulingRequest({ application, eventId: action.eventId });
           return;
         }
 
@@ -461,10 +469,10 @@ export function AtsKanbanBoard({
           requestGoogleConnection(action);
           return;
         }
-        toast.error(readActionError(error, action.kind === 'create-interview' ? 'Failed to create meeting' : action.kind === 'create-stage' ? 'Failed to create stage' : 'Failed to update stage'));
+        toast.error(readActionError(error, action.kind === 'create-stage' ? 'Failed to create stage' : 'Failed to update stage'));
       }
     },
-    [createInterviewMeeting, createStage, hasGoogleAccess, permissions, requestGoogleConnection, updateInterviewMeeting, updateStage],
+    [allBoardApplications, createStage, hasGoogleAccess, permissions, requestGoogleConnection, updateStage],
   );
 
   useEffect(() => {
@@ -660,6 +668,10 @@ export function AtsKanbanBoard({
     });
   }
 
+  function openScheduleInterview() {
+    // Scheduling from kanban happens only after the interviewer accepts and picks candidate-facing slots.
+  }
+
   async function connectGoogleForEvaluation() {
     if (!pendingGoogleAction) return;
 
@@ -669,7 +681,7 @@ export function AtsKanbanBoard({
       const callbackUrl = new URL(window.location.href);
       callbackUrl.searchParams.set(GOOGLE_CONNECT_RETURN_PARAM, '1');
 
-      const requiredScope = requiredGoogleScope(pendingGoogleAction);
+      const requiredScope = requiredGoogleScope();
       const alreadyLinked = await hasGoogleLinked();
       
       const result = await authClient.linkSocial({
@@ -710,54 +722,6 @@ export function AtsKanbanBoard({
     const nextOrder = getStageReorderOrder(stages, stage.id, direction);
     if (nextOrder === null) return;
     updateStage.mutate({ stageId: stage.id, data: { order: nextOrder } });
-  }
-
-  function openScheduleInterview(application: PipelineApplication) {
-    const existingStart = application.interviewMeeting?.scheduledStartAt;
-    const start = existingStart ? new Date(existingStart) : new Date(Date.now() + 60 * 60 * 1000);
-    if (!existingStart) start.setMinutes(0, 0, 0);
-
-    setSelectedDate(start);
-    setSelectedHour(String(start.getHours()).padStart(2, '0'));
-    setSelectedMinute(String(start.getMinutes() < 15 ? '00' : start.getMinutes() < 30 ? '15' : start.getMinutes() < 45 ? '30' : '45'));
-    setDurationMinutes(30);
-    setSchedulingApplication(application);
-  }
-
-  function scheduleInterview() {
-    if (!schedulingApplication || !selectedDate || selectedHour === '' || selectedMinute === '') return;
-
-    const year = selectedDate.getFullYear();
-    const month = selectedDate.getMonth();
-    const day = selectedDate.getDate();
-    const hour = parseInt(selectedHour, 10);
-    const minute = parseInt(selectedMinute, 10);
-
-    // Construct as IST (+05:30) to match the expected server format
-    const istDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+05:30`;
-
-    const existingMeeting = schedulingApplication.interviewMeeting;
-    if (existingMeeting && existingMeeting.status === 'PENDING') {
-      void runStageAction({
-        kind: 'reschedule-interview',
-        applicationId: schedulingApplication.id,
-        eventId: existingMeeting.id,
-        data: {
-          scheduledStartAt: new Date(istDateStr).toISOString(),
-          durationMinutes,
-        },
-      });
-    } else {
-      void runStageAction({
-        kind: 'create-interview',
-        applicationId: schedulingApplication.id,
-        data: {
-          mode: 'SCHEDULE',
-          scheduledStartAt: new Date(istDateStr).toISOString(),
-          durationMinutes,
-        },
-      });
-    }
   }
 
   function openCompleteInterviewDialog(application: PipelineApplication) {
@@ -857,34 +821,22 @@ export function AtsKanbanBoard({
   }
 
   function handleAcceptInterview(applicationId: string, eventId: string) {
-    const application = boardQuery.data?.stages
-      .flatMap((stage) => stage.applications)
-      .find((item) => item.id === applicationId);
-    const start = application?.currentAssignment?.scheduledStartAt
-      ? new Date(application.currentAssignment.scheduledStartAt)
-      : new Date(Date.now() + 60 * 60 * 1000);
-    const end = application?.currentAssignment?.scheduledEndAt
-      ? new Date(application.currentAssignment.scheduledEndAt)
-      : new Date(start.getTime() + 30 * 60_000);
+    void runStageAction({ kind: 'accept-interview', applicationId, eventId });
+  }
 
-    acceptInterview.mutate(
-      {
-        eventId,
-        data: {
-          proposedSlots: [{ startTime: start.toISOString(), endTime: end.toISOString() }],
-          durationMinutes: Math.max(15, Math.round((end.getTime() - start.getTime()) / 60_000)),
-        },
-      },
-      {
-        onSuccess: () => {
-          toast.success('Interview accepted');
-          void boardQuery.refetch();
-        },
-        onError: (error) => {
-          toast.error(readActionError(error, 'Failed to accept interview'));
-        },
-      },
-    );
+  async function submitAcceptedInterviewSlots(payload: AcceptInterviewInput) {
+    if (!schedulingRequest) return;
+    try {
+      await acceptInterview.mutateAsync({
+        eventId: schedulingRequest.eventId,
+        data: payload,
+      });
+      toast.success('Slots sent to candidate');
+      setSchedulingRequest(null);
+      await boardQuery.refetch();
+    } catch (error) {
+      toast.error(readActionError(error, 'Could not send slots'));
+    }
   }
 
   function handleRejectInterview(_applicationId: string, eventId: string) {
@@ -957,8 +909,6 @@ export function AtsKanbanBoard({
         })
         .filter((application) => matchesApplicationSearch(application, aiFilteredStages[0].name, deferredGlobalSearch))
     : [];
-
-  const scheduleFormValid = selectedDate !== undefined && selectedHour !== '' && selectedMinute !== '';
 
   return (
     <>
@@ -1274,158 +1224,16 @@ export function AtsKanbanBoard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={schedulingApplication !== null} onOpenChange={(open) => setSchedulingApplication(open ? schedulingApplication : null)}>
-        <DialogContent className="w-[min(92vw,760px)] sm:max-w-[760px] gap-0 rounded bg-white p-0 shadow-2xl">
-          <DialogHeader className="px-8 pt-8 pb-6">
-            <DialogTitle>
-              {schedulingApplication?.interviewMeeting?.status === 'PENDING' ? 'Reschedule interview' : 'Schedule interview'}
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              Choose an interview date, time, and duration for this candidate.
-            </DialogDescription>
-          </DialogHeader>
-
-          {(() => {
-            const stages = boardQuery.data?.stages ?? [];
-            const schedulingStage = schedulingApplication
-              ? stages.find((s) => s.id === schedulingApplication.pipelineStageId)
-              : undefined;
-            const dueDate = schedulingStage?.dueDate ? new Date(schedulingStage.dueDate) : undefined;
-
-            const now = new Date();
-            // 5-minute buffer: allow selecting up to 5 mins before current time
-            const adjustedNow = new Date(now.getTime() - 5 * 60 * 1000);
-            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const isSelectedToday =
-              selectedDate &&
-              selectedDate.getFullYear() === now.getFullYear() &&
-              selectedDate.getMonth() === now.getMonth() &&
-              selectedDate.getDate() === now.getDate();
-
-            const minTime = isSelectedToday
-              ? { hour: adjustedNow.getHours(), minute: adjustedNow.getMinutes() }
-              : undefined;
-
-            return (
-              <div className="grid gap-8 px-8 pb-8 md:grid-cols-2 md:items-start">
-                {/* Left: Date */}
-                <div className="grid min-w-0 content-start gap-3">
-                  <label className="text-sm font-medium text-neutral-700" id="schedule-date-label">
-                    Date
-                  </label>
-                  <Calendar
-                    className="w-fit p-0"
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        setSelectedDate(new Date(date.getFullYear(), date.getMonth(), date.getDate()));
-                      } else {
-                        setSelectedDate(undefined);
-                      }
-                    }}
-                    disabled={[
-                      { before: todayStart },
-                      ...(dueDate ? [{ after: dueDate } as const] : []),
-                    ]}
-                    aria-labelledby="schedule-date-label"
-                  />
-                  {dueDate ? (
-                    <p className="text-xs text-neutral-500">
-                      Available until{' '}
-                      {dueDate.toLocaleDateString('en-IN', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                        timeZone: 'Asia/Kolkata',
-                      })}
-                    </p>
-                  ) : null}
-                </div>
-
-                {/* Right: Time + Duration */}
-                <div className="grid min-w-0 content-start gap-8 md:pt-0.5">
-                  {/* Time */}
-                  <div className="grid gap-3">
-                    <label className="text-sm font-medium text-neutral-700" id="schedule-time-label">
-                      Time (IST)
-                    </label>
-                    <TimePicker
-                      hour={selectedHour}
-                      minute={selectedMinute}
-                      onHourChange={setSelectedHour}
-                      onMinuteChange={setSelectedMinute}
-                      minTime={minTime}
-                    />
-                    {isSelectedToday ? (
-                      <p className="min-h-4 text-xs leading-5 text-neutral-500">
-                        Times before{' '}
-                        {adjustedNow.toLocaleTimeString('en-IN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true,
-                          timeZone: 'Asia/Kolkata',
-                        })}{' '}
-                        are unavailable
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {/* Duration (optional) */}
-                  <div className="grid gap-3">
-                    <label className="text-sm font-medium text-neutral-700" id="schedule-duration-label">
-                      Duration <span className="text-neutral-400 font-normal">(optional)</span>
-                    </label>
-                    <Select
-                      value={String(durationMinutes)}
-                      onValueChange={(value) => setDurationMinutes(Number(value))}
-                    >
-                      <SelectTrigger className="h-11 w-[140px] rounded-xl border-[#d8dce5] bg-white px-3 text-base shadow-none" aria-labelledby="schedule-duration-label">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border-[#d8dce5]">
-                        <SelectItem value="15">15 min</SelectItem>
-                        <SelectItem value="30">30 min</SelectItem>
-                        <SelectItem value="45">45 min</SelectItem>
-                        <SelectItem value="60">1 hour</SelectItem>
-                        <SelectItem value="90">1.5 hours</SelectItem>
-                        <SelectItem value="120">2 hours</SelectItem>
-                        <SelectItem value="180">3 hours</SelectItem>
-                        <SelectItem value="240">4 hours</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {(() => {
-            const isReschedule = schedulingApplication?.interviewMeeting?.status === 'PENDING';
-            const isPending = createInterviewMeeting.isPending || updateInterviewMeeting.isPending;
-
-            return (
-              <DialogFooter className="border-t border-neutral-100 px-8 py-5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setSchedulingApplication(null)}
-                  disabled={isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={scheduleInterview}
-                  disabled={isPending || !scheduleFormValid}
-                >
-                  {isPending ? (isReschedule ? 'Rescheduling' : 'Scheduling') : isReschedule ? 'Reschedule' : 'Schedule'}
-                </Button>
-              </DialogFooter>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      <SchedulingModal
+        key={schedulingRequest?.eventId ?? 'closed-kanban-scheduling-modal'}
+        interview={schedulingInterview}
+        open={schedulingRequest !== null}
+        isSubmitting={acceptInterview.isPending}
+        onOpenChange={(open) => {
+          if (!open) setSchedulingRequest(null);
+        }}
+        onSubmit={submitAcceptedInterviewSlots}
+      />
       <Dialog
         open={completingApplication !== null}
         onOpenChange={(open) => {
