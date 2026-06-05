@@ -213,6 +213,7 @@ function AssetDetailDialogContent({
                       <div className="grid gap-3">
                         <DetailField label="Category" value={humanize(asset.category)} />
                         <DetailField label="Condition" value={humanize(asset.condition)} />
+                        <DetailField label="Brand" value={asset.brand || 'Not recorded'} />
                         <DetailField label="Model" value={asset.model || 'Not recorded'} />
                         <DetailField label="Location" value={asset.location || 'Not recorded'} />
                         <DetailField label="Current Holder" value={asset.currentHolderName || 'In register'} />

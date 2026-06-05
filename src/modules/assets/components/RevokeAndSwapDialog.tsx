@@ -99,8 +99,8 @@ export function RevokeAndSwapDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl rounded-3xl border border-[#e5e7eb] bg-white p-0">
-        <DialogHeader className="border-b border-[#eef0f3] px-6 py-5 text-left">
+      <DialogContent className="flex max-h-[90vh] max-w-5xl flex-col gap-0 overflow-hidden rounded-3xl border border-[#e5e7eb] bg-white p-0">
+        <DialogHeader className="shrink-0 border-b border-[#eef0f3] px-6 py-5 text-left">
           <DialogTitle className="flex items-center gap-3 text-[22px] font-semibold tracking-[-0.02em] text-[#111827]">
             <span className="flex size-10 items-center justify-center rounded-2xl bg-[#fff6db]">
               <RefreshCcw className="size-5 text-[#9a6700]" />
@@ -112,7 +112,7 @@ export function RevokeAndSwapDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 px-6 py-5">
+        <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto px-6 py-5">
           <div className="grid gap-2">
             <Label className="text-[13px] font-medium text-[#6b7280]">Incident Ticket</Label>
             <Select
@@ -254,7 +254,7 @@ export function RevokeAndSwapDialog({
           )}
         </div>
 
-        <DialogFooter className="border-t border-[#eef0f3] px-6 py-4">
+        <DialogFooter className="shrink-0 border-t border-[#eef0f3] px-6 py-4">
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full px-5">
             Cancel
           </Button>
