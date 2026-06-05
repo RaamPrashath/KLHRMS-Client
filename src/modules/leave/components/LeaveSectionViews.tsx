@@ -111,6 +111,10 @@ function SectionEmpty({ title }: Readonly<{ title: string; body?: string }>) {
 
 type SortOption = 'pending-first' | 'latest' | 'oldest';
 type FilterOption = 'all-time' | 'this-month' | 'this-week' | 'today';
+const EMPTY_REQUESTS: LeaveRequestRecord[] = [];
+const EMPTY_BALANCES: LeaveBalanceRecord[] = [];
+const EMPTY_HOLIDAYS: HolidayRecord[] = [];
+const EMPTY_SUMMARY_ITEMS: EmployeeLeaveSummary[] = [];
 
 function statusTone(status: string) {
   if (status === 'APPROVED') return 'bg-success-bg text-success-text border-success-border';
@@ -128,13 +132,19 @@ function statusLabel(status: string) {
 
 export function LeaveRequestsView() {
   const { orgSlug, memberId, permissions, openRequestDetails } = useLeaveShell();
-  const today = new Date();
-  const requestsQuery = useLeaveRequests(orgSlug, memberId, {
-    status: 'PENDING',
-    fromDate: format(startOfMonth(today), 'yyyy-MM-dd'),
-    page: 1,
-    pageSize: 200,
-    year: today.getFullYear(),
+  const requestFilters = React.useMemo(() => {
+    const today = new Date();
+    return {
+      status: 'PENDING' as const,
+      fromDate: format(startOfMonth(today), 'yyyy-MM-dd'),
+      page: 1,
+      pageSize: 200,
+      year: today.getFullYear(),
+    };
+  }, []);
+  const requestsQuery = useLeaveRequests(orgSlug, memberId, requestFilters, {
+    keepPreviousData: true,
+    staleTime: 30_000,
   });
 
   const showNameColumn = permissions.view !== 'self';
@@ -143,7 +153,7 @@ export function LeaveRequestsView() {
   const [sort, setSort] = useState<SortOption>('latest');
   const [page, setPage] = useState(1);
 
-  const allRequests = requestsQuery.data?.items ?? [];
+  const allRequests = requestsQuery.data?.items ?? EMPTY_REQUESTS;
 
   const filtered = React.useMemo(() => {
     let items = allRequests;
@@ -408,7 +418,7 @@ export function LeaveBalancesView() {
     placeholderData: (prev) => prev,
   });
 
-  const allItems = query.data?.items ?? [];
+  const allItems = query.data?.items ?? EMPTY_BALANCES;
 
   const grouped: EmployeeBalanceGroup[] = React.useMemo(() => {
     const map = new Map<string, EmployeeBalanceGroup>();
@@ -445,8 +455,6 @@ export function LeaveBalancesView() {
     () => grouped.find((g) => g.memberId === detailMemberId) ?? null,
     [grouped, detailMemberId],
   );
-
-  React.useEffect(() => { setPage(1); }, [search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -587,6 +595,16 @@ export function LeaveTypesView() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
+  const filtered = search.trim()
+    ? leaveTypes.filter((t: LeaveTypeRecord) => t.name.toLowerCase().includes(search.toLowerCase()))
+    : leaveTypes;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const ltEmptyTitle = search ? 'No leave types match your search.' : 'No leave types configured';
+  const ltEmptyBody = search ? 'Try a different search term.' : 'Create your first leave type to start shaping the policy layer.';
+
   if (!canApprove) {
     return (
       <Card>
@@ -594,18 +612,6 @@ export function LeaveTypesView() {
       </Card>
     );
   }
-
-  const filtered = search.trim()
-    ? leaveTypes.filter((t: LeaveTypeRecord) => t.name.toLowerCase().includes(search.toLowerCase()))
-    : leaveTypes;
-
-  React.useEffect(() => { setPage(1); }, [search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const ltEmptyTitle = search ? 'No leave types match your search.' : 'No leave types configured';
-  const ltEmptyBody = search ? 'Try a different search term.' : 'Create your first leave type to start shaping the policy layer.';
 
   return (
     <Card>
@@ -784,7 +790,7 @@ export function LeaveHolidaysView() {
     placeholderData: (prev) => prev,
   });
 
-  const allHolidays = query.data?.items ?? [];
+  const allHolidays = query.data?.items ?? EMPTY_HOLIDAYS;
 
   const filtered = React.useMemo(() => {
     let items = allHolidays;
@@ -797,8 +803,6 @@ export function LeaveHolidaysView() {
     }
     return items;
   }, [allHolidays, month, search]);
-
-  React.useEffect(() => { setPage(1); }, [search, month]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -993,8 +997,6 @@ function SummaryTooltipContent({ items }: { readonly items: LeaveSummaryRequestI
   );
 }
 
-const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
-
 function yearFromDate(dateStr: string): number {
   return new Date(dateStr).getFullYear();
 }
@@ -1038,25 +1040,17 @@ export function LeaveSummaryView() {
       pendingYear < currentYear
         ? MONTH_OPTIONS
         : MONTH_OPTIONS.filter((opt) => opt.value === '0' || Number(opt.value) <= currentMonth),
-    [pendingYear],
+    [currentMonth, currentYear, pendingYear],
   );
   const hasActiveFilters = appliedMonth > 0 || appliedLeaveFilter !== 'all';
-
-  if (!canApprove) {
-    return (
-      <Card>
-        <SectionEmpty title="Restricted section" body="Only organization-level approvers can view the leave summary." />
-      </Card>
-    );
-  }
 
   const {
     data,
     isLoading,
     isFetching,
-  } = useLeaveSummary(orgSlug, memberId);
+  } = useLeaveSummary(orgSlug, memberId, { enabled: canApprove });
 
-  const allItems = data?.items ?? [];
+  const allItems = data?.items ?? EMPTY_SUMMARY_ITEMS;
 
   const filtered = React.useMemo(() => {
     let items = allItems;
@@ -1093,6 +1087,14 @@ export function LeaveSummaryView() {
   const totalFiltered = leaveFiltered.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
   const paged = leaveFiltered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  if (!canApprove) {
+    return (
+      <Card>
+        <SectionEmpty title="Restricted section" body="Only organization-level approvers can view the leave summary." />
+      </Card>
+    );
+  }
 
   return (
     <FloatingPanelRoot>
@@ -1295,7 +1297,7 @@ export function LeaveHistoryView() {
 
   const requestsQuery = useLeaveHistory(orgSlug, memberId);
 
-  const allRequests = requestsQuery.data?.items ?? [];
+  const allRequests = requestsQuery.data?.items ?? EMPTY_REQUESTS;
 
   const filtered = React.useMemo(() => {
     let items = allRequests.filter((r) => r.status === 'APPROVED');

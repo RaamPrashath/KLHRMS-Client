@@ -25,10 +25,11 @@ interface AttendancePivotViewProps {
   records: AttendanceRecord[];
   isLoading: boolean;
   showEmployeeColumn: boolean;
+  currentMemberId?: string;
   allEmployees?: EmployeeInfo[];
   /** date → holiday name */
   holidayNames?: Map<string, string>;
-  /** date → leave type name */
+  /** `${employeeId}:${date}` → leave type name */
   leaveNames?: Map<string, string>;
 }
 
@@ -104,6 +105,7 @@ function buildEmployeeRows(
   records: AttendanceRecord[],
   days: Date[],
   showEmployeeColumn: boolean,
+  currentMemberId?: string,
   allEmployees?: EmployeeInfo[],
 ): EmployeeRow[] {
   const daySet = new Set(days.map(toYMD));
@@ -139,8 +141,9 @@ function buildEmployeeRows(
 
   // Self scope: always show at least a "Me" row
   if (map.size === 0 && !showEmployeeColumn) {
-    map.set('me', {
-      employeeId: 'me',
+    const selfKey = currentMemberId ?? 'me';
+    map.set(selfKey, {
+      employeeId: selfKey,
       employeeName: 'Me',
       byDate: new Map(),
       total: 0,
@@ -167,9 +170,13 @@ function cellValue(record: AttendanceRecord | undefined): string {
   return `${record.totalHours.toFixed(1)}h`;
 }
 
-function offDayLabel(ymd: string, holidayNames: Map<string, string>, leaveNames: Map<string, string>): string | null {
+function leaveKey(employeeId: string, ymd: string): string {
+  return `${employeeId}:${ymd}`;
+}
+
+function offDayLabel(ymd: string, employeeId: string, holidayNames: Map<string, string>, leaveNames: Map<string, string>): string | null {
   if (holidayNames.has(ymd)) return 'Holiday';
-  if (leaveNames.has(ymd)) return 'Leave';
+  if (leaveNames.has(leaveKey(employeeId, ymd))) return 'Leave';
   return null;
 }
 
@@ -233,13 +240,6 @@ function PivotSkeleton({
 
 // ─── Employee cell ────────────────────────────────────────────────────────────
 
-const MAX_NAME_CHARS = 20;
-
-function truncateName(name: string): string {
-  if (name.length <= MAX_NAME_CHARS) return name;
-  return `${name.slice(0, MAX_NAME_CHARS).trimEnd()}…`;
-}
-
 function EmployeeCell({ name }: { readonly name: string }) {
   const initials = name
     .split(' ')
@@ -278,6 +278,7 @@ export function AttendancePivotView({
   records,
   isLoading,
   showEmployeeColumn,
+  currentMemberId,
   allEmployees,
   holidayNames: holidayNamesProp,
   leaveNames: leaveNamesProp,
@@ -285,7 +286,7 @@ export function AttendancePivotView({
   const anchor = parseYMD(periodStart);
   const days = getDays(mode, anchor);
   const periodLabel = formatPeriodLabel(mode, days);
-  const employeeRows = buildEmployeeRows(records, days, showEmployeeColumn, allEmployees);
+  const employeeRows = buildEmployeeRows(records, days, showEmployeeColumn, currentMemberId, allEmployees);
   const holidayNames = holidayNamesProp ?? new Map<string, string>();
   const leaveNames = leaveNamesProp ?? new Map<string, string>();
 
@@ -343,14 +344,14 @@ export function AttendancePivotView({
               {days.map((d) => {
                 const ymd = toYMD(d);
                 const today = isToday(d);
-                const isOff = holidayNames.has(ymd) || leaveNames.has(ymd);
-                const tooltipText = holidayNames.get(ymd) ?? leaveNames.get(ymd) ?? null;
+                const isHoliday = holidayNames.has(ymd);
+                const tooltipText = holidayNames.get(ymd) ?? null;
                 const headerContent = (
                   <div className="flex flex-col items-center gap-0.5">
                     <span
                       className={cn(
                         'text-[10px] font-semibold uppercase tracking-wider',
-                        today ? 'text-primary' : isOff ? 'text-red-500' : 'text-neutral-500',
+                        today ? 'text-primary' : isHoliday ? 'text-red-500' : 'text-neutral-500',
                       )}
                     >
                       {`${MONTH_NAMES[d.getMonth()]!.slice(0, 3)} ${d.getDate()}`}
@@ -358,7 +359,7 @@ export function AttendancePivotView({
                     <span
                       className={cn(
                         'text-[9px] font-medium uppercase tracking-widest',
-                        today ? 'text-primary/70' : isOff ? 'text-red-400' : 'text-neutral-400',
+                        today ? 'text-primary/70' : isHoliday ? 'text-red-400' : 'text-neutral-400',
                       )}
                     >
                       {DAY_ABBR[d.getDay()]}
@@ -438,8 +439,10 @@ export function AttendancePivotView({
                     const ymd = toYMD(d);
                     const record = row.byDate.get(ymd);
                     const today = isToday(d);
-                    const isOff = holidayNames.has(ymd) || leaveNames.has(ymd);
-                    const offLabel = offDayLabel(ymd, holidayNames, leaveNames);
+                    const isHoliday = holidayNames.has(ymd);
+                    const isLeave = leaveNames.has(leaveKey(row.employeeId, ymd));
+                    const isOff = isHoliday || isLeave;
+                    const offLabel = offDayLabel(ymd, row.employeeId, holidayNames, leaveNames);
                     return (
                       <td
                         key={ymd}

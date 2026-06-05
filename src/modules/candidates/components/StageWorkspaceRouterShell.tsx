@@ -45,6 +45,7 @@ export function StageWorkspaceRouterShell({
   jobSlug,
   stageSlug,
 }: StageWorkspaceRouterShellProps) {
+  const normalizedStageSlug = stageSlug.trim().toLowerCase();
   // Try offer workspace first (for OFFER stages)
   const offerWorkspaceQuery = useOfferWorkspace(orgSlug, memberId, jobSlug, stageSlug);
   const errorStatus = readErrorStatus(offerWorkspaceQuery.error);
@@ -61,6 +62,17 @@ export function StageWorkspaceRouterShell({
   );
   const onboardErrorStatus = readErrorStatus(onboardQuery.error);
 
+  if (normalizedStageSlug === 'rejected') {
+    return (
+      <StageWorkspacePageShell
+        orgSlug={orgSlug}
+        memberId={memberId}
+        jobSlug={jobSlug}
+        stageSlug={stageSlug}
+      />
+    );
+  }
+
   // Offer workspace loaded → show offer shell
   if (offerWorkspaceQuery.data) {
     return (
@@ -70,6 +82,17 @@ export function StageWorkspaceRouterShell({
         jobSlug={jobSlug}
         stageSlug={stageSlug}
         initialWorkspace={offerWorkspaceQuery.data}
+      />
+    );
+  }
+
+  if (normalizedStageSlug === 'offer' && offerWorkspaceQuery.isError) {
+    return (
+      <StageWorkspacePageShell
+        orgSlug={orgSlug}
+        memberId={memberId}
+        jobSlug={jobSlug}
+        stageSlug={stageSlug}
       />
     );
   }

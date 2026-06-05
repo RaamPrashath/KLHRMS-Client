@@ -8,7 +8,7 @@ export function useLeaveRequests(
   orgSlug: string,
   memberId: string,
   filters: LeaveRequestFiltersState,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; keepPreviousData?: boolean; staleTime?: number },
 ) {
   return useQuery<LeaveRequestListResponse, Error>({
     queryKey: ['leave-requests', orgSlug, filters],
@@ -28,5 +28,7 @@ export function useLeaveRequests(
         },
       }),
     enabled: (options?.enabled ?? true) && !!orgSlug && !!memberId,
+    placeholderData: options?.keepPreviousData ? (previousData) => previousData : undefined,
+    staleTime: options?.staleTime,
   });
 }

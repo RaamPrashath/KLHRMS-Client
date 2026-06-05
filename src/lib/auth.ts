@@ -6,6 +6,12 @@ import { Resend } from "resend";
 import { getAuthAllowedHosts, getPublicAppUrl, getTrustedOrigins } from "@/lib/deployment-env";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const publicAppUrl = getPublicAppUrl();
+const authProtocol = publicAppUrl.startsWith("http://")
+    ? "http"
+    : publicAppUrl.startsWith("https://")
+        ? "https"
+        : "auto";
 const resendFromEmail =
     process.env.RESEND_FROM_EMAIL ||
     process.env.EMAIL_FROM ||
@@ -14,8 +20,8 @@ const resendFromEmail =
 export const auth = betterAuth({
     baseURL: {
         allowedHosts: getAuthAllowedHosts(),
-        fallback: getPublicAppUrl(),
-        protocol: process.env.NODE_ENV === "production" ? "https" : "auto",
+        fallback: publicAppUrl,
+        protocol: authProtocol,
     },
     trustedOrigins: getTrustedOrigins(),
     database: prismaAdapter(prisma, {

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -135,13 +135,52 @@ export function LeaveSectionShell({
   const holidaysQuery = useHolidays(orgSlug, memberId);
   const deleteHolidayMutation = useDeleteHoliday(orgSlug, memberId);
   const syncHolidaysMutation = useSyncHolidays(orgSlug, memberId);
+  const deleteHolidayMutationAsync = deleteHolidayMutation.mutateAsync;
+  const syncHolidaysMutationAsync = syncHolidaysMutation.mutateAsync;
 
-  const permissions: LeavePermissions = resolveLeavePermissions(initialPermissions);
+  const permissions: LeavePermissions = useMemo(
+    () => resolveLeavePermissions(initialPermissions),
+    [initialPermissions],
+  );
   const canCreate = canCreateLeaves(permissions.create);
   const canApprove = canApproveLeaves(permissions.approve);
   const canSync = canSyncHolidays(permissions.create);
   const leaveTypes = leaveTypesQuery.data ?? EMPTY_LEAVE_TYPES;
   const holidays = holidaysQuery.data ?? EMPTY_HOLIDAYS;
+
+  const openApplyLeave = useCallback(() => setApplyOpen(true), []);
+  const openLeaveTypeDialog = useCallback((leaveType: LeaveTypeRecord | null = null) => {
+    setSelectedLeaveType(leaveType);
+    setLeaveTypeDialogOpen(true);
+  }, []);
+  const openHolidayDialog = useCallback((holiday: HolidayRecord | null = null) => {
+    setSelectedHoliday(holiday);
+    setHolidayDialogOpen(true);
+  }, []);
+  const openRequestDetails = useCallback((requestId: string) => setSelectedRequestId(requestId), []);
+  const deleteHoliday = useCallback(
+    async (holidayId: string) => {
+      try {
+        await deleteHolidayMutationAsync(holidayId);
+        toast.success('Holiday deleted');
+      } catch (error) {
+        toast.error(getLeaveErrorMessage(error, 'Failed to delete holiday'));
+      }
+    },
+    [deleteHolidayMutationAsync],
+  );
+  const syncHolidays = useCallback(async () => {
+    try {
+      const result = await syncHolidaysMutationAsync();
+      toast.success(
+        result.rows_inserted > 0
+          ? `Synced ${result.rows_inserted} holiday${result.rows_inserted === 1 ? '' : 's'} from ${result.source === 'api' ? 'public API' : 'master list'}`
+          : 'Holidays already up to date',
+      );
+    } catch (error) {
+      toast.error(getLeaveErrorMessage(error, 'Failed to sync holidays'));
+    }
+  }, [syncHolidaysMutationAsync]);
 
   const shellContext = useMemo<LeaveShellContextValue>(
     () => ({
@@ -156,41 +195,17 @@ export function LeaveSectionShell({
       leaveTypesLoading: leaveTypesQuery.isLoading,
       holidays,
       holidaysLoading: holidaysQuery.isLoading,
-      openApplyLeave: () => setApplyOpen(true),
-      openLeaveTypeDialog: (leaveType = null) => {
-        setSelectedLeaveType(leaveType);
-        setLeaveTypeDialogOpen(true);
-      },
-      openHolidayDialog: (holiday = null) => {
-        setSelectedHoliday(holiday);
-        setHolidayDialogOpen(true);
-      },
-      openRequestDetails: (requestId) => setSelectedRequestId(requestId),
-      deleteHoliday: async (holidayId) => {
-        try {
-          await deleteHolidayMutation.mutateAsync(holidayId);
-          toast.success('Holiday deleted');
-        } catch (error) {
-          toast.error(getLeaveErrorMessage(error, 'Failed to delete holiday'));
-        }
-      },
-      syncHolidays: async () => {
-        try {
-          const result = await syncHolidaysMutation.mutateAsync();
-          toast.success(
-            result.rows_inserted > 0
-              ? `Synced ${result.rows_inserted} holiday${result.rows_inserted === 1 ? '' : 's'} from ${result.source === 'api' ? 'public API' : 'master list'}`
-              : 'Holidays already up to date',
-          );
-        } catch (error) {
-          toast.error(getLeaveErrorMessage(error, 'Failed to sync holidays'));
-        }
-      },
+      openApplyLeave,
+      openLeaveTypeDialog,
+      openHolidayDialog,
+      openRequestDetails,
+      deleteHoliday,
+      syncHolidays,
     }),
     [
-      canApprove, canCreate, canSync, deleteHolidayMutation, initialMembers, syncHolidaysMutation,
+      canApprove, canCreate, canSync, deleteHoliday, initialMembers, syncHolidays,
       holidays, holidaysQuery.isLoading, leaveTypes, leaveTypesQuery.isLoading,
-      memberId, orgSlug, permissions,
+      memberId, openApplyLeave, openHolidayDialog, openLeaveTypeDialog, openRequestDetails, orgSlug, permissions,
     ],
   );
 

@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -626,11 +625,6 @@ export function InterviewsPageShell({
                           }
                         }}
                       >
-                        <Avatar className="size-8">
-                          <AvatarFallback className="bg-primary-ghost text-xs font-semibold text-primary">
-                            {interview.candidate.firstName[0]}{interview.candidate.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
                         <div className="min-w-0 text-left">
                           <p className="truncate text-sm font-medium text-neutral-900 hover:text-primary transition-colors">
                             {candidateName(interview.candidate.firstName, interview.candidate.lastName)}

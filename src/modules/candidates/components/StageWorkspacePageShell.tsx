@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, ChevronLeft, Inbox, Loader2, Plus, Search, Send, Shuffle, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -412,7 +412,7 @@ export function StageWorkspacePageShell({
   stageSlug,
   jobSlug = null,
 }: StageWorkspacePageShellProps) {
-  const stageWorkspaceQuery = useStageWorkspace(orgSlug, memberId, stageSlug);
+  const stageWorkspaceQuery = useStageWorkspace(orgSlug, memberId, jobSlug ? '' : stageSlug);
   const jobStageWorkspaceQuery = useStageWorkspaceByJobSlug(orgSlug, memberId, jobSlug, stageSlug);
   const workspaceQuery = jobSlug ? jobStageWorkspaceQuery : stageWorkspaceQuery;
   const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug, workspaceQuery.data?.jobPosting.id ?? null);
@@ -429,7 +429,7 @@ export function StageWorkspacePageShell({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'unassigned' | 'assigned'>('all');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [assignmentTeamId, setAssignmentTeamId] = useState<string | null>(null);
+  const [localAssignmentTeamId, setLocalAssignmentTeamId] = useState<string | null>(null);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
   const [completionNote, setCompletionNote] = useState('');
@@ -446,19 +446,13 @@ export function StageWorkspacePageShell({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const workspace = workspaceQuery.data;
+  const assignmentTeamId = localAssignmentTeamId ?? workspace?.assignmentTeamId ?? null;
   const selectedApplicationIds = useMemo(
     () => workspace?.candidates
       .filter((candidate) => !isLockedAssignment(candidate))
       .map((candidate) => candidate.applicationId) ?? [],
     [workspace],
   );
-
-  // Sync assignmentTeamId from workspace response
-  useEffect(() => {
-    if (workspace?.assignmentTeamId) {
-      setAssignmentTeamId(workspace.assignmentTeamId);
-    }
-  }, [workspace?.assignmentTeamId]);
 
   const teamMembers = useMemo(
     () => workspace?.teamMembers ?? [],
@@ -646,7 +640,7 @@ export function StageWorkspacePageShell({
           stageId,
           members: [{ memberId: interviewer.memberId, role: dept }],
         });
-        setAssignmentTeamId(created.id);
+        setLocalAssignmentTeamId(created.id);
       } else if (assignmentTeamId) {
         await addTeamMember.mutateAsync({
           teamId: assignmentTeamId,
@@ -779,6 +773,7 @@ export function StageWorkspacePageShell({
         totalCount += 1;
       }
       toast.success(`${totalCount} assignment${totalCount === 1 ? '' : 's'} saved`);
+      await workspaceQuery.refetch();
       setBoardAssignments({});
     } catch (error) {
       toast.error(readActionError(error, 'Failed to save assignments'));
@@ -803,7 +798,7 @@ export function StageWorkspacePageShell({
           members: teamMembers.map((member) => ({ memberId: member.memberId })),
         });
         hiringTeamId = created.id;
-        setAssignmentTeamId(created.id);
+        setLocalAssignmentTeamId(created.id);
       }
 
       const payload: TeamDistributionRequest = {
