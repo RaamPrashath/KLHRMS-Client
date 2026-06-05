@@ -194,6 +194,7 @@ export function AssetsPageShell({
         assetCode: data.assetCode,
         name: data.name,
         categoryDefinitionId: data.categoryDefinitionId ?? null,
+        brand: data.brand?.trim() ? data.brand.trim() : null,
         condition: data.condition,
         location: data.location ?? '',
         serialNumbers: data.serialNumbers,

@@ -9,44 +9,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type {
-  EmployeeFilterOption,
-  AttendanceTodayStatus,
-} from '@/modules/employees/types/employeeTypes';
+import type { EmployeeFilterOption } from '@/modules/employees/types/employeeTypes';
 
 interface EmployeeFiltersProps {
   search: string;
   roleId: string | undefined;
-  attendanceStatus: AttendanceTodayStatus | undefined;
   roles: EmployeeFilterOption[];
   onSearchChange: (value: string) => void;
   onRoleChange: (value: string | undefined) => void;
-  onAttendanceStatusChange: (value: AttendanceTodayStatus | undefined) => void;
   onClearAll: () => void;
 }
-
-const ATTENDANCE_OPTIONS: { value: AttendanceTodayStatus; label: string }[] = [
-  { value: 'PRESENT', label: 'Present' },
-  { value: 'ABSENT', label: 'Absent' },
-  { value: 'WORK_FROM_HOME', label: 'Work From Home' },
-  { value: 'HALF_DAY', label: 'Half Day' },
-  { value: 'NO_RECORD', label: 'No Record' },
-];
 
 const ALL_VALUE = '__all__';
 
 export function EmployeeFilters({
   search,
   roleId,
-  attendanceStatus,
   roles,
   onSearchChange,
   onRoleChange,
-  onAttendanceStatusChange,
   onClearAll,
 }: EmployeeFiltersProps) {
-  const hasActiveFilters =
-    search || roleId || attendanceStatus;
+  const hasActiveFilters = !!roleId;
 
   return (
     <div className="flex items-center gap-2 w-full">
@@ -54,7 +38,7 @@ export function EmployeeFilters({
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
         <Input
-          placeholder="Who's in today?"
+          placeholder="Search by name, email, employee ID, department, or role"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="h-9 pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
@@ -78,30 +62,6 @@ export function EmployeeFilters({
             {roles.map((r) => (
               <SelectItem key={r.id} value={r.id} className="text-sm">
                 {r.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Attendance status filter */}
-        <Select
-          value={attendanceStatus ?? ALL_VALUE}
-          onValueChange={(v) =>
-            onAttendanceStatusChange(
-              v === ALL_VALUE ? undefined : (v as AttendanceTodayStatus),
-            )
-          }
-        >
-          <SelectTrigger className="h-9 w-[180px] text-sm border-0 bg-canvas">
-            <SelectValue placeholder="All Attendance" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE} className="text-sm">
-              All Attendance
-            </SelectItem>
-            {ATTENDANCE_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-sm">
-                {o.label}
               </SelectItem>
             ))}
           </SelectContent>

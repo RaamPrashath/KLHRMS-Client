@@ -27,6 +27,7 @@ import type { AttendanceExportRow } from '@/modules/attendance/api/attendanceSer
 // ─── View mode ────────────────────────────────────────────────────────────────
 
 type ViewMode = 'list' | 'weekly' | 'monthly';
+const DEFAULT_PAGE_SIZE = 10;
 
 // ─── Date helpers for pivot period navigation ─────────────────────────────────
 
@@ -223,7 +224,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
       dateFrom: from,
       dateTo: to,
       page: 1,
-      pageSize: 200,
+      pageSize: filters.pageSize || DEFAULT_PAGE_SIZE,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, pivotAnchor]);
@@ -237,9 +238,19 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
         dateFrom: undefined,
         dateTo: undefined,
         page: 1,
-        pageSize: 50,
+        pageSize: DEFAULT_PAGE_SIZE,
       });
+      return;
     }
+    const [from, to] = getPivotRange(mode as PivotMode, pivotAnchor);
+    onFiltersChange({
+      ...filters,
+      timePreset: 'custom',
+      dateFrom: from,
+      dateTo: to,
+      page: 1,
+      pageSize: filters.pageSize || DEFAULT_PAGE_SIZE,
+    });
   }
 
   function handlePrev() {
@@ -259,7 +270,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
   }
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
-  const pageSize = filters.pageSize ?? 15;
+  const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE;
   const today = getTodayIST();
   const currentPage = filters.page ?? 1;
 
@@ -638,6 +649,12 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                 allEmployees={allEmployees}
                 holidayNames={pivotHolidayNames}
                 leaveNames={pivotLeaveNames}
+                page={currentPage}
+                pageSize={pageSize}
+                onPageChange={(page) => onFiltersChange({ ...filters, page })}
+                onPageSizeChange={(nextPageSize) =>
+                  onFiltersChange({ ...filters, page: 1, pageSize: nextPageSize })
+                }
               />
             );
           })()}

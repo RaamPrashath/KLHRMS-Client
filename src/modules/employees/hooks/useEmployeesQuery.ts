@@ -15,12 +15,11 @@ import type { EmployeeFiltersInput } from '@/modules/employees/schema/employeeSc
 export function useEmployeesQuery(
   orgSlug: string,
   memberId: string,
-  filters: Partial<EmployeeFiltersInput>,
   options?: { enabled?: boolean },
 ) {
   return useQuery<EmployeeListResponse, Error>({
-    queryKey: ['employees', orgSlug, filters],
-    queryFn: () => fetchEmployeesAction({ orgSlug, memberId, filters }),
+    queryKey: ['employees', orgSlug],
+    queryFn: () => fetchEmployeesAction({ orgSlug, memberId }),
     enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
     staleTime: 30_000,
   });

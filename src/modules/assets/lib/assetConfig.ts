@@ -110,7 +110,6 @@ export const defaultBulkAssetForm: BulkAssetCreateInput = {
   name: '',
   categoryDefinitionId: null,
   brand: '',
-  model: '',
   condition: 'GOOD',
   location: '',
   serialNumbers: [''],

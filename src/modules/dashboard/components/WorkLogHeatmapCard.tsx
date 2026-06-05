@@ -49,18 +49,16 @@ function sumLogHours(logs: WorkLogWithTimeRange[]): number {
   }, 0);
 }
 
-function buildFallbackLogFromAttendance(args: {
-  date: Date;
-  clockIn: Date | null;
+function buildClockedInLog(args: {
+  clockIn: Date;
   clockOut: Date | null;
   sourceLog?: LocalWorkLog | null;
 }): LocalWorkLog {
-  const { date, clockIn, clockOut, sourceLog } = args;
-  const start = clockIn ?? sourceLog?.startTime ?? new Date(date.getFullYear(), date.getMonth(), date.getDate(), 9, 0, 0, 0);
-  const end = clockOut && clockOut > start
-    ? clockOut
-    : sourceLog?.endTime && sourceLog.endTime > start
-      ? sourceLog.endTime
+  const { clockIn, clockOut, sourceLog } = args;
+  const start = clockIn;
+  const end =
+    clockOut && clockOut > start
+      ? clockOut
       : new Date(start.getTime() + 60 * 60_000);
 
   return {
@@ -210,12 +208,21 @@ export function WorkLogHeatmapCard({
     const rangeLogs = (rangeDay?.logs ?? []).map(hydrateLocalWorkLog);
     const existingLogs = currentDay?.logs ?? rangeLogs;
     const sourceLog = existingLogs[0] ?? null;
-    const preparedLog = buildFallbackLogFromAttendance({
-      date: day,
-      clockIn: currentDay?.clockIn ?? (rangeDay?.clockIn ? new Date(rangeDay.clockIn) : null),
-      clockOut: currentDay?.clockOut ?? (rangeDay?.clockOut ? new Date(rangeDay.clockOut) : null),
-      sourceLog,
-    });
+    const resolvedClockIn =
+      currentDay?.clockIn ?? (rangeDay?.clockIn ? new Date(rangeDay.clockIn) : null);
+    const resolvedClockOut =
+      currentDay?.clockOut ?? (rangeDay?.clockOut ? new Date(rangeDay.clockOut) : null);
+
+    let preparedLog: LocalWorkLog | null = null;
+    if (sourceLog) {
+      preparedLog = sourceLog;
+    } else if (resolvedClockIn) {
+      preparedLog = buildClockedInLog({
+        clockIn: resolvedClockIn,
+        clockOut: resolvedClockOut,
+      });
+    }
+
     setDialogState({
       open: true,
       mode: sourceLog ? "edit" : "create",

@@ -75,10 +75,10 @@ export function WorkLogForm({
   const resolvedEnd = initialLog?.endTime ?? defaultEnd;
 
   const [startTimeStr, setStartTimeStr] = useState<string>(() =>
-    resolvedStart ? toTimeInput(resolvedStart) : '09:00',
+    resolvedStart ? toTimeInput(resolvedStart) : '',
   );
   const [endTimeStr, setEndTimeStr] = useState<string>(() =>
-    resolvedEnd ? toTimeInput(resolvedEnd) : '10:00',
+    resolvedEnd ? toTimeInput(resolvedEnd) : '',
   );
   const [durationStr, setDurationStr] = useState<string>(() => {
     if (resolvedStart && resolvedEnd) {
@@ -86,7 +86,7 @@ export function WorkLogForm({
         computeDurationMinutes(resolvedStart, resolvedEnd),
       );
     }
-    return '1 hr';
+    return '';
   });
   const [notes, setNotes] = useState(initialLog?.notes ?? '');
   const [projectId, setProjectId] = useState<string | null>(initialLog?.projectId ?? null);
@@ -176,8 +176,8 @@ export function WorkLogForm({
 
     if (!projectId) nextErrors.project = 'Project is required';
     if (!projectTaskId) nextErrors.task = 'Task is required';
-    if (!start) nextErrors.startTime = 'Invalid start time';
-    if (!end) nextErrors.endTime = 'Invalid end time';
+    if (!start) nextErrors.startTime = startTimeStr ? 'Invalid start time' : 'Start time is required';
+    if (!end) nextErrors.endTime = endTimeStr ? 'Invalid end time' : 'End time is required';
     if (start && end && end <= start) nextErrors.endTime = 'End time must be after start time';
 
     if (Object.keys(nextErrors).length > 0) {
