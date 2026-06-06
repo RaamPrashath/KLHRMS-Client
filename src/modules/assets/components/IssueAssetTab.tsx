@@ -438,12 +438,13 @@ export function IssueAssetTab({
     return raw;
   }
 
-  function groupDisplayLabel(group: AvailableAssetGroup): string {
-    const parts = [group.assetName];
+function groupDisplayLabel(group: AvailableAssetGroup): string {
+    const parts: string[] = [];
     if (group.categoryName) parts.push(group.categoryName);
+    if (group.brand) parts.push(group.brand);
     parts.push(group.assetCode);
     return parts.join(' / ');
-  }
+}
 
   const columns = useMemo(
     () => [

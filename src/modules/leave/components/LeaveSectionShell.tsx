@@ -260,7 +260,7 @@ export function LeaveSectionShell({
         </div>
       </div>
 
-      <ApplyLeaveSheet open={applyOpen} onOpenChange={setApplyOpen} orgSlug={orgSlug} memberId={memberId} createScope={permissions.create} leaveTypes={leaveTypes} members={initialMembers} />
+      <ApplyLeaveSheet open={applyOpen} onOpenChange={setApplyOpen} orgSlug={orgSlug} memberId={memberId} leaveTypes={leaveTypes} />
       <LeaveTypeDialog
         open={leaveTypeDialogOpen}
         onOpenChange={setLeaveTypeDialogOpen}

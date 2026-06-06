@@ -171,7 +171,7 @@ export function createHRManagerPermissions(): RolePermissions {
   permissions.attendanceReport.approve = 'organization';
   
   permissions.leaves.view = 'organization';
-  permissions.leaves.create = 'organization';
+  permissions.leaves.create = 'self';
   permissions.leaves.edit = 'organization';
   permissions.leaves.delete = 'organization';
   permissions.leaves.approve = 'organization';
