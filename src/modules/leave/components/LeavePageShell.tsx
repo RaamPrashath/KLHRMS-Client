@@ -646,9 +646,7 @@ export function LeavePageShell({ orgSlug, memberId }: Readonly<LeavePageShellPro
         onOpenChange={setApplyOpen}
         orgSlug={orgSlug}
         memberId={memberId}
-        createScope={permissions.create}
         leaveTypes={leaveTypes}
-        members={members}
       />
 
       <LeaveTypeDialog

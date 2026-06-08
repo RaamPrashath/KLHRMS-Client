@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { addDays, format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -74,6 +74,17 @@ export function BulkAttendancePageClient({
     pageSize: 50,
   });
   const { data: projects = [] } = useProjectsForAttendance(orgSlug, memberId);
+
+  const totalHoursLogged = useMemo(() => {
+    let totalMins = 0;
+    for (const day of dayMap.values()) {
+      for (const log of day.logs) {
+        const diff = log.endTime.getTime() - log.startTime.getTime();
+        totalMins += Math.round(diff / 60_000);
+      }
+    }
+    return totalMins / 60;
+  }, [dayMap]);
 
   const handleOpenCreate = useCallback((date: string, slotStart?: Date, slotEnd?: Date) => {
     let start: Date;
@@ -329,28 +340,25 @@ export function BulkAttendancePageClient({
   const showTimesheetEntryToggle = permissions.view === 'organization';
 
   return (
-    <div className="flex max-h-dvh min-h-0 flex-1 flex-col gap-6 overflow-hidden bg-background">
-      <div className="ml-7 mr-7 mt-7 flex shrink-0 items-center justify-between">
-        <h1 className="text-4xl font-semibold tracking-tight text-foreground">Timesheet</h1>
-        <div className="flex items-center gap-3">
-          <TimesheetSubnav orgSlug={orgSlug} />
-          <BulkAttendanceToolbar
-            weekStart={currentWeekStart}
-            onPrev={goToPrevWeek}
-            onNext={goToNextWeek}
-            onToday={goToCurrentWeek}
-            saveState={saveState}
-            saveError={saveError}
-            showTimesheetEntryToggle={showTimesheetEntryToggle}
-            onTimesheetToggle={() => setViewMode('calendar')}
-          />
-        </div>
-      </div>
+    <div className="flex max-h-dvh min-h-0 flex-1 flex-col overflow-hidden bg-background">
+      {/* redrawn page-level header with redesigned toolbar */}
+      <BulkAttendanceToolbar
+        weekStart={currentWeekStart}
+        onPrev={goToPrevWeek}
+        onNext={goToNextWeek}
+        onToday={goToCurrentWeek}
+        saveState={saveState}
+        saveError={saveError}
+        showTimesheetEntryToggle={showTimesheetEntryToggle}
+        onTimesheetToggle={() => setViewMode('calendar')}
+        totalHoursLogged={totalHoursLogged}
+        totalHoursTarget={40}
+      />
 
       {viewMode === 'entries' ? (
         <WorkLogDirectorySection orgSlug={orgSlug} memberId={memberId} />
       ) : (
-        <div className="mx-7 min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-xl border border-border bg-card shadow-sm">
+        <div className="mx-7 mb-7 min-h-0 flex-1 overflow-x-hidden overflow-y-auto border border-border bg-card shadow-sm rounded-none">
           <BulkAttendanceCalendar
             weekStart={currentWeekStart}
             dayMap={dayMap}
@@ -360,6 +368,7 @@ export function BulkAttendancePageClient({
             onOpenEdit={handleOpenEdit}
             onDeleteLog={handleDeleteLog}
             onDragLog={handleDragLog}
+            projects={projects}
           />
         </div>
       )}

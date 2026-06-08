@@ -3,15 +3,18 @@
 import { format } from 'date-fns';
 import { Pencil, Trash2 } from 'lucide-react';
 import type { CalendarWorkLogEvent } from '@/modules/attendance/types/bulkAttendanceTypes';
+import type { ProjectForAttendance } from '@/modules/projects/types/projectTypes';
 
 interface BulkAttendanceEventProps {
   event: CalendarWorkLogEvent;
+  projects?: ProjectForAttendance[];
   onEdit: (event: CalendarWorkLogEvent) => void;
   onDelete: (event: CalendarWorkLogEvent) => void;
 }
 
 export function BulkAttendanceEvent({
   event,
+  projects = [],
   onEdit,
   onDelete,
 }: Readonly<BulkAttendanceEventProps>) {
@@ -32,14 +35,19 @@ export function BulkAttendanceEvent({
   const title = event.resource.title;
   const notes = event.resource.notes;
 
+  // Try to match a ticket ID pattern (e.g. FIPFS-13124, TEII-2)
+  const textToSearch = `${title ?? ''} ${notes ?? ''}`;
+  const ticketMatch = textToSearch.match(/[A-Z0-9]{2,6}-\d{1,6}/i);
+  const ticketId = ticketMatch ? ticketMatch[0].toUpperCase() : null;
+
   return (
     <div
       className={[
         'group relative h-full w-full overflow-hidden cursor-pointer select-none',
         'transition-all duration-150',
-        'border border-border rounded-lg',
-        'bg-primary/5',
-        'hover:border-primary/40 hover:shadow-sm hover:bg-primary/10',
+        'border border-border/80 rounded-xl',
+        'bg-card hover:bg-muted/10',
+        'hover:border-primary/45 hover:shadow-sm',
         isOptimistic ? 'opacity-60' : '',
       ]
         .filter(Boolean)
@@ -50,58 +58,72 @@ export function BulkAttendanceEvent({
       onClick={() => onEdit(event)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onEdit(event); }}
     >
-      <div className="px-3 py-2 h-full flex flex-col gap-1">
-        {/* Time + duration */}
-        <div className="flex items-baseline gap-2">
-          <p className="font-mono text-xs leading-tight font-medium text-foreground">
-            {startStr} - {endStr}
-          </p>
-          <p className="font-mono text-xs leading-tight font-medium text-muted-foreground">
-            {durationLabel}
-          </p>
+      <div className="px-3 py-2.5 h-full flex flex-col justify-between gap-1 text-left">
+        <div className="flex flex-col gap-1 overflow-hidden">
+          {/* Title */}
+          {title ? (
+            <p className="text-xs font-semibold leading-snug text-foreground line-clamp-2">
+              {title}
+            </p>
+          ) : (
+            <p className="text-xs font-semibold leading-snug text-foreground/80 italic">
+              Work Log
+            </p>
+          )}
+
+          {/* Notes */}
+          {notes && (
+            <p className="text-[10px] leading-relaxed text-muted-foreground break-words line-clamp-3">
+              {notes}
+            </p>
+          )}
         </div>
 
-        {/* Title */}
-        {title && (
-          <p className="text-sm font-semibold leading-tight text-foreground line-clamp-1">
-            {title}
-          </p>
-        )}
+        {/* Bottom row: Ticket Badge (left) & Duration Label (right) */}
+        <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/30 gap-1.5 shrink-0">
+          {ticketId ? (
+            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-[9px] font-bold tracking-tight">
+              <svg className="size-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              <span>{ticketId}</span>
+            </div>
+          ) : (
+            <div className="w-1" />
+          )}
 
-        {/* Notes */}
-        {notes && (
-          <p className="text-xs leading-relaxed text-muted-foreground break-words line-clamp-3">
-            {notes}
-          </p>
-        )}
+          <span className="text-[10px] font-bold text-muted-foreground font-mono bg-muted/65 px-1.5 py-0.5 rounded border border-border/30">
+            {durationLabel}
+          </span>
+        </div>
       </div>
 
       {/* Hover action strip */}
       <div
-        className="absolute top-0.5 right-0.5 hidden group-hover:flex items-center gap-0.5"
+        className="absolute top-1.5 right-1.5 hidden group-hover:flex items-center gap-1"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           aria-label="Edit work log"
           onClick={(e) => { e.stopPropagation(); onEdit(event); }}
-          className="size-5 flex items-center justify-center rounded-sm bg-background/90 border border-border/50 backdrop-blur-sm text-muted-foreground hover:text-primary transition-colors duration-100 shadow-sm"
+          className="size-5.5 flex items-center justify-center rounded-md bg-background border border-border text-muted-foreground hover:text-primary transition-colors duration-100 shadow-sm"
         >
-          <Pencil className="size-2.5" strokeWidth={2} />
+          <Pencil className="size-3" strokeWidth={2.5} />
         </button>
         <button
           type="button"
           aria-label="Delete work log"
           onClick={(e) => { e.stopPropagation(); onDelete(event); }}
-          className="size-5 flex items-center justify-center rounded-sm bg-background/90 border border-border/50 backdrop-blur-sm text-muted-foreground hover:text-destructive transition-colors duration-100 shadow-sm"
+          className="size-5.5 flex items-center justify-center rounded-md bg-background border border-border text-muted-foreground hover:text-destructive transition-colors duration-100 shadow-sm"
         >
-          <Trash2 className="size-2.5" strokeWidth={2} />
+          <Trash2 className="size-3" strokeWidth={2.5} />
         </button>
       </div>
 
       {/* Saving pulse dot */}
       {isOptimistic && (
-        <div className="absolute bottom-1 right-1">
+        <div className="absolute bottom-1.5 right-1.5">
           <div className="size-1.5 rounded-full bg-warning animate-pulse" />
         </div>
       )}

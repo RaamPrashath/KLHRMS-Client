@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -21,7 +22,7 @@ import { CalendarIcon } from 'lucide-react';
 import { leaveRequestSchema, type LeaveRequestInput } from '@/modules/leave/schema/leaveSchemas';
 import { useCreateLeaveRequest } from '@/modules/leave/hooks/useCreateLeaveRequest';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
-import type { LeaveMemberSummary, LeavePermissionScope, LeaveTypeRecord, HolidayRecord } from '@/modules/leave/types/leaveTypes';
+import type { LeaveTypeRecord, HolidayRecord } from '@/modules/leave/types/leaveTypes';
 import { getLeaveErrorMessage } from '@/modules/leave/utils/errorMessage';
 
 interface ApplyLeaveSheetProps {
@@ -29,9 +30,7 @@ interface ApplyLeaveSheetProps {
   onOpenChange: (open: boolean) => void;
   orgSlug: string;
   memberId: string;
-  createScope: LeavePermissionScope;
-  leaveTypes: LeaveTypeRecord[];
-  members: LeaveMemberSummary[];
+      leaveTypes: LeaveTypeRecord[];
 }
 
 type ApplyLeaveFormValues = z.input<typeof leaveRequestSchema>;
@@ -65,18 +64,16 @@ export function ApplyLeaveSheet({
   onOpenChange,
   orgSlug,
   memberId,
-  createScope,
   leaveTypes,
-  members,
 }: Readonly<ApplyLeaveSheetProps>) {
   const mutation = useCreateLeaveRequest(orgSlug, memberId);
   const { data: holidays = [] } = useHolidays(orgSlug, memberId);
   const form = useForm<ApplyLeaveFormValues, unknown, LeaveRequestInput>({
     resolver: zodResolver(leaveRequestSchema),
     defaultValues: {
-      leaveTypeId: '',
-      memberId: createScope === 'organization' ? undefined : memberId,
-      startDate: '',
+        leaveTypeId: '',
+        memberId: memberId,
+        startDate: '',
       endDate: '',
       days: 0,
       reason: '',
@@ -85,7 +82,6 @@ export function ApplyLeaveSheet({
 
   const startDate = useWatch({ control: form.control, name: 'startDate' });
   const endDate = useWatch({ control: form.control, name: 'endDate' });
-  const selectedMemberId = useWatch({ control: form.control, name: 'memberId' });
   const selectedLeaveTypeId = useWatch({ control: form.control, name: 'leaveTypeId' });
 
   const leaveInfo = useMemo(() => {
@@ -103,13 +99,13 @@ export function ApplyLeaveSheet({
     try {
       await mutation.mutateAsync({
         ...values,
-        memberId: createScope === 'organization' ? values.memberId : undefined,
+        memberId: undefined,
         reason: values.reason || '',
       });
       toast.success('Leave request created');
       form.reset({
         leaveTypeId: '',
-        memberId: createScope === 'organization' ? undefined : memberId,
+      memberId: memberId,
         startDate: '',
         endDate: '',
         days: 0,
@@ -133,32 +129,6 @@ export function ApplyLeaveSheet({
 
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <form id="apply-leave-form" className="flex flex-col gap-5" onSubmit={form.handleSubmit(onSubmit)}>
-            {createScope === 'organization' ? (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="leave-member" className="text-sm font-medium text-neutral-900">
-                  Member
-                </Label>
-                <Select
-                  value={selectedMemberId}
-                  onValueChange={(value) => form.setValue('memberId', value, { shouldValidate: true })}
-                >
-                  <SelectTrigger id="leave-member" className="h-10 w-full">
-                    <SelectValue placeholder="Select a member" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="z-[100]">
-                    {members.map((member) => (
-                      <SelectItem key={member.memberId} value={member.memberId}>
-                        {member.name ?? member.email ?? member.memberId}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {form.formState.errors.memberId ? (
-                  <p className="text-xs text-destructive-text">{form.formState.errors.memberId.message}</p>
-                ) : null}
-              </div>
-            ) : null}
-
             <div className="flex flex-col gap-2">
               <Label htmlFor="leave-type" className="text-sm font-medium text-neutral-900">
                 Leave Type
