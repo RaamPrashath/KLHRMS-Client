@@ -7,7 +7,7 @@ import { getScope, type RolePermissions } from '@/lib/hrms-roles';
 import { useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { EmployeeTable } from './EmployeeTable';
 import { updateEmployeeRoleAction } from '@/app/actions/organizationActions';
-import type { EmployeeListItem } from '@/modules/employees/types/employeeTypes';
+import type { AttendanceTodayStatus, EmployeeListItem } from '@/modules/employees/types/employeeTypes';
 
 interface EmployeePageShellProps {
   orgSlug: string;
@@ -22,6 +22,7 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [roleId, setRoleId] = useState<string | undefined>(undefined);
+  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceTodayStatus | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -115,10 +116,22 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
     setPage(1);
   }, []);
 
+  const handleAttendanceStatusChange = useCallback((value: AttendanceTodayStatus | undefined) => {
+    setAttendanceStatus(value);
+    setPage(1);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchInput('');
+    setSearch('');
+    setPage(1);
+  }, []);
+
   const handleClearAll = useCallback(() => {
     setSearchInput('');
     setSearch('');
     setRoleId(undefined);
+    setAttendanceStatus(undefined);
     setPage(1);
   }, []);
 
@@ -160,9 +173,12 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
         onPageSizeChange={handlePageSizeChange}
         search={searchInput}
         roleId={roleId}
+        attendanceStatus={attendanceStatus}
         roles={roles}
         onSearchChange={handleSearchChange}
+        onClearSearch={handleClearSearch}
         onRoleChange={handleRoleChange}
+        onAttendanceStatusChange={handleAttendanceStatusChange}
         onClearAll={handleClearAll}
         canEditRole={canEditRole}
         onUpdateRole={handleUpdateRole}

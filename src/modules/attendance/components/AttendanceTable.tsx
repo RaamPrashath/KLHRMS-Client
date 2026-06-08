@@ -332,9 +332,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
   // Fetch all employees for org-scope pivot view
   const { data: employeeData } = useEmployeesQuery(orgSlug, memberId, {
-    page: 1,
-    pageSize: 200,
-  }, {
     enabled: showEmployeeColumn,
   });
   const allEmployees = showEmployeeColumn
