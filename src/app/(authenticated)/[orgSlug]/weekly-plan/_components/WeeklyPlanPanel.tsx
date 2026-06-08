@@ -315,7 +315,7 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
           <Button
             type="button"
             variant="outline"
-            className="h-10 rounded-lg px-5 text-[13px] font-medium"
+            className="btn-clockout-border h-10 rounded-lg px-5 text-[13px] font-medium"
             onClick={handleCopyPreviousWeek}
             disabled={isWeekLoading || isLocationsLoading || saveMutation.isPending}
           >

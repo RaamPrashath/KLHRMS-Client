@@ -591,6 +591,11 @@ export function AttendanceClockCard({
   function handleClockOutConfirm() {
     const trimmedWorkLog = existingWorkSummary ? "" : clockOutWorkLogText.trim();
 
+    if (!existingWorkSummary && !trimmedWorkLog) {
+      setInlineError("Work summary is required before clock-out.");
+      return;
+    }
+
     setInlineError(null);
     clockOutMutation
       .mutateAsync({ work_log_text: trimmedWorkLog })
@@ -935,11 +940,19 @@ export function AttendanceClockCard({
             </div>
           </div>
 
-          <DialogFooter className="sm:justify-center">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+          <DialogFooter className="sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              className="btn-clockout-border"
+            >
               Cancel
             </Button>
-            <Button onClick={handleClockInSubmit} disabled={!canSubmitClockIn}>
+            <Button
+              onClick={handleClockInSubmit}
+              disabled={!canSubmitClockIn}
+              className="btn-primary-grad"
+            >
               {clockInButtonLabel}
             </Button>
           </DialogFooter>

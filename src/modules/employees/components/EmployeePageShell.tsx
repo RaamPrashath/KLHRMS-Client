@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useCallback, useTransition } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getScope, type RolePermissions } from '@/lib/hrms-roles';
-import { useDeactivateEmployeeMutation, useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
-import { DeactivateEmployeeDialog } from './DeactivateEmployeeDialog';
+import { useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { EmployeeTable } from './EmployeeTable';
 import { updateEmployeeRoleAction } from '@/app/actions/organizationActions';
-import type { AttendanceTodayStatus } from '@/modules/employees/types/employeeTypes';
+import type { EmployeeListItem } from '@/modules/employees/types/employeeTypes';
 
 interface EmployeePageShellProps {
   orgSlug: string;
@@ -16,21 +15,31 @@ interface EmployeePageShellProps {
   permissions: RolePermissions | null;
 }
 
-export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<EmployeePageShellProps>) {
-  const [, startTransition] = useTransition();
+const SEARCH_DEBOUNCE_MS = 300;
 
+export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<EmployeePageShellProps>) {
   // ── Filter state ────────────────────────────────────────────────────────────
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [roleId, setRoleId] = useState<string | undefined>(undefined);
-  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceTodayStatus | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Debounce search input → applied search
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchInput]);
+
   // ── Role editing ───────────────────────────────────────────────────────────
   const queryClient = useQueryClient();
-
-  const [deactivateTarget, setDeactivateTarget] = useState<{ memberId: string; name: string } | null>(null);
-  const deactivateMutation = useDeactivateEmployeeMutation(orgSlug, memberId);
 
   const canEditRole = permissions ? getScope(permissions, 'employees', 'edit') !== 'none' : false;
 
@@ -60,61 +69,66 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
     [orgSlug, queryClient],
   );
 
-  const handleDeactivate = useCallback((targetMemberId: string, name: string) => {
-    setDeactivateTarget({ memberId: targetMemberId, name });
-  }, []);
-
-  // ── Data queries ────────────────────────────────────────────────────────────
-  const { data, isLoading, isError, error } = useEmployeesQuery(orgSlug, memberId, {
-    search: search || undefined,
-    roleId,
-    attendanceStatus,
-    page,
-    pageSize,
-  });
-
+  // ── Data query: fetch all employees once ────────────────────────────────────
+  const { data, isLoading, isError, error } = useEmployeesQuery(orgSlug, memberId);
   const { data: roles = [] } = useEmployeeRolesQuery(orgSlug, memberId);
+
+  const allItems: EmployeeListItem[] = useMemo(() => data?.items ?? [], [data?.items]);
+
+  // ── Client-side filtering ──────────────────────────────────────────────────
+  const filteredItems = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return allItems.filter((item) => {
+      if (roleId && item.role?.id !== roleId) return false;
+      if (term) {
+        const haystack = [
+          item.name,
+          item.email,
+          item.user_principal_name ?? '',
+          item.role?.name ?? '',
+          item.employee_id ?? '',
+          item.department ?? '',
+          item.job_title ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [allItems, search, roleId]);
+
+  // ── Client-side pagination ─────────────────────────────────────────────────
+  const total = filteredItems.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const paginatedItems = filteredItems.slice(pageStart, pageStart + pageSize);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleSearchChange = useCallback((value: string) => {
-    startTransition(() => {
-      setSearch(value);
-      setPage(1);
-    });
+    setSearchInput(value);
   }, []);
 
   const handleRoleChange = useCallback((value: string | undefined) => {
-    startTransition(() => {
-      setRoleId(value);
-      setPage(1);
-    });
-  }, []);
-
-  const handleAttendanceStatusChange = useCallback((value: AttendanceTodayStatus | undefined) => {
-    startTransition(() => {
-      setAttendanceStatus(value);
-      setPage(1);
-    });
+    setRoleId(value);
+    setPage(1);
   }, []);
 
   const handleClearAll = useCallback(() => {
-    startTransition(() => {
-      setSearch('');
-      setRoleId(undefined);
-      setAttendanceStatus(undefined);
-      setPage(1);
-    });
+    setSearchInput('');
+    setSearch('');
+    setRoleId(undefined);
+    setPage(1);
   }, []);
 
   const handlePageChange = useCallback((newPage: number) => {
-    startTransition(() => setPage(newPage));
+    setPage(newPage);
   }, []);
 
   const handlePageSizeChange = useCallback((newSize: number) => {
-    startTransition(() => {
-      setPageSize(newSize);
-      setPage(1);
-    });
+    setPageSize(newSize);
+    setPage(1);
   }, []);
 
   if (isError) {
@@ -132,41 +146,27 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
     );
   }
 
-  const totalPages = data?.total_pages ?? 1;
-  const total = data?.total ?? 0;
-  const items = data?.items ?? [];
-
   return (
     <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">
       <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight ml-7 mt-7">Employees</h1>
       <EmployeeTable
-        data={items}
+        data={paginatedItems}
         isLoading={isLoading}
         total={total}
-        page={page}
+        page={safePage}
         pageSize={pageSize}
         totalPages={totalPages}
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
-        search={search}
+        search={searchInput}
         roleId={roleId}
-        attendanceStatus={attendanceStatus}
         roles={roles}
         onSearchChange={handleSearchChange}
         onRoleChange={handleRoleChange}
-        onAttendanceStatusChange={handleAttendanceStatusChange}
         onClearAll={handleClearAll}
         canEditRole={canEditRole}
         onUpdateRole={handleUpdateRole}
-        onDeactivate={canEditRole ? handleDeactivate : undefined}
-      />
-
-      <DeactivateEmployeeDialog
-        open={deactivateTarget !== null}
-        onOpenChange={(open) => { if (!open) setDeactivateTarget(null); }}
-        employeeName={deactivateTarget?.name ?? ''}
-        employeeMemberId={deactivateTarget?.memberId ?? ''}
-        deactivateMutation={deactivateMutation}
+        orgSlug={orgSlug}
       />
     </div>
   );

@@ -60,19 +60,10 @@ function toAbsoluteApiUrl(url: string | null): string | null {
 export async function fetchEmployeesAction(params: {
   orgSlug: string;
   memberId: string;
-  filters?: Partial<EmployeeFiltersInput>;
 }): Promise<EmployeeListResponse> {
-  const { orgSlug, memberId, filters = {} } = params;
+  const { orgSlug, memberId } = params;
 
-  const query = buildQuery({
-    search: filters.search || undefined,
-    role_id: filters.roleId,
-    attendance_status: filters.attendanceStatus,
-    page: filters.page ?? 1,
-    page_size: filters.pageSize ?? 25,
-  });
-
-  const res = await fetch(`${getApiUrl()}/employees${query}`, {
+  const res = await fetch(`${getApiUrl()}/employees`, {
     method: 'GET',
     headers: buildHeaders(orgSlug, memberId),
     cache: 'no-store',

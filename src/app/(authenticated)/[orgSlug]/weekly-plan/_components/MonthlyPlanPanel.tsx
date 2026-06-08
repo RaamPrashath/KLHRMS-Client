@@ -421,7 +421,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-xl border-primary/20 bg-background px-5 text-xs font-semibold capitalize tracking-wider text-primary hover:bg-primary/5 hover:border-primary/40 transition-colors focus-visible:ring-2 focus-visible:ring-primary/20"
+              className="btn-clockout-border h-9 rounded-xl px-5 text-xs font-semibold capitalize tracking-wider"
               onClick={handleApplyEverywhere}
               disabled={isMonthLoading || isLocationsLoading || saveMutation.isPending}
             >
@@ -432,7 +432,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-xl border-border bg-background px-5 text-xs font-semibold capitalize tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-muted-foreground/20"
+              className="btn-clockout-border h-9 rounded-xl px-5 text-xs font-semibold capitalize tracking-wider"
               onClick={handleClearAll}
               disabled={!isDirty || isMonthLoading || isLocationsLoading || saveMutation.isPending}
             >
@@ -442,7 +442,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
 
             <Button
               type="button"
-              className="h-9 rounded-lg bg-primary text-primary-foreground px-5 text-xs font-semibold capitalize tracking-wider transition-colors hover:bg-primary-hover active:bg-primary-press shadow-xs focus-visible:ring-2 focus-visible:ring-primary/20"
+              className="btn-primary-grad h-9 rounded-lg px-5 text-xs font-semibold capitalize tracking-wider"
               onClick={handleSave}
               disabled={!isDirty || saveMutation.isPending || isMonthLoading}
             >

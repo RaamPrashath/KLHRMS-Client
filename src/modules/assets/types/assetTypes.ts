@@ -17,7 +17,8 @@ export type OperationalCriticalityTier =
 
 export type AssetReplacementMode =
   | 'PERMANENT_REPLACEMENT'
-  | 'TEMPORARY_BACKUP';
+  | 'TEMPORARY_BACKUP'
+  | 'ANY_AVAILABLE';
 
 export type AssetCondition =
   | 'NEW'
@@ -113,7 +114,7 @@ export interface BulkAssetCreateInput {
   name: string;
   categoryDefinitionId: string | null;
   brand: string | null;
-  model: string | null;
+  model?: string | null;
   condition: AssetCondition;
   location: string;
   serialNumbers: string[];

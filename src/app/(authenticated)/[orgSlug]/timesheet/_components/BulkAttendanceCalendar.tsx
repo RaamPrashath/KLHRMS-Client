@@ -18,7 +18,9 @@ import type {
   LocalWorkLog,
 } from '@/modules/attendance/types/bulkAttendanceTypes';
 import type { HolidayRecord, LeaveRequestRecord } from '@/modules/leave/types/leaveTypes';
+import type { ProjectForAttendance } from '@/modules/projects/types/projectTypes';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 // ─── react-big-calendar setup ─────────────────────────────────────────────────
 
@@ -127,59 +129,49 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
     return sum + Math.round(diff / 60_000);
   }, 0) ?? 0;
 
+  const totalHours = totalMins / 60;
+  const targetHours = isWeekend ? 0 : 8;
+  const isCompleted = totalHours >= targetHours;
   const hasLogs = totalMins > 0;
 
-  // Determine text color for day name and date number
   let labelColor: string;
-  let dateColor: string;
   if (isToday) {
     labelColor = 'text-primary';
-    dateColor = 'text-primary';
   } else if (isOff) {
-    labelColor = 'text-red-500';
-    dateColor = 'text-red-500';
+    labelColor = 'text-destructive';
   } else {
-    labelColor = 'text-muted-foreground';
-    dateColor = 'text-foreground';
+    labelColor = 'text-foreground';
   }
 
   const headerContent = (
-    <div className="relative flex h-full flex-col">
-      {/* Date section */}
-      <div className="flex flex-col items-center pt-3 pb-2 px-1 gap-1">
-        <span className={`text-[10px] font-bold uppercase tracking-widest ${labelColor}`}>
-          {format(date, 'EEE')}
+    <div className="flex flex-col w-full p-3 bg-card border-b border-border/40 select-none">
+      {/* Header Info */}
+      <div className="flex items-center justify-between">
+        <span className={cn("text-xs font-bold uppercase tracking-wider", labelColor)}>
+          {format(date, 'EEE dd')}
         </span>
-
-        <span className={`text-[18px] font-bold leading-none ${dateColor}`}>
-          {format(date, 'd')}
-        </span>
-      </div>
-
-      {/* Total time row — flush to the bottom of the header */}
-      <div
-        className={`flex flex-col items-center justify-center h-9 border-t border-border/30 ${
-          isToday ? 'bg-primary/5' : 'bg-background'
-        }`}
-      >
-        <span
-          className={[
-            'font-mono text-[13px] font-semibold leading-none',
-            hasLogs ? 'text-primary' : 'text-muted-foreground/30',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          {formatMins(totalMins)}
+        <span className={cn(
+          "text-[11px] font-mono font-bold leading-none",
+          hasLogs && !isWeekend ? (isCompleted ? "text-emerald-600 dark:text-emerald-400" : "text-primary") : "text-muted-foreground/60"
+        )}>
+          {totalHours.toFixed(1).replace('.0', '')}h of {targetHours}h
         </span>
       </div>
 
-      <div
-        className="pointer-events-none absolute inset-x-0 z-30 flex justify-center"
-        style={{ top: 'calc(100% + 8px)' }}
-        data-date={dateStr}
-      >
-        <span
+      {/* Progress Bar under text */}
+      <div className="w-full h-1 mt-2 bg-muted/80 rounded-full overflow-hidden">
+        <div 
+          className={cn(
+            "h-full rounded-full transition-all duration-300",
+            isWeekend ? "bg-muted-foreground/20" : (isCompleted ? "bg-emerald-500" : "bg-primary")
+          )} 
+          style={{ width: `${Math.min(100, (totalHours / Math.max(1, targetHours)) * 100)}%` }} 
+        />
+      </div>
+
+      {/* Add log button card row (placed right below the header card) */}
+      <div className="mt-2.5">
+        <div
           role="button"
           tabIndex={0}
           onClick={(e) => {
@@ -193,12 +185,11 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
             e.stopPropagation();
             onAddLog(dateStr);
           }}
-          className="pointer-events-auto inline-flex h-7 items-center justify-center rounded-md border border-input bg-background/95 px-3 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-green-subtle hover:text-green-text hover:border-green-border"
+          className="w-full h-8 flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 hover:bg-muted/50 hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer"
           aria-label={`Add worklog for ${format(date, 'EEEE, MMMM d')}`}
         >
-          <Plus className="size-3 mr-1.5" strokeWidth={2.5} />
-          Add worklog
-        </span>
+          <Plus className="size-4" strokeWidth={2.5} />
+        </div>
       </div>
     </div>
   );
@@ -209,7 +200,7 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div>{headerContent}</div>
+          <div className="w-full">{headerContent}</div>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
           {tooltipLabel}
@@ -221,30 +212,13 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
   return headerContent;
 }
 
-// ─── Time gutter header — shows the week total ────────────────────────────────
+// ─── Time gutter header — shows an empty box ──────────────────────────────────
 
-interface GutterHeaderProps {
-  totalWeekLabel: string;
-}
-
-function TimeGutterHeader({ totalWeekLabel }: Readonly<GutterHeaderProps>) {
+function TimeGutterHeader() {
   return (
     <div
-      className="flex flex-col h-full bg-background"
-    >
-      {/* Spacer that matches the date + day-name area */}
-      <div className="flex-1" />
-      {/* Week total — aligns with the per-day total row */}
-      <div
-        className="flex flex-col items-center justify-center h-9 border-t border-border/30"
-      >
-        <span
-          className="font-mono text-[13px] font-semibold text-primary"
-        >
-          {totalWeekLabel}
-        </span>
-      </div>
-    </div>
+      className="flex items-center justify-center h-full bg-card p-3 border-b border-border/40"
+    />
   );
 }
 
@@ -265,6 +239,7 @@ interface BulkAttendanceCalendarProps {
     newEnd: Date,
     targetDate: string,
   ) => Promise<void>;
+  projects?: ProjectForAttendance[];
 }
 
 export function BulkAttendanceCalendar({
@@ -276,6 +251,7 @@ export function BulkAttendanceCalendar({
   onOpenEdit,
   onDeleteLog,
   onDragLog,
+  projects = [],
 }: Readonly<BulkAttendanceCalendarProps>) {
   const events = useMemo(() => logsToEvents(dayMap), [dayMap]);
 
@@ -316,6 +292,7 @@ export function BulkAttendanceCalendar({
       event: ({ event }: { event: CalendarWorkLogEvent }) => (
         <BulkAttendanceEvent
           event={event}
+          projects={projects}
           onEdit={(ev) => {
             const day = dayMap.get(ev.resource.date);
             const log = day?.logs.find((l) => l.id === ev.id);
@@ -338,11 +315,11 @@ export function BulkAttendanceCalendar({
         ),
       },
       timeGutterHeader: () => (
-        <TimeGutterHeader totalWeekLabel={totalWeekLabel} />
+        <TimeGutterHeader />
       ),
       toolbar: () => null,
     }),
-    [dayMap, holidayMap, leaveMap, onOpenCreate, onOpenEdit, onDeleteLog, totalWeekLabel],
+    [dayMap, holidayMap, leaveMap, onOpenCreate, onOpenEdit, onDeleteLog, totalWeekLabel, projects],
   );
 
   // ── Drag handlers ───────────────────────────────────────────────────────────
@@ -378,7 +355,7 @@ export function BulkAttendanceCalendar({
 
   return (
     <div
-      className="h-full bg-card text-foreground"
+      className="h-full bg-background text-foreground animate-in fade-in duration-200 rounded-none"
     >
       <style>{`
         /* ── Reset & base ── */
@@ -388,6 +365,7 @@ export function BulkAttendanceCalendar({
           color: var(--foreground) !important;
           min-height: 100% !important;
           height: auto !important;
+          border-radius: 0px !important;
         }
  
         /* ── Time view shell ── */
@@ -397,23 +375,27 @@ export function BulkAttendanceCalendar({
           flex-direction: column;
           min-height: 100% !important;
           height: auto !important;
+          border-radius: 0px !important;
         }
  
         /* ── Header area ── */
         .rbc-time-header {
           border-bottom: 1px solid var(--border) !important;
-          background: var(--background) !important;
+          background: var(--card) !important;
           flex-shrink: 0 !important;
           position: sticky !important;
           top: 0 !important;
           z-index: 20 !important;
+          border-radius: 0px !important;
         }
         .rbc-time-header.rbc-overflowing {
           border-right: none !important;
         }
         .rbc-time-header-gutter {
-          background: var(--background) !important;
+          background: var(--card) !important;
           border-right: 1px solid var(--border) !important;
+          min-width: 90px !important;
+          border-radius: 0px !important;
         }
         .rbc-time-header-content {
           border-left: none !important;
@@ -430,8 +412,9 @@ export function BulkAttendanceCalendar({
         .rbc-header {
           border-bottom: none !important;
           padding: 0 !important;
-          background: var(--background) !important;
+          background: var(--card) !important;
           overflow: visible !important;
+          border-radius: 0px !important;
         }
         .rbc-header + .rbc-header {
           border-left: 1px solid var(--border) !important;
@@ -451,6 +434,7 @@ export function BulkAttendanceCalendar({
           border-top: none !important;
           flex: 0 0 auto !important;
           overflow: visible !important;
+          border-radius: 0px !important;
         }
  
         /* ── Day columns with sticky button ── */
@@ -465,23 +449,32 @@ export function BulkAttendanceCalendar({
         .rbc-time-gutter {
           background: var(--background) !important;
           border-right: 1px solid var(--border) !important;
+          min-width: 90px !important;
+          border-radius: 0px !important;
         }
+        .rbc-time-gutter .rbc-label,
+        .rbc-time-gutter span,
         .rbc-label {
           font-size: 11px !important;
           font-family: var(--font-mono) !important;
-          color: var(--muted-foreground) !important;
+          color: #000000 !important;
+          font-weight: 700 !important;
           padding: 0 10px 0 4px !important;
           line-height: 1 !important;
+        }
+        .dark .rbc-time-gutter .rbc-label,
+        .dark .rbc-time-gutter span,
+        .dark .rbc-label {
+          color: #ffffff !important;
         }
  
         /* ── Slot rows ── */
         .rbc-timeslot-group {
           border-bottom: 1px solid var(--border) !important;
-          min-height: 48px !important;
+          min-height: 56px !important;
         }
         .rbc-time-slot {
-          border-top: 1px solid var(--border) !important;
-          opacity: 0.3;
+          border-top: 1px solid color-mix(in srgb, var(--border) 15%, transparent) !important;
         }
  
         /* ── Column dividers ── */
@@ -529,6 +522,7 @@ export function BulkAttendanceCalendar({
           height: 100% !important;
           width: 100% !important;
           overflow: hidden !important;
+          padding: 0 4px !important;
         }
         .rbc-event.rbc-selected {
           background: transparent !important;
@@ -574,7 +568,7 @@ export function BulkAttendanceCalendar({
         /* ── Off-range ── */
         .rbc-off-range-bg { background: var(--background) !important; }
       `}</style>
-
+ 
       <DnDCalendar
         localizer={localizer}
         events={events}
@@ -585,7 +579,7 @@ export function BulkAttendanceCalendar({
         step={15}
         timeslots={4}
         min={new Date(0, 0, 0, 8, 0, 0)}
-        max={new Date(0, 0, 0, 22, 0, 0)}
+        max={new Date(0, 0, 0, 23, 59, 0)}
         selectable
         resizable
         draggableAccessor={() => true}

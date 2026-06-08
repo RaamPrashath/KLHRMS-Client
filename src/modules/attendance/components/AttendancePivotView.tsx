@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { EmployeePagination } from '@/modules/employees/components/EmployeePagination';
 import type { AttendanceRecord } from '@/modules/attendance/types/attendanceTypes';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -31,6 +32,10 @@ interface AttendancePivotViewProps {
   holidayNames?: Map<string, string>;
   /** `${employeeId}:${date}` → leave type name */
   leaveNames?: Map<string, string>;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -282,6 +287,10 @@ export function AttendancePivotView({
   allEmployees,
   holidayNames: holidayNamesProp,
   leaveNames: leaveNamesProp,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
 }: Readonly<AttendancePivotViewProps>) {
   const anchor = parseYMD(periodStart);
   const days = getDays(mode, anchor);
@@ -289,6 +298,13 @@ export function AttendancePivotView({
   const employeeRows = buildEmployeeRows(records, days, showEmployeeColumn, currentMemberId, allEmployees);
   const holidayNames = holidayNamesProp ?? new Map<string, string>();
   const leaveNames = leaveNamesProp ?? new Map<string, string>();
+  const totalRows = employeeRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const pagedEmployeeRows = employeeRows.slice(
+    (safePage - 1) * pageSize,
+    (safePage - 1) * pageSize + pageSize,
+  );
 
   // For monthly view, group days into weeks for the header (optional — we just show all days)
   const isMonthly = mode === 'monthly';
@@ -422,7 +438,7 @@ export function AttendancePivotView({
                   </tr>
                 );
               }
-              return employeeRows.map((row) => (
+              return pagedEmployeeRows.map((row) => (
                 <tr
                   key={row.employeeId}
                   className="hover:bg-canvas/60 transition-colors duration-100"
@@ -475,6 +491,18 @@ export function AttendancePivotView({
           </tbody>
         </table>
       </div>
+      {!isLoading && totalRows > 0 ? (
+        <div className="border-t border-black/[0.04] px-6 py-4">
+          <EmployeePagination
+            page={safePage}
+            totalPages={totalPages}
+            total={totalRows}
+            pageSize={pageSize}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

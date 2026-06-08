@@ -316,8 +316,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
                   type="button"
                   onClick={onSave}
                   disabled={!isDirty || isSaving}
-                  className="h-10 rounded-lg px-5 text-sm font-medium"
-                  style={{ backgroundColor: 'var(--indigo-9)' }}
+                  className="btn-primary-grad h-10 rounded-lg px-5 text-sm font-medium"
                 >
                   {isSaving ? "Saving..." : "Save plan"}
                 </Button>
