@@ -1,7 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Columns, LayoutPanelTop, Search, X } from 'lucide-react';
+import {
+  Columns,
+  LayoutPanelTop,
+  Search,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import {
@@ -32,7 +37,7 @@ import {
 const statusFilterOptions = [...assetMaintenanceStatusOptions];
 const typeFilterOptions = [...assetMaintenanceTypeOptions];
 
-export function MaintenancePageShell({
+export function AssetMaintenancePageShell({
   orgSlug,
   memberId,
 }: {
@@ -90,6 +95,8 @@ export function MaintenancePageShell({
     [columnCounts],
   );
 
+
+
   function toggleCollapse(columnId: ColumnId) {
     setCollapsed((prev) => ({ ...prev, [columnId]: !prev[columnId] }));
   }
@@ -109,10 +116,12 @@ export function MaintenancePageShell({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="mb-5 shrink-0 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground">Maintenance</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">Track and manage asset repairs and service requests</p>
+      <div className="mb-5 shrink-0 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="max-w-3xl">
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-foreground">Asset Maintenance</h1>
+          <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
+            Track repairs, temporary handovers, pending returns, and permanent replacements from one admin queue.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -146,6 +155,7 @@ export function MaintenancePageShell({
           </div>
         </div>
       </div>
+
 
       {viewMode === 'kanban' && (
         <div className="mb-5 shrink-0 flex flex-col gap-3">
@@ -272,3 +282,5 @@ export function MaintenancePageShell({
     </div>
   );
 }
+
+export const MaintenancePageShell = AssetMaintenancePageShell;

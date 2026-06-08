@@ -20,6 +20,8 @@ export interface KanbanIssue {
   commentCount: number;
   attachmentCount: number;
   swapPreview?: AssetSwapPreview | null;
+  cancelledByMemberId: string | null;
+  cancelledByName: string | null;
 }
 
 export interface KanbanColumnData {

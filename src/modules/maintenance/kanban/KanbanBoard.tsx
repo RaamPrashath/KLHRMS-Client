@@ -90,6 +90,8 @@ function mapTicketsToIssues(tickets: MaintenanceTicket[]): KanbanIssue[] {
     assignees: t.loggedByName ? [{ name: t.loggedByName }] : [],
     raisedByName: t.loggedByName,
     raisedByEmail: t.loggedByEmail,
+    cancelledByMemberId: t.cancelledByMemberId,
+    cancelledByName: t.cancelledByName,
     dueDate: t.serviceDate,
     createdAt: t.createdAt,
     commentCount: 0,
@@ -148,7 +150,8 @@ export function KanbanBoard({
         (i) =>
           (i.title ?? '').toLowerCase().includes(q) ||
           i.ticketId.toLowerCase().includes(q) ||
-          (i.assignees[0]?.name ?? '').toLowerCase().includes(q),
+          (i.assignees[0]?.name ?? '').toLowerCase().includes(q) ||
+          (i.cancelledByName ?? '').toLowerCase().includes(q),
       );
     }
     return g;

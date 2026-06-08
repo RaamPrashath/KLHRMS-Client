@@ -48,6 +48,7 @@ import {
 import { cn } from '@/lib/utils';
 import { conditionBadge, formatDate, humanize } from '@/modules/assets/lib/assetUtils';
 import type { MaintenanceTicket } from '@/modules/assets/api/assetServerActions';
+import type { AssetCondition } from '@/modules/assets/types/assetTypes';
 
 const PAGE_SIZE = 10;
 
@@ -149,7 +150,7 @@ const COLUMNS = [
         <Badge
           className={cn(
             'rounded-md border-0 px-2 py-0.5 text-[11px] font-semibold tracking-wide',
-            conditionBadge(condition as any),
+            conditionBadge(condition as AssetCondition),
           )}
         >
           {humanize(condition)}
@@ -207,6 +208,10 @@ function TicketDetailPanel({ ticket }: { ticket: MaintenanceTicket }) {
           <DetailRow label="Type" value={ticket.maintenanceType ? humanize(ticket.maintenanceType) : null} />
           <DetailRow label="Reported By" value={ticket.loggedByName} />
           <DetailRow label="Asset State" value={ticket.assetLifecycleStatusLabel} />
+          <DetailRow
+            label="Replacement"
+            value={ticket.replacementDecision ? humanize(ticket.replacementDecision) : 'Pending'}
+          />
           <DetailRow label="Date" value={ticket.createdAt ? formatDate(ticket.createdAt) : null} />
           <DetailRow
             label="Swap Path"
@@ -222,6 +227,11 @@ function TicketDetailPanel({ ticket }: { ticket: MaintenanceTicket }) {
           <div className="mt-4 border-t border-[#f0f0f2] pt-4">
             <span className="text-[12px] font-medium text-neutral-400">Issue Description</span>
             <p className="mt-1.5 text-[13px] leading-5 text-[#1d1d1f]">{ticket.issueDescription}</p>
+            {ticket.swapPreview?.reason && (
+              <div className="mt-3 rounded-2xl border border-[#eef0f3] bg-[#fbfbfc] px-3 py-2.5 text-[12px] leading-5 text-[#5f6673]">
+                {ticket.swapPreview.reason}
+              </div>
+            )}
           </div>
         )}
       </FloatingPanelBody>

@@ -20,7 +20,7 @@ export default async function NotificationsPage({
   }
 
   return (
-    <div className="min-h-full bg-canvas px-5 pt-4 pb-6">
+    <div className="flex-1 flex flex-col min-h-full bg-background">
       <NotificationsPageShell orgSlug={orgSlug} memberId={memberId!} />
     </div>
   );

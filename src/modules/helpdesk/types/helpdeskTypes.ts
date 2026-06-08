@@ -23,6 +23,7 @@ export interface HelpdeskTicket {
   assetId: string | null;
   assetName: string | null;
   assetCode: string | null;
+  maintenanceType?: string | null;
   createdAt: string;
 }
 

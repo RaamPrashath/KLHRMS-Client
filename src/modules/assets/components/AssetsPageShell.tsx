@@ -169,7 +169,7 @@ export function AssetsPageShell({
   }
 
   function seedMaintenanceForm() {
-    router.push(`/${orgSlug}/maintenance`);
+    router.push(`/${orgSlug}/asset-maintenance`);
   }
 
   function openEmployeeIssueDialog(asset?: AssetSummary | null) {
@@ -549,7 +549,7 @@ export function AssetsPageShell({
         canManageAssets={canManageAssets}
         onEdit={() => {}}
         onProvide={seedProvideForm}
-        onReturn={() => router.push(`/${orgSlug}/maintenance`)}
+        onReturn={() => router.push(`/${orgSlug}/asset-maintenance`)}
         onMaintenance={seedMaintenanceForm}
         onRevokeSwap={openSwapDialog}
       />

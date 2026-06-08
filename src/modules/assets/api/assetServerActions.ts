@@ -605,6 +605,8 @@ export interface MaintenanceTicket {
   loggedByMemberId: string | null;
   loggedByName: string | null;
   loggedByEmail: string | null;
+  cancelledByMemberId: string | null;
+  cancelledByName: string | null;
   assetLifecycleStatus: string | null;
   assetLifecycleStatusLabel: string | null;
   swapPreview: AssetSwapPreview | null;

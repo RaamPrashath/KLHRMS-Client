@@ -13,8 +13,16 @@ function daysAgo(dateStr: string): string {
   return `${diff}d ago`;
 }
 
+function getActorName(issue: KanbanIssue): string {
+  if (issue.status === 'cancelled') {
+    return issue.cancelledByName ?? issue.raisedByName ?? 'Unknown';
+  }
+  return issue.assignees[0]?.name ?? 'Unassigned';
+}
+
 export function KanbanCardDragOverlay({ issue }: { issue: KanbanIssue }) {
-  const assigneeInitial = issue.assignees[0]?.name?.charAt(0)?.toUpperCase() ?? '?';
+  const actorName = getActorName(issue);
+  const actorInitial = actorName.charAt(0)?.toUpperCase() ?? '?';
 
   return (
     <div className="w-[284px] rounded-xl border border-border bg-card p-3 shadow-[0_20px_60px_rgba(0,0,0,0.18),0_8px_20px_rgba(0,0,0,0.1)] scale-[1.02] rotate-[1deg]">
@@ -44,10 +52,10 @@ export function KanbanCardDragOverlay({ issue }: { issue: KanbanIssue }) {
       <div className="mt-3 flex items-center gap-3">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
-            {assigneeInitial}
+            {actorInitial}
           </div>
           <span className="truncate text-[11px] text-muted-foreground">
-            {issue.assignees[0]?.name ?? 'Unassigned'}
+            {issue.status === 'cancelled' ? `Cancelled by ${actorName}` : actorName}
           </span>
         </div>
 

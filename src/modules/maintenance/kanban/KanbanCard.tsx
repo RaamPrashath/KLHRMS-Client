@@ -4,6 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Clock, MessageSquare, Paperclip, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { humanize } from '@/modules/assets/lib/assetUtils';
 
 import type { KanbanIssue } from './kanban.types';
 
@@ -14,6 +15,13 @@ function daysAgo(dateStr: string): string {
   if (diff === 0) return 'today';
   if (diff === 1) return '1d ago';
   return `${diff}d ago`;
+}
+
+function getActorName(issue: KanbanIssue): string {
+  if (issue.status === 'cancelled') {
+    return issue.cancelledByName ?? issue.raisedByName ?? 'Unknown';
+  }
+  return issue.assignees[0]?.name ?? 'Unassigned';
 }
 
 export function KanbanCard({
@@ -39,7 +47,8 @@ export function KanbanCard({
     transition,
   };
 
-  const assigneeInitial = issue.assignees[0]?.name?.charAt(0)?.toUpperCase() ?? '?';
+  const actorName = getActorName(issue);
+  const actorInitial = actorName.charAt(0)?.toUpperCase() ?? '?';
 
   return (
     <div
@@ -79,13 +88,31 @@ export function KanbanCard({
         </p>
       )}
 
+      <div className="mt-2 flex flex-wrap gap-2">
+        {issue.assetLifecycleStatusLabel && (
+          <span className="rounded-full bg-[#f3f7f5] px-2 py-0.5 text-[10px] font-semibold text-[#33624c]">
+            {issue.assetLifecycleStatusLabel}
+          </span>
+        )}
+        {issue.swapPreview?.requiresReplacementValidation && (
+          <span className="rounded-full bg-[#fff6db] px-2 py-0.5 text-[10px] font-semibold text-[#8a5a00]">
+            Replacement needed
+          </span>
+        )}
+        {issue.swapPreview?.recommendedMode && (
+          <span className="rounded-full bg-[#f4f8ff] px-2 py-0.5 text-[10px] font-semibold text-[#2454a6]">
+            {humanize(issue.swapPreview.recommendedMode)}
+          </span>
+        )}
+      </div>
+
       <div className="mt-3 flex items-center gap-3">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
-            {assigneeInitial}
+            {actorInitial}
           </div>
           <span className="truncate text-[11px] text-muted-foreground">
-            {issue.assignees[0]?.name ?? 'Unassigned'}
+            {issue.status === 'cancelled' ? `Cancelled by ${actorName}` : actorName}
           </span>
         </div>
 

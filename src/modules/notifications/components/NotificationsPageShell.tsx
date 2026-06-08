@@ -80,47 +80,46 @@ function NotificationItem({
         if (isUnread) onRead(notification.id);
       }}
       className={cn(
-        'group block rounded-[22px] border px-4 py-4 transition-all',
+        'group flex items-start gap-4 rounded-xl border p-4 transition-all duration-200 shadow-xs',
         isUnread
-          ? 'border-[#c8d7ea] bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_10px_30px_rgba(54,88,135,0.08)]'
-          : 'border-[#e7edf4] bg-white hover:bg-[#fafcfe]',
+          ? 'border-primary/20 bg-primary/[0.02] hover:bg-primary/[0.04] dark:bg-primary/[0.02]'
+          : 'border-border bg-card hover:bg-muted/40',
       )}
     >
-      <div className="flex items-start gap-4">
-        <div
-          className={cn(
-            'mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-2xl border',
-            isUnread
-              ? 'border-[#bfd2ea] bg-[#eef6ff] text-[#2b5a91]'
-              : 'border-[#e5ebf2] bg-[#f7f9fc] text-[#6f86a3]',
-          )}
-        >
-          <NotificationIcon category={notification.category} />
+      <div
+        className={cn(
+          'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border',
+          isUnread
+            ? 'border-primary/20 bg-primary/10 text-primary'
+            : 'border-border bg-muted text-muted-foreground',
+        )}
+      >
+        <NotificationIcon category={notification.category} />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-foreground">{notification.title}</p>
+          <Badge
+            variant="outline"
+            className="h-5 rounded-md border-border bg-muted/40 px-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider"
+          >
+            {categoryLabel(notification.category)}
+          </Badge>
+          {isUnread ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              <Circle className="size-1.5 fill-current" />
+              New
+            </span>
+          ) : null}
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[15px] font-semibold text-neutral-900">{notification.title}</p>
-            <Badge
-              variant="outline"
-              className="h-6 rounded-full border-[#d7e3f0] bg-[#f8fbff] px-2.5 text-[11px] font-medium text-[#44658f]"
-            >
-              {categoryLabel(notification.category)}
-            </Badge>
-            {isUnread ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#ecf5ff] px-2 py-0.5 text-[11px] font-semibold text-[#1f5fa5]">
-                <Circle className="size-2 fill-current" />
-                Unread
-              </span>
-            ) : null}
-          </div>
+        <p className="mt-1 text-sm text-muted-foreground leading-normal">{notification.message}</p>
 
-          <p className="mt-1.5 text-[13px] leading-6 text-neutral-600">{notification.message}</p>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-neutral-400">
-            <span>{formatRelative(notification.createdAt)}</span>
-            <span>{formatAbsolute(notification.createdAt)}</span>
-          </div>
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
+          <span>{formatRelative(notification.createdAt)}</span>
+          <span className="text-muted-foreground/30">•</span>
+          <span>{formatAbsolute(notification.createdAt)}</span>
         </div>
       </div>
     </Link>
@@ -148,7 +147,7 @@ function NotificationList({
     return (
       <div className="space-y-3">
         {[1, 2, 3, 4].map((item) => (
-          <div key={item} className="h-28 animate-pulse rounded-[22px] border border-[#e7edf4] bg-white" />
+          <div key={item} className="h-24 animate-pulse rounded-xl border border-border bg-card/60" />
         ))}
       </div>
     );
@@ -156,21 +155,21 @@ function NotificationList({
 
   if (error) {
     return (
-      <div className="rounded-[24px] border border-[#f0d5d5] bg-[#fff7f7] px-5 py-10 text-center">
-        <p className="text-sm font-semibold text-[#9f2f2f]">Could not load notifications</p>
-        <p className="mt-2 text-sm text-[#b45858]">{error}</p>
+      <div className="rounded-xl border border-destructive-border bg-destructive-bg px-5 py-8 text-center text-destructive-text">
+        <p className="text-sm font-semibold">Could not load notifications</p>
+        <p className="mt-1 text-xs">{error}</p>
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="rounded-[24px] border border-dashed border-[#d6e1ee] bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] px-5 py-12 text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-[#f2f7fd] text-[#5277a7]">
-          <Inbox className="size-6" />
+      <div className="rounded-xl border border-dashed border-border bg-card/50 px-5 py-16 text-center shadow-xs">
+        <div className="mx-auto flex size-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <Inbox className="size-5" />
         </div>
-        <p className="mt-4 text-base font-semibold text-neutral-900">{emptyTitle}</p>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-500">{emptyBody}</p>
+        <p className="mt-4 text-sm font-semibold text-foreground">{emptyTitle}</p>
+        <p className="mx-auto mt-1 max-w-sm text-xs leading-normal text-muted-foreground">{emptyBody}</p>
       </div>
     );
   }
@@ -207,87 +206,84 @@ export function NotificationsPageShell({
   }, [activeTab, allQuery, readQuery, unreadQuery]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="relative overflow-hidden rounded-[30px] border border-[#dce7f3] bg-[radial-gradient(circle_at_top_left,#f3f8ff_0%,#ffffff_55%,#f9fbfe_100%)] px-6 py-6 shadow-[0_18px_48px_rgba(31,63,104,0.08)]">
-        <div className="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-[radial-gradient(circle,#dfeeff_0%,rgba(223,238,255,0)_72%)]" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.24em] text-[#5d7ea7]">Notification Center</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">Everything that needs your attention.</h1>
-            <p className="mt-2 max-w-2xl text-[14px] leading-6 text-neutral-500">
-              Procurement approvals, request decisions, and workflow updates now live in one inbox.
-            </p>
-          </div>
+    <div className="mx-7 mt-7 mb-7 flex flex-col gap-6 flex-1 min-h-full">
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-4xl font-semibold tracking-tight text-foreground">
+          Notification Center
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Procurement approvals, request decisions, and workflow updates now live in one inbox.
+        </p>
+      </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-[170px] rounded-[22px] border border-[#d8e5f3] bg-white/90 px-4 py-3 shadow-[0_8px_24px_rgba(61,101,151,0.06)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7a94b5]">Unread</p>
-              <p className="mt-1 text-2xl font-semibold text-neutral-900">{allQuery.data?.unreadCount ?? 0}</p>
-            </div>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as NotificationFilter)} className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-1">
+          <TabsList variant="line" className="bg-transparent border-none">
+            <TabsTrigger value="all" className="px-3 sm:px-4 text-sm font-medium">All</TabsTrigger>
+            <TabsTrigger value="unread" className="px-3 sm:px-4 text-sm font-medium gap-1.5">
+              Unread
+              {allQuery.data?.unreadCount && allQuery.data.unreadCount > 0 ? (
+                <span className="inline-flex items-center justify-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                  {allQuery.data.unreadCount}
+                </span>
+              ) : null}
+            </TabsTrigger>
+            <TabsTrigger value="read" className="px-3 sm:px-4 text-sm font-medium">Read</TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-muted-foreground">
+              {currentQuery.data?.total ?? 0} notification{(currentQuery.data?.total ?? 0) === 1 ? '' : 's'}
+            </span>
             <Button
               variant="outline"
-              className="h-11 rounded-full border-[#d5e2f0] bg-white px-4 text-sm font-semibold text-[#355885]"
+              size="sm"
+              className="h-8 rounded-lg text-xs font-semibold gap-1.5"
               onClick={() => markAllReadMutation.mutate()}
               disabled={markAllReadMutation.isPending || (allQuery.data?.unreadCount ?? 0) === 0}
             >
-              <CheckCheck className="size-4" />
+              <CheckCheck className="size-3.5" />
               Mark all as read
             </Button>
           </div>
         </div>
-      </section>
 
-      <section className="rounded-[28px] border border-[#e3ebf4] bg-white p-4 shadow-[0_10px_40px_rgba(15,23,42,0.04)] sm:p-6">
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as NotificationFilter)} className="gap-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList variant="line" className="border-b border-[#e6edf5] px-0">
-              <TabsTrigger value="all" className="px-1.5 sm:px-4">All</TabsTrigger>
-              <TabsTrigger value="unread" className="px-1.5 sm:px-4">Unread</TabsTrigger>
-              <TabsTrigger value="read" className="px-1.5 sm:px-4">Read</TabsTrigger>
-            </TabsList>
+        <TabsContent value="all" className="mt-1 outline-none">
+          <NotificationList
+            items={allQuery.data?.items ?? []}
+            isLoading={allQuery.isLoading}
+            error={allQuery.error?.message ?? null}
+            emptyTitle="No notifications yet"
+            emptyBody="New procurement decisions and workflow alerts will appear here as they happen."
+            orgSlug={orgSlug}
+            onRead={(id) => markReadMutation.mutate(id)}
+          />
+        </TabsContent>
 
-            <p className="text-sm text-neutral-400">
-              {currentQuery.data?.total ?? 0} notification{(currentQuery.data?.total ?? 0) === 1 ? '' : 's'}
-            </p>
-          </div>
+        <TabsContent value="unread" className="mt-1 outline-none">
+          <NotificationList
+            items={unreadQuery.data?.items ?? []}
+            isLoading={unreadQuery.isLoading}
+            error={unreadQuery.error?.message ?? null}
+            emptyTitle="Inbox cleared"
+            emptyBody="You have read everything that was waiting for action."
+            orgSlug={orgSlug}
+            onRead={(id) => markReadMutation.mutate(id)}
+          />
+        </TabsContent>
 
-          <TabsContent value="all" className="mt-1">
-            <NotificationList
-              items={allQuery.data?.items ?? []}
-              isLoading={allQuery.isLoading}
-              error={allQuery.error?.message ?? null}
-              emptyTitle="No notifications yet"
-              emptyBody="New procurement decisions and workflow alerts will appear here as they happen."
-              orgSlug={orgSlug}
-              onRead={(id) => markReadMutation.mutate(id)}
-            />
-          </TabsContent>
-
-          <TabsContent value="unread" className="mt-1">
-            <NotificationList
-              items={unreadQuery.data?.items ?? []}
-              isLoading={unreadQuery.isLoading}
-              error={unreadQuery.error?.message ?? null}
-              emptyTitle="Inbox cleared"
-              emptyBody="You have read everything that was waiting for action."
-              orgSlug={orgSlug}
-              onRead={(id) => markReadMutation.mutate(id)}
-            />
-          </TabsContent>
-
-          <TabsContent value="read" className="mt-1">
-            <NotificationList
-              items={readQuery.data?.items ?? []}
-              isLoading={readQuery.isLoading}
-              error={readQuery.error?.message ?? null}
-              emptyTitle="No read notifications yet"
-              emptyBody="Notifications you have already opened will collect here."
-              orgSlug={orgSlug}
-              onRead={(id) => markReadMutation.mutate(id)}
-            />
-          </TabsContent>
-        </Tabs>
-      </section>
+        <TabsContent value="read" className="mt-1 outline-none">
+          <NotificationList
+            items={readQuery.data?.items ?? []}
+            isLoading={readQuery.isLoading}
+            error={readQuery.error?.message ?? null}
+            emptyTitle="No read notifications yet"
+            emptyBody="Notifications you have already opened will collect here."
+            orgSlug={orgSlug}
+            onRead={(id) => markReadMutation.mutate(id)}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

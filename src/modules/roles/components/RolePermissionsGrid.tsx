@@ -52,7 +52,7 @@ const MODULE_LABELS: Record<string, string> = {
   tax:                'Tax',
   procurement:        'Procurement',
   assets:             'Assets',
-  maintenance:        'Maintenance',
+  maintenance:        'Asset Maintenance',
   helpdesk:           'Helpdesk',
   documents:          'Documents',
 };

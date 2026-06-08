@@ -32,6 +32,7 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     await queryClient.invalidateQueries({ queryKey: ['asset-available-groups', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['asset-employee-view', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['my-tickets', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['helpdesk-admin-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['maintenance-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-dashboard', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-brand-model-analytics', orgSlug] });

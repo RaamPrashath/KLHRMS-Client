@@ -111,6 +111,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
     "tax": Calculator,
     "procurement": ShoppingCart,
     "assets": Monitor,
+    "asset-maintenance": Wrench,
     "maintenance": Wrench,
     "helpdesk": Headphones,
     "documents": FileStack,

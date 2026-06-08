@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -125,9 +125,16 @@ export function MaintenanceIssueDialog({
                 <div className="grid gap-3 md:grid-cols-2">
                   <DetailRow label="Issue Type" value={humanize(issue.maintenanceType)} />
                   <DetailRow label="Raised By" value={issue.raisedByName} />
+                  {issue.status === 'cancelled' ? (
+                    <DetailRow label="Cancelled By" value={issue.cancelledByName ?? issue.raisedByName} />
+                  ) : null}
                   <DetailRow label="Email" value={issue.raisedByEmail} />
                   <DetailRow label="Date" value={formatIssueDate(issue.createdAt)} />
                   <DetailRow label="Asset Status" value={issue.assetLifecycleStatusLabel} />
+                  <DetailRow
+                    label="Replacement"
+                    value={issue.swapPreview?.recommendedMode ? humanize(issue.swapPreview.recommendedMode) : 'Pending'}
+                  />
                 </div>
 
                 <div className="rounded-2xl border border-[#eef0f3] bg-[#fbfbfc] px-4 py-4">
@@ -137,6 +144,11 @@ export function MaintenanceIssueDialog({
                   <p className="mt-2 text-[14px] leading-6 text-[#111827]">
                     {issue.description?.trim() ? issue.description : 'No description provided.'}
                   </p>
+                  {issue.swapPreview?.reason && (
+                    <div className="mt-3 rounded-xl border border-[#eef0f3] bg-white px-3 py-2 text-[12px] leading-5 text-[#5f6673]">
+                      {issue.swapPreview.reason}
+                    </div>
+                  )}
                 </div>
               </div>
 
