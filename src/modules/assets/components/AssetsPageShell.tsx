@@ -368,7 +368,6 @@ export function AssetsPageShell({
           asset={selectedAsset ?? undefined}
           canManageAssets={false}
           onEdit={() => {}}
-          onArchive={() => {}}
           onProvide={() => {}}
           onReturn={(asset) => openEmployeeReturnDialog(asset)}
           onMaintenance={(asset) => openEmployeeIssueDialog(asset)}
@@ -456,53 +455,8 @@ export function AssetsPageShell({
         </TabsContent>
 
         <TabsContent value="register" className="mt-0">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="w-full sm:max-w-xs flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2">
-              <Search className="size-4 shrink-0 text-[#9ca3af]" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search assets..."
-                className="h-auto border-0 bg-transparent px-0 py-0 text-[13px] shadow-none focus-visible:ring-0 placeholder:text-[#9ca3af]"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Select
-                value={categoryFilter}
-                onValueChange={(value) => setCategoryFilter(value as AssetCategory | 'ALL')}
-              >
-                <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All categories</SelectItem>
-                  {categoryOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {humanize(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => setStatusFilter(value as AssetStatus | 'ALL')}
-              >
-                <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All statuses</SelectItem>
-                  {assetStatusOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {humanize(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
           <AssetRegisterTab
-            assets={filteredAssets}
+            assets={allFetchedAssets}
             isLoading={registerQuery.isLoading}
             onOpenDetail={openDetail}
             onEdit={() => {}}
@@ -594,7 +548,6 @@ export function AssetsPageShell({
         asset={selectedAsset ?? undefined}
         canManageAssets={canManageAssets}
         onEdit={() => {}}
-        onArchive={(assetId) => void handleArchiveAsset(assetId)}
         onProvide={seedProvideForm}
         onReturn={() => router.push(`/${orgSlug}/maintenance`)}
         onMaintenance={seedMaintenanceForm}

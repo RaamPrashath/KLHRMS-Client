@@ -1,13 +1,8 @@
 'use client';
 
+import { cn } from '@/lib/utils';
 import { Clock, MessageSquare, Paperclip } from 'lucide-react';
 import type { KanbanIssue } from './kanban.types';
-
-const priorityStyles: Record<string, string> = {
-  high: 'bg-destructive-bg text-destructive-text',
-  medium: 'bg-warning-bg text-warning-text',
-  low: 'bg-secondary text-secondary-foreground',
-};
 
 function daysAgo(dateStr: string): string {
   const d = new Date(dateStr);
@@ -28,9 +23,16 @@ export function KanbanCardDragOverlay({ issue }: { issue: KanbanIssue }) {
           <p className="truncate text-[13px] font-medium text-foreground">{issue.title}</p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">{issue.ticketId}</p>
         </div>
-        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.04em] ${priorityStyles[issue.priority] || priorityStyles.medium}`}>
-          {issue.priority}
-        </span>
+        <span
+            className={cn(
+              'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+              issue.ticketMode === 'ASSET_ISSUE'
+                ? 'bg-[#fff3f2] text-[#b3261e]'
+                : 'bg-[#f4f8ff] text-[#2454a6]',
+            )}
+          >
+            {issue.ticketMode === 'ASSET_ISSUE' ? 'Asset' : 'General'}
+          </span>
       </div>
 
       {issue.description && (

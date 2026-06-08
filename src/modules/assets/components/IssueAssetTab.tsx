@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { ChangeEvent, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   flexRender,
@@ -28,6 +28,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -50,7 +51,7 @@ import {
 import { cn } from '@/lib/utils';
 import { fetchAssetDetailAction } from '@/modules/assets/api/assetServerActions';
 import { readError } from '@/modules/assets/lib/assetUtils';
-import { formatDate, humanize } from '@/modules/assets/lib/assetUtils';
+import { conditionBadge, formatDate, humanize } from '@/modules/assets/lib/assetUtils';
 import { useAssetMutations } from '@/modules/assets/hooks/useAssetMutations';
 import type { AssetIssueInput } from '@/modules/assets/schema/assetSchemas';
 import type {
@@ -456,12 +457,12 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
           const a = r.original;
           return (
             <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] text-[#6b7280]">
-                <LaptopMinimal className="size-4" />
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border bg-slate-50/50 dark:bg-slate-900/10 text-muted-foreground">
+                <LaptopMinimal className="size-4.5" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[14px] font-medium text-[#111827]">{a.name}</p>
-                <p className="truncate text-[12px] text-[#6b7280]">{a.assetCode}</p>
+                <p className="text-[14px] font-semibold text-slate-900 dark:text-white truncate">{a.name}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{a.assetCode}</p>
               </div>
             </div>
           );
@@ -474,9 +475,9 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
         cell: ({ getValue }: { getValue: () => string | null }) => {
           const name = getValue();
           return name ? (
-            <span className="text-[13px] text-[#374151]">{name}</span>
+            <span className="text-[13px] text-slate-700 dark:text-slate-350 font-medium">{name}</span>
           ) : (
-            <span className="text-[13px] text-[#9ca3af]">—</span>
+            <span className="text-[13px] text-muted-foreground">—</span>
           );
         },
       },
@@ -486,21 +487,15 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
         accessorKey: 'condition',
         cell: ({ getValue }: { getValue: () => string }) => {
           const val = getValue();
-          const colors: Record<string, string> = {
-            NEW: 'bg-[#f3fbf5] text-[#156f3d]',
-            GOOD: 'bg-[#f4f8ff] text-[#2454a6]',
-            FAIR: 'bg-[#fff7e8] text-[#8a5a00]',
-            DAMAGED: 'bg-[#fff3f2] text-[#b3261e]',
-          };
           return (
-            <span
+            <Badge
               className={cn(
-                'rounded-md border-0 px-2 py-0.5 text-[12px] font-normal',
-                colors[val] || 'bg-[#f3f4f6] text-[#6b7280]',
+                'rounded-md border-0 px-2 py-0.5 text-[11px] font-semibold tracking-wide',
+                conditionBadge(val as any),
               )}
             >
               {humanize(val)}
-            </span>
+            </Badge>
           );
         },
       },
@@ -513,8 +508,8 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
           const isPending = a.openMaintenanceCount > 0;
           return (
             <span className="flex items-center gap-1.5">
-              <span className={cn('size-1.5 rounded-full shrink-0', isPending ? 'bg-[#eab308]' : 'bg-[#22c55e]')} />
-              <span className="text-[13px] text-[#374151]">{isPending ? 'Has Tickets' : 'Active'}</span>
+              <span className={cn('size-1.5 rounded-full shrink-0', isPending ? 'bg-amber-500' : 'bg-emerald-500')} />
+              <span className="text-[13px] text-slate-700 dark:text-slate-300 font-medium">{isPending ? 'Has Tickets' : 'Active'}</span>
             </span>
           );
         },
@@ -533,6 +528,22 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 6 } },
   });
+
+  const paginationPages = useMemo(() => {
+    const pageCount = table.getPageCount();
+    const pageIndex = table.getState().pagination.pageIndex;
+    if (pageCount <= 7) {
+      return Array.from({ length: pageCount }, (_, i) => i);
+    }
+    const pages: (number | 'ellipsis')[] = [0];
+    if (pageIndex > 2) pages.push('ellipsis');
+    const start = Math.max(1, pageIndex - 1);
+    const end = Math.min(pageCount - 2, pageIndex + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (pageIndex < pageCount - 3) pages.push('ellipsis');
+    pages.push(pageCount - 1);
+    return pages;
+  }, [table]);
 
   return (
     <div className="w-full space-y-8">
@@ -737,25 +748,31 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
         </div>
       </div>
 
-      {/* Issued Assets Table */}
-      <div className="mb-2 flex w-[30%] items-center gap-1.5 rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5">
-        <Search className="size-3.5 shrink-0 text-[#9ca3af]" />
-        <input
-          value={assetSearch}
-          onChange={(e) => setAssetSearch(e.target.value)}
-          placeholder="Search assets..."
-          className="h-auto flex-1 border-0 bg-transparent px-0 py-0 text-[12px] outline-none placeholder:text-[#9ca3af]"
-        />
-      </div>
-      <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm">
+      {/* Issued Assets Table Container */}
+      <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
+        {/* Search Input in Card Header */}
+        <div className="px-8 py-6 border-b border-border">
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search assets..."
+                value={assetSearch}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setAssetSearch(e.target.value)}
+                className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
+              />
+            </div>
+          </div>
+        </div>
+
         {issuedAssets.length === 0 ? (
           <div className="flex items-center justify-center py-14 text-center">
             <div>
-              <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-[#f9fafb]">
-                <PackageOpen className="size-5 text-[#9ca3af]" />
+              <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-muted/40 border border-border text-muted-foreground">
+                <PackageOpen className="size-5" />
               </div>
-              <p className="mt-3 text-[15px] font-medium text-[#111827]">No assets issued</p>
-              <p className="mt-0.5 text-[13px] text-[#6b7280]">Use the form above to assign assets to employees</p>
+              <p className="mt-3 text-[15px] font-semibold text-foreground">No assets issued</p>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">Use the form above to assign assets to employees</p>
             </div>
           </div>
         ) : (
@@ -764,11 +781,11 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((hg) => (
-                    <TableRow key={hg.id} className="border-b-2 border-[#e2e5ea]">
+                    <TableRow key={hg.id} className="border-b border-border bg-slate-50/50 dark:bg-slate-900/10 hover:bg-transparent">
                       {hg.headers.map((header) => (
                         <TableHead
                           key={header.id}
-                          className="h-10 px-3 text-[13px] font-semibold text-[#6b7280]"
+                          className="h-11 px-6 text-[12px] font-bold text-muted-foreground uppercase tracking-wider"
                         >
                           {header.isPlaceholder
                             ? null
@@ -782,11 +799,11 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
                   {table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
-                      className="group hover:bg-[#f8f9fa] cursor-pointer transition-colors"
+                      className="group border-b border-border hover:bg-slate-50/30 dark:hover:bg-slate-900/10 cursor-pointer transition-colors"
                       onClick={() => handleRowClick(row.original)}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="px-3 py-2.5 border-b border-[#e5e7eb]">
+                        <TableCell key={cell.id} className="px-6 py-3.5 text-slate-705 dark:text-slate-350 align-middle font-medium">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -797,46 +814,52 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
             </div>
 
             {issuedAssets.length > 0 && (
-              <div className="flex items-center justify-between border-t border-[#e5e7eb] bg-[#fafbfc] px-4 py-2.5">
-                <p className="text-[12px] text-[#6b7280]">
-                  {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
-                  &ndash;{Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, issuedAssets.length)}
-                  {' '}of {issuedAssets.length}
-                </p>
-                <div className="flex items-center gap-1">
+              <div className="p-4 bg-slate-50/30 dark:bg-slate-900/10 border-t border-border text-xs text-muted-foreground flex justify-between items-center shrink-0">
+                <span className="font-semibold text-muted-foreground">
+                  Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-
+                  {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, issuedAssets.length)}
+                  {' '}of {issuedAssets.length} entries
+                </span>
+                <div className="flex items-center gap-1.5">
                   <Button
-                    variant="ghost"
-                    size="icon"
+                    variant="outline"
+                    size="sm"
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
-                    className="size-7 rounded-md text-[#6b7280] hover:text-[#111827] disabled:opacity-30"
+                    className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
                   >
-                    <ChevronLeft className="size-3.5" />
+                    Previous
                   </Button>
-                  {Array.from({ length: table.getPageCount() }).map((_, i) => (
-                    <Button
-                      key={i}
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => table.setPageIndex(i)}
-                      className={cn(
-                        'size-7 rounded-md text-[12px] font-medium',
-                        table.getState().pagination.pageIndex === i
-                          ? 'bg-[#111827] text-white hover:bg-[#111827]'
-                          : 'text-[#6b7280] hover:text-[#111827]',
-                      )}
-                    >
-                      {i + 1}
-                    </Button>
-                  ))}
+                  {paginationPages.map((p, idx) =>
+                    p === 'ellipsis' ? (
+                      <span key={`e-${idx}`} className="flex size-7 items-center justify-center text-[12px] text-muted-foreground">
+                        &hellip;
+                      </span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={table.getState().pagination.pageIndex === p ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => table.setPageIndex(p)}
+                        className={cn(
+                          'h-7 min-w-7 rounded-lg px-1 text-[11px] font-semibold',
+                          table.getState().pagination.pageIndex === p
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'border-border text-muted-foreground bg-card hover:bg-muted',
+                        )}
+                      >
+                        {p + 1}
+                      </Button>
+                    ),
+                  )}
                   <Button
-                    variant="ghost"
-                    size="icon"
+                    variant="outline"
+                    size="sm"
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
-                    className="size-7 rounded-md text-[#6b7280] hover:text-[#111827] disabled:opacity-30"
+                    className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
                   >
-                    <ChevronRight className="size-3.5" />
+                    Next
                   </Button>
                 </div>
               </div>

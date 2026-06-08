@@ -116,16 +116,6 @@ export function MaintenancePageShell({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-full max-w-[320px] items-center gap-2.5 rounded-full border border-[#e2e8f0] bg-white px-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-within:border-[#0066cc] focus-within:ring-1 focus-within:ring-[#0066cc]/20 transition-all">
-            <Search className="size-4 shrink-0 text-[#5f6673]" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search tickets..."
-              className="h-auto border-0 bg-transparent px-0 py-0 text-[14px] shadow-none focus-visible:ring-0 placeholder:text-[#86868b]"
-            />
-          </div>
-
           <div className="inline-flex items-center rounded-xl border border-black/4 bg-neutral-50 p-1">
             <button
               onClick={() => setViewMode('kanban')}
@@ -160,6 +150,16 @@ export function MaintenancePageShell({
       <div className="mb-5 shrink-0 flex flex-col gap-3">
         <div className="flex items-center justify-between rounded-xl border border-[#e6e9ef] bg-[#fbfbfc] px-5 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
           <div className="flex items-center gap-3">
+            <div className="flex h-8 w-[180px] items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-within:border-[#0066cc] focus-within:ring-1 focus-within:ring-[#0066cc]/20 transition-all">
+              <Search className="size-3.5 shrink-0 text-[#5f6673]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search tickets..."
+                className="h-auto border-0 bg-transparent px-0 py-0 text-[12px] shadow-none focus-visible:ring-0 placeholder:text-[#86868b]"
+              />
+            </div>
+
             <span className="text-[14px] font-semibold text-[#4b5563]">Filters</span>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -167,7 +167,7 @@ export function MaintenancePageShell({
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Statuses</SelectItem>
+                <SelectItem value="ALL">Status</SelectItem>
                 {statusFilterOptions.map((opt) => (
                   <SelectItem key={opt} value={opt}>{humanize(opt)}</SelectItem>
                 ))}
@@ -179,7 +179,7 @@ export function MaintenancePageShell({
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Types</SelectItem>
+                <SelectItem value="ALL">Types</SelectItem>
                 {typeFilterOptions.map((opt) => (
                   <SelectItem key={opt} value={opt}>{humanize(opt)}</SelectItem>
                 ))}
@@ -241,7 +241,7 @@ export function MaintenancePageShell({
             onOpenSwap={openSwapDialog}
           />
         ) : (
-          <MaintenanceTableView tickets={filteredTickets} onOpenSwap={openSwapDialog} />
+          <MaintenanceTableView tickets={filteredTickets} />
         )}
       </div>
 

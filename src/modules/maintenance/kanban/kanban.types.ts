@@ -6,6 +6,7 @@ export interface KanbanIssue {
   title: string | null;
   ticketId: string;
   maintenanceType: string;
+  ticketMode: string;
   description: string;
   assetLifecycleStatus: string | null;
   assetLifecycleStatusLabel: string | null;

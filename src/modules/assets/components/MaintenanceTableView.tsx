@@ -9,15 +9,14 @@ import {
   getSortedRowModel,
   useReactTable,
   type SortingState,
+  type PaginationState,
 } from '@tanstack/react-table';
 import {
   BadgeCheck,
   ChevronDown,
   ChevronUp,
   Hammer,
-  RefreshCcw,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -33,9 +32,12 @@ import {
   FloatingPanelRoot,
   useFloatingPanel,
 } from '@/components/ui/floating-panel';
+import { EmployeePagination } from '@/modules/employees/components/EmployeePagination';
 import { cn } from '@/lib/utils';
 import { formatDate, humanize } from '@/modules/assets/lib/assetUtils';
 import type { MaintenanceTicket } from '@/modules/assets/api/assetServerActions';
+
+const PAGE_SIZE = 10;
 
 const statusStyle: Record<string, { dot: string; label: string; bg: string; text: string }> = {
   OPEN: { dot: '#2563eb', label: 'Open', bg: 'bg-blue-50', text: 'text-blue-700' },
@@ -232,28 +234,27 @@ function TicketDetailPanel({ ticket }: { ticket: MaintenanceTicket }) {
 function TableInner({
   tickets,
   className,
-  onOpenSwap,
 }: {
   tickets: MaintenanceTicket[];
   className?: string;
-  onOpenSwap: (ticketId: string) => void;
 }) {
   const { openFloatingPanel, setTitle } = useFloatingPanel();
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: PAGE_SIZE });
 
   const data = useMemo(() => tickets, [tickets]);
 
   const table = useReactTable({
     data,
     columns: COLUMNS,
-    state: { sorting },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
   });
 
   const { rows } = table.getRowModel();
@@ -293,16 +294,13 @@ function TableInner({
                     )}
                   </TableHead>
                 ))}
-                <TableHead className="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
-                  Availability
-                </TableHead>
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={COLUMNS.length + 1} className="py-12 text-center text-[13px] text-[#6e6e73]">
+                <TableCell colSpan={COLUMNS.length} className="py-12 text-center text-[13px] text-[#6e6e73]">
                   No matching tickets
                 </TableCell>
               </TableRow>
@@ -318,36 +316,6 @@ function TableInner({
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
-                  <TableCell className="py-2.5 px-3">
-                    <div className="flex items-center gap-2">
-                      {row.original.swapPreview?.options.map((option) => (
-                        <span
-                          key={option.mode}
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-[10px] font-medium',
-                            option.available ? 'bg-[#eff6ff] text-[#2454a6]' : 'bg-[#fff1f1] text-[#b3261e]',
-                          )}
-                        >
-                          {option.mode === 'PERMANENT_REPLACEMENT' ? 'Exact' : 'Temp'} {option.availableCount}
-                        </span>
-                      ))}
-                      {row.original.swapPreview?.requiresReplacementValidation && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 rounded-full border-[#d1d5db] px-2.5 text-[11px]"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onOpenSwap(row.original.id);
-                          }}
-                        >
-                          <RefreshCcw className="mr-1 size-3" />
-                          Swap
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -355,47 +323,16 @@ function TableInner({
         </Table>
       </div>
 
-      {table.getPageCount() > 1 && (
-        <div className="mt-3 flex items-center justify-between px-1">
-          <span className="text-[12px] text-neutral-400 tabular-nums">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="h-7 rounded-lg border-[#e5e7eb] px-2.5 text-[12px] font-normal"
-            >
-              Prev
-            </Button>
-            {Array.from({ length: table.getPageCount() }).map((_, i) => (
-              <Button
-                key={i}
-                variant={table.getState().pagination.pageIndex === i ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => table.setPageIndex(i)}
-                className={cn(
-                  'h-7 min-w-7 rounded-lg px-1 text-[12px]',
-                  table.getState().pagination.pageIndex === i
-                    ? 'bg-[#1d1d1f] text-white'
-                    : 'border-[#e5e7eb] text-[#6e6e73]',
-                )}
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="h-7 rounded-lg border-[#e5e7eb] px-2.5 text-[12px] font-normal"
-            >
-              Next
-            </Button>
-          </div>
+      {table.getPageCount() > 0 && (
+        <div className="mt-3">
+          <EmployeePagination
+            page={table.getState().pagination.pageIndex + 1}
+            totalPages={table.getPageCount()}
+            total={table.getPrePaginationRowModel().rows.length}
+            pageSize={table.getState().pagination.pageSize}
+            onPageChange={(p) => table.setPageIndex(p - 1)}
+            onPageSizeChange={(size) => table.setPageSize(size)}
+          />
         </div>
       )}
 
@@ -407,11 +344,9 @@ function TableInner({
 export function MaintenanceTableView({
   tickets,
   className,
-  onOpenSwap,
 }: {
   tickets: MaintenanceTicket[];
   className?: string;
-  onOpenSwap: (ticketId: string) => void;
 }) {
   const data = useMemo(() => tickets, [tickets]);
 
@@ -429,7 +364,7 @@ export function MaintenanceTableView({
 
   return (
     <FloatingPanelRoot>
-      <TableInner tickets={data} onOpenSwap={onOpenSwap} />
+      <TableInner tickets={data} />
     </FloatingPanelRoot>
   );
 }

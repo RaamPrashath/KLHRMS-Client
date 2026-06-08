@@ -10,6 +10,11 @@ import {
     MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
 import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
     LayoutDashboard,
     Users,
     Building2,
@@ -406,17 +411,6 @@ function UserFooter({
                                 <GearIcon className="h-4 w-4 shrink-0" />
                                 Account Settings
                             </Link>
-                            {isAdmin && (
-                                <Link
-                                    href={`/${orgSlug}/settings`}
-                                    role="menuitem"
-                                    onClick={() => setDropdownOpen(false)}
-                                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-slate-650 dark:text-zinc-350 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-zinc-800 dark:hover:text-white"
-                                >
-                                    <Building2 className="h-4 w-4 shrink-0" />
-                                    Organization Settings
-                                </Link>
-                            )}
                             <div className="mx-2 my-1 h-px bg-slate-100 dark:bg-zinc-800" />
                             <button
                                 role="menuitem"
@@ -441,6 +435,12 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
 
     void orgName;
 
+    const isAdmin = permissions
+        ? getScope(permissions, "permission", "edit") === "organization" ||
+          getScope(permissions, "employees", "edit") === "organization" ||
+          getScope(permissions, "organization", "edit") === "organization"
+        : false;
+
     const allNavGroups = useMemo(
         () => filterNavByPermissions(permissions),
         [permissions],
@@ -456,7 +456,25 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
         <Sidebar open={open} setOpen={setOpen} animate={true}>
             <SidebarBody className="justify-between gap-4 border-r-0 bg-white dark:bg-zinc-950 px-3 py-4 pt-3 md:py-4 md:pt-3">
                 <div className="flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                    <OrganizationSwitcher currentOrgSlug={orgSlug} organizations={organizations} />
+                    <div className="flex items-center">
+                        <OrganizationSwitcher currentOrgSlug={orgSlug} organizations={organizations} />
+                        {open && isAdmin && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Link
+                                        href={`/${orgSlug}/settings`}
+                                        className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                                        aria-label="Organization Settings"
+                                    >
+                                        <GearIcon className="h-4 w-4" />
+                                    </Link>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                    Organization Settings
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+                    </div>
                     <SidebarNavigation
                         key={showSearch ? "with-search" : "without-search"}
                         allNavGroups={allNavGroups}

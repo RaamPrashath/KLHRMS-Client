@@ -65,7 +65,7 @@ export function OrganizationSwitcher({
     }
 
     return (
-        <div className="pt-1 pb-1">
+        <div className="flex-1 pt-1 pb-1">
             <Popover open={isOpen} onOpenChange={setIsOpen}>
                 <PopoverTrigger asChild>
                     <button

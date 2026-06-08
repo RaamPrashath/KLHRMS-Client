@@ -7,8 +7,10 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { AlertTriangle, ChevronLeft, ChevronRight, LaptopMinimal, PackageOpen } from 'lucide-react';
+import { AlertTriangle, LaptopMinimal, PackageOpen, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -36,7 +38,19 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
   const { data, isLoading, isError } = useBrandModelAnalyticsQuery(orgSlug, memberId);
   const rows = data?.rows ?? [];
   const [pageIndex, setPageIndex] = useState(0);
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const [search, setSearch] = useState('');
+
+  const filteredRows = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.brand.toLowerCase().includes(q) ||
+        r.model.toLowerCase().includes(q)
+    );
+  }, [rows, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
 
   const columns = useMemo(
     () => [
@@ -45,7 +59,7 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
         header: 'Brand',
         accessorKey: 'brand',
         cell: ({ getValue }: { getValue: () => string }) => (
-          <span className="text-[13px] font-medium text-[#111827]">{getValue()}</span>
+          <span className="text-[13px] font-semibold text-slate-900 dark:text-white">{getValue()}</span>
         ),
       },
       {
@@ -53,7 +67,7 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
         header: 'Model',
         accessorKey: 'model',
         cell: ({ getValue }: { getValue: () => string }) => (
-          <span className="text-[13px] text-[#6b7280]">{getValue()}</span>
+          <span className="text-[13px] text-slate-550 dark:text-slate-400 font-medium">{getValue()}</span>
         ),
       },
       {
@@ -61,7 +75,7 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
         header: 'Total Stock',
         accessorKey: 'totalStock',
         cell: ({ getValue }: { getValue: () => number }) => (
-          <span className="text-[13px] font-medium tabular-nums text-[#374151]">{getValue()}</span>
+          <span className="text-[13px] font-semibold tabular-nums text-slate-800 dark:text-slate-300">{getValue()}</span>
         ),
       },
       {
@@ -71,7 +85,7 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
         cell: ({ row: r }: { row: { original: BrandModelInventoryRow } }) => {
           const v = r.original.inOfficeStock;
           return (
-            <span className={cn('text-[13px] tabular-nums', v === 0 ? 'text-[#b3261e] font-medium' : 'text-[#374151]')}>
+            <span className={cn('text-[13px] font-semibold tabular-nums', v === 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-300')}>
               {v}
             </span>
           );
@@ -82,7 +96,7 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
         header: 'Provided',
         accessorKey: 'providedStock',
         cell: ({ getValue }: { getValue: () => number }) => (
-          <span className="text-[13px] tabular-nums text-[#374151]">{getValue()}</span>
+          <span className="text-[13px] font-semibold tabular-nums text-slate-800 dark:text-slate-300">{getValue()}</span>
         ),
       },
       {
@@ -90,26 +104,15 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
         header: 'Maint.',
         accessorKey: 'maintenanceOrDamagedStock',
         cell: ({ getValue }: { getValue: () => number }) => (
-          <span className="text-[13px] tabular-nums text-[#374151]">{getValue()}</span>
+          <span className="text-[13px] font-semibold tabular-nums text-slate-800 dark:text-slate-300">{getValue()}</span>
         ),
-      },
-      {
-        id: 'lowStockAlert',
-        header: 'Alert',
-        accessorFn: (row: BrandModelInventoryRow) => (row.lowStockAlert ? 'Low Stock' : 'OK'),
-        cell: ({ row: r }: { row: { original: BrandModelInventoryRow } }) =>
-          r.original.lowStockAlert ? (
-            <span className="rounded-md bg-[#fff3f2] px-2 py-0.5 text-[11px] font-medium text-[#b3261e]">Low Stock</span>
-          ) : (
-            <span className="text-[12px] text-[#9ca3af]">—</span>
-          ),
       },
     ],
     [],
   );
 
   const table = useReactTable({
-    data: rows,
+    data: filteredRows,
     columns,
     state: { pagination: { pageIndex, pageSize: PAGE_SIZE } },
     onPaginationChange: (updater) => {
@@ -123,11 +126,25 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
     pageCount,
   });
 
+  const paginationPages = useMemo(() => {
+    if (pageCount <= 7) {
+      return Array.from({ length: pageCount }, (_, i) => i);
+    }
+    const pages: (number | 'ellipsis')[] = [0];
+    if (pageIndex > 2) pages.push('ellipsis');
+    const start = Math.max(1, pageIndex - 1);
+    const end = Math.min(pageCount - 2, pageIndex + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (pageIndex < pageCount - 3) pages.push('ellipsis');
+    pages.push(pageCount - 1);
+    return pages;
+  }, [pageIndex, pageCount]);
+
   if (isLoading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-12 animate-pulse rounded-lg bg-[#f3f4f6]" />
+          <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/60 border border-border" />
         ))}
       </div>
     );
@@ -135,10 +152,10 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
 
   if (isError) {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-[#e5e7eb] bg-white px-6 py-14 text-center">
+      <div className="flex items-center justify-center bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] px-6 py-14 text-center">
         <div>
-          <AlertTriangle className="mx-auto size-6 text-[#9ca3af]" />
-          <p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">Failed to load brand & model data</p>
+          <AlertTriangle className="mx-auto size-6 text-muted-foreground" />
+          <p className="mt-2 text-[14px] font-semibold text-foreground">Failed to load brand & model data</p>
         </div>
       </div>
     );
@@ -146,69 +163,122 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
 
   if (rows.length === 0) {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-[#e5e7eb] bg-white px-6 py-14 text-center">
+      <div className="flex items-center justify-center bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] px-6 py-14 text-center">
         <div>
-          <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-[#f9fafb]">
-            <PackageOpen className="size-5 text-[#9ca3af]" />
+          <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-[#f9fafb] dark:bg-slate-900/50">
+            <PackageOpen className="size-5 text-muted-foreground" />
           </div>
-          <p className="mt-3 text-[15px] font-medium text-[#111827]">No brand & model data</p>
+          <p className="mt-3 text-[15px] font-semibold text-foreground">No brand & model data</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id} className="border-b-2 border-[#e2e5ea]">
-                {hg.headers.map((header) => (
-                  <TableHead key={header.id} className="h-10 px-3 text-[13px] font-semibold text-[#6b7280]">
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className="group border-b border-[#e5e7eb] transition-colors hover:bg-[#f8f9fa]">
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-3 py-2.5">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-between border-t border-[#e5e7eb] bg-[#fafbfc] px-4 py-2.5">
-        <p className="text-[12px] text-[#6b7280]">
-          {pageIndex * PAGE_SIZE + 1}&ndash;{Math.min((pageIndex + 1) * PAGE_SIZE, rows.length)} of {rows.length}
-        </p>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0}
-            className="size-7 rounded-md text-[#6b7280] hover:text-[#111827] disabled:opacity-30">
-            <ChevronLeft className="size-3.5" />
-          </Button>
-          {Array.from({ length: pageCount }).map((_, i) => (
-            <Button key={i} variant="ghost" size="icon" onClick={() => setPageIndex(i)}
-              className={cn('size-7 rounded-md text-[12px] font-medium',
-                pageIndex === i
-                  ? 'bg-[#111827] text-white hover:bg-[#111827]'
-                  : 'text-[#6b7280] hover:text-[#111827]')}>
-              {i + 1}
-            </Button>
-          ))}
-          <Button variant="ghost" size="icon" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= pageCount - 1}
-            className="size-7 rounded-md text-[#6b7280] hover:text-[#111827] disabled:opacity-30">
-            <ChevronRight className="size-3.5" />
-          </Button>
+    <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
+      {/* Search Header inside container */}
+      <div className="px-8 py-6 border-b border-border">
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search brand or model..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPageIndex(0);
+              }}
+              className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
+            />
+          </div>
         </div>
       </div>
+
+      {filteredRows.length === 0 ? (
+        <div className="flex items-center justify-center bg-card px-6 py-14 text-center">
+          <div>
+            <PackageOpen className="mx-auto size-6 text-muted-foreground" />
+            <p className="mt-2 text-[14px] font-semibold text-foreground">No matching inventory records</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">Try a different search query</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id} className="border-b border-border bg-slate-50/50 dark:bg-slate-900/10 hover:bg-transparent">
+                    {hg.headers.map((header) => (
+                      <TableHead key={header.id} className="h-11 px-6 text-[12px] font-semibold text-[#86868b] uppercase tracking-wider">
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} className="border-b border-border hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors">
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-6 py-3.5 text-slate-705 dark:text-slate-350 align-middle font-medium">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="p-4 bg-slate-50/30 dark:bg-slate-900/10 border-t border-border text-xs text-muted-foreground flex justify-between items-center shrink-0">
+            <span className="font-semibold text-muted-foreground">
+              Showing {pageIndex * PAGE_SIZE + 1}-{Math.min((pageIndex + 1) * PAGE_SIZE, filteredRows.length)} of {filteredRows.length} entries
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(pageIndex - 1)}
+                disabled={pageIndex === 0}
+                className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+              >
+                Previous
+              </Button>
+              {paginationPages.map((p, idx) =>
+                p === 'ellipsis' ? (
+                  <span key={`e-${idx}`} className="flex size-7 items-center justify-center text-[12px] text-muted-foreground">
+                    &hellip;
+                  </span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={pageIndex === p ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPageIndex(p)}
+                    className={cn(
+                      'h-7 min-w-7 rounded-lg px-1 text-[11px] font-semibold',
+                      pageIndex === p
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : 'border-border text-muted-foreground bg-card hover:bg-muted',
+                    )}
+                  >
+                    {p + 1}
+                  </Button>
+                ),
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(pageIndex + 1)}
+                disabled={pageIndex >= pageCount - 1}
+                className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -219,7 +289,15 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
   const { data, isLoading, isError } = useOsDistributionQuery(orgSlug, memberId);
   const rows = data?.rows ?? [];
   const [pageIndex, setPageIndex] = useState(0);
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const [search, setSearch] = useState('');
+
+  const filteredRows = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return rows;
+    return rows.filter((r) => r.osName.toLowerCase().includes(q));
+  }, [rows, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
 
   const columns = useMemo(
     () => [
@@ -230,15 +308,15 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
         cell: ({ getValue }: { getValue: () => string }) => {
           const os = getValue();
           const dotColor: Record<string, string> = {
-            macOS: 'bg-[#6b7280]',
-            Windows: 'bg-[#3b82f6]',
-            Linux: 'bg-[#f59e0b]',
-            Ubuntu: 'bg-[#f97316]',
+            macOS: 'bg-slate-500',
+            Windows: 'bg-blue-500',
+            Linux: 'bg-amber-500',
+            Ubuntu: 'bg-orange-500',
           };
           return (
             <div className="flex items-center gap-2">
-              <span className={cn('size-2 rounded-full shrink-0', dotColor[os] || 'bg-[#9ca3af]')} />
-              <span className="text-[13px] font-medium text-[#111827]">{os}</span>
+              <span className={cn('size-2 rounded-full shrink-0', dotColor[os] || 'bg-slate-400')} />
+              <span className="text-[13px] font-semibold text-slate-900 dark:text-white">{os}</span>
             </div>
           );
         },
@@ -248,7 +326,7 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
         header: 'Users',
         accessorKey: 'headcount',
         cell: ({ getValue }: { getValue: () => number }) => (
-          <span className="text-[13px] tabular-nums font-medium text-[#374151]">{getValue()}</span>
+          <span className="text-[13px] font-semibold tabular-nums text-slate-800 dark:text-slate-300">{getValue()}</span>
         ),
       },
       {
@@ -258,11 +336,11 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
         cell: ({ getValue }: { getValue: () => number }) => {
           const pct = Math.round(getValue());
           return (
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-24 rounded-full bg-[#e5e7eb]">
-                <div className="h-full rounded-full bg-[#22c55e]" style={{ width: `${pct}%` }} />
+            <div className="flex items-center gap-3">
+              <div className="h-1.5 w-24 rounded-full bg-muted overflow-hidden">
+                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
               </div>
-              <span className="text-[12px] tabular-nums text-[#6b7280]">{pct}%</span>
+              <span className="text-[12px] tabular-nums text-muted-foreground font-semibold">{pct}%</span>
             </div>
           );
         },
@@ -272,7 +350,7 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
   );
 
   const table = useReactTable({
-    data: rows,
+    data: filteredRows,
     columns,
     state: { pagination: { pageIndex, pageSize: PAGE_SIZE } },
     onPaginationChange: (updater) => {
@@ -286,11 +364,25 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
     pageCount,
   });
 
+  const paginationPages = useMemo(() => {
+    if (pageCount <= 7) {
+      return Array.from({ length: pageCount }, (_, i) => i);
+    }
+    const pages: (number | 'ellipsis')[] = [0];
+    if (pageIndex > 2) pages.push('ellipsis');
+    const start = Math.max(1, pageIndex - 1);
+    const end = Math.min(pageCount - 2, pageIndex + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (pageIndex < pageCount - 3) pages.push('ellipsis');
+    pages.push(pageCount - 1);
+    return pages;
+  }, [pageIndex, pageCount]);
+
   if (isLoading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-12 animate-pulse rounded-lg bg-[#f3f4f6]" />
+          <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/60 border border-border" />
         ))}
       </div>
     );
@@ -298,10 +390,10 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
 
   if (isError) {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-[#e5e7eb] bg-white px-6 py-14 text-center">
+      <div className="flex items-center justify-center bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] px-6 py-14 text-center">
         <div>
-          <AlertTriangle className="mx-auto size-6 text-[#9ca3af]" />
-          <p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">Failed to load OS distribution</p>
+          <AlertTriangle className="mx-auto size-6 text-muted-foreground" />
+          <p className="mt-2 text-[14px] font-semibold text-foreground">Failed to load OS distribution</p>
         </div>
       </div>
     );
@@ -309,69 +401,122 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
 
   if (rows.length === 0) {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-[#e5e7eb] bg-white px-6 py-14 text-center">
+      <div className="flex items-center justify-center bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] px-6 py-14 text-center">
         <div>
-          <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-[#f9fafb]">
-            <LaptopMinimal className="size-5 text-[#9ca3af]" />
+          <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-[#f9fafb] dark:bg-slate-900/50">
+            <LaptopMinimal className="size-5 text-muted-foreground" />
           </div>
-          <p className="mt-3 text-[15px] font-medium text-[#111827]">No OS distribution data</p>
+          <p className="mt-3 text-[15px] font-semibold text-foreground">No OS distribution data</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id} className="border-b-2 border-[#e2e5ea]">
-                {hg.headers.map((header) => (
-                  <TableHead key={header.id} className="h-10 px-3 text-[13px] font-semibold text-[#6b7280]">
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className="group border-b border-[#e5e7eb] transition-colors hover:bg-[#f8f9fa]">
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-3 py-2.5">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-between border-t border-[#e5e7eb] bg-[#fafbfc] px-4 py-2.5">
-        <p className="text-[12px] text-[#6b7280]">
-          {pageIndex * PAGE_SIZE + 1}&ndash;{Math.min((pageIndex + 1) * PAGE_SIZE, rows.length)} of {rows.length}
-        </p>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0}
-            className="size-7 rounded-md text-[#6b7280] hover:text-[#111827] disabled:opacity-30">
-            <ChevronLeft className="size-3.5" />
-          </Button>
-          {Array.from({ length: pageCount }).map((_, i) => (
-            <Button key={i} variant="ghost" size="icon" onClick={() => setPageIndex(i)}
-              className={cn('size-7 rounded-md text-[12px] font-medium',
-                pageIndex === i
-                  ? 'bg-[#111827] text-white hover:bg-[#111827]'
-                  : 'text-[#6b7280] hover:text-[#111827]')}>
-              {i + 1}
-            </Button>
-          ))}
-          <Button variant="ghost" size="icon" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= pageCount - 1}
-            className="size-7 rounded-md text-[#6b7280] hover:text-[#111827] disabled:opacity-30">
-            <ChevronRight className="size-3.5" />
-          </Button>
+    <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
+      {/* Search Header inside container */}
+      <div className="px-8 py-6 border-b border-border">
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search OS..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPageIndex(0);
+              }}
+              className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
+            />
+          </div>
         </div>
       </div>
+
+      {filteredRows.length === 0 ? (
+        <div className="flex items-center justify-center bg-card px-6 py-14 text-center">
+          <div>
+            <LaptopMinimal className="mx-auto size-6 text-muted-foreground" />
+            <p className="mt-2 text-[14px] font-semibold text-foreground">No matching OS distribution records</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">Try a different search query</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id} className="border-b border-border bg-slate-50/50 dark:bg-slate-900/10 hover:bg-transparent">
+                    {hg.headers.map((header) => (
+                      <TableHead key={header.id} className="h-11 px-6 text-[12px] font-semibold text-[#86868b] uppercase tracking-wider">
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} className="border-b border-border hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors">
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-6 py-3.5 text-slate-705 dark:text-slate-350 align-middle font-medium">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="p-4 bg-slate-50/30 dark:bg-slate-900/10 border-t border-border text-xs text-muted-foreground flex justify-between items-center shrink-0">
+            <span className="font-semibold text-muted-foreground">
+              Showing {pageIndex * PAGE_SIZE + 1}-{Math.min((pageIndex + 1) * PAGE_SIZE, filteredRows.length)} of {filteredRows.length} entries
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(pageIndex - 1)}
+                disabled={pageIndex === 0}
+                className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+              >
+                Previous
+              </Button>
+              {paginationPages.map((p, idx) =>
+                p === 'ellipsis' ? (
+                  <span key={`e-${idx}`} className="flex size-7 items-center justify-center text-[12px] text-muted-foreground">
+                    &hellip;
+                  </span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={pageIndex === p ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPageIndex(p)}
+                    className={cn(
+                      'h-7 min-w-7 rounded-lg px-1 text-[11px] font-semibold',
+                      pageIndex === p
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : 'border-border text-muted-foreground bg-card hover:bg-muted',
+                    )}
+                  >
+                    {p + 1}
+                  </Button>
+                ),
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(pageIndex + 1)}
+                disabled={pageIndex >= pageCount - 1}
+                className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -382,7 +527,21 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
   const { data, isLoading, isError } = useWarrantyFeedQuery(orgSlug, memberId);
   const rows = data?.items ?? [];
   const [pageIndex, setPageIndex] = useState(0);
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const [search, setSearch] = useState('');
+
+  const filteredRows = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.assetName.toLowerCase().includes(q) ||
+        r.assetCode.toLowerCase().includes(q) ||
+        (r.model ?? '').toLowerCase().includes(q) ||
+        (r.employeeName ?? '').toLowerCase().includes(q)
+    );
+  }, [rows, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
 
   const columns = useMemo(
     () => [
@@ -394,12 +553,12 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
           const item = r.original;
           return (
             <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] text-[#6b7280]">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-slate-50/50 dark:bg-slate-900/10 text-muted-foreground">
                 <LaptopMinimal className="size-4" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[14px] font-medium text-[#111827]">{item.assetName}</p>
-                <p className="truncate text-[12px] text-[#6b7280]">{item.assetCode}{item.serialNumber ? ` · ${item.serialNumber}` : ''}</p>
+                <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">{item.assetName}</p>
+                <p className="truncate text-[11px] text-muted-foreground">{item.assetCode}{item.serialNumber ? ` · ${item.serialNumber}` : ''}</p>
               </div>
             </div>
           );
@@ -410,7 +569,7 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
         header: 'Model',
         accessorKey: 'model',
         cell: ({ getValue }: { getValue: () => string | null }) => (
-          <span className="text-[13px] text-[#6b7280]">{getValue() || '—'}</span>
+          <span className="text-[13px] text-slate-550 dark:text-slate-400 font-medium">{getValue() || '—'}</span>
         ),
       },
       {
@@ -418,7 +577,7 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
         header: 'Assigned To',
         accessorKey: 'employeeName',
         cell: ({ getValue }: { getValue: () => string | null }) => (
-          <span className="text-[13px] text-[#374151]">{getValue() || '—'}</span>
+          <span className="text-[13px] text-slate-700 dark:text-slate-350 font-medium">{getValue() || '—'}</span>
         ),
       },
       {
@@ -426,7 +585,7 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
         header: 'Expiry Date',
         accessorKey: 'warrantyExpiryDate',
         cell: ({ getValue }: { getValue: () => string }) => (
-          <span className="text-[13px] tabular-nums text-[#6b7280]">{formatDate(getValue())}</span>
+          <span className="text-[13px] tabular-nums text-slate-755 dark:text-slate-300 font-medium">{formatDate(getValue())}</span>
         ),
       },
       {
@@ -436,8 +595,8 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
         cell: ({ getValue }: { getValue: () => number }) => {
           const days = getValue();
           return (
-            <span className={cn('text-[13px] tabular-nums font-medium',
-              days <= 1 ? 'text-[#b3261e]' : days <= 3 ? 'text-[#d97706]' : 'text-[#374151]')}>
+            <span className={cn('text-[13px] tabular-nums font-semibold',
+              days <= 30 ? 'text-red-600 dark:text-red-400' : days <= 90 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-750 dark:text-slate-300')}>
               {days}d
             </span>
           );
@@ -449,8 +608,8 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
         accessorFn: (row: WarrantyExpirationFeedItem) => (row.hasReminderSent ? 'Sent' : 'Pending'),
         cell: ({ row: r }: { row: { original: WarrantyExpirationFeedItem } }) => (
           r.original.hasReminderSent
-            ? <span className="rounded-md bg-[#f3fbf5] px-2 py-0.5 text-[11px] font-medium text-[#156f3d]">Sent</span>
-            : <span className="rounded-md bg-[#fff7e8] px-2 py-0.5 text-[11px] font-medium text-[#8a5a00]">Pending</span>
+            ? <Badge className="rounded-md border-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 text-[11px] font-semibold">Sent</Badge>
+            : <Badge className="rounded-md border-0 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 text-[11px] font-semibold">Pending</Badge>
         ),
       },
     ],
@@ -458,7 +617,7 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
   );
 
   const table = useReactTable({
-    data: rows,
+    data: filteredRows,
     columns,
     state: { pagination: { pageIndex, pageSize: PAGE_SIZE } },
     onPaginationChange: (updater) => {
@@ -472,11 +631,25 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
     pageCount,
   });
 
+  const paginationPages = useMemo(() => {
+    if (pageCount <= 7) {
+      return Array.from({ length: pageCount }, (_, i) => i);
+    }
+    const pages: (number | 'ellipsis')[] = [0];
+    if (pageIndex > 2) pages.push('ellipsis');
+    const start = Math.max(1, pageIndex - 1);
+    const end = Math.min(pageCount - 2, pageIndex + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (pageIndex < pageCount - 3) pages.push('ellipsis');
+    pages.push(pageCount - 1);
+    return pages;
+  }, [pageIndex, pageCount]);
+
   if (isLoading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-12 animate-pulse rounded-lg bg-[#f3f4f6]" />
+          <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/60 border border-border" />
         ))}
       </div>
     );
@@ -484,10 +657,10 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
 
   if (isError) {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-[#e5e7eb] bg-white px-6 py-14 text-center">
+      <div className="flex items-center justify-center bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] px-6 py-14 text-center">
         <div>
-          <AlertTriangle className="mx-auto size-6 text-[#9ca3af]" />
-          <p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">Failed to load warranty data</p>
+          <AlertTriangle className="mx-auto size-6 text-muted-foreground" />
+          <p className="mt-2 text-[14px] font-semibold text-foreground">Failed to load warranty data</p>
         </div>
       </div>
     );
@@ -495,70 +668,123 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
 
   if (rows.length === 0) {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-[#e5e7eb] bg-white px-6 py-14 text-center">
+      <div className="flex items-center justify-center bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] px-6 py-14 text-center">
         <div>
-          <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-[#f9fafb]">
-            <PackageOpen className="size-5 text-[#9ca3af]" />
+          <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-[#f9fafb] dark:bg-slate-900/50">
+            <PackageOpen className="size-5 text-muted-foreground" />
           </div>
-          <p className="mt-3 text-[15px] font-medium text-[#111827]">No upcoming expirations</p>
-          <p className="mt-0.5 text-[13px] text-[#6b7280]">All warranties are up to date</p>
+          <p className="mt-3 text-[15px] font-semibold text-foreground">No upcoming expirations</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">All warranties are up to date</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id} className="border-b-2 border-[#e2e5ea]">
-                {hg.headers.map((header) => (
-                  <TableHead key={header.id} className="h-10 px-3 text-[13px] font-semibold text-[#6b7280]">
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className="group border-b border-[#e5e7eb] transition-colors hover:bg-[#f8f9fa]">
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-3 py-2.5">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-between border-t border-[#e5e7eb] bg-[#fafbfc] px-4 py-2.5">
-        <p className="text-[12px] text-[#6b7280]">
-          {pageIndex * PAGE_SIZE + 1}&ndash;{Math.min((pageIndex + 1) * PAGE_SIZE, rows.length)} of {rows.length}
-        </p>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0}
-            className="size-7 rounded-md text-[#6b7280] hover:text-[#111827] disabled:opacity-30">
-            <ChevronLeft className="size-3.5" />
-          </Button>
-          {Array.from({ length: pageCount }).map((_, i) => (
-            <Button key={i} variant="ghost" size="icon" onClick={() => setPageIndex(i)}
-              className={cn('size-7 rounded-md text-[12px] font-medium',
-                pageIndex === i
-                  ? 'bg-[#111827] text-white hover:bg-[#111827]'
-                  : 'text-[#6b7280] hover:text-[#111827]')}>
-              {i + 1}
-            </Button>
-          ))}
-          <Button variant="ghost" size="icon" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= pageCount - 1}
-            className="size-7 rounded-md text-[#6b7280] hover:text-[#111827] disabled:opacity-30">
-            <ChevronRight className="size-3.5" />
-          </Button>
+    <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
+      {/* Search Header inside container */}
+      <div className="px-8 py-6 border-b border-border">
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search expirations..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPageIndex(0);
+              }}
+              className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
+            />
+          </div>
         </div>
       </div>
+
+      {filteredRows.length === 0 ? (
+        <div className="flex items-center justify-center bg-card px-6 py-14 text-center">
+          <div>
+            <PackageOpen className="mx-auto size-6 text-muted-foreground" />
+            <p className="mt-2 text-[14px] font-semibold text-foreground">No matching expiration records</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">Try a different search query</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id} className="border-b border-border bg-slate-50/50 dark:bg-slate-900/10 hover:bg-transparent">
+                    {hg.headers.map((header) => (
+                      <TableHead key={header.id} className="h-11 px-6 text-[12px] font-semibold text-[#86868b] uppercase tracking-wider">
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} className="border-b border-border hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors">
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-6 py-3.5 text-slate-705 dark:text-slate-350 align-middle font-medium">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="p-4 bg-slate-50/30 dark:bg-slate-900/10 border-t border-border text-xs text-muted-foreground flex justify-between items-center shrink-0">
+            <span className="font-semibold text-muted-foreground">
+              Showing {pageIndex * PAGE_SIZE + 1}-{Math.min((pageIndex + 1) * PAGE_SIZE, filteredRows.length)} of {filteredRows.length} entries
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(pageIndex - 1)}
+                disabled={pageIndex === 0}
+                className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+              >
+                Previous
+              </Button>
+              {paginationPages.map((p, idx) =>
+                p === 'ellipsis' ? (
+                  <span key={`e-${idx}`} className="flex size-7 items-center justify-center text-[12px] text-muted-foreground">
+                    &hellip;
+                  </span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={pageIndex === p ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPageIndex(p)}
+                    className={cn(
+                      'h-7 min-w-7 rounded-lg px-1 text-[11px] font-semibold',
+                      pageIndex === p
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : 'border-border text-muted-foreground bg-card hover:bg-muted',
+                    )}
+                  >
+                    {p + 1}
+                  </Button>
+                ),
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(pageIndex + 1)}
+                disabled={pageIndex >= pageCount - 1}
+                className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

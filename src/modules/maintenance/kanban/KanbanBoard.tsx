@@ -81,6 +81,7 @@ function mapTicketsToIssues(tickets: MaintenanceTicket[]): KanbanIssue[] {
     title: t.assetName ?? t.subject ?? '',
     ticketId: t.ticketId,
     maintenanceType: t.maintenanceType,
+    ticketMode: t.ticketMode,
     description: t.issueDescription,
     assetLifecycleStatus: t.assetLifecycleStatus,
     assetLifecycleStatusLabel: t.assetLifecycleStatusLabel,
@@ -209,11 +210,6 @@ export function KanbanBoard({
       status: targetStatus,
     };
 
-    if (targetStatus === 'COMPLETED') {
-      updateData.completedDate = new Date().toISOString().split('T')[0];
-      updateData.nextAssetStatus = 'AVAILABLE';
-    }
-
     if (!options?.skipLocalMove) {
       moveIssueLocally(issue.id, toColId);
     }
@@ -226,6 +222,23 @@ export function KanbanBoard({
       setSelectedIssue((current) => (current && current.id === issue.id ? { ...current, status: toColId } : current));
     } catch (error) {
       toast.error(readError(error, 'Failed to update status'));
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  }
+
+  async function handleCompleteMaintenance(issue: KanbanIssue, data: AssetMaintenanceUpdateInput) {
+    const toColId: ColumnId = 'done';
+    moveIssueLocally(issue.id, toColId);
+    setSelectedIssue(null);
+    setIsUpdatingStatus(true);
+    try {
+      await onUpdateMaintenance({
+        assetId: issue.assetId,
+        data,
+      });
+    } catch (error) {
+      toast.error(readError(error, 'Failed to complete maintenance'));
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -338,6 +351,7 @@ export function KanbanBoard({
           void updateIssueStatus(issue, target);
         }}
         isUpdating={isUpdatingStatus}
+        onCompleteMaintenance={handleCompleteMaintenance}
       />
     </div>
   );

@@ -48,6 +48,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { ACTION_GREEN } from '@/modules/assets/lib/assetConfig';
 import { humanize, readError } from '@/modules/assets/lib/assetUtils';
 import {
@@ -179,74 +187,26 @@ export function CategoryTab({
   const columns = useMemo<ColumnDef<AssetCategoryDefinition>[]>(
     () => [
       {
-        id: 'select',
-        header: ({ table }) => (
-          <div className="flex items-center justify-center pl-1">
-            <input
-              type="checkbox"
-              checked={table.getIsAllPageRowsSelected()}
-              onChange={table.getToggleAllPageRowsSelectedHandler()}
-              className="size-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 accent-emerald-600 cursor-pointer"
-            />
-          </div>
-        ),
-        cell: ({ row }) => (
-          <div className="flex items-center justify-center pl-1">
-            <input
-              type="checkbox"
-              checked={row.getIsSelected()}
-              onChange={row.getToggleSelectedHandler()}
-              className="size-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 accent-emerald-600 cursor-pointer"
-            />
-          </div>
-        ),
-        enableSorting: false,
-        size: 40,
-      },
-      {
-        id: 'expand',
-        header: () => null,
-        cell: ({ row }) => {
-          const isExpanded = expandedId === row.original.id;
-          return (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleExpand(row.original.id);
-              }}
-              className="flex size-7 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-            >
-              <ChevronRight
-                className={cn('size-4 transition-transform duration-150', isExpanded && 'rotate-90')}
-              />
-            </button>
-          );
-        },
-        enableSorting: false,
-        size: 40,
-      },
-      {
         accessorKey: 'name',
-        header: 'Category Meta & Token',
+        header: 'Category Name',
         cell: ({ row }) => {
           const cat = row.original;
           const Icon = getCategoryIcon(cat.name);
           return (
             <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-600 shadow-sm">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-50/50 dark:bg-slate-900/10 border border-border text-muted-foreground shadow-sm">
                 <Icon className="size-4.5" />
               </div>
               <div className="min-w-0">
-                <div className="text-[13.5px] font-semibold text-zinc-900 leading-snug">
+                <div className="text-[13.5px] font-semibold text-slate-900 dark:text-white leading-snug">
                   {cat.name}
                 </div>
                 {cat.assetCode ? (
-                  <span className="inline-block font-mono text-[10.5px] font-medium text-zinc-400 mt-0.5 tracking-tight uppercase">
+                  <span className="inline-block font-mono text-[10.5px] font-medium text-muted-foreground mt-0.5 tracking-tight uppercase">
                     {cat.assetCode}
                   </span>
                 ) : (
-                  <span className="inline-block text-[10px] text-zinc-400 italic mt-0.5">
+                  <span className="inline-block text-[10px] text-muted-foreground/60 italic mt-0.5">
                     No token code
                   </span>
                 )}
@@ -257,7 +217,7 @@ export function CategoryTab({
       },
       {
         id: 'fieldsCapacity',
-        header: 'Field Capacity & Metrics',
+        header: 'Field Capacity',
         cell: ({ row }) => {
           const fields = row.original.fields || [];
           const count = fields.length;
@@ -278,7 +238,7 @@ export function CategoryTab({
           
           return (
             <div className="flex flex-col gap-1">
-              <span className="text-[13px] font-bold text-zinc-800">
+              <span className="text-[13px] font-bold text-slate-800 dark:text-slate-200">
                 {count} {count === 1 ? 'Field' : 'Fields'}
               </span>
               <span className={cn("inline-flex items-center w-fit rounded px-1.5 py-0.5 text-[10.5px] font-medium border", toneClass)}>
@@ -300,7 +260,7 @@ export function CategoryTab({
           
           if (sorted.length === 0) {
             return (
-              <span className="text-[12px] text-zinc-400 italic font-normal">
+              <span className="text-[12px] text-muted-foreground/60 italic font-normal">
                 No structural fields assigned yet
               </span>
             );
@@ -311,7 +271,7 @@ export function CategoryTab({
               {display.map((f) => (
                 <span
                   key={f.id}
-                  className="inline-flex items-center rounded-md bg-zinc-50 border border-zinc-150 px-2 py-0.5 text-[11px] font-medium text-zinc-600 shadow-sm"
+                  className="inline-flex items-center rounded-md bg-slate-50/50 dark:bg-slate-900/10 border border-border px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-400 shadow-sm"
                 >
                   {f.fieldName}
                 </span>
@@ -326,25 +286,27 @@ export function CategoryTab({
         },
       },
       {
-        id: 'status',
-        header: 'Operational Status',
+        id: 'expand',
+        header: () => null,
         cell: ({ row }) => {
-          const count = (row.original.fields || []).length;
-          const isProduction = count > 0;
+          const isExpanded = expandedId === row.original.id;
           return (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.02)] border",
-                isProduction 
-                  ? "bg-emerald-50/20 text-primary border-emerald-100" 
-                  : "bg-zinc-50/60 text-zinc-500 border-zinc-200"
-              )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpand(row.original.id);
+              }}
+              className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors"
             >
-              <span className={cn("size-1.5 rounded-full", isProduction ? "bg-primary animate-pulse" : "bg-zinc-400")} />
-              {isProduction ? 'Production' : 'Inactive Draft'}
-            </span>
+              <ChevronRight
+                className={cn('size-4 transition-transform duration-150', isExpanded && 'rotate-90')}
+              />
+            </button>
           );
         },
+        enableSorting: false,
+        size: 40,
       },
       {
         id: 'actions',
@@ -363,7 +325,7 @@ export function CategoryTab({
                   setCatFieldRequired(false);
                 }}
                 title="Add Field"
-                className="flex size-7.5 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:border-emerald-200 hover:bg-emerald-50 hover:text-primary shadow-sm transition-all duration-150"
+                className="flex size-7.5 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:border-emerald-250 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 hover:text-primary shadow-sm transition-all duration-150"
               >
                 <Plus className="size-4" />
               </button>
@@ -374,7 +336,7 @@ export function CategoryTab({
                   setCatEditName(cat.name);
                 }}
                 title="Settings"
-                className="flex size-7.5 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-800 shadow-sm transition-all duration-150"
+                className="flex size-7.5 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:border-slate-350 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/50 hover:text-slate-800 dark:hover:text-slate-200 shadow-sm transition-all duration-150"
               >
                 <Settings className="size-3.5" />
               </button>
@@ -382,7 +344,7 @@ export function CategoryTab({
                 type="button"
                 onClick={() => setCatDeleteTarget(cat.id)}
                 title="Delete"
-                className="flex size-7.5 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-400 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 shadow-sm transition-all duration-150"
+                className="flex size-7.5 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground/60 hover:border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 shadow-sm transition-all duration-150"
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -417,6 +379,20 @@ export function CategoryTab({
   
   const startIdx = totalCount === 0 ? 0 : pageIndex * pageSize + 1;
   const endIdx = Math.min((pageIndex + 1) * pageSize, totalCount);
+
+  const paginationPages = useMemo(() => {
+    if (pageCount <= 7) {
+      return Array.from({ length: pageCount }, (_, i) => i);
+    }
+    const pages: (number | 'ellipsis')[] = [0];
+    if (pageIndex > 2) pages.push('ellipsis');
+    const start = Math.max(1, pageIndex - 1);
+    const end = Math.min(pageCount - 2, pageIndex + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (pageIndex < pageCount - 3) pages.push('ellipsis');
+    pages.push(pageCount - 1);
+    return pages;
+  }, [pageCount, pageIndex]);
 
   const renderExpandedRow = (cat: AssetCategoryDefinition) => {
     return (
@@ -488,61 +464,61 @@ export function CategoryTab({
     <>
 
       {/* Main Table Shell */}
-      <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
         {isLoading ? (
           <div className="space-y-2 p-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-14 animate-pulse rounded-lg bg-zinc-50 border border-zinc-100" />
+              <div key={i} className="h-14 animate-pulse rounded-lg bg-muted/60 border border-border" />
             ))}
           </div>
         ) : filteredCategories.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-5 py-14 text-center">
-            <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-zinc-50 border border-zinc-150">
-              <LayoutGrid className="size-5 text-zinc-400" />
+            <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-muted/40 border border-border text-muted-foreground">
+              <LayoutGrid className="size-5" />
             </div>
-            <p className="mt-3 text-[15px] font-semibold text-zinc-900">
+            <p className="mt-3 text-[15px] font-semibold text-foreground">
               {categorySearch ? 'No categories match your search' : 'No categories yet'}
             </p>
             {!categorySearch && (
-              <p className="mt-1 text-[13px] text-zinc-505">
+              <p className="mt-1 text-[13px] text-muted-foreground">
                 Create categories to organize your assets with custom fields.
               </p>
             )}
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
+            <Table>
+              <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id} className="border-b border-zinc-150 bg-zinc-50/40">
+                  <TableRow key={headerGroup.id} className="border-b border-border bg-slate-50/50 dark:bg-slate-900/10 hover:bg-transparent">
                     {headerGroup.headers.map((header) => (
-                      <th
+                      <TableHead
                         key={header.id}
                         style={{ width: header.column.columnDef.size }}
-                        className="px-4 py-3 text-[11px] font-bold text-zinc-400 uppercase tracking-wider select-none"
+                        className="h-11 px-6 text-[12px] font-bold text-muted-foreground uppercase tracking-wider select-none"
                       >
                         {header.isPlaceholder
                           ? null
                           : flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
+                      </TableHead>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </thead>
-              <tbody>
+              </TableHeader>
+              <TableBody>
                 {table.getRowModel().rows.map((row) => {
                   const isExpanded = expandedId === row.original.id;
                   return (
                     <Fragment key={row.id}>
-                      <tr
+                      <TableRow
                         onClick={() => toggleExpand(row.original.id)}
                         className={cn(
-                          "group border-b border-zinc-100 hover:bg-zinc-50/50 transition-colors cursor-pointer select-none",
-                          isExpanded && "bg-zinc-50/20"
+                          "group border-b border-border hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors cursor-pointer select-none",
+                          isExpanded && "bg-slate-50/10 dark:bg-slate-900/5"
                         )}
                       >
                         {row.getVisibleCells().map((cell) => (
-                          <td
+                          <TableCell
                             key={cell.id}
                             style={{ width: cell.column.columnDef.size }}
                             onClick={(e) => {
@@ -551,99 +527,95 @@ export function CategoryTab({
                                 e.stopPropagation();
                               }
                             }}
-                            className="px-4 py-3 text-zinc-700 align-middle"
+                            className="px-6 py-3.5 text-slate-705 dark:text-slate-350 align-middle font-medium"
                           >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </td>
+                          </TableCell>
                         ))}
-                      </tr>
+                      </TableRow>
                       {isExpanded && (
-                        <tr>
-                          <td colSpan={columns.length} className="p-0">
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={columns.length} className="p-0">
                             {renderExpandedRow(row.original)}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       )}
                     </Fragment>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
 
         {/* Pagination Footer */}
         {filteredCategories.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-zinc-100 bg-zinc-50/30">
-            <div className="text-[12.5px] text-zinc-500">
-              Showing <span className="font-semibold text-zinc-700">{startIdx}</span> to{' '}
-              <span className="font-semibold text-zinc-700">{endIdx}</span> of{' '}
-              <span className="font-semibold text-zinc-700">{totalCount}</span> entries
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-slate-50/30 dark:bg-slate-900/10">
+            {/* Rows Per View Selection */}
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] text-muted-foreground whitespace-nowrap">Show</span>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(val) => {
+                  table.setPageSize(Number(val));
+                }}
+              >
+                <SelectTrigger className="h-8 w-[72px] text-xs border border-border bg-card rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {['10', '25', '50', '100'].map((size) => (
+                    <SelectItem key={size} value={size} className="text-xs">
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-[13px] text-muted-foreground whitespace-nowrap">per page</span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Rows Per View Selection */}
-              <div className="flex items-center gap-2">
-                <span className="text-[12.5px] text-zinc-500 whitespace-nowrap">Rows per page:</span>
-                <Select
-                  value={pageSize.toString()}
-                  onValueChange={(val) => {
-                    table.setPageSize(Number(val));
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-18.5 rounded-lg border-zinc-200 bg-white text-[12.5px] font-medium shadow-none focus:ring-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {['10', '25', '50', '100'].map((size) => (
-                      <SelectItem key={size} value={size} className="text-[12.5px]">
-                        {size}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Step navigations */}
-              <div className="flex items-center gap-1 bg-white border border-zinc-200 rounded-lg p-0.5 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
-                  className="flex size-7.5 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-                >
-                  <ChevronsLeft className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  className="flex size-7.5 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-                
-                <div className="px-3.5 text-[12.5px] font-semibold text-zinc-700">
-                  Page {pageIndex + 1} of {Math.max(1, pageCount)}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                  className="flex size-7.5 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-                >
-                  <ChevronRight className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => table.setPageIndex(pageCount - 1)}
-                  disabled={!table.getCanNextPage()}
-                  className="flex size-7.5 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-                >
-                  <ChevronsRight className="size-4" />
-                </button>
-              </div>
+            {/* Step navigations */}
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+              >
+                Previous
+              </Button>
+              {paginationPages.map((p, idx) =>
+                p === 'ellipsis' ? (
+                  <span key={`e-${idx}`} className="flex size-7 items-center justify-center text-[12px] text-muted-foreground">
+                    &hellip;
+                  </span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={pageIndex === p ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => table.setPageIndex(p)}
+                    className={cn(
+                      'h-7 min-w-7 rounded-lg px-1 text-[11px] font-semibold',
+                      pageIndex === p
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : 'border-border text-muted-foreground bg-card hover:bg-muted',
+                    )}
+                  >
+                    {p + 1}
+                  </Button>
+                )
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+              >
+                Next
+              </Button>
             </div>
           </div>
         )}
