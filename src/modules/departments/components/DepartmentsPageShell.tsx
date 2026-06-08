@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -24,19 +23,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { DepartmentsTable } from './DepartmentsTable';
 import { DepartmentViewDrawer } from './DepartmentViewDrawer';
 import { useDepartmentsQuery, useDepartmentMetaQuery, useDepartmentDetailQuery } from '@/modules/departments/hooks/useDepartmentsQuery';
 import { useDepartmentMutations } from '@/modules/departments/hooks/useDepartmentMutations';
 import type { DepartmentInput } from '@/modules/departments/schema/departmentSchemas';
-import type { DepartmentSummary, DepartmentStatus } from '@/modules/departments/types/departmentTypes';
+import type { DepartmentSummary } from '@/modules/departments/types/departmentTypes';
 
 interface DepartmentsPageShellProps {
   orgSlug: string;
@@ -69,7 +61,6 @@ export function DepartmentsPageShell({
 
   // ── Filter state ────────────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<DepartmentStatus | 'ALL'>('ALL');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -102,17 +93,9 @@ export function DepartmentsPageShell({
     });
   }, []);
 
-  const handleStatusChange = useCallback((value: DepartmentStatus | 'ALL') => {
-    startTransition(() => {
-      setStatusFilter(value);
-      setPage(1);
-    });
-  }, []);
-
   const handleClearAll = useCallback(() => {
     startTransition(() => {
       setSearch('');
-      setStatusFilter('ALL');
       setPage(1);
     });
   }, []);
@@ -167,9 +150,6 @@ export function DepartmentsPageShell({
 
   // ── Apply client-side status filter ─────────────────────────────────────────
   const items = data?.items ?? [];
-  const filteredItems = statusFilter === 'ALL'
-    ? items
-    : items.filter((d) => d.status === statusFilter);
 
   // ── Error state ─────────────────────────────────────────────────────────────
   if (isError) {
@@ -201,13 +181,13 @@ export function DepartmentsPageShell({
             className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer"
           >
             <Plus className="mr-2 size-4" />
-            Create department
+            Create Department
           </button>
         )}
       </div>
 
       <DepartmentsTable
-        data={filteredItems}
+        data={items}
         isLoading={isLoading}
         total={total}
         page={page}
@@ -216,9 +196,7 @@ export function DepartmentsPageShell({
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
         search={search}
-        statusFilter={statusFilter}
         onSearchChange={handleSearchChange}
-        onStatusChange={handleStatusChange}
         onClearAll={handleClearAll}
         onRowClick={handleRowClick}
       />
@@ -228,44 +206,19 @@ export function DepartmentsPageShell({
         <DialogContent className="max-w-2xl border border-[#e5e5ea] bg-white p-0 shadow-2xl rounded-[18px] overflow-hidden">
           <DialogHeader className="border-b border-[#e5e5ea] px-6 py-5">
             <DialogTitle className="text-[24px] font-semibold tracking-[-0.01em] text-[#1d1d1f]">
-              Create department
+              Create Department
             </DialogTitle>
-            <DialogDescription className="text-[14px] leading-6 text-[#6e6e73]">
-              Create the department and assign a department head without waiting on a page reload.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-5 px-6 py-6">
             <div className="grid gap-2">
-              <Label htmlFor="department-name">Department name</Label>
+              <Label htmlFor="department-name">Department Name</Label>
               <Input
                 id="department-name"
                 value={departmentForm.name}
                 onChange={(event) => setDepartmentForm({ ...departmentForm, name: event.target.value })}
                 className="h-11 rounded-lg border-[#e5e5ea] shadow-none focus-visible:ring-[3px] focus-visible:ring-primary/10"
               />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Department lead</Label>
-              <Select
-                value={departmentForm.headMemberId || 'none'}
-                onValueChange={(value) =>
-                  setDepartmentForm({ ...departmentForm, headMemberId: value === 'none' ? '' : value })
-                }
-              >
-                <SelectTrigger className="h-11 rounded-lg border-[#e5e5ea] shadow-none">
-                  <SelectValue placeholder="Select department lead" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Not assigned</SelectItem>
-                  {metaQuery.data?.members.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
@@ -278,7 +231,7 @@ export function DepartmentsPageShell({
               disabled={mutations.createDepartment.isPending}
               className="rounded-lg px-6"
             >
-              {mutations.createDepartment.isPending ? 'Creating...' : 'Create and open'}
+              {mutations.createDepartment.isPending ? 'Creating...' : 'Create And Open'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -289,10 +242,10 @@ export function DepartmentsPageShell({
         <AlertDialogContent className="border border-[#e5e5ea] bg-white shadow-2xl rounded-[18px] overflow-hidden">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[24px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
-              Remove department
+              Remove Department
             </AlertDialogTitle>
             <AlertDialogDescription className="text-[14px] leading-6 text-[#6e6e73]">
-              This removes the department from active use. Review department membership before you continue.
+              This Removes The Department From Active Use. Review Department Membership Before You Continue.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="px-6 py-4">
@@ -318,7 +271,6 @@ export function DepartmentsPageShell({
         orgSlug={orgSlug}
         memberId={memberId}
         allOrgMembers={metaQuery.data?.members ?? []}
-        departmentOptions={metaQuery.data?.departments ?? []}
       />
     </div>
   );

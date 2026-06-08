@@ -12,7 +12,6 @@ import {
 interface DepartmentsPaginationProps {
   page: number;
   totalPages: number;
-  total: number;
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
@@ -52,7 +51,6 @@ function buildPageNumbers(current: number, total: number): (number | '...')[] {
 export function DepartmentsPagination({
   page,
   totalPages,
-  total,
   pageSize,
   onPageChange,
   onPageSizeChange,
@@ -79,7 +77,7 @@ export function DepartmentsPagination({
               ))}
             </SelectContent>
           </Select>
-          <span className="text-[13px] text-neutral-500">per page</span>
+          <span className="text-[13px] text-neutral-500">Per Page</span>
         </div>
       </div>
 
@@ -89,7 +87,7 @@ export function DepartmentsPagination({
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
           className="inline-flex size-8 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
-          aria-label="Previous page"
+          aria-label="Previous Page"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -124,7 +122,7 @@ export function DepartmentsPagination({
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           className="inline-flex size-8 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
-          aria-label="Next page"
+          aria-label="Next Page"
         >
           <ChevronRight className="size-4" />
         </button>

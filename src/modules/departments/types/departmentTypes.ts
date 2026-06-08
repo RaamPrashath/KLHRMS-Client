@@ -19,6 +19,7 @@ export interface DepartmentMemberSummary {
   memberId: string;
   name: string | null;
   email: string | null;
+  image: string | null;
 }
 
 export interface DepartmentHeadSummary {
@@ -26,6 +27,7 @@ export interface DepartmentHeadSummary {
   memberId: string;
   name: string | null;
   email: string | null;
+  image: string | null;
   assignedAt: string;
 }
 

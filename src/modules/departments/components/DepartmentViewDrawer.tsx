@@ -1,26 +1,17 @@
 'use client';
 
-import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch } from 'react-hook-form';
-import { useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
 import { Crown, Edit2, Search, Trash2, UserCheck, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'motion/react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 import { cn } from '@/lib/utils';
 import { useDepartmentMutations } from '@/modules/departments/hooks/useDepartmentMutations';
@@ -31,7 +22,6 @@ import {
 import type {
   DepartmentHeadSummary,
   DepartmentMemberSummary,
-  DepartmentStatus,
   DepartmentSummary,
   LookupOption,
 } from '@/modules/departments/types/departmentTypes';
@@ -45,30 +35,10 @@ function TabBar({
   value: string;
   onValueChange: (v: string) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
-
-  const activeIdx = tabs.findIndex((t) => t.value === value);
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const activeBtn = container.querySelector<HTMLButtonElement>(`[data-tab-index="${activeIdx}"]`);
-    if (!activeBtn) return;
-    const cr = container.getBoundingClientRect();
-    const br = activeBtn.getBoundingClientRect();
-    setIndicatorStyle({ left: br.left - cr.left, width: br.width });
-  }, [activeIdx]);
-
   return (
     <div
-      ref={containerRef}
-      className="grid grid-cols-2 w-full rounded-xl bg-neutral-50 p-1 border border-black/4 relative"
+      className="grid w-full grid-cols-2 rounded-xl border border-black/4 bg-neutral-50 p-1"
     >
-      <div
-        className="absolute top-1 bottom-1 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-        style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
-      />
       {tabs.map((tab, idx) => (
         <button
           key={tab.value}
@@ -76,8 +46,10 @@ function TabBar({
           type="button"
           onClick={() => onValueChange(tab.value)}
           className={cn(
-            'inline-flex items-center justify-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg relative z-10 transition-colors duration-200',
-            value === tab.value ? 'text-primary' : 'text-neutral-500 hover:text-neutral-900',
+            'relative z-10 inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-colors duration-200',
+            value === tab.value
+              ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+              : 'text-neutral-500 hover:text-neutral-900',
           )}
         >
           {tab.label}
@@ -97,14 +69,6 @@ function TabBar({
 
 const ACTION_GREEN = 'var(--indigo-9)';
 
-function statusBadge(status: DepartmentStatus) {
-  const map: Record<DepartmentStatus, string> = {
-    ACTIVE: 'bg-[#eef9f1] text-[#156f3d]',
-    INACTIVE: 'bg-[#fff0f0] text-[#a12323]',
-  };
-  return map[status];
-}
-
 function readError(error: unknown, fallback: string) {
   try {
     const parsed = JSON.parse((error as Error)?.message ?? '{}');
@@ -123,7 +87,6 @@ interface DepartmentViewDrawerProps {
   orgSlug: string;
   memberId: string;
   allOrgMembers: LookupOption[];
-  departmentOptions: LookupOption[];
 }
 
 export function DepartmentViewDrawer({
@@ -135,9 +98,7 @@ export function DepartmentViewDrawer({
   orgSlug,
   memberId,
   allOrgMembers,
-  departmentOptions,
 }: DepartmentViewDrawerProps) {
-  const queryClient = useQueryClient();
   const mutations = useDepartmentMutations(orgSlug, memberId);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'members' | 'heads'>('members');
@@ -165,7 +126,6 @@ export function DepartmentViewDrawer({
       status: 'ACTIVE',
     },
   });
-  const watchedStatus = useWatch({ control: form.control, name: 'status' });
 
   useEffect(() => {
     if (department) {
@@ -241,7 +201,7 @@ export function DepartmentViewDrawer({
         memberIds: Array.from(selectedMemberIds),
       });
       setSelectedMemberIds(new Set());
-      toast.success(`${selectedMemberIds.size} employee${selectedMemberIds.size > 1 ? 's' : ''} assigned`);
+      toast.success(`${selectedMemberIds.size} Employee${selectedMemberIds.size > 1 ? 's' : ''} Assigned`);
     } catch (error) {
       toast.error(readError(error, 'Failed to assign employees'));
     }
@@ -254,7 +214,7 @@ export function DepartmentViewDrawer({
         departmentId: department.id,
         targetMemberId,
       });
-      toast.success('Employee removed');
+      toast.success('Employee Removed');
     } catch (error) {
       toast.error(readError(error, 'Failed to remove employee'));
     }
@@ -267,7 +227,7 @@ export function DepartmentViewDrawer({
         departmentId: department.id,
         headMemberId,
       });
-      toast.success('Department head assigned');
+      toast.success('Department Head Assigned');
     } catch (error) {
       toast.error(readError(error, 'Failed to assign department head'));
     }
@@ -280,7 +240,7 @@ export function DepartmentViewDrawer({
         departmentId: department.id,
         headMemberId: targetHeadId,
       });
-      toast.success('Department head removed');
+      toast.success('Department Head Removed');
     } catch (error) {
       toast.error(readError(error, 'Failed to remove department head'));
     }
@@ -294,7 +254,7 @@ export function DepartmentViewDrawer({
         data: values,
       });
       setIsEditing(false);
-      toast.success('Department updated');
+      toast.success('Department Updated');
     } catch (error) {
       toast.error(readError(error, 'Failed to update department'));
     }
@@ -302,11 +262,11 @@ export function DepartmentViewDrawer({
 
   async function handleDelete() {
     if (!department) return;
-    if (!confirm(`Delete "${department.name}"? This action cannot be undone.`)) return;
+    if (!confirm(`Delete "${department.name}"? This Action Cannot Be Undone.`)) return;
     try {
       await mutations.deleteDepartment.mutateAsync(department.id);
       onClose();
-      toast.success('Department deleted');
+      toast.success('Department Deleted');
     } catch (error) {
       toast.error(readError(error, 'Failed to delete department'));
     }
@@ -326,7 +286,7 @@ export function DepartmentViewDrawer({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={department ? `${department.name} details` : 'Department details'}
+        aria-label={department ? `${department.name} Details` : 'Department Details'}
         className={cn(
           'fixed right-0 top-0 z-50 flex h-full w-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:w-[40%] sm:min-w-[360px]',
           isOpen ? 'translate-x-0' : 'translate-x-full',
@@ -340,7 +300,7 @@ export function DepartmentViewDrawer({
           </div>
         ) : !department ? (
           <div className="flex flex-1 items-center justify-center p-8">
-            <p className="text-[15px] text-[#6e6e73]">Unable to load department details.</p>
+            <p className="text-[15px] text-[#6e6e73]">Unable To Load Department Details.</p>
           </div>
         ) : (
           <>
@@ -370,7 +330,7 @@ export function DepartmentViewDrawer({
                           form.reset();
                         }}
                         className="flex size-8 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
-                        aria-label="Cancel editing"
+                        aria-label="Cancel Editing"
                       >
                         <X className="size-4" />
                       </button>
@@ -379,7 +339,7 @@ export function DepartmentViewDrawer({
                     <div className="space-y-3">
                       <div>
                         <label htmlFor="edit-name" className="mb-1 block text-[12px] font-medium text-[#1d1d1f]">
-                          Department name
+                          Department Name
                         </label>
                         <Input
                           id="edit-name"
@@ -389,50 +349,6 @@ export function DepartmentViewDrawer({
                         {form.formState.errors.name && (
                           <p className="mt-1 text-[11px] text-[#a12323]">{form.formState.errors.name.message}</p>
                         )}
-                      </div>
-
-                      <div>
-                        <label htmlFor="edit-parent" className="mb-1 block text-[12px] font-medium text-[#1d1d1f]">
-                          Parent department
-                        </label>
-                        <Select
-                          value={form.watch('parentDepartmentId') || 'none'}
-                          onValueChange={(value) =>
-                            form.setValue('parentDepartmentId', value === 'none' ? '' : value)
-                          }
-                        >
-                          <SelectTrigger id="edit-parent" className="h-9 w-full text-[14px]">
-                            <SelectValue placeholder="Top-level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Top-level</SelectItem>
-                            {departmentOptions.map((dept) => (
-                              <SelectItem key={dept.id} value={dept.id}>
-                                {dept.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex justify-end">
-                        <div className="w-1/2">
-                          <label htmlFor="edit-status" className="mb-1 block text-[12px] font-medium text-[#1d1d1f]">
-                            Status
-                          </label>
-                          <Select
-                            value={watchedStatus}
-                            onValueChange={(value) => form.setValue('status', value as DepartmentStatus)}
-                          >
-                            <SelectTrigger id="edit-status" className="h-9 w-full text-[14px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ACTIVE">Active</SelectItem>
-                              <SelectItem value="INACTIVE">Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
                       </div>
                     </div>
 
@@ -454,7 +370,7 @@ export function DepartmentViewDrawer({
                         className="flex-1 h-9 rounded-lg text-[13px] text-white"
                         style={{ backgroundColor: ACTION_GREEN }}
                       >
-                        {mutations.updateDepartment.isPending ? 'Saving' : 'Save changes'}
+                        {mutations.updateDepartment.isPending ? 'Saving' : 'Save Changes'}
                       </Button>
                     </div>
                   </form>
@@ -478,18 +394,10 @@ export function DepartmentViewDrawer({
                       </h2>
                     </div>
                     <div className="flex shrink-0 items-center gap-2 pt-1">
-                      <Badge
-                        className={cn(
-                          'rounded-xl px-3 py-1 text-[11px] font-medium',
-                          statusBadge(department.status),
-                        )}
-                      >
-                        {department.status}
-                      </Badge>
                       <button
                         onClick={onClose}
                         className="flex size-8 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
-                        aria-label="Close drawer"
+                        aria-label="Close Drawer"
                       >
                         <X className="size-4" />
                       </button>
@@ -498,19 +406,16 @@ export function DepartmentViewDrawer({
 
                   {department.headMemberName && (
                     <p className="mt-2 text-[14px] leading-relaxed text-[#6e6e73]">
-                      Led by {department.headMemberName}
+                      Led By {department.headMemberName}
                     </p>
                   )}
 
                   <div className="mt-4 flex flex-wrap gap-4 text-[13px] text-[#6e6e73]">
                     <span>
-                      <span className="font-medium text-[#1d1d1f]">{department.memberCount}</span> members
+                      <span className="font-medium text-[#1d1d1f]">{department.memberCount}</span> Members
                     </span>
                     <span>
-                      <span className="font-medium text-[#1d1d1f]">{department.heads.length}</span> head{department.heads.length !== 1 ? 's' : ''}
-                    </span>
-                    <span>
-                      <span className="font-medium text-[#1d1d1f]">{department.projectCount}</span> projects
+                      <span className="font-medium text-[#1d1d1f]">{department.heads.length}</span> Head{department.heads.length !== 1 ? 's' : ''}
                     </span>
                   </div>
                 </motion.div>
@@ -537,7 +442,7 @@ export function DepartmentViewDrawer({
                       <button
                         onClick={() => setIsEditing(true)}
                         className="flex size-9 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
-                        aria-label="Edit department"
+                        aria-label="Edit Department"
                       >
                         <Edit2 className="size-3.5" />
                       </button>
@@ -545,7 +450,7 @@ export function DepartmentViewDrawer({
                         onClick={() => void handleDelete()}
                         disabled={mutations.deleteDepartment.isPending}
                         className="flex size-9 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#fff0f0] hover:text-[#a12323] disabled:opacity-50"
-                        aria-label="Delete department"
+                        aria-label="Delete Department"
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -578,7 +483,7 @@ export function DepartmentViewDrawer({
                         <Input
                           value={assignedMemberSearch}
                           onChange={(e) => setAssignedMemberSearch(e.target.value)}
-                          placeholder="Search assigned"
+                          placeholder="Search Assigned"
                           className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                         />
                       </div>
@@ -588,12 +493,12 @@ export function DepartmentViewDrawer({
                           <div className="flex flex-col items-center justify-center py-12 text-center">
                             <Users className="size-8 text-[#86868b]" />
                             <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
-                              {deferredAssignedMemberSearch ? 'No results' : 'No employees assigned yet'}
+                              {deferredAssignedMemberSearch ? 'No Results' : 'No Employees Assigned Yet'}
                             </p>
                             <p className="mt-1 text-[13px] text-[#6e6e73]">
                               {deferredAssignedMemberSearch
-                                ? 'Try a different search term.'
-                                : 'Switch to the Unassigned tab to add people.'}
+                                ? 'Try A Different Search Term.'
+                                : 'Switch To The Unassigned Tab To Add People.'}
                             </p>
                           </div>
                         ) : (
@@ -618,7 +523,7 @@ export function DepartmentViewDrawer({
                         <Input
                           value={unassignedMemberSearch}
                           onChange={(e) => setUnassignedMemberSearch(e.target.value)}
-                          placeholder="Search employees"
+                          placeholder="Search Employees"
                           className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                         />
                       </div>
@@ -628,12 +533,12 @@ export function DepartmentViewDrawer({
                           <div className="flex flex-col items-center justify-center py-12 text-center">
                             <Users className="size-8 text-[#86868b]" />
                             <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
-                              {deferredUnassignedMemberSearch ? 'No results' : 'All employees assigned'}
+                              {deferredUnassignedMemberSearch ? 'No Results' : 'All Employees Assigned'}
                             </p>
                             <p className="mt-1 text-[13px] text-[#6e6e73]">
                               {deferredUnassignedMemberSearch
-                                ? 'Try a different search term.'
-                                : 'Every org member is already in this department.'}
+                                ? 'Try A Different Search Term.'
+                                : 'Every Org Member Is Already In This Department.'}
                             </p>
                           </div>
                         ) : (
@@ -678,7 +583,7 @@ export function DepartmentViewDrawer({
                             <UserCheck className="mr-2 size-4" />
                             {mutations.bulkAssignMembers.isPending
                               ? 'Assigning'
-                              : `Assign ${selectedMemberIds.size} employee${selectedMemberIds.size > 1 ? 's' : ''}`}
+                              : `Assign ${selectedMemberIds.size} Employee${selectedMemberIds.size > 1 ? 's' : ''}`}
                           </Button>
                         </div>
                       )}
@@ -711,10 +616,10 @@ export function DepartmentViewDrawer({
                           <div className="flex flex-col items-center justify-center py-12 text-center">
                             <Crown className="size-8 text-[#86868b]" />
                             <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
-                              No department heads
+                              No Department Heads
                             </p>
                             <p className="mt-1 text-[13px] text-[#6e6e73]">
-                              Switch to the Unassigned tab to assign a head.
+                              Switch To The Unassigned Tab To Assign A Head.
                             </p>
                           </div>
                         ) : (
@@ -739,7 +644,7 @@ export function DepartmentViewDrawer({
                         <Input
                           value={unassignedHeadSearch}
                           onChange={(e) => setUnassignedHeadSearch(e.target.value)}
-                          placeholder="Search employees"
+                          placeholder="Search Employees"
                           className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
                         />
                       </div>
@@ -749,12 +654,12 @@ export function DepartmentViewDrawer({
                           <div className="flex flex-col items-center justify-center py-12 text-center">
                             <Crown className="size-8 text-[#86868b]" />
                             <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
-                              {deferredUnassignedHeadSearch ? 'No results' : 'All employees are heads'}
+                              {deferredUnassignedHeadSearch ? 'No Results' : 'All Employees Are Heads'}
                             </p>
                             <p className="mt-1 text-[13px] text-[#6e6e73]">
                               {deferredUnassignedHeadSearch
-                                ? 'Try a different search term.'
-                                : 'Every org member is already a department head.'}
+                                ? 'Try A Different Search Term.'
+                                : 'Every Org Member Is Already A Department Head.'}
                             </p>
                           </div>
                         ) : (
@@ -882,7 +787,7 @@ function UnassignedHeadRow({
           onClick={() => void onAssign(member.id)}
           disabled={isAssigning}
           className="shrink-0 rounded-xl p-1.5 text-[#86868b] transition-colors hover:bg-[#eef9f1] hover:text-[#156f3d] disabled:opacity-50"
-          aria-label={`Assign ${member.label} as head`}
+          aria-label={`Assign ${member.label} As Head`}
         >
           <UserPlus className="size-3.5" />
         </button>

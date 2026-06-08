@@ -263,10 +263,12 @@ export function InputField({
   label,
   value,
   onChange,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
 }) {
   return (
     <div className="grid gap-1.5">
@@ -274,6 +276,7 @@ export function InputField({
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
         className="h-9 rounded-lg border-[#e5e7eb] text-sm shadow-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-transparent"
       />
     </div>
