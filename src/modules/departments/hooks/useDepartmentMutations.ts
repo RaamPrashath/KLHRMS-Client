@@ -68,6 +68,7 @@ export function useDepartmentMutations(orgSlug: string, memberId: string) {
               memberId: id,
               name: null,
               email: null,
+              image: null,
             }));
           return {
             ...old,

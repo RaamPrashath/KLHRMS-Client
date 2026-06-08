@@ -8,7 +8,6 @@ import {
   type ColumnDef,
   type Row,
 } from '@tanstack/react-table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -18,10 +17,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+  AvatarImage,
+} from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { getHrmsApiUrl } from '@/lib/deployment-env';
 import { DepartmentsFilters } from './DepartmentsFilters';
 import { DepartmentsPagination } from './DepartmentsPagination';
-import type { DepartmentSummary, DepartmentStatus } from '@/modules/departments/types/departmentTypes';
+import type {
+  DepartmentHeadSummary,
+  DepartmentMemberSummary,
+  DepartmentSummary,
+} from '@/modules/departments/types/departmentTypes';
+
+function toAbsoluteApiUrl(url?: string | null): string | null {
+  if (!url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url ?? null;
+  }
+  return `${getHrmsApiUrl().replace(/\/$/, '')}${url.startsWith('/') ? url : `/${url}`}`;
+}
 
 interface DepartmentsTableProps {
   data: DepartmentSummary[];
@@ -33,36 +51,102 @@ interface DepartmentsTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   search: string;
-  statusFilter: DepartmentStatus | 'ALL';
   onSearchChange: (value: string) => void;
-  onStatusChange: (value: DepartmentStatus | 'ALL') => void;
   onClearAll: () => void;
   onRowClick: (department: DepartmentSummary) => void;
 }
 
-function formatStatus(status: DepartmentStatus) {
-  return status === 'ACTIVE'
-    ? 'bg-primary/[0.08] text-primary border border-primary/10'
-    : 'bg-neutral-100 text-neutral-500 border border-neutral-200';
-}
-
 const SKELETON_COUNT = 20;
 const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-row-${i}`);
+const MAX_AVATAR_VISIBLE = 3;
+
+function getInitials(name: string | null | undefined): string {
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || '?';
+}
 
 function colWidth(id: string): string {
   const map: Record<string, string> = {
     department: 'w-[34%]',
-    lead: 'w-[26%]',
-    people: 'w-[14%]',
-    projects: 'w-[14%]',
-    status: 'w-[14%]',
-    actions: 'w-[6%]',
+    lead: 'w-[32%]',
+    people: 'w-[24%]',
+    actions: 'w-[10%]',
   };
   return map[id] ?? 'w-[10%]';
 }
 
 function colAlign(id: string): string {
   return id === 'department' || id === 'lead' ? 'justify-start' : 'justify-center';
+}
+
+function colCellPadding(id: string): string {
+  if (id === 'department') return 'pl-6 pr-3';
+  if (id === 'people') return 'px-3';
+  if (id === 'actions') return 'pr-6 pl-3';
+  return 'px-3';
+}
+
+function colHeadPadding(id: string): string {
+  if (id === 'department') return 'pl-6 pr-3';
+  if (id === 'actions') return 'pr-6 pl-3';
+  return 'px-3';
+}
+
+interface PersonAvatarItem {
+  id: string;
+  name: string | null;
+  image?: string | null;
+}
+
+function PersonAvatars({ people }: Readonly<{ people: PersonAvatarItem[] }>) {
+  if (people.length === 0) {
+    return <span className="text-sm text-neutral-400">Not Assigned</span>;
+  }
+
+  if (people.length === 1) {
+    return (
+      <div className="flex items-center gap-2.5">
+        <Avatar size="default">
+          <AvatarImage src={toAbsoluteApiUrl(people[0].image) ?? undefined} alt={people[0].name ?? ''} />
+          <AvatarFallback className="bg-primary-subtle text-xs font-medium text-primary">
+            {getInitials(people[0].name)}
+          </AvatarFallback>
+        </Avatar>
+        <span className="truncate text-sm text-neutral-700">{people[0].name || 'Unassigned'}</span>
+      </div>
+    );
+  }
+
+  const visible = people.slice(0, MAX_AVATAR_VISIBLE);
+  const overflow = people.length - visible.length;
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <AvatarGroup>
+        {visible.map((person) => (
+          <Avatar key={person.id} size="default">
+            <AvatarImage src={toAbsoluteApiUrl(person.image) ?? undefined} alt={person.name ?? ''} />
+            <AvatarFallback className="bg-primary-subtle text-xs font-medium text-primary">
+              {getInitials(person.name)}
+            </AvatarFallback>
+          </Avatar>
+        ))}
+        {overflow > 0 && (
+          <AvatarGroupCount className="bg-neutral-50 text-xs font-medium text-neutral-500">
+            +{overflow}
+          </AvatarGroupCount>
+        )}
+      </AvatarGroup>
+      <span className="truncate text-sm text-neutral-500">
+        {people.length} {people.length === 1 ? 'person' : 'people'}
+      </span>
+    </div>
+  );
 }
 
 const columns: ColumnDef<DepartmentSummary>[] = [
@@ -77,39 +161,30 @@ const columns: ColumnDef<DepartmentSummary>[] = [
   },
   {
     id: 'lead',
-    header: 'Lead',
-    cell: ({ row }) => (
-      <span className="block truncate text-sm text-neutral-700">
-        {row.original.headMemberName || 'Not assigned'}
-      </span>
-    ),
+    header: 'Leads',
+    cell: ({ row }) => {
+      const heads: DepartmentHeadSummary[] = row.original.heads ?? [];
+      const items: PersonAvatarItem[] =
+        heads.length > 0
+          ? heads.map((h) => ({ id: h.id, name: h.name, image: h.image }))
+          : row.original.headMemberName
+            ? [{ id: row.original.headMemberId ?? 'lead', name: row.original.headMemberName, image: null }]
+            : [];
+      return <PersonAvatars people={items} />;
+    },
   },
   {
     id: 'people',
-    header: 'People',
-    cell: ({ row }) => (
-      <span className="text-sm font-medium text-neutral-900">
-        {row.original.memberCount}
-      </span>
-    ),
-  },
-  {
-    id: 'projects',
-    header: 'Projects',
-    cell: ({ row }) => (
-      <span className="text-sm font-medium text-neutral-900">
-        {row.original.projectCount}
-      </span>
-    ),
-  },
-  {
-    id: 'status',
-    header: 'Status',
-    cell: ({ row }) => (
-      <Badge className={cn('rounded-lg px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase', formatStatus(row.original.status))}>
-        {row.original.status}
-      </Badge>
-    ),
+    header: 'Members',
+    cell: ({ row }) => {
+      const members: DepartmentMemberSummary[] = row.original.members ?? [];
+      const items: PersonAvatarItem[] = members.map((m) => ({
+        id: m.id,
+        name: m.name,
+        image: m.image,
+      }));
+      return <PersonAvatars people={items} />;
+    },
   },
 ];
 
@@ -147,7 +222,7 @@ function DepartmentsTableBody({
       <ShadcnTableBody className="bg-surface">
         <TableRow className="border-black/4 hover:bg-transparent">
           <TableCell colSpan={columnCount} className="py-16 text-center text-sm text-neutral-400">
-            No departments found.
+            No Departments Found.
           </TableCell>
         </TableRow>
       </ShadcnTableBody>
@@ -169,7 +244,8 @@ function DepartmentsTableBody({
                 key={cell.id}
                 className={cn(
                   colWidth(cell.column.id),
-                  'px-3 py-3 whitespace-nowrap',
+                  colCellPadding(cell.column.id),
+                  'py-3 whitespace-nowrap',
                   cell.column.id === 'department' || cell.column.id === 'lead' ? 'text-left' : 'text-center',
                 )}
               >
@@ -179,7 +255,7 @@ function DepartmentsTableBody({
               </TableCell>
             ))}
 
-            <TableCell className="w-[6%] px-3 py-3 text-right">
+            <TableCell className="w-[6%] py-3 pr-6 pl-3 text-right">
               <div className="flex justify-end">
                 <Button
                   type="button"
@@ -211,9 +287,7 @@ export function DepartmentsTable({
   onPageChange,
   onPageSizeChange,
   search,
-  statusFilter,
   onSearchChange,
-  onStatusChange,
   onClearAll,
   onRowClick,
 }: Readonly<DepartmentsTableProps>) {
@@ -230,18 +304,16 @@ export function DepartmentsTable({
   return (
     <div className="flex flex-col flex-1 mx-7 mb-7">
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
-        <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
+        <div className="flex flex-col gap-2 border-b border-black/[0.04] px-3.5 py-3.5">
           <DepartmentsFilters
             search={search}
-            statusFilter={statusFilter}
             onSearchChange={onSearchChange}
-            onStatusChange={onStatusChange}
             onClearAll={onClearAll}
           />
         </div>
 
         <div className="w-full">
-          <div className="px-4">
+          <div>
             <Table className="table-fixed">
               <TableHeader className="bg-canvas/50">
                 {table.getHeaderGroups().map((hg) => (
@@ -251,7 +323,8 @@ export function DepartmentsTable({
                         key={header.id}
                         className={cn(
                           colWidth(header.id),
-                          'h-auto px-3 py-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
+                          colHeadPadding(header.id),
+                          'h-auto py-3 whitespace-nowrap text-[12.5px] font-semibold tracking-wider text-neutral-500',
                           header.id === 'department' || header.id === 'lead' ? 'text-left' : 'text-center',
                         )}
                       >
@@ -260,7 +333,7 @@ export function DepartmentsTable({
                           : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     ))}
-                    <TableHead className="w-[6%] px-3 py-3" />
+                    <TableHead className="w-[8%] py-3 pr-6 pl-3" />
                   </TableRow>
                 ))}
               </TableHeader>
@@ -281,7 +354,6 @@ export function DepartmentsTable({
             <DepartmentsPagination
               page={page}
               totalPages={totalPages}
-              total={total}
               pageSize={pageSize}
               onPageChange={onPageChange}
               onPageSizeChange={onPageSizeChange}

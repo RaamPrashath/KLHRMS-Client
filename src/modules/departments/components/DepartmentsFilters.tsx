@@ -2,80 +2,42 @@
 
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import type { DepartmentStatus } from '@/modules/departments/types/departmentTypes';
 
 interface DepartmentsFiltersProps {
   search: string;
-  statusFilter: DepartmentStatus | 'ALL';
   onSearchChange: (value: string) => void;
-  onStatusChange: (value: DepartmentStatus | 'ALL') => void;
   onClearAll: () => void;
 }
 
-const ALL_VALUE = '__all__';
-
-const STATUS_OPTIONS: { value: DepartmentStatus | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'All Statuses' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'INACTIVE', label: 'Inactive' },
-];
-
 export function DepartmentsFilters({
   search,
-  statusFilter,
   onSearchChange,
-  onStatusChange,
   onClearAll,
 }: DepartmentsFiltersProps) {
-  const hasActiveFilters = search || statusFilter !== 'ALL';
+  const hasActiveFilters = search.trim().length > 0;
 
   return (
     <div className="flex items-center gap-2">
       <div className="relative w-full max-w-[280px]">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
         <Input
-          placeholder="Search departments…"
+          placeholder="Search Departments"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="h-9 pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
+          className="h-9 border-0 bg-canvas px-3 py-2.5 pl-9 text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10"
         />
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => onStatusChange(v as DepartmentStatus | 'ALL')}
+      {hasActiveFilters && (
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 py-2 text-[13px] text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
         >
-          <SelectTrigger className="h-9 w-[160px] text-sm border-0 bg-canvas">
-            <SelectValue placeholder="All Statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-sm">
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={onClearAll}
-            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 py-2 text-[13px] text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
-          >
-            <X className="size-3.5" />
-            Clear
-          </button>
-        )}
-      </div>
+          <X className="size-3.5" />
+          Clear
+        </button>
+      )}
     </div>
   );
 }

@@ -56,6 +56,7 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
             { title: "Organization",       urlSuffix: "organization",        permissionKey: "organization" },
             { title: "Departments",        urlSuffix: "departments",         permissionKey: "departments" },
             { title: "Permissions",        urlSuffix: "permissions",         permissionKey: "permission"  },
+            { title: "Projects",           urlSuffix: "projects",            permissionKey: "projects"    },
         ],
     },
     {
@@ -65,7 +66,6 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
             { title: "Report",             urlSuffix: "attendance-report",   permissionKey: "attendanceReport", minAction: "view" },
             { title: "Plan",               urlSuffix: "weekly-plan",         permissionKey: "weeklyPlan"  },
             { title: "Timesheet",          urlSuffix: "timesheet",           permissionKey: "timesheet"   },
-            { title: "Projects",           urlSuffix: "projects",            permissionKey: "projects"    },
             { title: "Leaves",             urlSuffix: "leaves",              permissionKey: "leaves"      },
         ],
     },
