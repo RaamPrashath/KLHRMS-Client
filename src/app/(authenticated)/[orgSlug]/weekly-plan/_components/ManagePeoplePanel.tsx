@@ -198,7 +198,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
     true,
   );
 
-  const { data: employeeData } = useEmployeesQuery(orgSlug, memberId, { pageSize: 200 });
+  const { data: employeeData } = useEmployeesQuery(orgSlug, memberId);
 
   // Build user_id → member_id mapping for attendance lookup
   const userIdToMemberId = useMemo(() => {

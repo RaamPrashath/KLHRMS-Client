@@ -218,11 +218,7 @@ function GrantAccessDialog({
   memberId: string;
 }) {
   const mutations = useAccessControlMutations(orgSlug, memberId);
-  const employeesQuery = useEmployeesQuery(orgSlug, memberId, {
-    page: 1,
-    pageSize: 100,
-    search: '',
-  });
+  const employeesQuery = useEmployeesQuery(orgSlug, memberId);
   const employees = employeesQuery.data?.items ?? [];
 
   const [employeeQuery, setEmployeeQuery] = useState('');

@@ -178,10 +178,7 @@ export function RolesPageShell({ orgSlug, memberId }: Readonly<RolesPageShellPro
     search,
   );
 
-  const { data: employeesResponse } = useEmployeesQuery(orgSlug, memberId, {
-    page: 1,
-    pageSize: 100,
-  });
+  const { data: employeesResponse } = useEmployeesQuery(orgSlug, memberId);
 
   const peopleByRoleId = useMemo(() => {
     const employees = employeesResponse?.items ?? [];
