@@ -240,7 +240,7 @@ export function ReturnedAssetsTab({
         cell: ({ row: tableRow }: { row: { original: ReturnedAssetItem } }) => {
           const item = tableRow.original;
           return (
-            <div className="flex items-center gap-2 justify-center">
+            <div className="flex items-center gap-2">
               <User2 className="size-3.5 shrink-0 text-muted-foreground" />
               <span className="text-[13px] text-slate-700 dark:text-slate-350 font-medium">{item.employeeName || '—'}</span>
             </div>
@@ -255,16 +255,14 @@ export function ReturnedAssetsTab({
         cell: ({ getValue }: { getValue: () => string }) => {
           const val = getValue();
           return (
-            <div className="flex justify-center">
-              <Badge
-                className={cn(
-                  'rounded-md border-0 px-2 py-0.5 text-[11px] font-semibold tracking-wide',
-                  conditionBadge(val as any),
-                )}
-              >
-                {humanize(val || 'Unknown')}
-              </Badge>
-            </div>
+            <Badge
+              className={cn(
+                'rounded-md border-0 px-2 py-0.5 text-[11px] font-semibold tracking-wide',
+                conditionBadge(val as any),
+              )}
+            >
+              {humanize(val || 'Unknown')}
+            </Badge>
           );
         },
         enableSorting: true,
@@ -274,7 +272,7 @@ export function ReturnedAssetsTab({
         header: 'Return Date',
         accessorFn: (row: ReturnedAssetItem) => row.returnDate,
         cell: ({ getValue }: { getValue: () => string }) => (
-          <div className="flex items-center gap-1.5 justify-center">
+          <div className="flex items-center gap-1.5">
             <CalendarClock className="size-3.5 text-muted-foreground" />
             <span className="text-[13px] tabular-nums text-slate-755 dark:text-slate-300 font-medium">{formatDate(getValue())}</span>
           </div>
@@ -287,7 +285,7 @@ export function ReturnedAssetsTab({
         accessorFn: (row: ReturnedAssetItem) => (row.hasTicket ? row.maintenanceStatus ?? '' : ''),
         cell: ({ row: tableRow }: { row: { original: ReturnedAssetItem } }) => {
           const item = tableRow.original;
-          if (!item.hasTicket) return <span className="text-[12px] text-muted-foreground/60 block text-center">None</span>;
+          if (!item.hasTicket) return <span className="text-[12px] text-muted-foreground/60 block text-left">None</span>;
           const colors: Record<string, string> = {
             OPEN: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-500/20',
             IN_PROGRESS: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-500/20',
@@ -295,7 +293,7 @@ export function ReturnedAssetsTab({
             CANCELLED: 'bg-slate-500/10 text-slate-600 dark:bg-slate-500/20 dark:text-slate-400 border border-slate-500/20',
           };
           return (
-            <div className="flex items-center gap-2 justify-center">
+            <div className="flex items-center gap-2">
               <Hammer className="size-3.5 text-muted-foreground" />
               <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium', colors[item.maintenanceStatus ?? ''] || 'bg-slate-100 text-slate-600 dark:bg-slate-900/50 dark:text-slate-400')}>
                 {humanize(item.maintenanceStatus ?? 'Unknown')}
@@ -311,14 +309,12 @@ export function ReturnedAssetsTab({
         accessorFn: (row: ReturnedAssetItem) => (row.isTemporaryReplacement ? 'Temporary' : 'Standard'),
         cell: ({ row: tableRow }: { row: { original: ReturnedAssetItem } }) => {
           const item = tableRow.original;
-          if (!item.isTemporaryReplacement) return <span className="text-[12px] text-muted-foreground/60 block text-center">Standard</span>;
+          if (!item.isTemporaryReplacement) return <span className="text-[12px] text-muted-foreground/60 block text-left">Standard</span>;
           return (
-            <div className="flex justify-center">
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 px-2.5 py-0.5 text-[10px] font-medium">
-                <RotateCcw className="size-3" />
-                Temporary
-              </span>
-            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 px-2.5 py-0.5 text-[10px] font-medium">
+              <RotateCcw className="size-3" />
+              Temporary
+            </span>
           );
         },
         enableSorting: true,
