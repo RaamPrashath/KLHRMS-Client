@@ -59,7 +59,6 @@ export function AssetDetailDialog({
   onProvide,
   onReturn,
   onMaintenance,
-  onRevokeSwap,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -72,7 +71,6 @@ export function AssetDetailDialog({
   onProvide: (asset: AssetSummary) => void;
   onReturn: (asset: AssetSummary) => void;
   onMaintenance: (asset: AssetSummary) => void;
-  onRevokeSwap?: (asset: AssetDetail) => void;
 }) {
   return (
     <AnimatePresence>
@@ -88,7 +86,6 @@ export function AssetDetailDialog({
           onProvide={onProvide}
           onReturn={onReturn}
           onMaintenance={onMaintenance}
-          onRevokeSwap={onRevokeSwap}
         />
       )}
     </AnimatePresence>
@@ -106,7 +103,6 @@ function AssetDetailDialogContent({
   onProvide,
   onReturn,
   onMaintenance,
-  onRevokeSwap,
 }: {
   onOpenChange: (open: boolean) => void;
   isLoading: boolean;
@@ -118,7 +114,6 @@ function AssetDetailDialogContent({
   onProvide: (asset: AssetSummary) => void;
   onReturn: (asset: AssetSummary) => void;
   onMaintenance: (asset: AssetSummary) => void;
-  onRevokeSwap?: (asset: AssetDetail) => void;
 }) {
   const [activeTab, setActiveTab] = useState<AssetDetailTab>('details');
 
@@ -276,7 +271,6 @@ function AssetDetailDialogContent({
                                   if (action === 'Issue Asset') onProvide(asset);
                                   if (action === 'Return Asset') onReturn(asset);
                                   if (action === 'Log Maintenance') onMaintenance(asset);
-                                  if (action === 'Revoke & Swap') onRevokeSwap?.(asset);
                                 }}
                               />
                             ))}

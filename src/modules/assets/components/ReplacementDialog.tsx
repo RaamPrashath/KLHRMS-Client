@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Cog, Laptop, Lock, RefreshCcw, Search, Ticket, X } from 'lucide-react';
+import { Calendar, Cog, Laptop, Lock, Package, RefreshCcw, Search, Ticket, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -11,7 +11,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useAssetMutations } from '@/modules/assets/hooks/useAssetMutations';
-import { fetchMemberTicketsAction } from '@/modules/assets/api/assetServerActions';
+import {
+  fetchMemberAssignedAssetsAction,
+  fetchMemberTicketsAction,
+} from '@/modules/assets/api/assetServerActions';
 import { readError } from '@/modules/assets/lib/assetUtils';
 import type { AssetLookupOption, AssetReplacementMode } from '@/modules/assets/types/assetTypes';
 
@@ -58,6 +61,15 @@ export function ReplacementDialog({
     staleTime: 1000 * 60,
   });
   const tickets = ticketsQuery.data ?? [];
+
+  const assignedAssetsQuery = useQuery({
+    queryKey: ['member-assigned-assets', orgSlug, selectedEmployeeId],
+    queryFn: () =>
+      fetchMemberAssignedAssetsAction({ orgSlug, memberId, targetMemberId: selectedEmployeeId! }),
+    enabled: !!orgSlug && !!memberId && !!selectedEmployeeId,
+    staleTime: 1000 * 60,
+  });
+  const assignedAssets = assignedAssetsQuery.data ?? [];
 
   const filteredEmployees = useMemo(() => {
     const q = employeeQuery.toLowerCase().trim();
@@ -301,6 +313,67 @@ export function ReplacementDialog({
                 <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
                   <Search className="w-4 h-4" />
                 </span>
+              </div>
+            )}
+          </div>
+
+          {/* Assigned Assets */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">Assigned Assets</label>
+            {!selectedEmployeeId ? (
+              <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-sm text-slate-400">
+                Select an employee to view assigned assets
+              </div>
+            ) : assignedAssetsQuery.isLoading ? (
+              <div className="rounded-xl border border-slate-200 p-4 text-center text-sm text-slate-400">
+                Loading...
+              </div>
+            ) : assignedAssets.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-sm text-slate-400">
+                No assets currently assigned to this employee
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {assignedAssets.map((asset) => (
+                  <div
+                    key={asset.id}
+                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
+                  >
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                      <Package className="size-4.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold text-slate-800">{asset.name}</p>
+                      <p className="truncate text-[11px] text-slate-400">
+                        {asset.assetCode}
+                        {asset.unitSerial ? ` · ${asset.unitSerial}` : ''}
+                        {asset.serialNumber ? ` · ${asset.serialNumber}` : ''}
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap gap-1.5">
+                        {asset.brand && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                            {asset.brand}
+                          </span>
+                        )}
+                        {asset.model && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                            {asset.model}
+                          </span>
+                        )}
+                        {asset.condition && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                            {asset.condition.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                        {asset.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

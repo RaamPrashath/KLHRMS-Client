@@ -116,14 +116,12 @@ export function KanbanBoard({
   collapsed,
   onToggleColumn,
   onUpdateMaintenance,
-  onOpenSwap,
 }: {
   tickets: MaintenanceTicket[];
   search: string;
   collapsed: Record<string, boolean>;
   onToggleColumn: (columnId: ColumnId) => void;
   onUpdateMaintenance: (params: { assetId: string | null; data: AssetMaintenanceUpdateInput }) => Promise<unknown>;
-  onOpenSwap: (ticketId: string) => void;
 }) {
   const [activeIssue, setActiveIssue] = useState<KanbanIssue | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<KanbanIssue | null>(null);
@@ -333,7 +331,6 @@ export function KanbanBoard({
               issues={filteredGrouped[column.id]}
               isCollapsed={collapsed[column.id]}
               onToggleCollapse={() => onToggleColumn(column.id)}
-              onOpenSwap={onOpenSwap}
               onOpenIssue={setSelectedIssue}
             />
           ))}

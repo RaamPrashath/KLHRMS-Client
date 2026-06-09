@@ -244,16 +244,6 @@ export const assetMaintenanceUpdateSchema = z
     }
   });
 
-export const assetRevokeSwapSchema = z.object({
-  maintenanceId: z.string().min(1, 'Maintenance record is required'),
-  replacementMode: z.enum(assetReplacementModeOptions),
-  replacementAssetUnitId: z.string().min(1, 'Replacement unit is required'),
-  revokeStatus: z.enum(['IN_MAINTENANCE', 'PENDING_RETURN']).default('IN_MAINTENANCE'),
-  replacementConditionWhileProviding: z.enum(assetConditionOptions).default('GOOD'),
-  providedByMemberId: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
-});
-
 // Category schemas
 export const assetCategoryCreateSchema = z.object({
   name: z.string().trim().min(1, 'Category name is required').max(100),
@@ -286,4 +276,4 @@ export type HelpdeskTicketCreateInput = z.infer<typeof helpdeskTicketCreateSchem
 export type AssetCategoryCreateInput = z.infer<typeof assetCategoryCreateSchema>;
 export type AssetCategoryFieldCreateInput = z.infer<typeof assetCategoryFieldCreateSchema>;
 export type AssetCategoryFieldUpdateInput = z.infer<typeof assetCategoryFieldUpdateSchema>;
-export type AssetRevokeSwapInput = z.infer<typeof assetRevokeSwapSchema>;
+

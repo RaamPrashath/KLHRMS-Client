@@ -96,8 +96,8 @@ export function deriveReturnNextStatus(condition: AssetCondition) {
 
 export function getRowActions(status: AssetStatus) {
   if (status === 'AVAILABLE') return ['View', 'Issue Asset', 'Log Maintenance', 'Decommission'];
-  if (status === 'ASSIGNED') return ['View', 'Return Asset', 'Log Maintenance', 'Revoke & Swap'];
-  if (status === 'IN_MAINTENANCE' || status === 'PENDING_RETURN') return ['View', 'Revoke & Swap'];
+  if (status === 'ASSIGNED') return ['View', 'Return Asset', 'Log Maintenance'];
+  if (status === 'IN_MAINTENANCE' || status === 'PENDING_RETURN') return ['View'];
   if (status === 'DAMAGED') return ['View', 'Log Maintenance', 'Decommission'];
   return ['View'];
 }

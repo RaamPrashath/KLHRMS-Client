@@ -310,57 +310,6 @@ export interface AssetFiltersState {
   pageSize: number;
 }
 
-export interface SwapAvailabilityOption {
-  mode: AssetReplacementMode;
-  label: string;
-  available: boolean;
-  availableCount: number;
-  assetUnitIds: string[];
-  serialNumbers: string[];
-  recommended: boolean;
-}
-
-export interface AssetSwapPreview {
-  maintenanceId: string;
-  assetId: string;
-  assetUnitId: string | null;
-  currentAssetStatus: AssetStatus;
-  currentCondition: AssetCondition | null;
-  assignedMemberId: string | null;
-  assignedMemberName: string | null;
-  brand: string | null;
-  model: string | null;
-  operationalCriticalityTier: OperationalCriticalityTier | null;
-  estimatedDowntimeHours: number | null;
-  requiresReplacementValidation: boolean;
-  recommendedMode: AssetReplacementMode | null;
-  reason: string;
-  options: SwapAvailabilityOption[];
-}
-
-export interface AssetRevokeSwapInput {
-  maintenanceId: string;
-  replacementMode: AssetReplacementMode;
-  replacementAssetUnitId: string;
-  revokeStatus: 'IN_MAINTENANCE' | 'PENDING_RETURN';
-  replacementConditionWhileProviding: AssetCondition;
-  providedByMemberId?: string | null;
-  notes?: string | null;
-}
-
-export interface AssetSwapExecutionResult {
-  maintenanceId: string;
-  revokedAssetId: string;
-  revokedAssetUnitId: string | null;
-  revokedStatus: AssetStatus;
-  replacementAssetId: string;
-  replacementAssetUnitId: string;
-  replacementMode: AssetReplacementMode;
-  assignmentId: string;
-  assignedMemberId: string;
-  assignedMemberName: string | null;
-}
-
 // ── Replacement Types ──────────────────────────────────────────────────────
 
 export interface ReplacementRecord {
@@ -406,6 +355,21 @@ export interface ReplacementRaiseAppraisalInput {
   notes?: string | null;
 }
 
+export interface MemberAssignedAsset {
+  id: string;
+  assetId: string;
+  assetCode: string;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  category: string;
+  serialNumber: string | null;
+  unitSerial: string | null;
+  status: string;
+  condition: string | null;
+  providedDate: string | null;
+}
+
 export interface MemberTicketSummary {
   id: string;
   ticketId: string;
@@ -413,4 +377,32 @@ export interface MemberTicketSummary {
   issueDescription: string;
   status: string;
   replacementDecision: string | null;
+}
+
+export interface SwapAvailabilityOption {
+  mode: string;
+  label: string;
+  available: boolean;
+  availableCount: number;
+  assetUnitIds: string[];
+  serialNumbers: string[];
+  recommended: boolean;
+}
+
+export interface AssetSwapPreview {
+  maintenanceId: string;
+  assetId: string;
+  assetUnitId: string | null;
+  currentAssetStatus: string;
+  currentCondition: string | null;
+  assignedMemberId: string | null;
+  assignedMemberName: string | null;
+  brand: string | null;
+  model: string | null;
+  operationalCriticalityTier: string | null;
+  estimatedDowntimeHours: number | null;
+  requiresReplacementValidation: boolean;
+  recommendedMode: string | null;
+  reason: string;
+  options: SwapAvailabilityOption[];
 }
