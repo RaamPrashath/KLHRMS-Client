@@ -35,6 +35,10 @@ import type {
   BulkAssetCreateInput,
   TicketAttachmentMetadata,
   TicketMode,
+  ReplacementRecord,
+  ReplacementProvideInput,
+  ReplacementRaiseAppraisalInput,
+  MemberTicketSummary,
 } from '@/modules/assets/types/assetTypes';
 
 function getApiUrl(): string {
@@ -605,6 +609,8 @@ export interface MaintenanceTicket {
   loggedByMemberId: string | null;
   loggedByName: string | null;
   loggedByEmail: string | null;
+  cancelledByMemberId: string | null;
+  cancelledByName: string | null;
   assetLifecycleStatus: string | null;
   assetLifecycleStatusLabel: string | null;
   swapPreview: AssetSwapPreview | null;
@@ -856,4 +862,77 @@ export async function issueAssetsAction(params: {
     body: JSON.stringify(parsed.data),
   });
   return handleResponse<AssetIssueResponse>(res);
+}
+
+// ── Replacement API Actions ────────────────────────────────────────────────
+
+export async function fetchMemberTicketsAction(params: {
+  orgSlug: string;
+  memberId: string;
+  targetMemberId: string;
+}): Promise<MemberTicketSummary[]> {
+  const res = await fetch(
+    `${getApiUrl()}/assets/members/${params.targetMemberId}/tickets`,
+    {
+      method: 'GET',
+      headers: buildHeaders(params.orgSlug, params.memberId),
+      cache: 'no-store',
+    },
+  );
+  return handleResponse<MemberTicketSummary[]>(res);
+}
+
+export async function fetchReplacementsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<ReplacementRecord[]> {
+  const res = await fetch(`${getApiUrl()}/assets/replacements`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<ReplacementRecord[]>(res);
+}
+
+export async function provideReplacementAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: ReplacementProvideInput;
+}): Promise<ReplacementRecord> {
+  const res = await fetch(`${getApiUrl()}/assets/replacement/provide`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<ReplacementRecord>(res);
+}
+
+export async function raiseReplacementAppraisalAction(params: {
+  orgSlug: string;
+  memberId: string;
+  data: ReplacementRaiseAppraisalInput;
+}): Promise<{ requisitionId: string; message: string }> {
+  const res = await fetch(`${getApiUrl()}/assets/replacement/raise-appraisal`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data),
+  });
+  return handleResponse<{ requisitionId: string; message: string }>(res);
+}
+
+export async function updateReplacementReturnDateAction(params: {
+  orgSlug: string;
+  memberId: string;
+  assignmentId: string;
+  expectedReturnDate: string;
+}): Promise<{ success: boolean }> {
+  const res = await fetch(
+    `${getApiUrl()}/assets/replacements/${params.assignmentId}/return-date`,
+    {
+      method: 'PATCH',
+      headers: buildHeaders(params.orgSlug, params.memberId),
+      body: JSON.stringify({ expectedReturnDate: params.expectedReturnDate }),
+    },
+  );
+  return handleResponse<{ success: boolean }>(res);
 }

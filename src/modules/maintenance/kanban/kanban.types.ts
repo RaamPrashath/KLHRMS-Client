@@ -6,6 +6,7 @@ export interface KanbanIssue {
   title: string | null;
   ticketId: string;
   maintenanceType: string;
+  ticketMode: string;
   description: string;
   assetLifecycleStatus: string | null;
   assetLifecycleStatusLabel: string | null;
@@ -19,6 +20,8 @@ export interface KanbanIssue {
   commentCount: number;
   attachmentCount: number;
   swapPreview?: AssetSwapPreview | null;
+  cancelledByMemberId: string | null;
+  cancelledByName: string | null;
 }
 
 export interface KanbanColumnData {

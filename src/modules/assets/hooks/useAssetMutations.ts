@@ -20,7 +20,11 @@ import {
   updateAssetCategoryFieldAction,
   updateAssetMaintenanceAction,
   withdrawMyTicketAction,
+  provideReplacementAction,
+  raiseReplacementAppraisalAction,
+  updateReplacementReturnDateAction,
 } from '@/modules/assets/api/assetServerActions';
+import type { ReplacementProvideInput, ReplacementRaiseAppraisalInput } from '@/modules/assets/types/assetTypes';
 
 export function useAssetMutations(orgSlug: string, memberId: string) {
   const queryClient = useQueryClient();
@@ -32,12 +36,14 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     await queryClient.invalidateQueries({ queryKey: ['asset-available-groups', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['asset-employee-view', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['my-tickets', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['helpdesk-admin-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['maintenance-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-dashboard', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-brand-model-analytics', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-os-distribution', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-warranty-feed', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['asset-swap-preview', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['replacements', orgSlug] });
     if (assetId) {
       await queryClient.invalidateQueries({ queryKey: ['asset', orgSlug, assetId] });
     }
@@ -113,6 +119,28 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
       onSuccess: async (result) => {
         await invalidateAll(result.revokedAssetId);
         await invalidateAll(result.replacementAssetId);
+      },
+    }),
+    provideReplacement: useMutation({
+      mutationFn: (data: ReplacementProvideInput) =>
+        provideReplacementAction({ orgSlug, memberId, data }),
+      onSuccess: async () => invalidateAll(),
+    }),
+    raiseReplacementAppraisal: useMutation({
+      mutationFn: (data: ReplacementRaiseAppraisalInput) =>
+        raiseReplacementAppraisalAction({ orgSlug, memberId, data }),
+      onSuccess: async () => invalidateAll(),
+    }),
+    updateReplacementReturnDate: useMutation({
+      mutationFn: ({
+        assignmentId,
+        expectedReturnDate,
+      }: {
+        assignmentId: string;
+        expectedReturnDate: string;
+      }) => updateReplacementReturnDateAction({ orgSlug, memberId, assignmentId, expectedReturnDate }),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: ['replacements', orgSlug] });
       },
     }),
     createCategory: useMutation({

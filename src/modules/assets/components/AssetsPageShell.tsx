@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PackagePlus, Plus, Search } from 'lucide-react';
+import { PackagePlus, Plus, RefreshCcw, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,7 @@ import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog
 import { AssetFormDialog } from '@/modules/assets/components/AssetFormDialog';
 import { AssetSettingsDialog } from '@/modules/assets/components/AssetSettingsDialog';
 import { RevokeAndSwapDialog } from '@/modules/assets/components/RevokeAndSwapDialog';
+import { ReplacementDialog } from '@/modules/assets/components/ReplacementDialog';
 import {
   ACTION_GREEN,
   defaultAssetForm,
@@ -83,6 +84,7 @@ export function AssetsPageShell({
   const [ticketDialogMode, setTicketDialogMode] = useState<'issue' | 'return'>('issue');
   const [ticketDialogAssetId, setTicketDialogAssetId] = useState<string | null>(null);
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
+  const [replacementDialogOpen, setReplacementDialogOpen] = useState(false);
 
   const router = useRouter();
   const tabOptions = useMemo(() => getAssetTabOptions(canManageAssets), [canManageAssets]);
@@ -169,7 +171,7 @@ export function AssetsPageShell({
   }
 
   function seedMaintenanceForm() {
-    router.push(`/${orgSlug}/maintenance`);
+    router.push(`/${orgSlug}/asset-maintenance`);
   }
 
   function openEmployeeIssueDialog(asset?: AssetSummary | null) {
@@ -369,7 +371,6 @@ export function AssetsPageShell({
           asset={selectedAsset ?? undefined}
           canManageAssets={false}
           onEdit={() => {}}
-          onArchive={() => {}}
           onProvide={() => {}}
           onReturn={(asset) => openEmployeeReturnDialog(asset)}
           onMaintenance={(asset) => openEmployeeIssueDialog(asset)}
@@ -457,53 +458,8 @@ export function AssetsPageShell({
         </TabsContent>
 
         <TabsContent value="register" className="mt-0">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="w-full sm:max-w-xs flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2">
-              <Search className="size-4 shrink-0 text-[#9ca3af]" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search assets..."
-                className="h-auto border-0 bg-transparent px-0 py-0 text-[13px] shadow-none focus-visible:ring-0 placeholder:text-[#9ca3af]"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Select
-                value={categoryFilter}
-                onValueChange={(value) => setCategoryFilter(value as AssetCategory | 'ALL')}
-              >
-                <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All categories</SelectItem>
-                  {categoryOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {humanize(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => setStatusFilter(value as AssetStatus | 'ALL')}
-              >
-                <SelectTrigger className="h-9 w-auto min-w-32.5 rounded-lg border border-[#e5e7eb] bg-white px-3 text-[13px] shadow-none">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All statuses</SelectItem>
-                  {assetStatusOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {humanize(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
           <AssetRegisterTab
-            assets={filteredAssets}
+            assets={allFetchedAssets}
             isLoading={registerQuery.isLoading}
             onOpenDetail={openDetail}
             onEdit={() => {}}
@@ -556,6 +512,18 @@ export function AssetsPageShell({
             onIssue={handleIssueGroupAsset}
             isGroupsLoading={availableGroupsQuery.isLoading}
             assignedAssets={allFetchedAssets}
+            headerAction={
+              canManageAssets && (
+                <button
+                  type="button"
+                  onClick={() => setReplacementDialogOpen(true)}
+                  className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0"
+                >
+                  <RefreshCcw className="mr-1.5 size-3.5" />
+                  Replacement Option
+                </button>
+              )
+            }
           />
         </TabsContent>
 
@@ -595,9 +563,8 @@ export function AssetsPageShell({
         asset={selectedAsset ?? undefined}
         canManageAssets={canManageAssets}
         onEdit={() => {}}
-        onArchive={(assetId) => void handleArchiveAsset(assetId)}
         onProvide={seedProvideForm}
-        onReturn={() => router.push(`/${orgSlug}/maintenance`)}
+        onReturn={() => router.push(`/${orgSlug}/asset-maintenance`)}
         onMaintenance={seedMaintenanceForm}
         onRevokeSwap={openSwapDialog}
       />
@@ -620,6 +587,14 @@ export function AssetsPageShell({
             status: log.status,
             issueDescription: log.issueDescription,
           }))}
+      />
+
+      <ReplacementDialog
+        open={replacementDialogOpen}
+        onOpenChange={setReplacementDialogOpen}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        members={metaQuery.data?.members ?? []}
       />
 
       <AssetSettingsDialog

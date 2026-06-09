@@ -15,7 +15,6 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select';
-import { ACTION_GREEN } from '@/modules/assets/lib/assetConfig';
 import {
   DateField,
   FieldSelect,
@@ -147,8 +146,7 @@ export function MaintenanceUpdateDialog({
                 <Button
                   onClick={onSave}
                   disabled={isSaving}
-                  className="rounded-lg px-5 text-white"
-                  style={{ backgroundColor: ACTION_GREEN }}
+                  className="rounded-lg px-5 text-white bg-primary hover:bg-primary-hover"
                 >
                   {isSaving ? 'Saving...' : 'Save Maintenance'}
                 </Button>

@@ -4,23 +4,9 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Clock, MessageSquare, Paperclip, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { humanize } from '@/modules/assets/lib/assetUtils';
 
 import type { KanbanIssue } from './kanban.types';
-
-const priorityStyles: Record<string, string> = {
-  high: 'bg-destructive-bg text-destructive-text border-destructive-border',
-  medium: 'bg-warning-bg text-warning-text border-warning-border',
-  low: 'bg-secondary text-secondary-foreground border-border',
-};
-
-const lifecycleStyles: Record<string, string> = {
-  ASSIGNED: 'bg-blue-50 text-blue-700 border-blue-100',
-  PENDING_RETURN: 'bg-amber-50 text-amber-700 border-amber-100',
-  RETURNED_IN_REPAIR: 'bg-orange-50 text-orange-700 border-orange-100',
-  RETURNED_READY: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  AVAILABLE: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  IN_MAINTENANCE: 'bg-orange-50 text-orange-700 border-orange-100',
-};
 
 function daysAgo(dateStr: string): string {
   const d = new Date(dateStr);
@@ -29,6 +15,13 @@ function daysAgo(dateStr: string): string {
   if (diff === 0) return 'today';
   if (diff === 1) return '1d ago';
   return `${diff}d ago`;
+}
+
+function getActorName(issue: KanbanIssue): string {
+  if (issue.status === 'cancelled') {
+    return issue.cancelledByName ?? issue.raisedByName ?? 'Unknown';
+  }
+  return issue.assignees[0]?.name ?? 'Unassigned';
 }
 
 export function KanbanCard({
@@ -54,7 +47,8 @@ export function KanbanCard({
     transition,
   };
 
-  const assigneeInitial = issue.assignees[0]?.name?.charAt(0)?.toUpperCase() ?? '?';
+  const actorName = getActorName(issue);
+  const actorInitial = actorName.charAt(0)?.toUpperCase() ?? '?';
 
   return (
     <div
@@ -77,13 +71,15 @@ export function KanbanCard({
           <p className="mt-0.5 text-[11px] text-muted-foreground">{issue.ticketId}</p>
         </div>
         <span
-          className={cn(
-            'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.04em]',
-            priorityStyles[issue.priority] || priorityStyles.medium,
-          )}
-        >
-          {issue.priority}
-        </span>
+            className={cn(
+              'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+              issue.ticketMode === 'ASSET_ISSUE'
+                ? 'bg-[#fff3f2] text-[#b3261e]'
+                : 'bg-[#f4f8ff] text-[#2454a6]',
+            )}
+          >
+            {issue.ticketMode === 'ASSET_ISSUE' ? 'Asset' : 'General'}
+          </span>
       </div>
 
       {issue.description && (
@@ -92,42 +88,31 @@ export function KanbanCard({
         </p>
       )}
 
-      {issue.assetLifecycleStatusLabel && (
-        <div className="mt-2">
-          <span
-            className={cn(
-              'inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium',
-              lifecycleStyles[issue.assetLifecycleStatus ?? ''] ?? 'bg-neutral-100 text-neutral-600 border-neutral-200',
-            )}
-          >
+      <div className="mt-2 flex flex-wrap gap-2">
+        {issue.assetLifecycleStatusLabel && (
+          <span className="rounded-full bg-[#f3f7f5] px-2 py-0.5 text-[10px] font-semibold text-[#33624c]">
             {issue.assetLifecycleStatusLabel}
           </span>
-        </div>
-      )}
-
-      {issue.swapPreview && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {issue.swapPreview.options.map((option) => (
-            <span
-              key={option.mode}
-              className={cn(
-                'rounded-full px-2 py-0.5 text-[10px] font-medium',
-                option.available ? 'bg-[#eff6ff] text-[#2454a6]' : 'bg-[#fff1f1] text-[#b3261e]',
-              )}
-            >
-              {option.mode === 'PERMANENT_REPLACEMENT' ? 'Exact' : 'Temp'} {option.availableCount}
-            </span>
-          ))}
-        </div>
-      )}
+        )}
+        {issue.swapPreview?.requiresReplacementValidation && (
+          <span className="rounded-full bg-[#fff6db] px-2 py-0.5 text-[10px] font-semibold text-[#8a5a00]">
+            Replacement needed
+          </span>
+        )}
+        {issue.swapPreview?.recommendedMode && (
+          <span className="rounded-full bg-[#f4f8ff] px-2 py-0.5 text-[10px] font-semibold text-[#2454a6]">
+            {humanize(issue.swapPreview.recommendedMode)}
+          </span>
+        )}
+      </div>
 
       <div className="mt-3 flex items-center gap-3">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
-            {assigneeInitial}
+            {actorInitial}
           </div>
           <span className="truncate text-[11px] text-muted-foreground">
-            {issue.assignees[0]?.name ?? 'Unassigned'}
+            {issue.status === 'cancelled' ? `Cancelled by ${actorName}` : actorName}
           </span>
         </div>
 

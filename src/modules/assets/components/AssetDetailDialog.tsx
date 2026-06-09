@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Archive, Hammer, History, PackageOpen, X } from 'lucide-react';
+import { Hammer, History, PackageOpen, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -56,7 +56,6 @@ export function AssetDetailDialog({
   hideActions = false,
   titleOverride,
   onEdit,
-  onArchive,
   onProvide,
   onReturn,
   onMaintenance,
@@ -70,7 +69,6 @@ export function AssetDetailDialog({
   hideActions?: boolean;
   titleOverride?: string;
   onEdit: (asset: AssetSummary | AssetDetail) => void;
-  onArchive: (assetId: string) => void;
   onProvide: (asset: AssetSummary) => void;
   onReturn: (asset: AssetSummary) => void;
   onMaintenance: (asset: AssetSummary) => void;
@@ -87,7 +85,6 @@ export function AssetDetailDialog({
           hideActions={hideActions}
           titleOverride={titleOverride}
           onEdit={onEdit}
-          onArchive={onArchive}
           onProvide={onProvide}
           onReturn={onReturn}
           onMaintenance={onMaintenance}
@@ -106,7 +103,6 @@ function AssetDetailDialogContent({
   hideActions,
   titleOverride,
   onEdit,
-  onArchive,
   onProvide,
   onReturn,
   onMaintenance,
@@ -119,7 +115,6 @@ function AssetDetailDialogContent({
   hideActions: boolean;
   titleOverride?: string;
   onEdit: (asset: AssetSummary | AssetDetail) => void;
-  onArchive: (assetId: string) => void;
   onProvide: (asset: AssetSummary) => void;
   onReturn: (asset: AssetSummary) => void;
   onMaintenance: (asset: AssetSummary) => void;
@@ -267,7 +262,7 @@ function AssetDetailDialogContent({
                         <p className="text-[16px] font-semibold text-[#111827]">Actions</p>
                         <div className="mt-4 flex flex-wrap gap-2">
                           {getRowActions(asset.status)
-                            .filter((action) => action !== 'View' && action !== 'Retire')
+                            .filter((action) => action !== 'View' && action !== 'Retire' && action !== 'Decommission')
                             .filter((action) => {
                               if (canManageAssets) return true;
                               return action === 'Log Maintenance' || action === 'Return Asset';
@@ -285,16 +280,7 @@ function AssetDetailDialogContent({
                                 }}
                               />
                             ))}
-                          {canManageAssets && asset.status !== 'ASSIGNED' && (
-                            <Button
-                              variant="outline"
-                              className="rounded-full border-[#d8dde5] px-4 text-[12px] h-8"
-                              onClick={() => onArchive(asset.id)}
-                            >
-                              <Archive className="mr-2 size-3.5" />
-                              Archive
-                            </Button>
-                          )}
+
                         </div>
                       </div>
                     )}

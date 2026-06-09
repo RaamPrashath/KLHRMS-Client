@@ -1,7 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Columns, LayoutPanelTop, Search, X } from 'lucide-react';
+import {
+  Columns,
+  LayoutPanelTop,
+  Search,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import {
@@ -32,7 +37,7 @@ import {
 const statusFilterOptions = [...assetMaintenanceStatusOptions];
 const typeFilterOptions = [...assetMaintenanceTypeOptions];
 
-export function MaintenancePageShell({
+export function AssetMaintenancePageShell({
   orgSlug,
   memberId,
 }: {
@@ -90,11 +95,13 @@ export function MaintenancePageShell({
     [columnCounts],
   );
 
+
+
   function toggleCollapse(columnId: ColumnId) {
     setCollapsed((prev) => ({ ...prev, [columnId]: !prev[columnId] }));
   }
 
-  const hasActiveFilters = search.trim() || statusFilter !== 'ALL' || typeFilter !== 'ALL';
+  const hasActiveFilters = !!search.trim() || statusFilter !== 'ALL' || typeFilter !== 'ALL';
 
   function clearFilters() {
     setSearch('');
@@ -109,23 +116,15 @@ export function MaintenancePageShell({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="mb-5 shrink-0 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground">Maintenance</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">Track and manage asset repairs and service requests</p>
+      <div className="mb-5 shrink-0 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="max-w-3xl">
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-foreground">Asset Maintenance</h1>
+          <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
+            Track repairs, temporary handovers, pending returns, and permanent replacements from one admin queue.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-full max-w-[320px] items-center gap-2.5 rounded-full border border-[#e2e8f0] bg-white px-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-within:border-[#0066cc] focus-within:ring-1 focus-within:ring-[#0066cc]/20 transition-all">
-            <Search className="size-4 shrink-0 text-[#5f6673]" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search tickets..."
-              className="h-auto border-0 bg-transparent px-0 py-0 text-[14px] shadow-none focus-visible:ring-0 placeholder:text-[#86868b]"
-            />
-          </div>
-
           <div className="inline-flex items-center rounded-xl border border-black/4 bg-neutral-50 p-1">
             <button
               onClick={() => setViewMode('kanban')}
@@ -157,38 +156,49 @@ export function MaintenancePageShell({
         </div>
       </div>
 
-      <div className="mb-5 shrink-0 flex flex-col gap-3">
-        <div className="flex items-center justify-between rounded-xl border border-[#e6e9ef] bg-[#fbfbfc] px-5 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-          <div className="flex items-center gap-3">
-            <span className="text-[14px] font-semibold text-[#4b5563]">Filters</span>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 w-[140px] rounded-lg border-[#e2e8f0] bg-white text-[12px] shadow-none">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Statuses</SelectItem>
-                {statusFilterOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{humanize(opt)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {viewMode === 'kanban' && (
+        <div className="mb-5 shrink-0 flex flex-col gap-3">
+          <div className="flex items-center justify-between rounded-xl border border-[#e6e9ef] bg-[#fbfbfc] px-5 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-[180px] items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-within:border-[#0066cc] focus-within:ring-1 focus-within:ring-[#0066cc]/20 transition-all">
+                <Search className="size-3.5 shrink-0 text-[#5f6673]" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search tickets..."
+                  className="h-auto border-0 bg-transparent px-0 py-0 text-[12px] shadow-none focus-visible:ring-0 placeholder:text-[#86868b]"
+                />
+              </div>
 
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-8 w-[150px] rounded-lg border-[#e2e8f0] bg-white text-[12px] shadow-none">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Types</SelectItem>
-                {typeFilterOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{humanize(opt)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <span className="text-[14px] font-semibold text-[#4b5563]">Filters</span>
 
-          <div className="flex items-center gap-4">
-            {viewMode === 'kanban' && (
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-8 w-[140px] rounded-lg border-[#e2e8f0] bg-white text-[12px] shadow-none">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Status</SelectItem>
+                  {statusFilterOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{humanize(opt)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="h-8 w-[150px] rounded-lg border-[#e2e8f0] bg-white text-[12px] shadow-none">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Types</SelectItem>
+                  {typeFilterOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{humanize(opt)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-x-4 gap-y-2 text-[14px] text-[#4b5563]">
                 {MAINTENANCE_KANBAN_COLUMNS.map((column) => (
                   <button
@@ -207,28 +217,25 @@ export function MaintenancePageShell({
                   </button>
                 ))}
               </div>
-            )}
-            <div className="flex items-center gap-2">
-              {viewMode === 'table' && (
-                <span className="text-[13px] font-medium text-muted-foreground">{filteredTickets.length} tickets</span>
-              )}
-              <div className="h-4 w-px bg-[#e2e8f0]" />
-              <span className="text-[13px] font-medium text-muted-foreground">{totalCount} total</span>
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="h-7 rounded-lg px-2 text-[12px] text-[#6e6e73] hover:text-[#1d1d1f]"
-                >
-                  <X className="mr-1 size-3" />
-                  Clear
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-px bg-[#e2e8f0]" />
+                <span className="text-[13px] font-medium text-muted-foreground">{totalCount} total</span>
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="h-7 rounded-lg px-2 text-[12px] text-[#6e6e73] hover:text-[#1d1d1f]"
+                  >
+                    <X className="mr-1 size-3" />
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="min-h-0 flex-1">
         {viewMode === 'kanban' ? (
@@ -241,7 +248,19 @@ export function MaintenancePageShell({
             onOpenSwap={openSwapDialog}
           />
         ) : (
-          <MaintenanceTableView tickets={filteredTickets} onOpenSwap={openSwapDialog} />
+          <MaintenanceTableView
+            tickets={filteredTickets}
+            search={search}
+            onSearchChange={setSearch}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+            typeFilter={typeFilter}
+            onTypeChange={setTypeFilter}
+            statusFilterOptions={statusFilterOptions}
+            typeFilterOptions={typeFilterOptions}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearFilters}
+          />
         )}
       </div>
 
@@ -263,3 +282,5 @@ export function MaintenancePageShell({
     </div>
   );
 }
+
+export const MaintenancePageShell = AssetMaintenancePageShell;

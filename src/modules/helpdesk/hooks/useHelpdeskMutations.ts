@@ -1,29 +1,27 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createAssetMaintenanceAction } from '@/modules/assets/api/assetServerActions';
+import { createHelpdeskTicketAction } from '@/modules/assets/api/assetServerActions';
 import {
   createGeneralHelpTicketAction,
   withdrawHelpdeskTicketAction,
 } from '@/modules/helpdesk/api/helpdeskServerActions';
-import type { AssetMaintenanceCreateInput } from '@/modules/assets/schema/assetSchemas';
 import type { GeneralHelpRequestInput } from '@/modules/helpdesk/types/helpdeskTypes';
+import type { HelpdeskTicketCreateInput } from '@/modules/assets/schema/assetSchemas';
 
 export function useHelpdeskMutations(orgSlug: string, memberId: string) {
   const queryClient = useQueryClient();
 
-  async function invalidateHelpdesk(assetId?: string) {
-    await queryClient.invalidateQueries({ queryKey: ['helpdesk-tickets', orgSlug] });
+  async function invalidateHelpdesk() {
     await queryClient.invalidateQueries({ queryKey: ['my-tickets', orgSlug] });
-    await queryClient.invalidateQueries({ queryKey: ['assets', orgSlug] });
-    if (assetId) await queryClient.invalidateQueries({ queryKey: ['asset', orgSlug, assetId] });
+    await queryClient.invalidateQueries({ queryKey: ['helpdesk-admin-tickets', orgSlug] });
   }
 
   return {
-    createAssetIssue: useMutation({
-      mutationFn: (data: AssetMaintenanceCreateInput) =>
-        createAssetMaintenanceAction({ orgSlug, memberId, data }),
-      onSuccess: async (asset) => invalidateHelpdesk(asset.id),
+    createAssetRequest: useMutation({
+      mutationFn: (data: HelpdeskTicketCreateInput) =>
+        createHelpdeskTicketAction({ orgSlug, memberId, data }),
+      onSuccess: async () => invalidateHelpdesk(),
     }),
     createGeneralHelp: useMutation({
       mutationFn: (data: GeneralHelpRequestInput) =>

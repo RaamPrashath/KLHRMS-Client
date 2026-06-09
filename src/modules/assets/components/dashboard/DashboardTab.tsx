@@ -107,6 +107,7 @@ function buildAggregateDetail(row: BrandModelInventoryRow, details: AssetDetail[
     assetCode: `${row.brand.toUpperCase()}-${row.model.toUpperCase().replaceAll(' ', '-')}`,
     name: `${row.brand} ${row.model}`,
     category: 'LAPTOP',
+    brand: row.brand,
     categoryDefinitionId: newestDetail?.categoryDefinitionId ?? null,
     serialNumber: units[0]?.serialNumber ?? null,
     brand: row.brand,
@@ -194,11 +195,11 @@ export function DashboardTab({
 
   if (isError) {
     return (
-      <div className="flex items-center justify-center rounded-[18px] border border-[#e5e7eb] bg-white px-6 py-14 text-center">
+      <div className="flex items-center justify-center rounded-2xl border border-border bg-card px-6 py-14 text-center shadow-sm">
         <div>
           <AlertTriangle className="mx-auto size-6 text-[#9ca3af]" />
-          <p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">Failed to load dashboard</p>
-          <p className="mt-0.5 text-[13px] text-[#6e6e73]">Try refreshing the page</p>
+          <p className="mt-2 text-[14px] font-medium text-foreground">Failed to load dashboard</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">Try refreshing the page</p>
         </div>
       </div>
     );
@@ -206,32 +207,81 @@ export function DashboardTab({
 
   if (isLoading) {
     return (
-      <div className="space-y-5">
-        <div className="grid grid-cols-5 gap-4">
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
-              <SkeletonLine className="mb-2 h-7 w-16" />
-              <SkeletonLine className="h-4 w-20" />
+            <div key={i} className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center gap-4">
+              <SkeletonLine className="size-12 rounded-xl" />
+              <div className="flex-1 space-y-1.5">
+                <SkeletonLine className="h-3 w-16" />
+                <SkeletonLine className="h-6 w-10" />
+              </div>
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-5">
-          <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
-            <SkeletonLine className="mb-4 h-5 w-36" />
-            <SkeletonLine className="h-40 w-full" />
+        
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm min-h-[380px] flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <SkeletonLine className="h-5 w-36" />
+              <SkeletonLine className="h-3 w-48" />
+            </div>
+            <div className="flex justify-center my-6">
+              <SkeletonLine className="size-32 rounded-full" />
+            </div>
+            <div className="space-y-2">
+              <SkeletonLine className="h-8 w-full rounded-lg" />
+              <SkeletonLine className="h-8 w-full rounded-lg" />
+            </div>
           </div>
-          <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
-            <SkeletonLine className="mb-4 h-5 w-36" />
-            <SkeletonLine className="h-40 w-full" />
+          <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-sm min-h-[380px] flex flex-col justify-between">
+            <div className="flex justify-between items-center">
+              <div className="space-y-1.5">
+                <SkeletonLine className="h-5 w-36" />
+                <SkeletonLine className="h-3 w-48" />
+              </div>
+              <SkeletonLine className="h-6 w-12 rounded" />
+            </div>
+            <SkeletonLine className="h-44 w-full rounded-lg mt-6" />
           </div>
         </div>
-        <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
+
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           <SkeletonLine className="mb-4 h-5 w-48" />
           <SkeletonLine className="h-52 w-full" />
         </div>
-        <div className="grid grid-cols-3 gap-5">
-          <div className="col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white p-5">
-            <SkeletonLine className="mb-4 h-5 w-32" />
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm min-h-[295px]">
+            <SkeletonLine className="h-5 w-36 mb-4" />
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="flex justify-between">
+                    <SkeletonLine className="h-4 w-24" />
+                    <SkeletonLine className="h-4 w-12" />
+                  </div>
+                  <SkeletonLine className="h-2.5 w-full rounded-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm min-h-[295px]">
+            <SkeletonLine className="h-5 w-36 mb-4" />
+            <div className="space-y-4">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <SkeletonLine className="h-4 w-24" />
+                  <SkeletonLine className="h-12 w-full rounded-xl" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-sm min-h-[380px]">
+            <SkeletonLine className="h-5 w-36 mb-4" />
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3">
@@ -242,17 +292,11 @@ export function DashboardTab({
               ))}
             </div>
           </div>
-          <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-5">
-            <SkeletonLine className="mb-4 h-5 w-28" />
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm min-h-[380px]">
+            <SkeletonLine className="h-5 w-36 mb-4" />
             <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <SkeletonLine className="mt-1 size-2.5 rounded-full" />
-                  <div className="flex-1 space-y-1.5">
-                    <SkeletonLine className="h-4 w-32" />
-                    <SkeletonLine className="h-3 w-24" />
-                  </div>
-                </div>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-16 w-full rounded-xl" />
               ))}
             </div>
           </div>
@@ -270,8 +314,8 @@ export function DashboardTab({
   const filteredActivity = activityTab === 'assigned' ? assignedActivity : maintenanceActivity;
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <DashboardKPICard value={d.totalAssets} label="Total Assets" icon={Package} color="#6b7280" />
         <DashboardKPICard value={d.availableCount} label="Available" icon={CircleCheck} color="var(--indigo-9)" />
         <DashboardKPICard value={d.providedCount} label="Issued" icon={UserCheckIcon} color="#2563eb" />
@@ -279,18 +323,29 @@ export function DashboardTab({
         <DashboardKPICard value={d.openTicketCount} label="Open Tickets" icon={Ticket} color="#dc2626" />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-          <h3 className="mb-4 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-            Status Distribution
-          </h3>
-          <StatusDonutChart data={d.statusDistribution} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm lg:col-span-1 flex flex-col justify-between h-full min-h-[380px]">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Status Distribution</h3>
+            <p className="text-xs text-muted-foreground mt-0.5 font-medium">Asset allocation breakdown</p>
+          </div>
+          <div className="flex-1 flex flex-col justify-between mt-4">
+            <StatusDonutChart data={d.statusDistribution} />
+          </div>
         </div>
-        <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-          <h3 className="mb-4 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-            Monthly Additions
-          </h3>
-          <MonthlyTrendChart data={d.monthlyTrends} />
+        <div className="bg-card p-6 rounded-2xl border border-border shadow-sm lg:col-span-2 flex flex-col justify-between h-full min-h-[380px]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Monthly Additions</h3>
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium">Timeline of stock updates</p>
+            </div>
+            <span className="text-xs bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 font-semibold px-2.5 py-1 rounded-md border border-border">
+              {new Date().getFullYear()}
+            </span>
+          </div>
+          <div className="flex-1 flex flex-col justify-end mt-4">
+            <MonthlyTrendChart data={d.monthlyTrends} />
+          </div>
         </div>
       </div>
 
@@ -301,7 +356,7 @@ export function DashboardTab({
         onRowClick={handleBreakdownRowClick}
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <OsDistributionCard
           data={osDistributionQuery.data}
           isLoading={osDistributionQuery.isLoading}
@@ -313,20 +368,21 @@ export function DashboardTab({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-              Recent Activity
-            </h3>
-            <div className="flex items-center gap-0.5 rounded-lg bg-[#f5f5f7] p-0.5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col justify-between h-full min-h-[380px]">
+          <div className="p-6 border-b border-border flex items-center justify-between shrink-0">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Recent Activity</h3>
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium">Log of asset transactional movements</p>
+            </div>
+            <div className="bg-slate-100/80 dark:bg-slate-800 p-0.5 rounded-xl flex gap-1 text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setActivityTab('assigned')}
-                className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-lg transition-all ${
                   activityTab === 'assigned'
-                    ? 'bg-white text-[#1d1d1f] shadow-sm'
-                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                    ? 'bg-white dark:bg-slate-950 text-slate-800 dark:text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
                 Assigned
@@ -334,26 +390,21 @@ export function DashboardTab({
               <button
                 type="button"
                 onClick={() => setActivityTab('maintenance')}
-                className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-lg transition-all ${
                   activityTab === 'maintenance'
-                    ? 'bg-white text-[#1d1d1f] shadow-sm'
-                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                    ? 'bg-white dark:bg-slate-950 text-slate-800 dark:text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
                 Maintenance
               </button>
             </div>
           </div>
-          <div className="max-h-[380px] overflow-y-auto">
+          <div className="flex-1 overflow-y-auto">
             <ActivityTable items={filteredActivity} />
           </div>
         </div>
-        <div className="rounded-[18px] border border-[#e5e7eb] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.03)]">
-          <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-            Open Tickets
-          </h3>
-          <OpenTicketList tickets={d.recentTickets} />
-        </div>
+        <OpenTicketList tickets={d.recentTickets} />
       </div>
 
       <AssetDetailDialog
@@ -368,7 +419,6 @@ export function DashboardTab({
         hideActions
         titleOverride={selectedBreakdown?.name}
         onEdit={() => {}}
-        onArchive={() => {}}
         onProvide={() => {}}
         onReturn={() => {}}
         onMaintenance={() => {}}

@@ -1,13 +1,8 @@
 'use client';
 
+import { cn } from '@/lib/utils';
 import { Clock, MessageSquare, Paperclip } from 'lucide-react';
 import type { KanbanIssue } from './kanban.types';
-
-const priorityStyles: Record<string, string> = {
-  high: 'bg-destructive-bg text-destructive-text',
-  medium: 'bg-warning-bg text-warning-text',
-  low: 'bg-secondary text-secondary-foreground',
-};
 
 function daysAgo(dateStr: string): string {
   const d = new Date(dateStr);
@@ -18,8 +13,16 @@ function daysAgo(dateStr: string): string {
   return `${diff}d ago`;
 }
 
+function getActorName(issue: KanbanIssue): string {
+  if (issue.status === 'cancelled') {
+    return issue.cancelledByName ?? issue.raisedByName ?? 'Unknown';
+  }
+  return issue.assignees[0]?.name ?? 'Unassigned';
+}
+
 export function KanbanCardDragOverlay({ issue }: { issue: KanbanIssue }) {
-  const assigneeInitial = issue.assignees[0]?.name?.charAt(0)?.toUpperCase() ?? '?';
+  const actorName = getActorName(issue);
+  const actorInitial = actorName.charAt(0)?.toUpperCase() ?? '?';
 
   return (
     <div className="w-[284px] rounded-xl border border-border bg-card p-3 shadow-[0_20px_60px_rgba(0,0,0,0.18),0_8px_20px_rgba(0,0,0,0.1)] scale-[1.02] rotate-[1deg]">
@@ -28,9 +31,16 @@ export function KanbanCardDragOverlay({ issue }: { issue: KanbanIssue }) {
           <p className="truncate text-[13px] font-medium text-foreground">{issue.title}</p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">{issue.ticketId}</p>
         </div>
-        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.04em] ${priorityStyles[issue.priority] || priorityStyles.medium}`}>
-          {issue.priority}
-        </span>
+        <span
+            className={cn(
+              'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+              issue.ticketMode === 'ASSET_ISSUE'
+                ? 'bg-[#fff3f2] text-[#b3261e]'
+                : 'bg-[#f4f8ff] text-[#2454a6]',
+            )}
+          >
+            {issue.ticketMode === 'ASSET_ISSUE' ? 'Asset' : 'General'}
+          </span>
       </div>
 
       {issue.description && (
@@ -42,10 +52,10 @@ export function KanbanCardDragOverlay({ issue }: { issue: KanbanIssue }) {
       <div className="mt-3 flex items-center gap-3">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
-            {assigneeInitial}
+            {actorInitial}
           </div>
           <span className="truncate text-[11px] text-muted-foreground">
-            {issue.assignees[0]?.name ?? 'Unassigned'}
+            {issue.status === 'cancelled' ? `Cancelled by ${actorName}` : actorName}
           </span>
         </div>
 

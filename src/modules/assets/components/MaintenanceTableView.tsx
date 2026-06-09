@@ -9,15 +9,17 @@ import {
   getSortedRowModel,
   useReactTable,
   type SortingState,
+  type PaginationState,
 } from '@tanstack/react-table';
 import {
   BadgeCheck,
   ChevronDown,
   ChevronUp,
   Hammer,
-  RefreshCcw,
+  LaptopMinimal,
+  Search,
+  X,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -33,9 +35,22 @@ import {
   FloatingPanelRoot,
   useFloatingPanel,
 } from '@/components/ui/floating-panel';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { formatDate, humanize } from '@/modules/assets/lib/assetUtils';
+import { conditionBadge, formatDate, humanize } from '@/modules/assets/lib/assetUtils';
 import type { MaintenanceTicket } from '@/modules/assets/api/assetServerActions';
+import type { AssetCondition } from '@/modules/assets/types/assetTypes';
+
+const PAGE_SIZE = 10;
 
 const statusStyle: Record<string, { dot: string; label: string; bg: string; text: string }> = {
   OPEN: { dot: '#2563eb', label: 'Open', bg: 'bg-blue-50', text: 'text-blue-700' },
@@ -68,63 +83,78 @@ function resolvePriority(t: MaintenanceTicket): 'high' | 'medium' | 'low' {
   return 'low';
 }
 
+const STATUS_DOT: Record<string, string> = {
+  OPEN: 'bg-[#3b82f6]',
+  IN_PROGRESS: 'bg-[#eab308]',
+  COMPLETED: 'bg-[#22c55e]',
+  CANCELLED: 'bg-[#9ca3af]',
+};
+
+function StatusDot({ status }: { status: string }) {
+  const label = status === 'IN_PROGRESS' ? 'In Progress' : humanize(status);
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className={cn('size-1.5 rounded-full shrink-0', STATUS_DOT[status] || 'bg-[#9ca3af]')} />
+      <span className="text-[13px] text-slate-707 dark:text-slate-350 font-medium">{label}</span>
+    </span>
+  );
+}
+
 const COLUMNS = [
   {
     id: 'ticketId',
-    header: 'Ticket',
+    header: 'Ticket No.',
     accessorFn: (row: MaintenanceTicket) => row.ticketId,
     cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="text-[12px] font-semibold tabular-nums text-[#1d1d1f]">{getValue()}</span>
+      <span className="text-[13px] font-mono text-muted-foreground font-medium">
+        {getValue()}
+      </span>
     ),
     enableSorting: true,
   },
   {
-    id: 'assetName',
+    id: 'asset',
     header: 'Asset',
-    accessorFn: (row: MaintenanceTicket) => row.assetName ?? '—',
-    cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="block max-w-40 truncate text-[13px] font-medium text-[#1d1d1f]" title={getValue()}>{getValue()}</span>
-    ),
-  },
-  {
-    id: 'assetCode',
-    header: 'Code',
-    accessorFn: (row: MaintenanceTicket) => row.assetCode ?? '—',
-    cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="text-[12px] text-[#6e6e73]">{getValue()}</span>
-    ),
+    cell: ({ row }: { row: { original: MaintenanceTicket } }) => {
+      const ticket = row.original;
+      return (
+        <span className="text-[14px] font-semibold text-slate-900 dark:text-white">
+          {ticket.assetName || '—'}
+        </span>
+      );
+    },
   },
   {
     id: 'maintenanceType',
-    header: 'Type',
+    header: 'Category',
     accessorFn: (row: MaintenanceTicket) => row.maintenanceType,
     cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="inline-flex items-center rounded-full bg-[#f0f4f8] px-2.5 py-0.5 text-[11px] font-medium text-[#5b6470]">
-        {humanize(getValue())}
-      </span>
+      <span className="text-[13px] text-muted-foreground font-medium">{humanize(getValue())}</span>
     ),
   },
   {
-    id: 'issueDescription',
-    header: 'Issue',
-    accessorFn: (row: MaintenanceTicket) => row.issueDescription,
+    id: 'loggedByName',
+    header: 'Holder',
+    accessorFn: (row: MaintenanceTicket) => row.loggedByName ?? '—',
     cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="block max-w-64 truncate text-[13px] text-[#6e6e73]" title={getValue()}>
-        {getValue()}
-      </span>
+      <span className="text-[13px] text-slate-707 dark:text-slate-350 font-medium">{getValue()}</span>
     ),
   },
   {
-    id: 'priority',
-    header: 'Priority',
-    accessorFn: (row: MaintenanceTicket) => resolvePriority(row),
+    id: 'assetCondition',
+    header: 'Condition',
+    accessorFn: (row: MaintenanceTicket) => row.assetCondition ?? 'GOOD',
     cell: ({ getValue }: { getValue: () => string }) => {
-      const s = priorityStyle[getValue()] || priorityStyle.low;
+      const condition = getValue();
       return (
-        <div className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full" style={{ backgroundColor: s.dot }} />
-          <span className="text-[12px] font-medium text-[#1d1d1f]">{s.label}</span>
-        </div>
+        <Badge
+          className={cn(
+            'rounded-md border-0 px-2 py-0.5 text-[11px] font-semibold tracking-wide',
+            conditionBadge(condition as AssetCondition),
+          )}
+        >
+          {humanize(condition)}
+        </Badge>
       );
     },
   },
@@ -132,45 +162,16 @@ const COLUMNS = [
     id: 'status',
     header: 'Status',
     accessorFn: (row: MaintenanceTicket) => row.status,
-    cell: ({ getValue }: { getValue: () => string }) => {
-      const s = statusStyle[getValue()] || statusStyle.OPEN;
-      return (
-        <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold', s.bg, s.text)}>
-          <span className="size-1.5 rounded-full" style={{ backgroundColor: s.dot }} />
-          {s.label}
-        </span>
-      );
-    },
-  },
-  {
-    id: 'assetLifecycle',
-    header: 'Asset State',
-    accessorFn: (row: MaintenanceTicket) => row.assetLifecycleStatusLabel ?? '—',
-    cell: ({ row, getValue }: { row: { original: MaintenanceTicket }; getValue: () => string }) => {
-      const tone = lifecycleStyle[row.original.assetLifecycleStatus ?? ''] ?? { bg: 'bg-neutral-100', text: 'text-neutral-600' };
-      return (
-        <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold', tone.bg, tone.text)}>
-          {getValue()}
-        </span>
-      );
-    },
+    cell: ({ getValue }: { getValue: () => string }) => <StatusDot status={getValue()} />,
   },
   {
     id: 'createdAt',
     header: 'Date',
     accessorFn: (row: MaintenanceTicket) => row.createdAt,
     cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="whitespace-nowrap text-[12px] tabular-nums text-[#6e6e73]">{formatDate(getValue())}</span>
+      <span className="text-[13px] font-medium text-muted-foreground">{formatDate(getValue())}</span>
     ),
     enableSorting: true,
-  },
-  {
-    id: 'loggedByName',
-    header: 'Reported By',
-    accessorFn: (row: MaintenanceTicket) => row.loggedByName ?? '—',
-    cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="block max-w-32 truncate text-[12px] text-[#6e6e73]" title={getValue()}>{getValue()}</span>
-    ),
   },
 ];
 
@@ -207,6 +208,10 @@ function TicketDetailPanel({ ticket }: { ticket: MaintenanceTicket }) {
           <DetailRow label="Type" value={ticket.maintenanceType ? humanize(ticket.maintenanceType) : null} />
           <DetailRow label="Reported By" value={ticket.loggedByName} />
           <DetailRow label="Asset State" value={ticket.assetLifecycleStatusLabel} />
+          <DetailRow
+            label="Replacement"
+            value={ticket.replacementDecision ? humanize(ticket.replacementDecision) : 'Pending'}
+          />
           <DetailRow label="Date" value={ticket.createdAt ? formatDate(ticket.createdAt) : null} />
           <DetailRow
             label="Swap Path"
@@ -222,6 +227,11 @@ function TicketDetailPanel({ ticket }: { ticket: MaintenanceTicket }) {
           <div className="mt-4 border-t border-[#f0f0f2] pt-4">
             <span className="text-[12px] font-medium text-neutral-400">Issue Description</span>
             <p className="mt-1.5 text-[13px] leading-5 text-[#1d1d1f]">{ticket.issueDescription}</p>
+            {ticket.swapPreview?.reason && (
+              <div className="mt-3 rounded-2xl border border-[#eef0f3] bg-[#fbfbfc] px-3 py-2.5 text-[12px] leading-5 text-[#5f6673]">
+                {ticket.swapPreview.reason}
+              </div>
+            )}
           </div>
         )}
       </FloatingPanelBody>
@@ -229,31 +239,52 @@ function TicketDetailPanel({ ticket }: { ticket: MaintenanceTicket }) {
   );
 }
 
+interface TableInnerProps {
+  tickets: MaintenanceTicket[];
+  search: string;
+  onSearchChange: (val: string) => void;
+  statusFilter: string;
+  onStatusChange: (val: string) => void;
+  typeFilter: string;
+  onTypeChange: (val: string) => void;
+  statusFilterOptions: string[];
+  typeFilterOptions: string[];
+  hasActiveFilters: boolean;
+  onClearFilters: () => void;
+  className?: string;
+}
+
 function TableInner({
   tickets,
+  search,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  typeFilter,
+  onTypeChange,
+  statusFilterOptions,
+  typeFilterOptions,
+  hasActiveFilters,
+  onClearFilters,
   className,
-  onOpenSwap,
-}: {
-  tickets: MaintenanceTicket[];
-  className?: string;
-  onOpenSwap: (ticketId: string) => void;
-}) {
+}: TableInnerProps) {
   const { openFloatingPanel, setTitle } = useFloatingPanel();
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: PAGE_SIZE });
 
   const data = useMemo(() => tickets, [tickets]);
 
   const table = useReactTable({
     data,
     columns: COLUMNS,
-    state: { sorting },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
   });
 
   const { rows } = table.getRowModel();
@@ -264,45 +295,132 @@ function TableInner({
     openFloatingPanel(new DOMRect(window.innerWidth / 2, window.innerHeight / 2, 0, 0));
   }
 
+  const paginationPages = useMemo(() => {
+    const pageCount = table.getPageCount();
+    const pageIndex = table.getState().pagination.pageIndex;
+    if (pageCount <= 7) {
+      return Array.from({ length: pageCount }, (_, i) => i);
+    }
+    const pages: (number | 'ellipsis')[] = [0];
+    if (pageIndex > 2) pages.push('ellipsis');
+    const start = Math.max(1, pageIndex - 1);
+    const end = Math.min(pageCount - 2, pageIndex + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (pageIndex < pageCount - 3) pages.push('ellipsis');
+    pages.push(pageCount - 1);
+    return pages;
+  }, [table]);
+
   return (
-    <>
-      <div className={cn('rounded-xl border border-[#e5e7eb] bg-white', className)}>
+    <div className={cn('bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col', className)}>
+      {/* Search and Filter Section inside Card Container */}
+      <div className="px-8 py-6 border-b border-border">
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search tickets by ID, asset, issue..."
+              value={search}
+              onChange={(e) => {
+                onSearchChange(e.target.value);
+                setPagination({ pageIndex: 0, pageSize: PAGE_SIZE });
+              }}
+              className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Select
+              value={typeFilter}
+              onValueChange={(value) => {
+                onTypeChange(value);
+                setPagination({ pageIndex: 0, pageSize: PAGE_SIZE });
+              }}
+            >
+              <SelectTrigger className="h-9 w-[130px] text-xs border border-border bg-card rounded-xl">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL" className="text-xs">Category</SelectItem>
+                {typeFilterOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt} className="text-xs">
+                    {humanize(opt)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => {
+                onStatusChange(value);
+                setPagination({ pageIndex: 0, pageSize: PAGE_SIZE });
+              }}
+            >
+              <SelectTrigger className="h-9 w-[130px] text-xs border border-border bg-card rounded-xl">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL" className="text-xs">Status</SelectItem>
+                {statusFilterOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt} className="text-xs">
+                    {humanize(opt)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  onClearFilters();
+                  setPagination({ pageIndex: 0, pageSize: PAGE_SIZE });
+                }}
+                className="h-9 rounded-xl border-border hover:bg-muted text-xs font-semibold px-3"
+              >
+                <X className="size-3.5 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id}>
+              <TableRow key={hg.id} className="border-b border-border bg-slate-50/50 dark:bg-slate-900/10 hover:bg-transparent">
                 {hg.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400"
+                    className="h-11 px-6 text-[12px] font-bold text-muted-foreground uppercase tracking-wider font-bold"
                   >
                     {header.isPlaceholder ? null : (
                       <button
                         type="button"
-                        className="flex items-center gap-1 cursor-pointer select-none"
+                        className="flex items-center gap-1 cursor-pointer select-none text-muted-foreground hover:text-foreground transition-colors font-bold uppercase tracking-wider"
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {header.column.getCanSort() && (
                           <span className="flex flex-col">
-                            <ChevronUp className={cn('size-3 -mb-1', header.column.getIsSorted() === 'asc' ? 'text-[#1d1d1f]' : 'text-[#d2d2d7]')} />
-                            <ChevronDown className={cn('size-3', header.column.getIsSorted() === 'desc' ? 'text-[#1d1d1f]' : 'text-[#d2d2d7]')} />
+                            <ChevronUp className={cn('size-3 -mb-1', header.column.getIsSorted() === 'asc' ? 'text-foreground' : 'text-[#d2d2d7]')} />
+                            <ChevronDown className={cn('size-3', header.column.getIsSorted() === 'desc' ? 'text-foreground' : 'text-[#d2d2d7]')} />
                           </span>
                         )}
                       </button>
                     )}
                   </TableHead>
                 ))}
-                <TableHead className="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
-                  Availability
-                </TableHead>
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={COLUMNS.length + 1} className="py-12 text-center text-[13px] text-[#6e6e73]">
+                <TableCell colSpan={COLUMNS.length} className="py-12 text-center text-[13px] text-[#6e6e73]">
                   No matching tickets
                 </TableCell>
               </TableRow>
@@ -310,44 +428,14 @@ function TableInner({
               rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="cursor-pointer border-b border-[#f0f0f2] transition-colors hover:bg-[#f9fafb]"
+                  className="cursor-pointer border-b border-border hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors"
                   onClick={() => handleRowClick(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-2.5 px-3">
+                    <TableCell key={cell.id} className="px-6 py-3.5 text-slate-705 dark:text-slate-350 align-middle font-medium">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
-                  <TableCell className="py-2.5 px-3">
-                    <div className="flex items-center gap-2">
-                      {row.original.swapPreview?.options.map((option) => (
-                        <span
-                          key={option.mode}
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-[10px] font-medium',
-                            option.available ? 'bg-[#eff6ff] text-[#2454a6]' : 'bg-[#fff1f1] text-[#b3261e]',
-                          )}
-                        >
-                          {option.mode === 'PERMANENT_REPLACEMENT' ? 'Exact' : 'Temp'} {option.availableCount}
-                        </span>
-                      ))}
-                      {row.original.swapPreview?.requiresReplacementValidation && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 rounded-full border-[#d1d5db] px-2.5 text-[11px]"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onOpenSwap(row.original.id);
-                          }}
-                        >
-                          <RefreshCcw className="mr-1 size-3" />
-                          Swap
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -355,43 +443,51 @@ function TableInner({
         </Table>
       </div>
 
-      {table.getPageCount() > 1 && (
-        <div className="mt-3 flex items-center justify-between px-1">
-          <span className="text-[12px] text-neutral-400 tabular-nums">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+      {data.length > 0 && (
+        <div className="p-4 bg-slate-50/30 dark:bg-slate-900/10 border-t border-border text-xs text-muted-foreground flex justify-between items-center shrink-0">
+          <span className="font-semibold text-muted-foreground">
+            Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-
+            {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, data.length)}
+            {' '}of {data.length} entries
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
               size="sm"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="h-7 rounded-lg border-[#e5e7eb] px-2.5 text-[12px] font-normal"
+              className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
             >
-              Prev
+              Previous
             </Button>
-            {Array.from({ length: table.getPageCount() }).map((_, i) => (
-              <Button
-                key={i}
-                variant={table.getState().pagination.pageIndex === i ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => table.setPageIndex(i)}
-                className={cn(
-                  'h-7 min-w-7 rounded-lg px-1 text-[12px]',
-                  table.getState().pagination.pageIndex === i
-                    ? 'bg-[#1d1d1f] text-white'
-                    : 'border-[#e5e7eb] text-[#6e6e73]',
-                )}
-              >
-                {i + 1}
-              </Button>
-            ))}
+            {paginationPages.map((p, idx) =>
+              p === 'ellipsis' ? (
+                <span key={`e-${idx}`} className="flex size-7 items-center justify-center text-[12px] text-muted-foreground">
+                  &hellip;
+                </span>
+              ) : (
+                <Button
+                  key={p}
+                  variant={table.getState().pagination.pageIndex === p ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => table.setPageIndex(p)}
+                  className={cn(
+                    'h-7 min-w-7 rounded-lg px-1 text-[11px] font-semibold',
+                    table.getState().pagination.pageIndex === p
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'border-border text-muted-foreground bg-card hover:bg-muted',
+                  )}
+                >
+                  {p + 1}
+                </Button>
+              ),
+            )}
             <Button
               variant="outline"
               size="sm"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="h-7 rounded-lg border-[#e5e7eb] px-2.5 text-[12px] font-normal"
+              className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
             >
               Next
             </Button>
@@ -400,22 +496,42 @@ function TableInner({
       )}
 
       {selectedTicket && <TicketDetailPanel ticket={selectedTicket} />}
-    </>
+    </div>
   );
+}
+
+export interface MaintenanceTableViewProps {
+  tickets: MaintenanceTicket[];
+  search: string;
+  onSearchChange: (val: string) => void;
+  statusFilter: string;
+  onStatusChange: (val: string) => void;
+  typeFilter: string;
+  onTypeChange: (val: string) => void;
+  statusFilterOptions: string[];
+  typeFilterOptions: string[];
+  hasActiveFilters: boolean;
+  onClearFilters: () => void;
+  className?: string;
 }
 
 export function MaintenanceTableView({
   tickets,
+  search,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  typeFilter,
+  onTypeChange,
+  statusFilterOptions,
+  typeFilterOptions,
+  hasActiveFilters,
+  onClearFilters,
   className,
-  onOpenSwap,
-}: {
-  tickets: MaintenanceTicket[];
-  className?: string;
-  onOpenSwap: (ticketId: string) => void;
-}) {
+}: MaintenanceTableViewProps) {
   const data = useMemo(() => tickets, [tickets]);
 
-  if (!data.length) {
+  if (!data.length && !hasActiveFilters) {
     return (
       <div className={cn('flex flex-col items-center justify-center py-16 text-center', className)}>
         <div className="flex size-10 items-center justify-center rounded-2xl bg-[#f9fafb]">
@@ -429,7 +545,20 @@ export function MaintenanceTableView({
 
   return (
     <FloatingPanelRoot>
-      <TableInner tickets={data} onOpenSwap={onOpenSwap} />
+      <TableInner
+        tickets={data}
+        search={search}
+        onSearchChange={onSearchChange}
+        statusFilter={statusFilter}
+        onStatusChange={onStatusChange}
+        typeFilter={typeFilter}
+        onTypeChange={onTypeChange}
+        statusFilterOptions={statusFilterOptions}
+        typeFilterOptions={typeFilterOptions}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={onClearFilters}
+        className={className}
+      />
     </FloatingPanelRoot>
   );
 }

@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { EmployeePagination } from '@/modules/employees/components/EmployeePagination';
 import {
   Popover,
   PopoverContent,
@@ -33,7 +34,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMemberPermissionsQuery } from '@/modules/attendance/hooks/queries/attendance';
+import { resolveAttendancePermissions } from '@/modules/attendance/utils/attendancePermissions';
+import { useManualAttendanceMutation, useDeleteAttendanceMutation } from '@/modules/attendance/hooks/mutations/attendance';
+import type { ApiError } from '@/modules/attendance/types/attendanceTypes';
 import { formatDate, formatHours } from '@/modules/attendance/utils/attendanceFormatters';
 import { exportAttendanceReportAction } from '@/modules/attendance-report/api';
 import {
@@ -223,7 +228,7 @@ function TabSlider<T extends string>({
           className={cn(
             'inline-flex items-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg relative z-10 transition-colors duration-200',
             activeMode === mode
-              ? 'text-[#00874A]'
+              ? 'text-primary'
               : 'text-neutral-500 hover:text-neutral-900',
           )}
         >
@@ -363,6 +368,8 @@ function ReportTable({
 }
 
 function TimesheetGrid({
+  orgSlug,
+  memberId,
   rows,
   employees,
   dateFrom,
@@ -371,7 +378,11 @@ function TimesheetGrid({
   selectedEmployeeIds,
   onToggleEmployee,
   onToggleManyEmployees,
+  canEdit,
+  allEmployeeIds,
 }: {
+  orgSlug: string;
+  memberId: string;
   rows: AttendanceReportRow[];
   employees: AttendanceReportEmployeeOption[];
   dateFrom: string;
@@ -380,6 +391,8 @@ function TimesheetGrid({
   selectedEmployeeIds: string[];
   onToggleEmployee: (employeeId: string, checked: boolean) => void;
   onToggleManyEmployees: (employeeIds: string[], checked: boolean) => void;
+  canEdit: boolean;
+  allEmployeeIds: string[];
 }) {
   const days = daysBetween(dateFrom, dateTo);
   const byEmployee = useMemo(() => {
@@ -391,16 +404,150 @@ function TimesheetGrid({
     return map;
   }, [rows]);
 
-  const visibleEmployeeIds = employees.map((employee) => employee.id);
+  const [editingCell, setEditingCell] = useState<{ employeeId: string; date: string } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
+
+  const manualMutation = useManualAttendanceMutation(orgSlug, memberId);
+  const deleteMutation = useDeleteAttendanceMutation(orgSlug);
+
+  async function handleSave(employeeId: string, dayString: string, value: string) {
+    setEditingCell(null);
+    const trimmed = value.trim();
+    if (trimmed === '' || trimmed === '-') {
+      // If empty or dashboard placeholder "-", delete the record
+      setIsSaving(true);
+      try {
+        await deleteMutation.mutateAsync({
+          orgSlug,
+          memberId,
+          targetMemberId: employeeId,
+          date: dayString,
+        });
+        await queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+        toast.success('Hours deleted successfully');
+      } catch (err: unknown) {
+        let message = 'Failed to delete hours';
+        if (err instanceof Error) {
+          try { message = (JSON.parse(err.message) as ApiError).message; } catch { message = err.message; }
+        }
+        toast.error(message);
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    const newHours = parseFloat(trimmed);
+    if (isNaN(newHours) || newHours < 0 || newHours > 24) {
+      toast.error('Please enter a valid number of hours between 0 and 24');
+      return;
+    }
+
+    if (newHours === 0) {
+      // Delete the record
+      setIsSaving(true);
+      try {
+        await deleteMutation.mutateAsync({
+          orgSlug,
+          memberId,
+          targetMemberId: employeeId,
+          date: dayString,
+        });
+        await queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+        toast.success('Hours deleted successfully');
+      } catch (err: unknown) {
+        let message = 'Failed to delete hours';
+        if (err instanceof Error) {
+          try { message = (JSON.parse(err.message) as ApiError).message; } catch { message = err.message; }
+        }
+        toast.error(message);
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    // Find if there is an existing record
+    const employeeRows = byEmployee.get(employeeId);
+    const existingRow = employeeRows?.get(dayString);
+
+    let startHour = 9;
+    let startMinute = 0;
+
+    if (existingRow?.clockIn) {
+      try {
+        const d = new Date(existingRow.clockIn);
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Kolkata',
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: false,
+        });
+        const parts = formatter.formatToParts(d);
+        const h = parts.find(p => p.type === 'hour')?.value;
+        const m = parts.find(p => p.type === 'minute')?.value;
+        if (h) startHour = parseInt(h, 10);
+        if (m) startMinute = parseInt(m, 10);
+      } catch {
+        // ignore and fallback to 9:00 AM
+      }
+    }
+
+    const totalMinutes = Math.round(newHours * 60);
+    const endMinutesSinceMidnight = (startHour * 60 + startMinute) + totalMinutes;
+    const endHour = Math.floor(endMinutesSinceMidnight / 60) % 24;
+    const endMinute = endMinutesSinceMidnight % 60;
+
+    // Helper function to combine date + time into ISO datetime string (Asia/Kolkata timezone)
+    const toISOFromIST = (dateStr: string, timeStr: string): string => {
+      const istString = `${dateStr}T${timeStr}:00+05:30`;
+      return new Date(istString).toISOString();
+    };
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const clockInStr = toISOFromIST(dayString, `${pad(startHour)}:${pad(startMinute)}`);
+    const clockOutStr = toISOFromIST(dayString, `${pad(endHour)}:${pad(endMinute)}`);
+
+    setIsSaving(true);
+    try {
+      await manualMutation.mutateAsync({
+        target_member_id: employeeId,
+        date: dayString,
+        clock_in: clockInStr,
+        clock_out: clockOutStr,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+      toast.success('Hours updated successfully');
+    } catch (err: unknown) {
+      let message = 'Failed to update hours';
+      if (err instanceof Error) {
+        try { message = (JSON.parse(err.message) as ApiError).message; } catch { message = err.message; }
+      }
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   const selectedSet = new Set(selectedEmployeeIds);
-  const visibleSelectedCount = visibleEmployeeIds.filter((id) => selectedSet.has(id)).length;
-  const allVisibleSelected = visibleEmployeeIds.length > 0 && visibleSelectedCount === visibleEmployeeIds.length;
-  const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
-  const selectAllState: boolean | 'indeterminate' = allVisibleSelected
+  const totalSelectedCount = allEmployeeIds.filter((id) => selectedSet.has(id)).length;
+  const allSelected = allEmployeeIds.length > 0 && totalSelectedCount === allEmployeeIds.length;
+  const someSelected = totalSelectedCount > 0 && !allSelected;
+  const selectAllState: boolean | 'indeterminate' = allSelected
     ? true
-    : someVisibleSelected
+    : someSelected
       ? 'indeterminate'
       : false;
+
+  console.log("TIMESHEET GRID STATE:", {
+    allEmployeeIds,
+    selectedEmployeeIds,
+    totalSelectedCount,
+    allSelected,
+    someSelected,
+    selectAllState,
+  });
 
   if (isLoading) {
     return <div className="h-80 animate-pulse rounded-b-xl bg-neutral-50" />;
@@ -414,8 +561,8 @@ function TimesheetGrid({
             <th className="sticky left-0 z-10 w-[52px] bg-canvas px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
               <Checkbox
                 checked={selectAllState}
-                onCheckedChange={(value) => onToggleManyEmployees(visibleEmployeeIds, value === true)}
-                aria-label="Select all visible employees"
+                onCheckedChange={(value) => onToggleManyEmployees(allEmployeeIds, value === true)}
+                aria-label="Select all employees"
               />
             </th>
             <th className="sticky left-[52px] z-10 w-[320px] border-r border-neutral-100 bg-canvas px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">Employee</th>
@@ -452,9 +599,44 @@ function TimesheetGrid({
                   {days.map((day) => {
                     const row = dayMap.get(toYMD(day));
                     const hours = row?.totalHours;
+                    const isEditing = editingCell?.employeeId === employee.id && editingCell?.date === toYMD(day);
+
                     return (
-                      <td key={toYMD(day)} className="px-3 py-3 text-center font-mono text-[13px] text-neutral-900">
-                        {hours != null ? `${hours.toFixed(1)}h` : '-'}
+                      <td key={toYMD(day)} className="px-3 py-3 text-center align-middle">
+                        {isEditing ? (
+                          <Input
+                            type="text"
+                            className="w-16 h-8 text-center text-xs font-semibold font-mono border-primary focus-visible:ring-primary focus-visible:ring-1 mx-auto bg-surface"
+                            defaultValue={hours != null ? hours.toFixed(1) : ''}
+                            onBlur={(e) => handleSave(employee.id, toYMD(day), e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSave(employee.id, toYMD(day), e.currentTarget.value);
+                              } else if (e.key === 'Escape') {
+                                setEditingCell(null);
+                              }
+                            }}
+                            autoFocus
+                            disabled={isSaving}
+                          />
+                        ) : (
+                          <span
+                            onClick={() => {
+                              if (canEdit && !isSaving) {
+                                setEditingCell({ employeeId: employee.id, date: toYMD(day) });
+                              }
+                            }}
+                            className={cn(
+                              "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-semibold border font-mono min-w-[58px] select-none transition-all duration-150 h-7",
+                              hours != null
+                                ? "text-emerald-600 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/20 dark:border-emerald-900/30 hover:bg-emerald-100/70"
+                                : "text-neutral-400 border-transparent hover:text-neutral-950",
+                              canEdit && "cursor-pointer"
+                            )}
+                          >
+                            {hours != null ? `${hours.toFixed(1)}h` : '-'}
+                          </span>
+                        )}
                       </td>
                     );
                   })}
@@ -494,6 +676,10 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [force8, setForce8] = useState(false);
   const [pendingExport, setPendingExport] = useState<AttendanceReportExportFormat | null>(null);
+  const [timesheetPage, setTimesheetPage] = useState(1);
+  const [timesheetPageSize, setTimesheetPageSize] = useState(10);
+
+  useEffect(() => { setTimesheetPage(1); }, [employeeSearch, projectId]);
 
   function handleViewChange(next: ViewMode) {
     if (next === viewMode) return;
@@ -514,6 +700,10 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
   const permissionsQuery = useMemberPermissionsQuery(orgSlug, memberId);
   const reportScope = normalizeScope(permissionsQuery.data?.attendanceReport?.view);
   const canView = reportScope === 'organization';
+  const permissions = useMemo(() => {
+    return resolveAttendancePermissions(permissionsQuery.data ?? {});
+  }, [permissionsQuery.data]);
+  const canEdit = permissions.edit === 'organization';
   const optionsQuery = useAttendanceReportOptionsQuery(orgSlug, memberId, canView);
 
   const dateRange = useMemo(() => {
@@ -534,7 +724,13 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
 
   const effectiveSelectedEmployeeIds = useMemo(() => {
     const eligibleIds = new Set(eligibleEmployees.map((employee) => employee.id));
-    return selectedEmployeeIds.filter((id) => eligibleIds.has(id));
+    const result = selectedEmployeeIds.filter((id) => eligibleIds.has(id));
+    console.log("SHELL STATE:", {
+      selectedEmployeeIds,
+      eligibleIds: Array.from(eligibleIds),
+      effectiveSelectedEmployeeIds: result
+    });
+    return result;
   }, [eligibleEmployees, selectedEmployeeIds]);
 
   function toggleEmployee(employeeId: string, checked: boolean) {
@@ -589,11 +785,13 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
   function handleProjectChange(value: string) {
     setProjectId(value);
     setSelectedEmployeeIds([]);
+    setTimesheetPage(1);
   }
 
   function handleClearFilters() {
     setEmployeeSearch('');
     setProjectId(ALL_PROJECTS);
+    setTimesheetPage(1);
   }
 
   const rows = useMemo(() => reportQuery.data?.items ?? [], [reportQuery.data?.items]);
@@ -609,6 +807,13 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
     const allowed = new Set(searchFilteredEmployees);
     return eligibleEmployees.filter((employee) => allowed.has(employee.id));
   }, [eligibleEmployees, searchFilteredEmployees]);
+
+  const timesheetTotalEmployees = visibleEmployeesForView.length;
+  const timesheetTotalPages = Math.max(1, Math.ceil(timesheetTotalEmployees / timesheetPageSize));
+  const paginatedTimesheetEmployees = useMemo(() => {
+    const start = (timesheetPage - 1) * timesheetPageSize;
+    return visibleEmployeesForView.slice(start, start + timesheetPageSize);
+  }, [visibleEmployeesForView, timesheetPage, timesheetPageSize]);
 
   const selectedVisibleEmployees = useMemo(() => {
     const selectedSet = new Set(effectiveSelectedEmployeeIds);
@@ -700,28 +905,37 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
               />
               <div className="flex items-center gap-1">
                 {periodMode !== 'custom' ? (
-                  <>
-                    <Button type="button" variant="ghost" size="icon-sm" onClick={() => shiftPeriod(-1)} aria-label="Previous period">
+                  <div className="inline-flex items-center bg-muted/30 border border-border rounded-lg overflow-hidden h-9">
+                    <button
+                      type="button"
+                      onClick={() => shiftPeriod(-1)}
+                      aria-label="Previous period"
+                      className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                    >
                       <ChevronLeft className="size-4" />
-                    </Button>
-                    <div className="flex h-9 min-w-[180px] items-center justify-center gap-2 rounded-md border border-neutral-100 bg-surface px-3 text-[13px] font-semibold text-neutral-900 shadow-[var(--shadow-1)]">
-                      <CalendarDays className="size-3.5 text-neutral-400" />
+                    </button>
+                    <span className="px-3 text-xs font-semibold tracking-tight text-foreground border-x border-border/80 h-full flex items-center bg-card/25 min-w-[170px] justify-center select-none font-mono">
                       {periodLabel(periodMode, dateRange.dateFrom, dateRange.dateTo)}
-                    </div>
-                    <Button type="button" variant="ghost" size="icon-sm" onClick={() => shiftPeriod(1)} aria-label="Next period">
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => shiftPeriod(1)}
+                      aria-label="Next period"
+                      className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                    >
                       <ChevronRight className="size-4" />
-                    </Button>
-                  </>
+                    </button>
+                  </div>
                 ) : (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-9 min-w-[180px] justify-start gap-2 rounded-md border border-neutral-100 bg-surface px-3 text-[13px] font-semibold text-neutral-900 shadow-[var(--shadow-1)]"
+                      <button
+                        type="button"
+                        className="h-9 px-4 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted/50 text-foreground hover:text-foreground transition-all flex items-center justify-center gap-2 font-mono shadow-sm"
                       >
-                        <CalendarDays className="size-3.5 text-neutral-400" />
+                        <CalendarDays className="size-4 text-muted-foreground" />
                         {periodLabel(periodMode, dateRange.dateFrom, dateRange.dateTo)}
-                      </Button>
+                      </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
                       <Calendar
@@ -835,16 +1049,35 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
             onToggleManyEmployees={toggleManyEmployees}
           />
         ) : (
-          <TimesheetGrid
-            rows={searchFilteredRows}
-            employees={visibleEmployeesForView}
-            dateFrom={dateRange.dateFrom}
-            dateTo={dateRange.dateTo}
-            isLoading={reportQuery.isLoading || optionsQuery.isLoading}
-            selectedEmployeeIds={effectiveSelectedEmployeeIds}
-            onToggleEmployee={toggleEmployee}
-            onToggleManyEmployees={toggleManyEmployees}
-          />
+          <>
+            <TimesheetGrid
+              orgSlug={orgSlug}
+              memberId={memberId}
+              rows={searchFilteredRows}
+              employees={paginatedTimesheetEmployees}
+              dateFrom={dateRange.dateFrom}
+              dateTo={dateRange.dateTo}
+              isLoading={reportQuery.isLoading || optionsQuery.isLoading}
+              selectedEmployeeIds={effectiveSelectedEmployeeIds}
+              onToggleEmployee={toggleEmployee}
+              onToggleManyEmployees={toggleManyEmployees}
+              canEdit={canEdit}
+              allEmployeeIds={visibleEmployeesForView.map((emp) => emp.id)}
+            />
+            <div className="border-t border-neutral-100 px-5 py-4">
+              <EmployeePagination
+                page={timesheetPage}
+                totalPages={timesheetTotalPages}
+                total={timesheetTotalEmployees}
+                pageSize={timesheetPageSize}
+                onPageChange={(p) => setTimesheetPage(p)}
+                onPageSizeChange={(size) => {
+                  setTimesheetPageSize(size);
+                  setTimesheetPage(1);
+                }}
+              />
+            </div>
+          </>
         )}
       </section>
     </main>
