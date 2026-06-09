@@ -282,6 +282,7 @@ export function useStageWorkspaceByJobSlug(
   memberId: string,
   jobSlug: string | null,
   stageSlug: string | null,
+  initialData?: StageWorkspace,
 ) {
   return useQuery<StageWorkspace, Error>({
     queryKey: ['ats-stage-workspace-job-slug', orgSlug, jobSlug, stageSlug],
@@ -293,6 +294,8 @@ export function useStageWorkspaceByJobSlug(
         stageSlug: stageSlug ?? '',
       }),
     enabled: !!orgSlug && !!memberId && !!jobSlug && !!stageSlug,
+    initialData,
+    staleTime: initialData ? 30_000 : 0,
     refetchInterval: 30_000,
   });
 }

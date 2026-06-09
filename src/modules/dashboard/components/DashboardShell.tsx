@@ -6,10 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   CalendarDays,
+  Check,
   FileText,
   Inbox,
   Search,
   Umbrella,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,12 @@ import {
   FloatingPanelTrigger,
 } from "@/components/ui/floating-panel";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useTeamWeeklyPlanQuery } from "@/hooks/queries/weekly_plan";
 import { cn } from "@/lib/utils";
@@ -33,7 +41,6 @@ import { fetchLeavePageContextAction } from "@/modules/leave/api/leaveServerActi
 import { useApproveLeaveRequest } from "@/modules/leave/hooks/useApproveLeaveRequest";
 import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
 import { useRejectLeaveRequest } from "@/modules/leave/hooks/useRejectLeaveRequest";
-import type { LeaveRequestRecord } from "@/modules/leave/types/leaveTypes";
 import { canApproveLeaves, resolveLeavePermissions } from "@/modules/leave/utils/leavePermissions";
 import { getCurrentWeekState } from "@/modules/weekly-plan/date";
 import { InviteEmployeeDialog } from "@/modules/employees/components/InviteEmployeeDialog";
@@ -48,14 +55,6 @@ interface DashboardShellProps {
   memberId: string;
   roleName: string | null;
   permissions: RolePermissions | null;
-}
-
-function formatRangeLabel(startDate: string, endDate: string, days: number): string {
-  const start = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate}T00:00:00`);
-  const range = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" });
-  if (startDate === endDate) return `${range.format(start)} - ${days} day${days === 1 ? "" : "s"}`;
-  return `${range.format(start)}-${range.format(end)} - ${days} day${days === 1 ? "" : "s"}`;
 }
 
 function getDisplayName(name: string | null, fallback: string): string {
@@ -182,12 +181,10 @@ function AttendanceOverviewSection({
               title="Absent Members"
               className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white px-3.5 text-[12px] font-medium text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
             >
-              <span className="inline-flex items-center justify-center gap-2 leading-none">
-                Absent
-                <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold leading-none text-neutral-900">
-                  {filteredAbsentCount}
+                <span className="inline-flex items-center justify-center gap-2 leading-none">
+                  Absent
+                  <span className="text-[11px] font-semibold text-neutral-900">{filteredAbsentCount}</span>
                 </span>
-              </span>
             </FloatingPanelTrigger>
             <FloatingPanelContent className="w-[min(calc(100vw-2rem),22rem)] max-h-[min(34rem,calc(100vh-2rem))] overflow-hidden rounded-[18px] border-neutral-200 shadow-[0_20px_70px_rgba(0,0,0,0.16)]">
               <FloatingPanelBody className="max-h-[calc(min(34rem,100vh-2rem)-2.75rem)] overflow-y-auto px-4 pb-4 pt-1">
@@ -229,10 +226,10 @@ function AttendanceOverviewSection({
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
             <Input
-              placeholder="Search members..."
+              placeholder="Search Employees"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 border-0 bg-canvas pl-9 text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10"
+              className="h-9 border-0 bg-white pl-9 text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10"
             />
           </div>
         </div>
@@ -241,7 +238,7 @@ function AttendanceOverviewSection({
         {sections.map((s) => {
           const filtered = s.members.filter(filterFn);
           return (
-            <div key={s.label} className="rounded-[8px] border border-zinc-200/80 bg-white/80 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <div key={s.label} className="rounded-[8px] bg-white/80 p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
                 {s.label} <span className="ml-1.5 text-neutral-900">{filtered.length}</span>
               </p>
@@ -288,98 +285,114 @@ function PendingLeaveRequestsSection({
       .catch((error: unknown) => toast.error(getErrorMessage(error, "Failed to reject")));
   }
 
-  return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-      <div className="flex items-start gap-4">
-        <div className="min-w-0">
-          <h2 className="text-[0.9375rem] font-semibold text-neutral-900">Leave Requests</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Incoming employee time-off approval requests pipeline.
-          </p>
-        </div>
-      </div>
+  const isApproving = approveMutation.isPending;
+  const isRejecting = rejectMutation.isPending;
+  const df = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" });
 
-      <div className="mt-5">
+  return (
+    <TooltipProvider>
+      <section className="rounded-2xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <h2 className="mb-4 text-base font-semibold text-neutral-900">Leave Requests</h2>
+
         {leaveRequestsQuery.isLoading ? (
-          <div className="flex min-h-[180px] gap-3 rounded-xl border border-dashed border-zinc-200 bg-neutral-50/50 p-4">
+          <div className="flex min-h-[180px] gap-3 rounded-xl bg-neutral-50/50 p-4">
             {[1, 2, 3].map((i) => <div key={i} className="h-12 flex-1 animate-pulse rounded-lg bg-neutral-100" />)}
           </div>
         ) : (leaveRequestsQuery.data?.items?.length ?? 0) > 0 ? (
-          <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-neutral-50/20 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            {(leaveRequestsQuery.data?.items ?? []).map((request) => (
-              <LeaveRequestRow
-                key={request.id}
-                request={request}
-                isApproving={approveMutation.isPending}
-                isRejecting={rejectMutation.isPending}
-                onApprove={handleApprove}
-                onReject={handleReject}
-              />
-            ))}
+          <div className="overflow-hidden rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <table className="w-full table-fixed">
+              <colgroup>
+                <col style={{ width: "28%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "16%" }} />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-black/4">
+                  <th className="truncate px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Name</th>
+                  <th className="truncate px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Leave Type</th>
+                  <th className="truncate px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Start Date</th>
+                  <th className="truncate px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">End Date</th>
+                  <th className="truncate px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Duration</th>
+                  <th className="truncate px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(leaveRequestsQuery.data?.items ?? []).map((request) => {
+                  const memberName = getDisplayName(request.member.name, "Unnamed member");
+                  const initials = memberName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "U";
+                  const startDate = new Date(`${request.startDate}T00:00:00`);
+                  const endDate = new Date(`${request.endDate}T00:00:00`);
+
+                  return (
+                    <tr key={request.id} className="border-b border-black/4 last:border-0">
+                      <td className="truncate px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-[11px] font-medium text-primary">
+                            {initials}
+                          </div>
+                          <span className="truncate text-sm font-medium text-neutral-900">{memberName}</span>
+                        </div>
+                      </td>
+                      <td className="truncate px-4 py-3 text-sm text-neutral-700">{request.leaveType.name}</td>
+                      <td className="truncate px-4 py-3 text-sm text-neutral-700">{df.format(startDate)}</td>
+                      <td className="truncate px-4 py-3 text-sm text-neutral-700">{df.format(endDate)}</td>
+                      <td className="truncate px-4 py-3 text-sm text-neutral-700">{request.days} day{request.days === 1 ? "" : "s"}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="size-8 rounded-lg p-0 text-neutral-400 transition-all duration-100 hover:text-red-500"
+                                onClick={() => handleReject(request.id)}
+                                disabled={isApproving || isRejecting}
+                              >
+                                <X className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Deny</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="size-8 rounded-lg p-0 text-neutral-400 transition-all duration-100 hover:text-green-500"
+                                onClick={() => handleApprove(request.id)}
+                                disabled={isApproving || isRejecting}
+                              >
+                                <Check className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Approve</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-zinc-200 bg-neutral-50/20 px-4 py-8 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+          <div className="rounded-xl border border-dashed border-zinc-200 bg-neutral-50/20 px-4 py-8">
             <div className="mx-auto flex min-h-[180px] max-w-md flex-col items-center justify-center text-center">
               <div className="mb-3.5 flex size-11 items-center justify-center rounded-full bg-zinc-100 text-neutral-400">
                 <Inbox className="size-5" />
               </div>
               <p className="text-sm font-semibold text-neutral-900">No leave requests pending</p>
-              <p className="mt-1.5 max-w-[320px] text-xs text-neutral-400 leading-relaxed">
+              <p className="mt-1.5 max-w-[320px] text-xs leading-relaxed text-neutral-400">
                 New approvals will appear here automatically when someone submits a leave form request.
               </p>
             </div>
           </div>
         )}
-      </div>
-    </section>
-  );
-}
-
-function LeaveRequestRow({
-  request,
-  isApproving,
-  isRejecting,
-  onApprove,
-  onReject,
-}: Readonly<{
-  request: LeaveRequestRecord;
-  isApproving: boolean;
-  isRejecting: boolean;
-  onApprove: (requestId: string) => void;
-  onReject: (requestId: string) => void;
-}>) {
-  const memberName = getDisplayName(request.member.name, "Unnamed member");
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-black/4 px-5 py-3.5 last:border-0">
-      <div className="min-w-0 flex items-center gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-[11px] font-medium text-primary">
-          {memberName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "U"}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-neutral-900">{memberName}</p>
-          <p className="text-xs text-neutral-500">{request.leaveType.name} · {formatRangeLabel(request.startDate, request.endDate, request.days)}</p>
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 rounded-lg text-xs transition-all active:scale-[0.98] duration-100"
-          onClick={() => onReject(request.id)}
-          disabled={isApproving || isRejecting}
-        >
-          Deny
-        </Button>
-        <Button
-          size="sm"
-          className="h-8 rounded-lg bg-primary text-xs text-white hover:bg-primary-hover active:scale-[0.98] transition-all duration-100"
-          onClick={() => onApprove(request.id)}
-          disabled={isApproving || isRejecting}
-        >
-          Approve
-        </Button>
-      </div>
-    </div>
+      </section>
+    </TooltipProvider>
   );
 }
 
@@ -397,7 +410,7 @@ function AdminActionItem({
   children?: React.ReactNode;
 }>) {
   const content = (
-    <div className="flex items-center gap-4 rounded-xl border border-zinc-200/70 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all hover:border-zinc-300 hover:bg-zinc-50/40">
+    <div className="flex items-center gap-4 rounded-xl bg-white px-4 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all hover:bg-zinc-50/40">
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-semibold text-neutral-800">{title}</p>
         <p className="mt-0.5 text-xs text-neutral-400 leading-normal">{description}</p>
@@ -464,8 +477,8 @@ function QuickShortcutsCard({ orgSlug }: { readonly orgSlug: string }) {
   ];
 
   return (
-    <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-      <h2 className="mb-4 text-[0.9375rem] font-semibold text-neutral-900">Quick Shortcuts</h2>
+    <div className="rounded-2xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <h2 className="mb-4 text-base font-semibold text-neutral-900">Quick Shortcuts</h2>
       <div className="grid grid-cols-3 gap-3">
         {shortcuts.map((s) => {
           const Icon = s.icon;
@@ -473,7 +486,7 @@ function QuickShortcutsCard({ orgSlug }: { readonly orgSlug: string }) {
             <Link
               key={s.href}
               href={s.href}
-              className="group flex items-center gap-3 rounded-xl border border-zinc-200/70 bg-white px-4 py-3 transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50/80 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] active:scale-[0.98]"
+              className="group flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-[0_4px_12px_rgb(0,0,0,0.04)] transition-all duration-200 hover:bg-zinc-50/80 hover:shadow-[0_8px_24px_rgb(0,0,0,0.06)] active:scale-[0.98]"
             >
               <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", s.iconBg, s.iconColor)}>
                 <Icon className="size-4" aria-hidden="true" />
@@ -495,7 +508,7 @@ function OpenInternalPositionsCard({
   memberId,
 }: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId">>) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+    <div className="overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <JobOpeningsCard orgSlug={orgSlug} memberId={memberId} />
     </div>
   );
@@ -506,7 +519,7 @@ function HeatmapPanel({
   memberId,
 }: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId">>) {
   return (
-    <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+    <div className="rounded-2xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <WorkLogHeatmapCard orgSlug={orgSlug} memberId={memberId} variant="default" />
     </div>
   );
@@ -565,15 +578,8 @@ function AdminDashboardContent({
             {canApproveLeave ? <PendingLeaveRequestsSection orgSlug={orgSlug} memberId={memberId} /> : null}
 
             {(canInviteEmployees || canManageDepartments || canManageAssets || canManagePermissions) ? (
-              <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-                <div className="flex items-start">
-                  <div className="min-w-0">
-                    <h2 className="text-[0.9375rem] font-semibold text-neutral-900">Quick Actions</h2>
-                    <p className="mt-1 text-xs text-neutral-500">
-                      Fast organizational control pathways.
-                    </p>
-                  </div>
-                </div>
+              <section className="rounded-2xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <h2 className="mb-4 text-base font-semibold text-neutral-900">Quick Actions</h2>
 
                 <div className="mt-5 space-y-3.5">
                   {canInviteEmployees ? (

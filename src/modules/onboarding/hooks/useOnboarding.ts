@@ -21,25 +21,25 @@ import type {
   Role,
 } from '@/modules/onboarding/types/onboardingTypes';
 
-export function acceptedOnboardingWorkspaceKey(orgSlug: string, jobSlug: string, stageSlug: string) {
-  return ['accepted-onboarding-workspace', orgSlug, jobSlug, stageSlug] as const;
+export function acceptedOnboardingWorkspaceKey(orgSlug: string, jobSlug: string | null, stageSlug: string | null) {
+  return ['accepted-onboarding-workspace', orgSlug, jobSlug ?? 'none', stageSlug ?? 'none'] as const;
 }
 
-export function onboardWorkspaceKey(orgSlug: string, jobSlug: string, stageSlug: string) {
-  return ['onboard-workspace', orgSlug, jobSlug, stageSlug] as const;
+export function onboardWorkspaceKey(orgSlug: string, jobSlug: string | null, stageSlug: string | null) {
+  return ['onboard-workspace', orgSlug, jobSlug ?? 'none', stageSlug ?? 'none'] as const;
 }
 
 export function useAcceptedOnboardingWorkspace(
   orgSlug: string,
   memberId: string,
-  jobSlug: string,
-  stageSlug: string,
+  jobSlug: string | null,
+  stageSlug: string | null,
   initialData?: AcceptedOnboardingWorkspace,
 ) {
   return useQuery<AcceptedOnboardingWorkspace, Error>({
     queryKey: acceptedOnboardingWorkspaceKey(orgSlug, jobSlug, stageSlug),
     queryFn: () =>
-      fetchAcceptedOnboardingWorkspaceAction({ orgSlug, memberId, jobSlug, stageSlug }),
+      fetchAcceptedOnboardingWorkspaceAction({ orgSlug, memberId, jobSlug: jobSlug ?? '', stageSlug: stageSlug ?? '' }),
     enabled: !!orgSlug && !!memberId && !!jobSlug && !!stageSlug,
     initialData,
     retry: false,
@@ -50,14 +50,14 @@ export function useAcceptedOnboardingWorkspace(
 export function useOnboardWorkspace(
   orgSlug: string,
   memberId: string,
-  jobSlug: string,
-  stageSlug: string,
+  jobSlug: string | null,
+  stageSlug: string | null,
   initialData?: OnboardWorkspace,
 ) {
   return useQuery<OnboardWorkspace, Error>({
     queryKey: onboardWorkspaceKey(orgSlug, jobSlug, stageSlug),
     queryFn: () =>
-      fetchOnboardWorkspaceAction({ orgSlug, memberId, jobSlug, stageSlug }),
+      fetchOnboardWorkspaceAction({ orgSlug, memberId, jobSlug: jobSlug ?? '', stageSlug: stageSlug ?? '' }),
     enabled: !!orgSlug && !!memberId && !!jobSlug && !!stageSlug,
     initialData,
     retry: false,

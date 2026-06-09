@@ -69,13 +69,13 @@ import type { MyInterview, PipelineApplication, PipelineStage } from '@/modules/
 import type { CreatePipelineStageInput as SetupCreatePipelineStageInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import type { RolePermissions } from '@/modules/roles/types/role';
 
-const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
-const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
+const MICROSOFT_CALENDAR_SCOPE = 'Calendars.ReadWrite';
+const MICROSOFT_CONNECT_RETURN_PARAM = 'atsMicrosoftConnected';
 const DRAG_EDGE_SCROLL_THRESHOLD = 40;
 const DRAG_EDGE_SCROLL_SPEED = 18;
 const EMPTY_STAGES: PipelineStage[] = [];
 
-type PendingGoogleAction =
+type PendingMicrosoftAction =
   | { kind: 'create-stage'; data: CreatePipelineStageInput }
   | { kind: 'update-stage'; stageId: string; data: UpdatePipelineStageInput }
   | { kind: 'accept-interview'; applicationId: string; eventId: string };
@@ -124,9 +124,9 @@ function readActionError(error: unknown, fallback: string): string {
   }
 }
 
-function isGoogleConnectError(error: unknown): boolean {
+function isMicrosoftConnectError(error: unknown): boolean {
   const message = readActionError(error, '').toLowerCase();
-  return message.includes('connect a google account') || message.includes('reconnect google');
+  return message.includes('connect a microsoft account') || message.includes('reconnect microsoft');
 }
 
 function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineStageInput {
@@ -138,15 +138,15 @@ function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineSt
   };
 }
 
-function actionNeedsGoogle(action: PendingGoogleAction): boolean {
+function actionNeedsMicrosoft(action: PendingMicrosoftAction): boolean {
   return action.kind === 'accept-interview';
 }
 
-function requiredGoogleScope(): string {
-  return GOOGLE_CALENDAR_SCOPE;
+function requiredMicrosoftScope(): string {
+  return MICROSOFT_CALENDAR_SCOPE;
 }
 
-function permissionErrorForAction(action: PendingGoogleAction, permissions?: RolePermissions | null): string | null {
+function permissionErrorForAction(action: PendingMicrosoftAction, permissions?: RolePermissions | null): string | null {
   if (!permissions) return null;
   const required =
     action.kind === 'accept-interview'
@@ -158,13 +158,13 @@ function permissionErrorForAction(action: PendingGoogleAction, permissions?: Rol
     : `You do not have permission to ${required.label}.`;
 }
 
-function readGoogleAccounts(data: unknown): Array<{ providerId?: unknown; scope?: unknown; scopes?: unknown }> {
+function readAuthAccounts(data: unknown): Array<{ providerId?: unknown; scope?: unknown; scopes?: unknown }> {
   return Array.isArray(data)
     ? data.filter((item): item is { providerId?: unknown; scope?: unknown; scopes?: unknown } => typeof item === 'object' && item !== null)
     : [];
 }
 
-function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
+function normalizeMicrosoftScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
   if (Array.isArray(account.scopes)) {
     return account.scopes.filter((scope): scope is string => typeof scope === 'string');
   }
@@ -368,12 +368,12 @@ export function AtsKanbanBoard({
   const rejectInterview = useRejectInterview(orgSlug, memberId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const pendingStorageKey = useMemo(
-    () => `ats-google-pending:${orgSlug}:${jobPostingId ?? 'none'}`,
+    () => `ats-microsoft-pending:${orgSlug}:${jobPostingId ?? 'none'}`,
     [jobPostingId, orgSlug],
   );
-  const [pendingGoogleAction, setPendingGoogleAction] = useState<PendingGoogleAction | null>(null);
-  const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
-  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const [pendingMicrosoftAction, setPendingMicrosoftAction] = useState<PendingMicrosoftAction | null>(null);
+  const [microsoftConnectOpen, setMicrosoftConnectOpen] = useState(false);
+  const [isConnectingMicrosoft, setIsConnectingMicrosoft] = useState(false);
   const [schedulingRequest, setSchedulingRequest] = useState<{ application: PipelineApplication; eventId: string } | null>(null);
   const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
   const [completionNote, setCompletionNote] = useState('');
@@ -400,44 +400,44 @@ export function AtsKanbanBoard({
   const createDefaultPipeline = useCreateRequisitionDefaultPipeline(orgSlug, memberId, setupRequisitionId);
   const importPipeline = useImportRequisitionPipeline(orgSlug, memberId, setupRequisitionId);
 
-  const hasGoogleAccess = useCallback(async (scope: string) => {
+  const hasMicrosoftAccess = useCallback(async (scope: string) => {
     const result = await authClient.listAccounts();
     if (result.error) {
-      throw new Error(result.error.message ?? 'Could not check Google connection');
+      throw new Error(result.error.message ?? 'Could not check Microsoft connection');
     }
 
-    const accounts = readGoogleAccounts(result.data);
-    const googleAccount = accounts.find((account) => account.providerId === 'google');
-    
-    if (!googleAccount) return false;
+    const accounts = readAuthAccounts(result.data);
+    const microsoftAccount = accounts.find((account) => account.providerId === 'microsoft');
 
-    return normalizeGoogleScopes(googleAccount).includes(scope);
+    if (!microsoftAccount) return false;
+
+    return normalizeMicrosoftScopes(microsoftAccount).includes(scope);
   }, []);
 
-  const hasGoogleLinked = useCallback(async () => {
+  const hasMicrosoftLinked = useCallback(async () => {
     const result = await authClient.listAccounts();
     if (result.error) return false;
-    
-    return readGoogleAccounts(result.data).some((account) => account.providerId === 'google');
+
+    return readAuthAccounts(result.data).some((account) => account.providerId === 'microsoft');
   }, []);
 
-  const requestGoogleConnection = useCallback((action: PendingGoogleAction) => {
-    setPendingGoogleAction(action);
-    setGoogleConnectOpen(true);
+  const requestMicrosoftConnection = useCallback((action: PendingMicrosoftAction) => {
+    setPendingMicrosoftAction(action);
+    setMicrosoftConnectOpen(true);
   }, []);
 
   const runStageAction = useCallback(
-    async (action: PendingGoogleAction, options?: { skipGoogleCheck?: boolean }) => {
+    async (action: PendingMicrosoftAction, options?: { skipMicrosoftCheck?: boolean }) => {
       const permissionError = permissionErrorForAction(action, permissions);
       if (permissionError) {
         toast.error(permissionError);
         return;
       }
 
-      if (!options?.skipGoogleCheck && actionNeedsGoogle(action)) {
-        const hasAccess = await hasGoogleAccess(requiredGoogleScope());
+      if (!options?.skipMicrosoftCheck && actionNeedsMicrosoft(action)) {
+        const hasAccess = await hasMicrosoftAccess(requiredMicrosoftScope());
         if (!hasAccess) {
-          requestGoogleConnection(action);
+          requestMicrosoftConnection(action);
           return;
         }
       }
@@ -465,23 +465,23 @@ export function AtsKanbanBoard({
         });
         setRenamingStage(null);
       } catch (error) {
-        if (!options?.skipGoogleCheck && isGoogleConnectError(error)) {
-          requestGoogleConnection(action);
+        if (!options?.skipMicrosoftCheck && isMicrosoftConnectError(error)) {
+          requestMicrosoftConnection(action);
           return;
         }
         toast.error(readActionError(error, action.kind === 'create-stage' ? 'Failed to create stage' : 'Failed to update stage'));
       }
     },
-    [allBoardApplications, createStage, hasGoogleAccess, permissions, requestGoogleConnection, updateStage],
+    [allBoardApplications, createStage, hasMicrosoftAccess, permissions, requestMicrosoftConnection, updateStage],
   );
 
   useEffect(() => {
     if (!jobPostingId) return;
 
     const url = new URL(window.location.href);
-    if (!url.searchParams.has(GOOGLE_CONNECT_RETURN_PARAM)) return;
+    if (!url.searchParams.has(MICROSOFT_CONNECT_RETURN_PARAM)) return;
 
-    url.searchParams.delete(GOOGLE_CONNECT_RETURN_PARAM);
+    url.searchParams.delete(MICROSOFT_CONNECT_RETURN_PARAM);
     window.history.replaceState(null, '', url.toString());
 
     const storedAction = window.sessionStorage.getItem(pendingStorageKey);
@@ -490,12 +490,12 @@ export function AtsKanbanBoard({
     window.sessionStorage.removeItem(pendingStorageKey);
 
     try {
-      const action = JSON.parse(storedAction) as PendingGoogleAction;
+      const action = JSON.parse(storedAction) as PendingMicrosoftAction;
       window.setTimeout(() => {
         void runStageAction(action);
       }, 0);
     } catch {
-      toast.error('Google connected, but the pending stage change could not be restored');
+      toast.error('Microsoft connected, but the pending stage change could not be restored');
     }
   }, [jobPostingId, pendingStorageKey, runStageAction]);
 
@@ -672,33 +672,30 @@ export function AtsKanbanBoard({
     // Scheduling from kanban happens only after the interviewer accepts and picks candidate-facing slots.
   }
 
-  async function connectGoogleForEvaluation() {
-    if (!pendingGoogleAction) return;
+  async function connectMicrosoftForEvaluation() {
+    if (!pendingMicrosoftAction) return;
 
     try {
-      setIsConnectingGoogle(true);
-      window.sessionStorage.setItem(pendingStorageKey, JSON.stringify(pendingGoogleAction));
+      setIsConnectingMicrosoft(true);
+      window.sessionStorage.setItem(pendingStorageKey, JSON.stringify(pendingMicrosoftAction));
       const callbackUrl = new URL(window.location.href);
-      callbackUrl.searchParams.set(GOOGLE_CONNECT_RETURN_PARAM, '1');
+      callbackUrl.searchParams.set(MICROSOFT_CONNECT_RETURN_PARAM, '1');
 
-      const requiredScope = requiredGoogleScope();
-      const alreadyLinked = await hasGoogleLinked();
-      
+      const requiredScope = requiredMicrosoftScope();
+      const alreadyLinked = await hasMicrosoftLinked();
+
       const result = await authClient.linkSocial({
-        provider: 'google',
+        provider: 'microsoft',
         callbackURL: callbackUrl.toString(),
-        scopes: [requiredScope],
+        scopes: ['User.Read', requiredScope, 'offline_access'],
         disableRedirect: true,
       });
-      
+
       if (result.error) {
-        // If account is already linked, this is expected when requesting additional scopes
-        // The error might be misleading, but the OAuth flow should still work
         if (alreadyLinked && result.error.message?.includes('already linked')) {
-          // Continue with the OAuth flow to request additional scopes
-          console.log('Requesting additional scopes for existing Google account');
+          console.log('Requesting additional scopes for existing Microsoft account');
         } else {
-          throw new Error(result.error.message ?? 'Google connection failed');
+          throw new Error(result.error.message ?? 'Microsoft connection failed');
         }
       }
 
@@ -708,13 +705,13 @@ export function AtsKanbanBoard({
         return;
       }
 
-      toast.error('Google did not return a connection URL');
+      toast.error('Microsoft did not return a connection URL');
       window.sessionStorage.removeItem(pendingStorageKey);
     } catch (error) {
       window.sessionStorage.removeItem(pendingStorageKey);
-      toast.error(error instanceof Error ? error.message : 'Google connection failed');
+      toast.error(error instanceof Error ? error.message : 'Microsoft connection failed');
     } finally {
-      setIsConnectingGoogle(false);
+      setIsConnectingMicrosoft(false);
     }
   }
 
@@ -1198,28 +1195,28 @@ export function AtsKanbanBoard({
         onCreateDefault={createSetupDefaultPipeline}
         onImport={importSetupPipeline}
       />
-      <Dialog open={googleConnectOpen} onOpenChange={setGoogleConnectOpen}>
+      <Dialog open={microsoftConnectOpen} onOpenChange={setMicrosoftConnectOpen}>
         <DialogContent>
           <DialogHeader>
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary-ghost text-primary">
               <CalendarPlus className="size-5" />
             </div>
-            <DialogTitle>Connect Google Calendar</DialogTitle>
+            <DialogTitle>Connect Microsoft Calendar</DialogTitle>
             <DialogDescription>
-              Interview meetings need Google Calendar access to create a Meet link and email the candidate.
+              Interview meetings need Microsoft Calendar access to create a Teams link and email the candidate.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => setGoogleConnectOpen(false)}
-              disabled={isConnectingGoogle}
+              onClick={() => setMicrosoftConnectOpen(false)}
+              disabled={isConnectingMicrosoft}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={connectGoogleForEvaluation} disabled={isConnectingGoogle}>
-              {isConnectingGoogle ? 'Opening Google' : 'Connect Google'}
+            <Button type="button" onClick={connectMicrosoftForEvaluation} disabled={isConnectingMicrosoft}>
+              {isConnectingMicrosoft ? 'Opening Microsoft' : 'Connect Microsoft'}
             </Button>
           </DialogFooter>
         </DialogContent>
