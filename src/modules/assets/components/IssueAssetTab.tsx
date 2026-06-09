@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useMemo, useState } from 'react';
+import { ChangeEvent, ReactNode, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   flexRender,
@@ -266,6 +266,7 @@ export function IssueAssetTab({
   isGroupsLoading,
   assignedAssets,
   orgSlug,
+  headerAction,
 }: {
   members: AssetLookupOption[];
   availableGroups: AvailableAssetGroup[];
@@ -275,6 +276,7 @@ export function IssueAssetTab({
   isGroupsLoading?: boolean;
   assignedAssets?: AssetSummary[];
   orgSlug: string;
+  headerAction?: ReactNode;
 }) {
   const queryClient = useQueryClient();
   const mutations = useAssetMutations(orgSlug, memberId);
@@ -549,7 +551,10 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
     <div className="w-full space-y-8">
       {/* Issue Asset Form */}
       <div>
-        <h2 className="text-[18px] font-semibold text-[#111827]">Issue Asset</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[18px] font-semibold text-[#111827]">Issue Asset</h2>
+          {headerAction}
+        </div>
         <Separator className="my-4" />
 
         <div className="space-y-6 max-w-3xl">

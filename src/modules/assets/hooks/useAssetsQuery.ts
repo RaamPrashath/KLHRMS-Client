@@ -9,10 +9,12 @@ import {
   fetchAssetCategoriesAction,
   fetchAvailableAssetGroupsAction,
   fetchEmployeeAssetViewAction,
+  fetchReplacementsAction,
 } from '@/modules/assets/api/assetServerActions';
 import type {
   AssetCategoryDefinition,
   AssetDetail,
+  ReplacementRecord,
   AssetFiltersState,
   AssetListResponse,
   AssetMetaResponse,
@@ -79,5 +81,14 @@ export function useAssetSwapPreviewQuery(
     queryKey: ['asset-swap-preview', orgSlug, maintenanceId],
     queryFn: () => fetchAssetSwapPreviewAction({ orgSlug, memberId, maintenanceId: maintenanceId! }),
     enabled: !!orgSlug && !!memberId && !!maintenanceId,
+  });
+}
+
+export function useReplacementsQuery(orgSlug: string, memberId: string) {
+  return useQuery<ReplacementRecord[], Error>({
+    queryKey: ['replacements', orgSlug],
+    queryFn: () => fetchReplacementsAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
+    staleTime: 1000 * 60 * 2,
   });
 }

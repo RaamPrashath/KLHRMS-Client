@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PackagePlus, Plus, Search } from 'lucide-react';
+import { PackagePlus, Plus, RefreshCcw, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,7 @@ import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog
 import { AssetFormDialog } from '@/modules/assets/components/AssetFormDialog';
 import { AssetSettingsDialog } from '@/modules/assets/components/AssetSettingsDialog';
 import { RevokeAndSwapDialog } from '@/modules/assets/components/RevokeAndSwapDialog';
+import { ReplacementDialog } from '@/modules/assets/components/ReplacementDialog';
 import {
   ACTION_GREEN,
   defaultAssetForm,
@@ -83,6 +84,7 @@ export function AssetsPageShell({
   const [ticketDialogMode, setTicketDialogMode] = useState<'issue' | 'return'>('issue');
   const [ticketDialogAssetId, setTicketDialogAssetId] = useState<string | null>(null);
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
+  const [replacementDialogOpen, setReplacementDialogOpen] = useState(false);
 
   const router = useRouter();
   const tabOptions = useMemo(() => getAssetTabOptions(canManageAssets), [canManageAssets]);
@@ -509,6 +511,18 @@ export function AssetsPageShell({
             onIssue={handleIssueGroupAsset}
             isGroupsLoading={availableGroupsQuery.isLoading}
             assignedAssets={allFetchedAssets}
+            headerAction={
+              canManageAssets && (
+                <button
+                  type="button"
+                  onClick={() => setReplacementDialogOpen(true)}
+                  className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0"
+                >
+                  <RefreshCcw className="mr-1.5 size-3.5" />
+                  Replacement Option
+                </button>
+              )
+            }
           />
         </TabsContent>
 
@@ -572,6 +586,14 @@ export function AssetsPageShell({
             status: log.status,
             issueDescription: log.issueDescription,
           }))}
+      />
+
+      <ReplacementDialog
+        open={replacementDialogOpen}
+        onOpenChange={setReplacementDialogOpen}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        members={metaQuery.data?.members ?? []}
       />
 
       <AssetSettingsDialog

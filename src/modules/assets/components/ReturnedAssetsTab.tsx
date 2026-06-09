@@ -18,6 +18,7 @@ import {
   ChevronUp,
   Hammer,
   RotateCcw,
+  RotateCw,
   User2,
   X,
 } from 'lucide-react';
@@ -37,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { fetchReturnedAssetsAction } from '@/modules/assets/api/assetServerActions';
 import { conditionBadge, formatDate, humanize } from '@/modules/assets/lib/assetUtils';
 import type { ReturnedAssetItem } from '@/modules/assets/components/dashboard/dashboard.types';
+import { ReplacementTab } from '@/modules/assets/components/ReplacementTab';
 import { Search } from 'lucide-react';
 
 function ReturnedAssetDetailDialog({
@@ -371,145 +373,183 @@ export function ReturnedAssetsTab({
     setDetailOpen(true);
   }
 
+  const [subTab, setSubTab] = useState<'returned' | 'replacement'>('returned');
+
   return (
-    <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
-      {isLoading ? (
-        <div className="space-y-2 p-6">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/60 border border-border" />
-          ))}
+    <div>
+      <div className="mb-4 overflow-x-auto">
+        <div className="inline-flex min-w-fit items-center rounded-xl border border-black/4 bg-neutral-50 p-1">
+          <button
+            type="button"
+            onClick={() => setSubTab('returned')}
+            className={cn(
+              'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+              subTab === 'returned'
+                ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                : 'text-neutral-500 hover:text-neutral-900',
+            )}
+          >
+            <RotateCw className="size-3.5" />
+            Returned Assets
+          </button>
+          <button
+            type="button"
+            onClick={() => setSubTab('replacement')}
+            className={cn(
+              'inline-flex h-8 items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium transition-all duration-200 ease-out',
+              subTab === 'replacement'
+                ? 'bg-white text-primary shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                : 'text-neutral-500 hover:text-neutral-900',
+            )}
+          >
+            <ArrowLeftRight className="size-3.5" />
+            Replacement
+          </button>
         </div>
-      ) : isError ? (
-        <div className="flex items-center justify-center bg-card px-6 py-14 text-center">
-          <div>
-            <AlertTriangle className="mx-auto size-6 text-muted-foreground" />
-            <p className="mt-2 text-[14px] font-semibold text-foreground">Failed to load returned assets</p>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">Try refreshing the page</p>
-          </div>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="flex items-center justify-center bg-card px-6 py-14 text-center">
-          <div>
-            <ArrowLeftRight className="mx-auto size-6 text-muted-foreground" />
-            <p className="mt-2 text-[14px] font-semibold text-foreground">No returned assets yet</p>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">Returned assets will appear here</p>
-          </div>
-        </div>
-      ) : (
-        <div>
-          {/* Search Input in Card Header */}
-          <div className="px-8 py-6 border-b border-border">
-            <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <div className="relative flex-1 max-w-xs">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                <Input
-                  placeholder="Search assets..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    table.setPageIndex(0);
-                  }}
-                  className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
-                />
+      </div>
+
+      {subTab === 'returned' ? (
+        <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
+          {isLoading ? (
+            <div className="space-y-2 p-6">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/60 border border-border" />
+              ))}
+            </div>
+          ) : isError ? (
+            <div className="flex items-center justify-center bg-card px-6 py-14 text-center">
+              <div>
+                <AlertTriangle className="mx-auto size-6 text-muted-foreground" />
+                <p className="mt-2 text-[14px] font-semibold text-foreground">Failed to load returned assets</p>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">Try refreshing the page</p>
               </div>
             </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((hg) => (
-                  <TableRow key={hg.id} className="border-b border-border bg-slate-50/50 dark:bg-slate-900/10 hover:bg-transparent">
-                    {hg.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className="h-11 px-6 text-[12px] font-semibold text-[#86868b] uppercase tracking-wider"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className="cursor-pointer border-b border-border hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors"
-                    onClick={() => handleRowClick(row.original)}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="px-6 py-3.5 text-slate-705 dark:text-slate-350 align-middle font-medium">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {filteredItems.length > 0 && (
-            <div className="p-4 bg-slate-50/30 dark:bg-slate-900/10 border-t border-border text-xs text-muted-foreground flex justify-between items-center shrink-0">
-              <span className="font-semibold text-muted-foreground">
-                Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-
-                {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, filteredItems.length)}
-                {' '}of {filteredItems.length} entries
-              </span>
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
-                >
-                  Previous
-                </Button>
-                {paginationPages.map((p, idx) =>
-                  p === 'ellipsis' ? (
-                    <span key={`e-${idx}`} className="flex size-7 items-center justify-center text-[12px] text-muted-foreground">
-                      &hellip;
-                    </span>
-                  ) : (
-                    <Button
-                      key={p}
-                      variant={table.getState().pagination.pageIndex === p ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => table.setPageIndex(p)}
-                      className={cn(
-                        'h-7 min-w-7 rounded-lg px-1 text-[11px] font-semibold',
-                        table.getState().pagination.pageIndex === p
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                          : 'border-border text-muted-foreground bg-card hover:bg-muted',
-                      )}
-                    >
-                      {p + 1}
-                    </Button>
-                  ),
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                  className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
-                >
-                  Next
-                </Button>
+          ) : items.length === 0 ? (
+            <div className="flex items-center justify-center bg-card px-6 py-14 text-center">
+              <div>
+                <ArrowLeftRight className="mx-auto size-6 text-muted-foreground" />
+                <p className="mt-2 text-[14px] font-semibold text-foreground">No returned assets yet</p>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">Returned assets will appear here</p>
               </div>
+            </div>
+          ) : (
+            <div>
+              <div className="px-8 py-6 border-b border-border">
+                <div className="flex flex-col md:flex-row md:items-center gap-3">
+                  <div className="relative flex-1 max-w-xs">
+                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="Search assets..."
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        table.setPageIndex(0);
+                      }}
+                      className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((hg) => (
+                      <TableRow key={hg.id} className="border-b border-border bg-slate-50/50 dark:bg-slate-900/10 hover:bg-transparent">
+                        {hg.headers.map((header) => (
+                          <TableHead
+                            key={header.id}
+                            className="h-11 px-6 text-[12px] font-semibold text-[#86868b] uppercase tracking-wider"
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="cursor-pointer border-b border-border hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors"
+                        onClick={() => handleRowClick(row.original)}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="px-6 py-3.5 text-slate-705 dark:text-slate-350 align-middle font-medium">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {filteredItems.length > 0 && (
+                <div className="p-4 bg-slate-50/30 dark:bg-slate-900/10 border-t border-border text-xs text-muted-foreground flex justify-between items-center shrink-0">
+                  <span className="font-semibold text-muted-foreground">
+                    Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-
+                    {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, filteredItems.length)}
+                    {' '}of {filteredItems.length} entries
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.previousPage()}
+                      disabled={!table.getCanPreviousPage()}
+                      className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+                    >
+                      Previous
+                    </Button>
+                    {paginationPages.map((p, idx) =>
+                      p === 'ellipsis' ? (
+                        <span key={`e-${idx}`} className="flex size-7 items-center justify-center text-[12px] text-muted-foreground">
+                          &hellip;
+                        </span>
+                      ) : (
+                        <Button
+                          key={p}
+                          variant={table.getState().pagination.pageIndex === p ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => table.setPageIndex(p)}
+                          className={cn(
+                            'h-7 min-w-7 rounded-lg px-1 text-[11px] font-semibold',
+                            table.getState().pagination.pageIndex === p
+                              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                              : 'border-border text-muted-foreground bg-card hover:bg-muted',
+                          )}
+                        >
+                          {p + 1}
+                        </Button>
+                      ),
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.nextPage()}
+                      disabled={!table.getCanNextPage()}
+                      className="h-7 rounded-lg border-border px-2.5 text-[11px] font-semibold bg-card hover:bg-muted"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      <ReturnedAssetDetailDialog
-        item={selectedItem}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-      />
+          <ReturnedAssetDetailDialog
+            item={selectedItem}
+            open={detailOpen}
+            onOpenChange={setDetailOpen}
+          />
+        </div>
+      ) : (
+        <ReplacementTab orgSlug={orgSlug} memberId={memberId} />
+      )}
     </div>
   );
 }

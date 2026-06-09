@@ -360,3 +360,57 @@ export interface AssetSwapExecutionResult {
   assignedMemberId: string;
   assignedMemberName: string | null;
 }
+
+// ── Replacement Types ──────────────────────────────────────────────────────
+
+export interface ReplacementRecord {
+  id: string;
+  employeeMemberId: string;
+  employeeName: string | null;
+  employeeEmail: string | null;
+  originalAssetId: string;
+  originalAssetName: string;
+  originalAssetCode: string;
+  originalSerial: string | null;
+  originalUnitStatus: string | null;
+  replacementAssignmentId: string | null;
+  replacementAssetId: string;
+  replacementAssetName: string;
+  replacementAssetCode: string;
+  replacementSerial: string | null;
+  replacementMode: AssetReplacementMode;
+  expectedReturnDate: string | null;
+  returnReminderSent: boolean;
+  providedByMemberId: string | null;
+  providedByName: string | null;
+  ticketId: string | null;
+  maintenanceType: string | null;
+  maintenanceStatus: string | null;
+  issueDescription: string | null;
+  returnDate: string;
+  swapCompletedAt: string;
+}
+
+export interface ReplacementProvideInput {
+  employeeMemberId: string;
+  ticketId: string;
+  replacementMode: AssetReplacementMode;
+  expectedReturnDate?: string | null;
+  notes?: string | null;
+}
+
+export interface ReplacementRaiseAppraisalInput {
+  employeeMemberId: string;
+  ticketId: string;
+  replacementMode: AssetReplacementMode;
+  notes?: string | null;
+}
+
+export interface MemberTicketSummary {
+  id: string;
+  ticketId: string;
+  maintenanceType: string;
+  issueDescription: string;
+  status: string;
+  replacementDecision: string | null;
+}
