@@ -1,10 +1,5 @@
-import { redirect } from 'next/navigation';
+import { LeaveRequestsView } from '@/modules/leave/components/LeaveSectionViews';
 
-export default async function LeavesPage({
-  params,
-}: Readonly<{
-  params: Promise<{ orgSlug: string }>;
-}>) {
-  const { orgSlug } = await params;
-  redirect(`/${orgSlug}/leaves/requests`);
+export default function LeavesPage() {
+  return <LeaveRequestsView />;
 }

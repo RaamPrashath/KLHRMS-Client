@@ -21,7 +21,7 @@ export default async function ResumeParserPage({
   }
 
   const permissions = (member.role?.permissions as RolePermissions) ?? null;
-  if (getScope(permissions, 'candidates', 'view') === 'none') {
+  if (getScope(permissions, 'jobs', 'view') === 'none') {
     redirect(`/${orgSlug}`);
   }
 

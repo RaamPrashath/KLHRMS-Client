@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Cog, Laptop, Lock, Package, RefreshCcw, Search, Ticket, X } from 'lucide-react';
+import { Calendar, Cog, Laptop, Lock, Package, RefreshCcw, RotateCcw, Search, Ticket, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -10,6 +10,13 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAssetMutations } from '@/modules/assets/hooks/useAssetMutations';
 import {
   fetchMemberAssignedAssetsAction,
@@ -17,6 +24,28 @@ import {
 } from '@/modules/assets/api/assetServerActions';
 import { readError } from '@/modules/assets/lib/assetUtils';
 import type { AssetLookupOption, AssetReplacementMode } from '@/modules/assets/types/assetTypes';
+
+function getTicketPlaceholder(
+  selectedEmployeeId: string | null,
+  isLoading: boolean,
+  length: number,
+): string {
+  if (!selectedEmployeeId) return 'Select an employee first';
+  if (isLoading) return 'Loading tickets...';
+  if (length === 0) return 'No open tickets found';
+  return 'Choose a ticket...';
+}
+
+function getAssetPlaceholder(
+  selectedEmployeeId: string | null,
+  isLoading: boolean,
+  length: number,
+): string {
+  if (!selectedEmployeeId) return 'Select an employee first';
+  if (isLoading) return 'Loading...';
+  if (length === 0) return 'No assets assigned';
+  return 'Choose an assigned asset...';
+}
 
 function memberDisplayName(member: AssetLookupOption): string {
   const raw = (member.label || member.email || '').trim();
@@ -46,6 +75,7 @@ export function ReplacementDialog({
   const [employeeQuery, setEmployeeQuery] = useState('');
   const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [selectedAssignedAssetId, setSelectedAssignedAssetId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [replacementMode, setReplacementMode] = useState<AssetReplacementMode | null>(null);
   const [expectedReturnDate, setExpectedReturnDate] = useState('');
@@ -96,6 +126,7 @@ export function ReplacementDialog({
 
   function handleEmployeeSelect(member: AssetLookupOption) {
     setSelectedEmployeeId(member.id);
+    setSelectedAssignedAssetId(null);
     setSelectedTicketId(null);
     setReplacementMode(null);
     setExpectedReturnDate('');
@@ -116,6 +147,7 @@ export function ReplacementDialog({
 
   function handleClearEmployee() {
     setSelectedEmployeeId(null);
+    setSelectedAssignedAssetId(null);
     setEmployeeQuery('');
     setSelectedTicketId(null);
     setReplacementMode(null);
@@ -175,39 +207,39 @@ export function ReplacementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl p-0 gap-0 rounded-2xl overflow-hidden" showCloseButton={false}>
+      <DialogContent className="sm:max-w-xl max-h-[92vh] flex flex-col p-0 gap-0 rounded-2xl overflow-hidden" showCloseButton={false}>
         <DialogTitle className="sr-only">Replacement Option</DialogTitle>
         <DialogDescription className="sr-only">Select employee, ticket, and replacement mode to proceed.</DialogDescription>
 
         {/* Header */}
-        <div className="p-6 pb-4 border-b border-slate-100 flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2.5 text-slate-900">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <RefreshCcw className="w-4 h-4" />
+        <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 text-slate-900">
+              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <RefreshCcw className="w-3.5 h-3.5" />
               </div>
-              <h2 className="text-lg font-bold tracking-tight">Replacement Option</h2>
+              <h2 className="text-base font-bold tracking-tight">Replacement Option</h2>
             </div>
-            <p className="text-sm text-slate-500 pl-10">Select employee, ticket, and replacement mode to proceed.</p>
+            <p className="text-[12px] text-slate-500 pl-9">Select employee, ticket, and replacement mode to proceed.</p>
           </div>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition cursor-pointer"
+            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form */}
-        <form className="p-6 space-y-5 flex-1" onSubmit={(e) => { e.preventDefault(); handleProvide(); }}>
+        <form className="px-5 py-4 space-y-4 overflow-y-auto max-h-[60vh] flex-1" onSubmit={(e) => { e.preventDefault(); handleProvide(); }}>
 
           {/* Select Employee */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">Select Employee</label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Select Employee</label>
             <div className="relative" ref={employeeDropdownRef}>
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                <Search className="w-4.5 h-4.5" />
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                <Search className="w-4 h-4" />
               </span>
               <input
                 ref={employeeInputRef}
@@ -216,12 +248,12 @@ export function ReplacementDialog({
                 onChange={(e) => handleEmployeeInputChange(e.target.value)}
                 onFocus={() => setEmployeeDropdownOpen(true)}
                 placeholder="Search employee..."
-                className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium placeholder:text-slate-400 text-slate-800"
+                className="w-full pl-9 pr-9 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium placeholder:text-slate-400 text-slate-800"
               />
               <button
                 type="button"
                 onClick={selectedEmployeeId && employeeQuery ? handleClearEmployee : () => setEmployeeDropdownOpen(!employeeDropdownOpen)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 {selectedEmployeeId && employeeQuery ? (
                   <X className="w-4 h-4" />
@@ -232,22 +264,22 @@ export function ReplacementDialog({
 
               {/* Employee Dropdown */}
               {employeeDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-slate-200 shadow-lg z-50 max-h-60 overflow-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-slate-200 shadow-lg z-50 max-h-48 overflow-auto">
                   {filteredEmployees.length === 0 ? (
-                    <div className="p-3 text-sm text-slate-400 text-center">No employees found</div>
+                    <div className="p-3 text-xs text-slate-400 text-center">No employees found</div>
                   ) : (
                     filteredEmployees.map((member) => (
                       <button
                         key={member.id}
                         type="button"
                         onClick={() => handleEmployeeSelect(member)}
-                        className="w-full px-3 py-2.5 text-left hover:bg-slate-50 transition flex flex-col"
+                        className="w-full px-3 py-2 text-left hover:bg-slate-50 transition flex flex-col"
                       >
-                        <span className="text-[13px] font-medium text-slate-800">
+                        <span className="text-[12px] font-medium text-slate-800">
                           {memberDisplayName(member)}
                         </span>
                         {member.email && (
-                          <span className="text-[11px] text-slate-400">{member.email}</span>
+                          <span className="text-[10px] text-slate-400">{member.email}</span>
                         )}
                       </button>
                     ))
@@ -257,140 +289,64 @@ export function ReplacementDialog({
             </div>
           </div>
 
-          {/* Select Ticket */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">Select Ticket</label>
-            {!selectedEmployeeId ? (
-              <div className="relative bg-slate-50/60 rounded-xl border border-slate-200/80 cursor-not-allowed">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <Ticket className="w-4.5 h-4.5" />
-                </span>
-                <select disabled className="w-full pl-10 pr-10 py-2.5 bg-transparent appearance-none text-sm font-medium text-slate-400 cursor-not-allowed rounded-xl">
-                  <option>Select an employee first</option>
-                </select>
-                <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
-                  <Lock className="w-3.5 h-3.5" />
-                </span>
-              </div>
-            ) : ticketsQuery.isLoading ? (
-              <div className="relative bg-slate-50/60 rounded-xl border border-slate-200/80">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <Ticket className="w-4.5 h-4.5" />
-                </span>
-                <select disabled className="w-full pl-10 pr-10 py-2.5 bg-transparent appearance-none text-sm font-medium text-slate-400 rounded-xl">
-                  <option>Loading tickets...</option>
-                </select>
-              </div>
-            ) : tickets.length === 0 ? (
-              <div className="relative bg-slate-50/60 rounded-xl border border-slate-200/80 cursor-not-allowed">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <Ticket className="w-4.5 h-4.5" />
-                </span>
-                <select disabled className="w-full pl-10 pr-10 py-2.5 bg-transparent appearance-none text-sm font-medium text-slate-400 cursor-not-allowed rounded-xl">
-                  <option>No open tickets found</option>
-                </select>
-              </div>
-            ) : (
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                  <Ticket className="w-4.5 h-4.5" />
-                </span>
-                <select
-                  value={selectedTicketId ?? ''}
-                  onChange={(e) => {
-                    setSelectedTicketId(e.target.value);
-                    setReplacementMode(null);
-                  }}
-                  className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-slate-800 appearance-none bg-white"
-                >
-                  <option value="" disabled>Choose a ticket...</option>
+          {/* Ticket & Assigned Assets Grid */}
+          <div className="grid grid-cols-2 gap-3.5">
+            {/* Select Ticket */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Select Ticket</label>
+              <Select
+                value={selectedTicketId ?? ''}
+                onValueChange={(value) => { setSelectedTicketId(value); setReplacementMode(null); }}
+                disabled={!selectedEmployeeId || ticketsQuery.isLoading || tickets.length === 0}
+              >
+                <SelectTrigger className="h-10 w-full rounded-xl border-slate-200 text-xs shadow-none">
+                  <SelectValue placeholder={getTicketPlaceholder(selectedEmployeeId, ticketsQuery.isLoading, tickets.length)} />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200">
                   {tickets.map((t) => (
-                    <option key={t.id} value={t.id}>
+                    <SelectItem key={t.id} value={t.id} className="text-[12px]">
                       {t.ticketId} — {t.issueDescription}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-                <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
-                  <Search className="w-4 h-4" />
-                </span>
-              </div>
-            )}
-          </div>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Assigned Assets */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">Assigned Assets</label>
-            {!selectedEmployeeId ? (
-              <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-sm text-slate-400">
-                Select an employee to view assigned assets
-              </div>
-            ) : assignedAssetsQuery.isLoading ? (
-              <div className="rounded-xl border border-slate-200 p-4 text-center text-sm text-slate-400">
-                Loading...
-              </div>
-            ) : assignedAssets.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-sm text-slate-400">
-                No assets currently assigned to this employee
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {assignedAssets.map((asset) => (
-                  <div
-                    key={asset.id}
-                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
-                  >
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                      <Package className="size-4.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold text-slate-800">{asset.name}</p>
-                      <p className="truncate text-[11px] text-slate-400">
-                        {asset.assetCode}
-                        {asset.unitSerial ? ` · ${asset.unitSerial}` : ''}
-                        {asset.serialNumber ? ` · ${asset.serialNumber}` : ''}
-                      </p>
-                      <div className="mt-0.5 flex flex-wrap gap-1.5">
-                        {asset.brand && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                            {asset.brand}
-                          </span>
-                        )}
-                        {asset.model && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                            {asset.model}
-                          </span>
-                        )}
-                        {asset.condition && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                            {asset.condition.replace(/_/g, ' ')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
-                        {asset.status.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Assigned Assets */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Assigned Assets</label>
+              <Select
+                value={selectedAssignedAssetId ?? ''}
+                onValueChange={(value) => setSelectedAssignedAssetId(value || null)}
+                disabled={!selectedEmployeeId || assignedAssetsQuery.isLoading || assignedAssets.length === 0}
+              >
+                <SelectTrigger className="h-10 w-full rounded-xl border-slate-200 text-xs shadow-none">
+                  <SelectValue placeholder={getAssetPlaceholder(selectedEmployeeId, assignedAssetsQuery.isLoading, assignedAssets.length)} />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200">
+                  {assignedAssets.map((a) => (
+                    <SelectItem key={a.id} value={a.id} className="text-[12px]">
+                      {a.name} — {a.assetCode}{a.unitSerial ? ` (${a.unitSerial})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Replacement Mode */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">Replacement Mode</label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Replacement Mode</label>
             {!selectedTicketId ? (
               <div className="relative bg-slate-50/60 rounded-xl border border-slate-200/80 cursor-not-allowed">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <Cog className="w-4.5 h-4.5" />
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <Cog className="w-4 h-4" />
                 </span>
-                <select disabled className="w-full pl-10 pr-10 py-2.5 bg-transparent appearance-none text-sm font-medium text-slate-400 cursor-not-allowed rounded-xl">
+                <select disabled className="w-full pl-9 pr-9 py-2 bg-transparent appearance-none text-xs font-medium text-slate-400 cursor-not-allowed rounded-xl">
                   <option>Select a ticket first</option>
                 </select>
-                <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
-                  <Lock className="w-3.5 h-3.5" />
+                <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                  <Lock className="w-3 h-3" />
                 </span>
               </div>
             ) : (
@@ -398,28 +354,28 @@ export function ReplacementDialog({
                 <button
                   type="button"
                   onClick={() => { setReplacementMode('PERMANENT_REPLACEMENT'); setExpectedReturnDate(''); }}
-                  className={`rounded-xl border-2 p-4 text-left transition-all cursor-pointer ${
+                  className={`rounded-xl border-2 p-3 text-left transition-all cursor-pointer ${
                     replacementMode === 'PERMANENT_REPLACEMENT'
                       ? 'border-[#3862f6] bg-[#f4f8ff]'
                       : 'border-[#eef0f3] bg-white hover:border-[#d1d5db]'
                   }`}
                 >
-                  <Laptop className="mb-2 size-5 text-[#3862f6]" />
-                  <p className="text-[13px] font-semibold text-[#111827]">Permanent</p>
-                  <p className="mt-0.5 text-[11px] text-[#6e6e73]">Exact model replacement</p>
+                  <Laptop className="mb-1 size-4 text-[#3862f6]" />
+                  <p className="text-[12px] font-semibold text-[#111827]">Permanent</p>
+                  <p className="mt-0.5 text-[10px] leading-tight text-[#6e6e73]">Exact model replacement</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => { setReplacementMode('TEMPORARY_BACKUP'); }}
-                  className={`rounded-xl border-2 p-4 text-left transition-all cursor-pointer ${
+                  className={`rounded-xl border-2 p-3 text-left transition-all cursor-pointer ${
                     replacementMode === 'TEMPORARY_BACKUP'
                       ? 'border-[#d97706] bg-[#fffbeb]'
                       : 'border-[#eef0f3] bg-white hover:border-[#d1d5db]'
                   }`}
                 >
-                  <RefreshCcw className="mb-2 size-5 text-[#d97706]" />
-                  <p className="text-[13px] font-semibold text-[#111827]">Temporary</p>
-                  <p className="mt-0.5 text-[11px] text-[#6e6e73]">Loaner / backup unit</p>
+                  <RefreshCcw className="mb-1 size-4 text-[#d97706]" />
+                  <p className="text-[12px] font-semibold text-[#111827]">Temporary</p>
+                  <p className="mt-0.5 text-[10px] leading-tight text-[#6e6e73]">Loaner / backup unit</p>
                 </button>
               </div>
             )}
@@ -427,44 +383,52 @@ export function ReplacementDialog({
 
           {/* Expected Return Date (for temporary) */}
           {replacementMode === 'TEMPORARY_BACKUP' && (
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">Expected Return Date</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Expected Return Date</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                  <Calendar className="w-4.5 h-4.5" />
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                  <Calendar className="w-4 h-4" />
                 </span>
                 <input
                   type="date"
                   value={expectedReturnDate}
                   onChange={(e) => setExpectedReturnDate(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-slate-800"
+                  className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-slate-800"
                 />
               </div>
             </div>
           )}
 
           {/* Notes */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               Notes <span className="text-slate-400 font-normal lowercase">(optional)</span>
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any notes about this replacement..."
-              rows={3}
-              className="w-full p-3.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium placeholder:text-slate-400 text-slate-800 resize-none"
+              rows={2}
+              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium placeholder:text-slate-400 text-slate-800 resize-none"
             />
           </div>
 
         </form>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-end gap-2">
+        <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-end gap-1.5">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="w-full sm:w-auto px-3 py-2 border border-slate-200 bg-white text-slate-500 rounded-xl text-xs font-medium hover:text-slate-700 shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1"
+          >
+            <RotateCcw className="size-3" />
+            Reset
+          </button>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="w-full sm:w-auto px-4 py-2.5 border border-slate-200 bg-white text-slate-700 rounded-xl text-sm font-semibold shadow-sm hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full sm:w-auto px-3 py-2 border border-slate-200 bg-white text-slate-700 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer"
           >
             Cancel
           </button>
@@ -472,7 +436,7 @@ export function ReplacementDialog({
             type="button"
             disabled={!canSubmit || isProviding || isRaising}
             onClick={handleRaiseAppraisal}
-            className="w-full sm:w-auto px-4 py-2.5 border border-slate-200 bg-white text-slate-500 rounded-xl text-sm font-medium hover:text-slate-700 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full sm:w-auto px-3 py-2 border border-slate-200 bg-white text-slate-500 rounded-xl text-xs font-medium hover:text-slate-700 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isRaising ? 'Raising...' : 'Raise Appraisal (Finance)'}
           </button>
@@ -480,11 +444,11 @@ export function ReplacementDialog({
             type="button"
             disabled={!canSubmit || isProviding || isRaising}
             onClick={handleProvide}
-            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 cursor-pointer"
           >
             {isProviding ? (
-              <span className="flex items-center gap-2">
-                <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 Providing...
               </span>
             ) : (
