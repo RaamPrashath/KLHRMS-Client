@@ -4,6 +4,7 @@ import { emailOTP } from "better-auth/plugins";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import { getAuthAllowedHosts, getPublicAppUrl, getTrustedOrigins } from "@/lib/deployment-env";
+import { getResendFromEmail } from "@/lib/resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const publicAppUrl = getPublicAppUrl();
@@ -12,10 +13,21 @@ const authProtocol = publicAppUrl.startsWith("http://")
     : publicAppUrl.startsWith("https://")
         ? "https"
         : "auto";
-const resendFromEmail =
-    process.env.RESEND_FROM_EMAIL ||
-    process.env.EMAIL_FROM ||
-    "Kovan Labs <onboarding@resend.dev>";
+const resendFromEmail = getResendFromEmail();
+const microsoftClientId = process.env.MICROSOFT_CLIENT_ID || process.env.AZURE_AD_CLIENT_ID;
+const microsoftClientSecret = process.env.MICROSOFT_CLIENT_SECRET || process.env.AZURE_AD_CLIENT_SECRET;
+const microsoftAuthorityTenant = "common";
+// Multitenant / tenant-locked mode:
+// When asked to switch back to Entra-only multitenant auth, replace the
+// `common` authority above with:
+// process.env.MICROSOFT_TENANT_ID || process.env.AZURE_AD_TENANT_ID || "organizations"
+type MicrosoftProfile = {
+    email?: string;
+    preferred_username?: string;
+    upn?: string;
+    verified_primary_email?: string[];
+    verified_secondary_email?: string[];
+};
 
 export const auth = betterAuth({
     baseURL: {
@@ -43,9 +55,20 @@ export const auth = betterAuth({
     },
     socialProviders: {
         microsoft: {
-            clientId: process.env.MICROSOFT_CLIENT_ID!,
-            clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
-            scope: ["User.Read"],
+            clientId: microsoftClientId!,
+            clientSecret: microsoftClientSecret!,
+            tenantId: microsoftAuthorityTenant,
+            scope: ["User.Read", "Calendars.ReadWrite", "offline_access"],
+            mapProfileToUser: (profile: MicrosoftProfile) => {
+                const fallbackEmail =
+                    profile.email ||
+                    profile.preferred_username ||
+                    profile.upn ||
+                    profile.verified_primary_email?.[0] ||
+                    profile.verified_secondary_email?.[0];
+
+                return fallbackEmail ? { email: fallbackEmail } : {};
+            },
         },
         github: {
             clientId: process.env.GITHUB_CLIENT_ID!,

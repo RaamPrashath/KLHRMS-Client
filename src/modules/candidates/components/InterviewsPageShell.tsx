@@ -36,10 +36,10 @@ import {
 import { cn } from '@/lib/utils';
 import type { MyInterview } from '@/modules/candidates/types/atsTypes';
 
-const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
-const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
+const MICROSOFT_CALENDAR_SCOPE = 'Calendars.ReadWrite';
+const MICROSOFT_CONNECT_RETURN_PARAM = 'atsMicrosoftConnected';
 
-function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
+function normalizeMicrosoftScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
   if (Array.isArray(account.scopes)) {
     return account.scopes.filter((scope): scope is string => typeof scope === 'string');
   }
@@ -52,7 +52,7 @@ function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): 
   return [];
 }
 
-function readGoogleAccounts(data: unknown): Array<{ providerId?: unknown; scope?: unknown; scopes?: unknown }> {
+function readAuthAccounts(data: unknown): Array<{ providerId?: unknown; scope?: unknown; scopes?: unknown }> {
   return Array.isArray(data)
     ? data.filter((item): item is { providerId?: unknown; scope?: unknown; scopes?: unknown } => typeof item === 'object' && item !== null)
     : [];
@@ -425,8 +425,8 @@ export function InterviewsPageShell({
   const [reassignmentInterview, setReassignmentInterview] = useState<MyInterview | null>(null);
   const [schedulingInterview, setSchedulingInterview] = useState<MyInterview | null>(null);
   const [completingInterview, setCompletingInterview] = useState<MyInterview | null>(null);
-  const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
-  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const [microsoftConnectOpen, setMicrosoftConnectOpen] = useState(false);
+  const [isConnectingMicrosoft, setIsConnectingMicrosoft] = useState(false);
   const pendingSchedulingInterviewRef = useRef<MyInterview | null>(null);
   const interviewsQuery = useFetchMyInterviews(orgSlug, memberId);
   const acceptInterview = useAcceptInterview(orgSlug, memberId);
@@ -434,22 +434,22 @@ export function InterviewsPageShell({
   const startInterview = useStartInterviewMeeting(orgSlug, memberId, null);
   const completeInterview = useCompleteInterviewMeeting(orgSlug, memberId, null);
 
-  const checkGoogleAccess = useCallback(async (): Promise<boolean> => {
+  const checkMicrosoftAccess = useCallback(async (): Promise<boolean> => {
     const result = await authClient.listAccounts();
     if (result.error) return false;
-    const accounts = readGoogleAccounts(result.data);
-    const googleAccount = accounts.find((account) => account.providerId === 'google');
-    if (!googleAccount) return false;
-    return normalizeGoogleScopes(googleAccount).includes(GOOGLE_CALENDAR_SCOPE);
+    const accounts = readAuthAccounts(result.data);
+    const microsoftAccount = accounts.find((account) => account.providerId === 'microsoft');
+    if (!microsoftAccount) return false;
+    return normalizeMicrosoftScopes(microsoftAccount).includes(MICROSOFT_CALENDAR_SCOPE);
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
-    if (!url.searchParams.has(GOOGLE_CONNECT_RETURN_PARAM)) return;
-    url.searchParams.delete(GOOGLE_CONNECT_RETURN_PARAM);
+    if (!url.searchParams.has(MICROSOFT_CONNECT_RETURN_PARAM)) return;
+    url.searchParams.delete(MICROSOFT_CONNECT_RETURN_PARAM);
     window.history.replaceState(null, '', url.toString());
-    toast.success('Google Calendar connected');
+    toast.success('Microsoft Calendar connected');
     const pending = pendingSchedulingInterviewRef.current;
     if (pending) {
       pendingSchedulingInterviewRef.current = null;
@@ -480,29 +480,29 @@ export function InterviewsPageShell({
 
   const interviews = interviewsQuery.data?.items ?? [];
 
-  async function promptGoogleConnect(interview: MyInterview) {
+  async function promptMicrosoftConnect(interview: MyInterview) {
     pendingSchedulingInterviewRef.current = interview;
-    setGoogleConnectOpen(true);
+    setMicrosoftConnectOpen(true);
   }
 
   async function handleAccept(interview: MyInterview) {
-    const hasGoogle = await checkGoogleAccess();
-    if (!hasGoogle) {
-      await promptGoogleConnect(interview);
+    const hasMicrosoft = await checkMicrosoftAccess();
+    if (!hasMicrosoft) {
+      await promptMicrosoftConnect(interview);
       return;
     }
     setSchedulingInterview(interview);
   }
 
-  async function connectGoogle() {
+  async function connectMicrosoft() {
     try {
-      setIsConnectingGoogle(true);
+      setIsConnectingMicrosoft(true);
       const callbackUrl = new URL(window.location.href);
-      callbackUrl.searchParams.set(GOOGLE_CONNECT_RETURN_PARAM, '1');
+      callbackUrl.searchParams.set(MICROSOFT_CONNECT_RETURN_PARAM, '1');
       const result = await authClient.linkSocial({
-        provider: 'google',
+        provider: 'microsoft',
         callbackURL: callbackUrl.toString(),
-        scopes: [GOOGLE_CALENDAR_SCOPE],
+        scopes: ['User.Read', MICROSOFT_CALENDAR_SCOPE, 'offline_access'],
         disableRedirect: false,
       });
       if (result.error && !String(result.error.message ?? '').includes('already linked')) {
@@ -510,9 +510,9 @@ export function InterviewsPageShell({
       }
     } catch (error) {
       pendingSchedulingInterviewRef.current = null;
-      toast.error(error instanceof Error ? error.message : 'Failed to connect Google Calendar');
+      toast.error(error instanceof Error ? error.message : 'Failed to connect Microsoft Calendar');
     } finally {
-      setIsConnectingGoogle(false);
+      setIsConnectingMicrosoft(false);
     }
   }
 
@@ -535,9 +535,9 @@ export function InterviewsPageShell({
   }
 
   async function handleSchedule(interview: MyInterview) {
-    const hasGoogle = await checkGoogleAccess();
-    if (!hasGoogle) {
-      await promptGoogleConnect(interview);
+    const hasMicrosoft = await checkMicrosoftAccess();
+    if (!hasMicrosoft) {
+      await promptMicrosoftConnect(interview);
       return;
     }
     setSchedulingInterview(interview);
@@ -690,15 +690,15 @@ export function InterviewsPageShell({
         />
       )}
 
-      <Dialog open={googleConnectOpen} onOpenChange={setGoogleConnectOpen}>
+      <Dialog open={microsoftConnectOpen} onOpenChange={setMicrosoftConnectOpen}>
         <DialogContent>
           <DialogHeader>
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary-ghost text-primary">
               <CalendarPlus className="size-5" />
             </div>
-            <DialogTitle>Connect Google Calendar</DialogTitle>
+            <DialogTitle>Connect Microsoft Calendar</DialogTitle>
             <DialogDescription>
-              Interview meetings need Google Calendar access to create a Meet link and email the candidate.
+              Interview meetings need Microsoft Calendar access to create a Teams link and email the candidate.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -706,15 +706,15 @@ export function InterviewsPageShell({
               type="button"
               variant="outline"
               onClick={() => {
-                setGoogleConnectOpen(false);
+                setMicrosoftConnectOpen(false);
                 pendingSchedulingInterviewRef.current = null;
               }}
-              disabled={isConnectingGoogle}
+              disabled={isConnectingMicrosoft}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={connectGoogle} disabled={isConnectingGoogle}>
-              {isConnectingGoogle ? 'Opening Google' : 'Connect Google'}
+            <Button type="button" onClick={connectMicrosoft} disabled={isConnectingMicrosoft}>
+              {isConnectingMicrosoft ? 'Opening Microsoft' : 'Connect Microsoft'}
             </Button>
           </DialogFooter>
         </DialogContent>

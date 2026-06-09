@@ -66,6 +66,7 @@ import type {
   PipelineApplication,
   PipelineStage,
   StageInterviewAssignment,
+  StageWorkspace,
   StageInterviewWarning,
   StageWorkspaceCandidate,
   StageWorkspaceInterviewer,
@@ -77,6 +78,7 @@ interface StageWorkspacePageShellProps {
   readonly memberId: string;
   readonly stageSlug: string;
   readonly jobSlug?: string | null;
+  readonly initialWorkspace?: StageWorkspace;
 }
 
 interface AssignmentColumnModel {
@@ -411,9 +413,10 @@ export function StageWorkspacePageShell({
   memberId,
   stageSlug,
   jobSlug = null,
+  initialWorkspace,
 }: StageWorkspacePageShellProps) {
   const stageWorkspaceQuery = useStageWorkspace(orgSlug, memberId, jobSlug ? '' : stageSlug);
-  const jobStageWorkspaceQuery = useStageWorkspaceByJobSlug(orgSlug, memberId, jobSlug, stageSlug);
+  const jobStageWorkspaceQuery = useStageWorkspaceByJobSlug(orgSlug, memberId, jobSlug, stageSlug, initialWorkspace);
   const workspaceQuery = jobSlug ? jobStageWorkspaceQuery : stageWorkspaceQuery;
   const assignInterviews = useAssignStageInterviews(orgSlug, memberId, stageSlug, workspaceQuery.data?.jobPosting.id ?? null);
   const distributeInterviews = useDistributeStageInterviews(orgSlug, memberId, workspaceQuery.data?.jobPosting.id ?? null);

@@ -238,6 +238,11 @@ export interface InterviewMeeting {
   scheduledStartAt: string;
   scheduledEndAt: string;
   meetingUrl: string | null;
+  calendarProvider: string | null;
+  calendarEventId: string | null;
+  calendarEventUrl: string | null;
+  microsoftCalendarEventId: string | null;
+  microsoftCalendarEventUrl: string | null;
   googleCalendarEventId: string | null;
   googleCalendarEventUrl: string | null;
   emailSentAt: string | null;

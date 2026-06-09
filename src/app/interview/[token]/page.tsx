@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useCallback, useState } from 'react';
+import { use, useCallback, useEffect, useState } from 'react';
 import { Check, Clock, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,17 @@ function getApiUrl(): string {
   return getHrmsApiUrl();
 }
 
+async function readApiError(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    if (typeof body?.detail === 'string') return body.detail;
+    if (typeof body?.message === 'string') return body.message;
+  } catch {
+    // Keep the fallback message.
+  }
+  return fallback;
+}
+
 export default function InterviewSlotPickerPage({
   params,
 }: {
@@ -55,39 +66,48 @@ export default function InterviewSlotPickerPage({
   const [data, setData] = useState<SlotListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
-  // Fetch slots on mount
-  useState(() => {
+  useEffect(() => {
+    let active = true;
+
     fetch(`${getApiUrl()}/public/interviews/${token}/slots`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Interview not found or link expired');
+      .then(async (res) => {
+        if (!res.ok) throw new Error(await readApiError(res, 'Interview not found or link expired'));
         return res.json();
       })
       .then((json: SlotListResponse) => {
+        if (!active) return;
         setData(json);
         setLoading(false);
       })
       .catch((err: Error) => {
+        if (!active) return;
         setError(err.message);
         setLoading(false);
       });
-  });
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
 
   const handleSelect = useCallback(async () => {
     if (!selectedSlotId) return;
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const res = await fetch(`${getApiUrl()}/public/interviews/${token}/slots/${selectedSlotId}/select`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      if (!res.ok) throw new Error('Failed to select slot');
+      if (!res.ok) throw new Error(await readApiError(res, 'Failed to select slot'));
       setConfirmed(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setSubmitError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setIsSubmitting(false);
     }
@@ -201,6 +221,9 @@ export default function InterviewSlotPickerPage({
             {isSubmitting ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             Confirm Selection
           </Button>
+          {submitError ? (
+            <p className="mx-auto mt-3 max-w-md text-sm text-destructive-text">{submitError}</p>
+          ) : null}
         </div>
       </div>
     </div>
