@@ -464,7 +464,7 @@ function QuickShortcutsCard({ orgSlug }: { readonly orgSlug: string }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <h2 className="mb-4 text-base font-semibold text-neutral-900">Quick Shortcuts</h2>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {shortcuts.map((s) => {
           const Icon = s.icon;
           return (

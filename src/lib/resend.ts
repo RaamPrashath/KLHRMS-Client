@@ -15,7 +15,11 @@ function isSandboxSender(fromEmail: string): boolean {
 export function getResendFromEmail(): string {
   const fromEmail = process.env.RESEND_FROM_EMAIL?.trim() || RESEND_SANDBOX_FROM_EMAIL;
 
-  if (process.env.NODE_ENV === "production" && isSandboxSender(fromEmail)) {
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.NEXT_PHASE !== "phase-production-build" &&
+    isSandboxSender(fromEmail)
+  ) {
     throw new Error(
       "RESEND_FROM_EMAIL must use an address on a verified Resend domain in production. " +
         "onboarding@resend.dev is only for Resend sandbox testing."

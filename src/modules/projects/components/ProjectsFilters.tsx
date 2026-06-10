@@ -20,7 +20,7 @@ interface ProjectsFiltersProps {
 }
 
 const STATUS_OPTIONS: { value: ProjectStatus | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'All Statuses' },
+  { value: 'ALL', label: 'Status' },
   { value: 'ACTIVE', label: 'Active' },
   { value: 'ON_HOLD', label: 'On Hold' },
   { value: 'COMPLETED', label: 'Completed' },
@@ -54,7 +54,7 @@ export function ProjectsFilters({
           onValueChange={(v) => onStatusChange(v as ProjectStatus | 'ALL')}
         >
           <SelectTrigger className="h-9 w-[160px] text-sm border-0 bg-canvas">
-            <SelectValue placeholder="All Statuses" />
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((o) => (

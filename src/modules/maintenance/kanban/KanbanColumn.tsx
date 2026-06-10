@@ -11,14 +11,12 @@ export function KanbanColumn({
   issues,
   isCollapsed,
   onToggleCollapse,
-  onOpenSwap,
   onOpenIssue,
 }: {
   column: ColumnConfig;
   issues: KanbanIssue[];
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
-  onOpenSwap: (ticketId: string) => void;
   onOpenIssue: (issue: KanbanIssue) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
@@ -71,7 +69,6 @@ export function KanbanColumn({
                 <KanbanCard
                   key={issue.id}
                   issue={issue}
-                  onOpenSwap={onOpenSwap}
                   onOpenIssue={onOpenIssue}
                 />
               ))}

@@ -943,4 +943,18 @@ body.Sessions23Wave--isLoaded .Sessions23Wave canvas {
 
 .btn-clockout-border:active:not(:disabled) {
   transform: translateY(0);
+}
+
+@media (max-width: 767px) {
+  .btn-primary-grad {
+    padding: 0.5rem 0.875rem !important;
+    font-size: 0.75rem !important;
+    gap: 0.375rem;
+  }
+  
+  .clock-btn {
+    padding: 0.375rem 0.625rem !important;
+    font-size: 11px !important;
+    gap: 0.25rem !important;
+  }
 }

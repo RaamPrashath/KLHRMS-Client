@@ -29,7 +29,6 @@ import { ReturnedAssetsTab } from '@/modules/assets/components/ReturnedAssetsTab
 import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog';
 import { AssetFormDialog } from '@/modules/assets/components/AssetFormDialog';
 import { AssetSettingsDialog } from '@/modules/assets/components/AssetSettingsDialog';
-import { RevokeAndSwapDialog } from '@/modules/assets/components/RevokeAndSwapDialog';
 import { ReplacementDialog } from '@/modules/assets/components/ReplacementDialog';
 import {
   ACTION_GREEN,
@@ -83,7 +82,6 @@ export function AssetsPageShell({
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const [ticketDialogMode, setTicketDialogMode] = useState<'issue' | 'return'>('issue');
   const [ticketDialogAssetId, setTicketDialogAssetId] = useState<string | null>(null);
-  const [swapDialogOpen, setSwapDialogOpen] = useState(false);
   const [replacementDialogOpen, setReplacementDialogOpen] = useState(false);
 
   const router = useRouter();
@@ -184,10 +182,6 @@ export function AssetsPageShell({
     setTicketDialogMode('return');
     setTicketDialogAssetId(asset?.id ?? null);
     setTicketDialogOpen(true);
-  }
-
-  function openSwapDialog() {
-    setSwapDialogOpen(true);
   }
 
   async function handleSaveBulkAsset(data: BulkAssetCreateSchemaInput) {
@@ -374,7 +368,6 @@ export function AssetsPageShell({
           onProvide={() => {}}
           onReturn={(asset) => openEmployeeReturnDialog(asset)}
           onMaintenance={(asset) => openEmployeeIssueDialog(asset)}
-          onRevokeSwap={undefined}
         />
 
         <RaiseTicketDialog
@@ -566,27 +559,6 @@ export function AssetsPageShell({
         onProvide={seedProvideForm}
         onReturn={() => router.push(`/${orgSlug}/asset-maintenance`)}
         onMaintenance={seedMaintenanceForm}
-        onRevokeSwap={openSwapDialog}
-      />
-
-      <RevokeAndSwapDialog
-        key={`${selectedAsset?.id ?? 'asset-swap'}:${selectedAsset?.maintenanceHistory.find((log) => ['OPEN', 'IN_PROGRESS'].includes(log.status))?.id ?? 'none'}`}
-        open={swapDialogOpen}
-        onOpenChange={setSwapDialogOpen}
-        orgSlug={orgSlug}
-        memberId={memberId}
-        defaultMaintenanceId={
-          selectedAsset?.maintenanceHistory.find((log) => ['OPEN', 'IN_PROGRESS'].includes(log.status))?.id ?? null
-        }
-        maintenanceOptions={(selectedAsset?.maintenanceHistory ?? [])
-          .filter((log) => ['OPEN', 'IN_PROGRESS'].includes(log.status))
-          .map((log) => ({
-            id: log.id,
-            ticketId: log.ticketId,
-            maintenanceType: log.maintenanceType,
-            status: log.status,
-            issueDescription: log.issueDescription,
-          }))}
       />
 
       <ReplacementDialog

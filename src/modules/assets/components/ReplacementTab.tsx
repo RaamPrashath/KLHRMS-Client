@@ -68,7 +68,7 @@ function ReplacementDetailDialog({
     Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) === 1;
 
   async function handleUpdateDate() {
-    if (!newDate) return;
+    if (!newDate || !record) return;
     try {
       await mutations.updateReplacementReturnDate.mutateAsync({
         assignmentId: record.replacementAssignmentId!,

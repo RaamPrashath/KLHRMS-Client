@@ -169,7 +169,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
       <div className="overflow-x-auto px-5 py-5 sm:px-6">
         <div className="min-w-[760px]">
           <div className="grid grid-cols-[96px_repeat(5,minmax(0,1fr))] gap-x-1.5 gap-y-2">
-            <div />
+            <div className="sticky left-0 bg-surface z-10" />
             {days.map(({ iso, label }) => {
               const [dayName, dayNumber] = label.split(" ");
               const today = isToday(parseISO(iso));
@@ -203,7 +203,7 @@ export const WeeklyPlanGrid = memo(function WeeklyPlanGrid({
               return (
                 <Fragment key={rowLocation}>
                   <div
-                    className="flex h-10 items-center gap-2 pr-2 text-foreground"
+                    className="sticky left-0 bg-surface z-10 flex h-10 items-center gap-2 pr-2 text-foreground"
                   >
                     <div className="flex size-7 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
                       <Icon className="h-3.5 w-3.5 shrink-0" />

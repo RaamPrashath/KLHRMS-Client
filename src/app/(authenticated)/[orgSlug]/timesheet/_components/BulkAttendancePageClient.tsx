@@ -358,7 +358,7 @@ export function BulkAttendancePageClient({
       {viewMode === 'entries' ? (
         <WorkLogDirectorySection orgSlug={orgSlug} memberId={memberId} />
       ) : (
-        <div className="mx-7 mb-7 min-h-0 flex-1 overflow-x-hidden overflow-y-auto border border-border bg-card shadow-sm rounded-none">
+        <div className="mx-7 mb-7 min-h-0 flex-1 overflow-x-auto overflow-y-auto border border-border bg-card shadow-sm rounded-none">
           <BulkAttendanceCalendar
             weekStart={currentWeekStart}
             dayMap={dayMap}

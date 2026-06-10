@@ -303,7 +303,7 @@ function UserFooter({
           getScope(permissions, "employees", "edit") === "organization" ||
           getScope(permissions, "organization", "edit") === "organization"
         : false;
-    const { open } = useSidebar();
+    const { open, setOpen } = useSidebar();
     const router = useRouter();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [isSigningOut, setIsSigningOut] = useState(false);
@@ -406,7 +406,12 @@ function UserFooter({
                             <Link
                                 href={`/${orgSlug}/settings/account`}
                                 role="menuitem"
-                                onClick={() => setDropdownOpen(false)}
+                                onClick={() => {
+                                    setDropdownOpen(false);
+                                    if (typeof window !== "undefined" && window.innerWidth < 768) {
+                                        setOpen(false);
+                                    }
+                                }}
                                 className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-slate-650 dark:text-zinc-350 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-zinc-800 dark:hover:text-white"
                             >
                                 <GearIcon className="h-4 w-4 shrink-0" />
@@ -434,6 +439,27 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
     const [open, setOpen] = useState(true);
     const pathname = usePathname();
 
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const handleResize = () => {
+                if (window.innerWidth < 768) {
+                    setOpen(false);
+                } else {
+                    setOpen(true);
+                }
+            };
+            handleResize();
+            window.addEventListener("resize", handleResize);
+            return () => window.removeEventListener("resize", handleResize);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof window !== "undefined" && window.innerWidth < 768) {
+            setOpen(false);
+        }
+    }, [pathname]);
+
     void orgName;
 
     const isAdmin = permissions
@@ -457,13 +483,18 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
         <Sidebar open={open} setOpen={setOpen} animate={true}>
             <SidebarBody className="justify-between gap-4 border-r-0 bg-white dark:bg-zinc-950 px-3 py-4 pt-3 md:py-4 md:pt-3">
                 <div className="flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                    <div className="flex items-center">
+                    <div className="flex items-center pr-14 md:pr-0">
                         <OrganizationSwitcher currentOrgSlug={orgSlug} organizations={organizations} />
                         {open && isAdmin && (
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Link
                                         href={`/${orgSlug}/settings`}
+                                        onClick={() => {
+                                            if (typeof window !== "undefined" && window.innerWidth < 768) {
+                                                setOpen(false);
+                                            }
+                                        }}
                                         className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                                         aria-label="Organization Settings"
                                     >

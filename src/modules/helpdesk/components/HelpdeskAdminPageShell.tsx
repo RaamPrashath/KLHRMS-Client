@@ -233,7 +233,6 @@ export function HelpdeskAdminPageShell({
             collapsed={collapsed}
             onToggleColumn={toggleCollapse}
             onUpdateMaintenance={(params) => mutations.updateMaintenance.mutateAsync(params)}
-            onOpenSwap={() => {}}
           />
         ) : (
           <MaintenanceTableView

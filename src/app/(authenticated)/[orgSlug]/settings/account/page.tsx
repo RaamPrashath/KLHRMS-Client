@@ -1,10 +1,8 @@
 import { redirect } from 'next/navigation';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { requireOrgMembership } from '@/lib/organizations';
 import { requireServerSession } from '@/lib/server-session';
-import { UserPasswordTab } from '@/modules/settings/components/UserPasswordTab';
-import { UserPersonalDetailsTab } from '@/modules/settings/components/UserPersonalDetailsTab';
+import { AccountSettingsClient } from '@/modules/settings/components/AccountSettingsClient';
 
 export default async function AccountSettingsPage({
   params,
@@ -33,20 +31,7 @@ export default async function AccountSettingsPage({
         </p>
       </div>
 
-      <Tabs defaultValue="personal-details" className="w-full">
-        <TabsList>
-          <TabsTrigger value="personal-details">Personal details</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="personal-details" className="mt-6 max-w-2xl">
-          <UserPersonalDetailsTab orgSlug={orgSlug} memberId={memberId} />
-        </TabsContent>
-
-        <TabsContent value="password" className="mt-6 max-w-2xl">
-          <UserPasswordTab orgSlug={orgSlug} memberId={memberId} />
-        </TabsContent>
-      </Tabs>
+      <AccountSettingsClient orgSlug={orgSlug} memberId={memberId} />
     </div>
   );
 }

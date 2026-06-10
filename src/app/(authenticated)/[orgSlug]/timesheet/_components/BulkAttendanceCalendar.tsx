@@ -569,36 +569,38 @@ export function BulkAttendanceCalendar({
         .rbc-off-range-bg { background: var(--background) !important; }
       `}</style>
  
-      <DnDCalendar
-        localizer={localizer}
-        events={events}
-        defaultView={Views.WEEK}
-        view={Views.WEEK}
-        date={weekStart}
-        onNavigate={() => {/* controlled externally */}}
-        step={15}
-        timeslots={4}
-        min={new Date(0, 0, 0, 8, 0, 0)}
-        max={new Date(0, 0, 0, 23, 59, 0)}
-        selectable
-        resizable
-        draggableAccessor={() => true}
-        resizableAccessor={() => true}
-        onSelectSlot={handleSelectSlot}
-        onEventDrop={handleEventDrop}
-        onEventResize={handleEventResize}
-        components={components}
-        className="min-h-full"
-        formats={{
-          timeGutterFormat: 'HH:mm',
-          eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
-            `${format(start, 'HH:mm')}–${format(end, 'HH:mm')}`,
-        }}
-        dayLayoutAlgorithm="no-overlap"
-        showMultiDayTimes={false}
-        popup={false}
-        tooltipAccessor={() => ''}
-      />
+      <div className="w-full h-full min-w-[750px]">
+        <DnDCalendar
+          localizer={localizer}
+          events={events}
+          defaultView={Views.WEEK}
+          view={Views.WEEK}
+          date={weekStart}
+          onNavigate={() => {/* controlled externally */}}
+          step={15}
+          timeslots={4}
+          min={new Date(0, 0, 0, 8, 0, 0)}
+          max={new Date(0, 0, 0, 23, 59, 0)}
+          selectable
+          resizable
+          draggableAccessor={() => true}
+          resizableAccessor={() => true}
+          onSelectSlot={handleSelectSlot}
+          onEventDrop={handleEventDrop}
+          onEventResize={handleEventResize}
+          components={components}
+          className="min-h-full"
+          formats={{
+            timeGutterFormat: 'HH:mm',
+            eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
+              `${format(start, 'HH:mm')}–${format(end, 'HH:mm')}`,
+          }}
+          dayLayoutAlgorithm="no-overlap"
+          showMultiDayTimes={false}
+          popup={false}
+          tooltipAccessor={() => ''}
+        />
+      </div>
     </div>
   );
 }

@@ -456,49 +456,51 @@ export function LeavePageShell({ orgSlug, memberId }: Readonly<LeavePageShellPro
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-7 gap-2">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label) => (
-                    <div key={label} className="rounded-md bg-canvas px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                      {label}
-                    </div>
-                  ))}
-                  {calendarCells.map((cell, index) => {
-                    if (!cell.date) {
-                      return <div key={`empty-${index}`} className="min-h-32 rounded-md border border-dashed border-neutral-100 bg-canvas/40" />;
-                    }
-
-                    const dayHolidays = holidayMap.get(cell.date) ?? [];
-                    const dayRequests = requestMap.get(cell.date) ?? [];
-
-                    return (
-                      <div key={cell.date} className="min-h-32 rounded-md border border-neutral-100 bg-canvas p-2">
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="font-mono text-xs text-neutral-500">{cell.date.slice(-2)}</span>
-                          {cell.date === startOfToday() ? <span className="text-[11px] text-primary">Today</span> : null}
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          {dayHolidays.slice(0, 2).map((holiday) => (
-                            <div key={holiday.id} className="rounded-full bg-info-bg px-2 py-1 text-[11px] text-info-text">
-                              {holiday.name}
-                            </div>
-                          ))}
-                          {dayRequests.slice(0, 3).map((request) => (
-                            <button
-                              key={`${request.id}-${cell.date}`}
-                              type="button"
-                              className="truncate rounded-full bg-surface px-2 py-1 text-left text-[11px] text-neutral-700 shadow-[var(--shadow-1)]"
-                              onClick={() => setSelectedRequestId(request.id)}
-                            >
-                              {request.member.name ?? 'Member'} · {request.leaveType.name}
-                            </button>
-                          ))}
-                          {dayRequests.length > 3 ? (
-                            <span className="text-[11px] text-neutral-500">+{dayRequests.length - 3} more</span>
-                          ) : null}
-                        </div>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[700px] grid grid-cols-7 gap-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label) => (
+                      <div key={label} className="rounded-md bg-canvas px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                        {label}
                       </div>
-                    );
-                  })}
+                    ))}
+                    {calendarCells.map((cell, index) => {
+                      if (!cell.date) {
+                        return <div key={`empty-${index}`} className="min-h-32 rounded-md border border-dashed border-neutral-100 bg-canvas/40" />;
+                      }
+
+                      const dayHolidays = holidayMap.get(cell.date) ?? [];
+                      const dayRequests = requestMap.get(cell.date) ?? [];
+
+                      return (
+                        <div key={cell.date} className="min-h-32 rounded-md border border-neutral-100 bg-canvas p-2">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="font-mono text-xs text-neutral-500">{cell.date.slice(-2)}</span>
+                            {cell.date === startOfToday() ? <span className="text-[11px] text-primary">Today</span> : null}
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            {dayHolidays.slice(0, 2).map((holiday) => (
+                              <div key={holiday.id} className="rounded-full bg-info-bg px-2 py-1 text-[11px] text-info-text">
+                                {holiday.name}
+                              </div>
+                            ))}
+                            {dayRequests.slice(0, 3).map((request) => (
+                              <button
+                                key={`${request.id}-${cell.date}`}
+                                type="button"
+                                className="truncate rounded-full bg-surface px-2 py-1 text-left text-[11px] text-neutral-700 shadow-[var(--shadow-1)]"
+                                onClick={() => setSelectedRequestId(request.id)}
+                              >
+                                {request.member.name ?? 'Member'} · {request.leaveType.name}
+                              </button>
+                            ))}
+                            {dayRequests.length > 3 ? (
+                              <span className="text-[11px] text-neutral-500">+{dayRequests.length - 3} more</span>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </section>
             </TabsContent>

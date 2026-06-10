@@ -5,7 +5,6 @@ import {
   assetIssueSchema,
   assetMaintenanceCreateSchema,
   assetMaintenanceUpdateSchema,
-  assetRevokeSwapSchema,
   helpdeskTicketCreateSchema,
   assetReturnSchema,
   assetSchema,
@@ -13,7 +12,6 @@ import {
   type AssetIssueInput,
   type AssetMaintenanceCreateInput,
   type AssetMaintenanceUpdateInput,
-  type AssetRevokeSwapInput,
   type HelpdeskTicketCreateInput,
   type AssetReturnInput,
 } from '@/modules/assets/schema/assetSchemas';
@@ -22,8 +20,6 @@ import type {
   AssetCategoryFieldDefinition,
   AssetDetail,
   EmployeeAssetViewResponse,
-  AssetRevokeSwapInput as AssetRevokeSwapPayload,
-  AssetSwapExecutionResult,
   AssetSwapPreview,
   AssetFiltersState,
   AssetIdDefinition,
@@ -36,9 +32,10 @@ import type {
   TicketAttachmentMetadata,
   TicketMode,
   ReplacementRecord,
+  MemberAssignedAsset,
+  MemberTicketSummary,
   ReplacementProvideInput,
   ReplacementRaiseAppraisalInput,
-  MemberTicketSummary,
 } from '@/modules/assets/types/assetTypes';
 
 function getApiUrl(): string {
@@ -628,51 +625,6 @@ export async function fetchMaintenanceTicketsAction(params: {
   return handleResponse<MaintenanceTicket[]>(res);
 }
 
-export async function fetchAssetSwapPreviewAction(params: {
-  orgSlug: string;
-  memberId: string;
-  maintenanceId: string;
-}): Promise<AssetSwapPreview> {
-  const res = await fetch(`${getApiUrl()}/assets/maintenance/${params.maintenanceId}/swap-preview`, {
-    method: 'GET',
-    headers: buildHeaders(params.orgSlug, params.memberId),
-    cache: 'no-store',
-  });
-  return handleResponse<AssetSwapPreview>(res);
-}
-
-export async function revokeAndSwapAssetAction(params: {
-  orgSlug: string;
-  memberId: string;
-  maintenanceId: string;
-  data: AssetRevokeSwapInput;
-}): Promise<AssetSwapExecutionResult> {
-  const parsed = assetRevokeSwapSchema.safeParse(params.data);
-  if (!parsed.success) {
-    throw new Error(
-      JSON.stringify({
-        status: 400,
-        message: parsed.error.issues[0]?.message ?? 'Validation failed',
-      }),
-    );
-  }
-
-  const res = await fetch(`${getApiUrl()}/assets/maintenance/${params.maintenanceId}/revoke-swap`, {
-    method: 'POST',
-    headers: buildHeaders(params.orgSlug, params.memberId),
-    body: JSON.stringify({
-      maintenanceId: parsed.data.maintenanceId,
-      replacementMode: parsed.data.replacementMode,
-      replacementAssetUnitId: parsed.data.replacementAssetUnitId,
-      revokeStatus: parsed.data.revokeStatus,
-      replacementConditionWhileProviding: parsed.data.replacementConditionWhileProviding,
-      providedByMemberId: parsed.data.providedByMemberId || null,
-      notes: parsed.data.notes || null,
-    } satisfies AssetRevokeSwapPayload),
-  });
-  return handleResponse<AssetSwapExecutionResult>(res);
-}
-
 // ── My Tickets Actions ────────────────────────────────────────────────────────
 
 export async function fetchMyTicketsAction(params: {
@@ -865,6 +817,22 @@ export async function issueAssetsAction(params: {
 }
 
 // ── Replacement API Actions ────────────────────────────────────────────────
+
+export async function fetchMemberAssignedAssetsAction(params: {
+  orgSlug: string;
+  memberId: string;
+  targetMemberId: string;
+}): Promise<MemberAssignedAsset[]> {
+  const res = await fetch(
+    `${getApiUrl()}/assets/members/${params.targetMemberId}/assigned-assets`,
+    {
+      method: 'GET',
+      headers: buildHeaders(params.orgSlug, params.memberId),
+      cache: 'no-store',
+    },
+  );
+  return handleResponse<MemberAssignedAsset[]>(res);
+}
 
 export async function fetchMemberTicketsAction(params: {
   orgSlug: string;

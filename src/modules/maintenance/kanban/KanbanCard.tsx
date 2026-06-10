@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Clock, MessageSquare, Paperclip, RefreshCcw } from 'lucide-react';
+import { Clock, MessageSquare, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { humanize } from '@/modules/assets/lib/assetUtils';
 
@@ -26,11 +26,9 @@ function getActorName(issue: KanbanIssue): string {
 
 export function KanbanCard({
   issue,
-  onOpenSwap,
   onOpenIssue,
 }: {
   issue: KanbanIssue;
-  onOpenSwap: (ticketId: string) => void;
   onOpenIssue: (issue: KanbanIssue) => void;
 }) {
   const {
@@ -136,19 +134,6 @@ export function KanbanCard({
         </div>
       </div>
 
-      {issue.swapPreview?.requiresReplacementValidation && (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpenSwap(issue.id);
-          }}
-          className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#111827] px-2.5 py-1 text-[10px] font-semibold text-white"
-        >
-          <RefreshCcw className="size-3" />
-          Swap
-        </button>
-      )}
     </div>
   );
 }

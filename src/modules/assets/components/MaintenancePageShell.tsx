@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { RevokeAndSwapDialog } from '@/modules/assets/components/RevokeAndSwapDialog';
 import { useAssetMutations } from '@/modules/assets/hooks/useAssetMutations';
 import { useMaintenanceTicketsQuery } from '@/modules/assets/hooks/useMaintenanceTicketsQuery';
 import {
@@ -52,8 +51,7 @@ export function AssetMaintenancePageShell({
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
-  const [swapDialogOpen, setSwapDialogOpen] = useState(false);
-  const [selectedSwapTicketId, setSelectedSwapTicketId] = useState<string | null>(null);
+
 
   const tickets = useMemo(() => ticketsQuery.data ?? [], [ticketsQuery.data]);
 
@@ -107,11 +105,6 @@ export function AssetMaintenancePageShell({
     setSearch('');
     setStatusFilter('ALL');
     setTypeFilter('ALL');
-  }
-
-  function openSwapDialog(ticketId: string) {
-    setSelectedSwapTicketId(ticketId);
-    setSwapDialogOpen(true);
   }
 
   return (
@@ -245,7 +238,6 @@ export function AssetMaintenancePageShell({
             collapsed={collapsed}
             onToggleColumn={toggleCollapse}
             onUpdateMaintenance={(params) => mutations.updateMaintenance.mutateAsync(params)}
-            onOpenSwap={openSwapDialog}
           />
         ) : (
           <MaintenanceTableView
@@ -264,21 +256,6 @@ export function AssetMaintenancePageShell({
         )}
       </div>
 
-      <RevokeAndSwapDialog
-        key={selectedSwapTicketId ?? 'maintenance-swap'}
-        open={swapDialogOpen}
-        onOpenChange={setSwapDialogOpen}
-        orgSlug={orgSlug}
-        memberId={memberId}
-        defaultMaintenanceId={selectedSwapTicketId}
-        maintenanceOptions={filteredTickets.map((ticket) => ({
-          id: ticket.id,
-          ticketId: ticket.ticketId,
-          maintenanceType: ticket.maintenanceType as AssetMaintenanceType,
-          status: ticket.status as AssetMaintenanceStatus,
-          issueDescription: ticket.issueDescription,
-        }))}
-      />
     </div>
   );
 }

@@ -677,7 +677,7 @@ export function HelpdeskPageShell({
               ) : null}
             </div>
 
-            <div className="min-h-0 overflow-hidden border-t border-border">
+            <div className="min-h-0 overflow-x-auto border-t border-border">
               <Table>
                 <TableHeader>
                   <TableRow className="border-b border-border bg-[#f8fafc] hover:bg-[#f8fafc]">

@@ -109,6 +109,9 @@ export function OrganizationSwitcher({
                                             value={org.name}
                                             onSelect={() => {
                                                 setIsOpen(false);
+                                                if (typeof window !== "undefined" && window.innerWidth < 768) {
+                                                    setOpen(false);
+                                                }
                                                 router.push(`/${org.slug}`);
                                                 router.refresh();
                                             }}
@@ -141,6 +144,9 @@ export function OrganizationSwitcher({
                                     value="__create__"
                                     onSelect={() => {
                                         setIsOpen(false);
+                                        if (typeof window !== "undefined" && window.innerWidth < 768) {
+                                            setOpen(false);
+                                        }
                                         router.push("/create-organization");
                                         router.refresh();
                                     }}
