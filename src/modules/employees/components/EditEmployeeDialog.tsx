@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { Loader2, MapPin, Save, User, UserCog } from 'lucide-react';
+import { CalendarDays, Loader2, MapPin, Save, User, UserCog } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +17,11 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Tabs,
   TabsContent,
@@ -147,6 +154,7 @@ export function EditEmployeeDialog({
 }: Readonly<EditEmployeeDialogProps>) {
   const [form, setForm] = useState<FormState>(() => toFormState(employee));
   const [activeTab, setActiveTab] = useState<EditTab>('personal');
+  const [hireDateOpen, setHireDateOpen] = useState(false);
 
   const mutation = useUpdateEmployeeDetailsMutation(orgSlug, memberId, employee.member_id);
 
@@ -337,12 +345,32 @@ export function EditEmployeeDialog({
                 </Field>
                 <Field className="sm:col-span-2">
                   <FieldLabel htmlFor="employee_hire_date">Hire date</FieldLabel>
-                  <Input
-                    id="employee_hire_date"
-                    type="date"
-                    value={form.employee_hire_date}
-                    onChange={handleChange('employee_hire_date')}
-                  />
+                  <Popover open={hireDateOpen} onOpenChange={setHireDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="employee_hire_date"
+                        type="button"
+                        variant="outline"
+                        className={cn('w-full justify-start text-left font-normal', !form.employee_hire_date && 'text-neutral-400')}
+                      >
+                        <CalendarDays className="size-4" />
+                        {form.employee_hire_date ? format(new Date(`${form.employee_hire_date}T00:00:00`), 'PPP') : 'Pick a date'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={form.employee_hire_date ? new Date(`${form.employee_hire_date}T00:00:00`) : undefined}
+                        onSelect={(date) => {
+                          if (!date) return;
+                          const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+                          setForm((prev) => ({ ...prev, employee_hire_date: local.toISOString().slice(0, 10) }));
+                          setHireDateOpen(false);
+                        }}
+                        disabled={{ before: new Date() }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </Field>
               </div>
             </TabsContent>

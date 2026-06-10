@@ -18,7 +18,7 @@ interface OfferTemplatePreviewProps {
 const PAGE_WIDTH = 794;
 const PAGE_MIN_HEIGHT = 1123;
 const PAGE_GAP = 24;
-const PAGE_PADDING_TOP = 90;
+const PAGE_PADDING_TOP = 56;
 const PAGE_PADDING_BOTTOM = 90;
 const PAGE_PADDING_X = 76;
 const CORNER_MARK_TOP = 28;
@@ -32,7 +32,7 @@ const MAX_SCALE = 3;
 const CONTENT_WIDTH = PAGE_WIDTH - PAGE_PADDING_X * 2;
 const CONTENT_HEIGHT = PAGE_MIN_HEIGHT - PAGE_PADDING_TOP - PAGE_PADDING_BOTTOM;
 const CONTENT_CLASS_NAME = cn(
-  'space-y-4 text-[15px] leading-[30px]',
+  'space-y-4 text-[15px] leading-[26px]',
   '[&_a]:text-primary [&_a]:underline',
   '[&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:leading-7 [&_h2]:text-neutral-900',
   '[&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:leading-6 [&_h3]:text-neutral-900',
@@ -267,7 +267,7 @@ export function OfferTemplatePreview({
           {pages.map((page, index) => (
             <article
               key={`${index}-${page.html.length}`}
-              className="offer-preview-page bg-surface text-neutral-900 shadow-[var(--shadow-2)]"
+              className="offer-preview-page bg-surface text-neutral-900 shadow-md relative"
               style={{
                 width: PAGE_WIDTH,
                 minHeight: PAGE_MIN_HEIGHT,

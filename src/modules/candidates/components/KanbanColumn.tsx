@@ -196,13 +196,13 @@ export function KanbanColumn({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden px-2 pt-2',
+        'flex h-full min-h-0 w-[360px] shrink-0 flex-col overflow-hidden px-2 pt-2',
         isLast && !isFirst ? 'border-r-0' : 'border-r border-neutral-200/70',
         isOver && ' bg-neutral-100/90',
       )}
     >
       <header className="sticky top-0 z-10 mb-3">
-        <div className="flex min-w-0 items-start gap-2 rounded-xl bg-surface px-3 py-2 shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
+        <div className="flex min-w-0 items-start gap-2 rounded-2xl bg-white px-3 py-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <button
@@ -312,7 +312,6 @@ export function KanbanColumn({
         ) : (
           <div className="space-y-3">
             <AnimatePresence initial={false}>
-              {filteredApplications.map(renderCard)}
               {previewApplication ? (
                 <CandidateCard
                   key={`preview-${previewApplication.id}-${stage.id}`}
@@ -325,6 +324,7 @@ export function KanbanColumn({
                   draggable={false}
                 />
               ) : null}
+              {filteredApplications.map(renderCard)}
             </AnimatePresence>
             {filteredApplications.length === 0 && renderEmpty()}
           </div>

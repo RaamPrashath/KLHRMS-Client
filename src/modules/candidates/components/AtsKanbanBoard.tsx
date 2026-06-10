@@ -36,9 +36,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
+import { CompleteInterviewDialog } from '@/modules/candidates/components/CompleteInterviewDialog';
 import { AtsPipelineTable } from '@/modules/candidates/components/AtsPipelineTable';
 import { KanbanColumn } from '@/modules/candidates/components/KanbanColumn';
 import { StageConfigDrawer } from '@/modules/candidates/components/StageConfigDrawer';
@@ -69,13 +69,13 @@ import type { MyInterview, PipelineApplication, PipelineStage } from '@/modules/
 import type { CreatePipelineStageInput as SetupCreatePipelineStageInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import type { RolePermissions } from '@/modules/roles/types/role';
 
-const MICROSOFT_CALENDAR_SCOPE = 'Calendars.ReadWrite';
-const MICROSOFT_CONNECT_RETURN_PARAM = 'atsMicrosoftConnected';
+const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
 const DRAG_EDGE_SCROLL_THRESHOLD = 40;
 const DRAG_EDGE_SCROLL_SPEED = 18;
 const EMPTY_STAGES: PipelineStage[] = [];
 
-type PendingMicrosoftAction =
+type PendingGoogleAction =
   | { kind: 'create-stage'; data: CreatePipelineStageInput }
   | { kind: 'update-stage'; stageId: string; data: UpdatePipelineStageInput }
   | { kind: 'accept-interview'; applicationId: string; eventId: string };
@@ -124,9 +124,9 @@ function readActionError(error: unknown, fallback: string): string {
   }
 }
 
-function isMicrosoftConnectError(error: unknown): boolean {
+function isGoogleConnectError(error: unknown): boolean {
   const message = readActionError(error, '').toLowerCase();
-  return message.includes('connect a microsoft account') || message.includes('reconnect microsoft');
+  return message.includes('connect a google account') || message.includes('reconnect google');
 }
 
 function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineStageInput {
@@ -138,15 +138,15 @@ function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineSt
   };
 }
 
-function actionNeedsMicrosoft(action: PendingMicrosoftAction): boolean {
+function actionNeedsGoogle(action: PendingGoogleAction): boolean {
   return action.kind === 'accept-interview';
 }
 
-function requiredMicrosoftScope(): string {
-  return MICROSOFT_CALENDAR_SCOPE;
+function requiredGoogleScope(): string {
+  return GOOGLE_CALENDAR_SCOPE;
 }
 
-function permissionErrorForAction(action: PendingMicrosoftAction, permissions?: RolePermissions | null): string | null {
+function permissionErrorForAction(action: PendingGoogleAction, permissions?: RolePermissions | null): string | null {
   if (!permissions) return null;
   const required =
     action.kind === 'accept-interview'
@@ -164,7 +164,7 @@ function readAuthAccounts(data: unknown): Array<{ providerId?: unknown; scope?: 
     : [];
 }
 
-function normalizeMicrosoftScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
+function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
   if (Array.isArray(account.scopes)) {
     return account.scopes.filter((scope): scope is string => typeof scope === 'string');
   }
@@ -227,7 +227,7 @@ function BoardSkeleton() {
   return (
     <div className="flex h-[calc(100dvh-124px)] items-stretch gap-4 overflow-x-auto pb-4">
       {[1, 2, 3, 4].map((column) => (
-        <div key={column} className="flex w-[300px] shrink-0 flex-col rounded-xl border border-neutral-100 bg-surface-subtle">
+        <div key={column} className="flex w-[300px] shrink-0 flex-col rounded-2xl bg-surface-subtle shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="border-b border-neutral-100 bg-surface p-3">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
@@ -251,7 +251,7 @@ function BoardSkeleton() {
 
 function TableSkeleton() {
   return (
-    <div className="rounded-xl border border-neutral-100 bg-surface shadow-[var(--shadow-1)]">
+    <div className="rounded-2xl bg-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="flex items-center justify-between border-b border-neutral-100 p-4">
         <Skeleton className="h-9 w-[180px] rounded-md" />
         <div className="flex items-center gap-2">
@@ -368,12 +368,12 @@ export function AtsKanbanBoard({
   const rejectInterview = useRejectInterview(orgSlug, memberId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const pendingStorageKey = useMemo(
-    () => `ats-microsoft-pending:${orgSlug}:${jobPostingId ?? 'none'}`,
+    () => `ats-google-pending:${orgSlug}:${jobPostingId ?? 'none'}`,
     [jobPostingId, orgSlug],
   );
-  const [pendingMicrosoftAction, setPendingMicrosoftAction] = useState<PendingMicrosoftAction | null>(null);
-  const [microsoftConnectOpen, setMicrosoftConnectOpen] = useState(false);
-  const [isConnectingMicrosoft, setIsConnectingMicrosoft] = useState(false);
+  const [pendingGoogleAction, setPendingGoogleAction] = useState<PendingGoogleAction | null>(null);
+  const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const [schedulingRequest, setSchedulingRequest] = useState<{ application: PipelineApplication; eventId: string } | null>(null);
   const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
   const [completionNote, setCompletionNote] = useState('');
@@ -400,44 +400,44 @@ export function AtsKanbanBoard({
   const createDefaultPipeline = useCreateRequisitionDefaultPipeline(orgSlug, memberId, setupRequisitionId);
   const importPipeline = useImportRequisitionPipeline(orgSlug, memberId, setupRequisitionId);
 
-  const hasMicrosoftAccess = useCallback(async (scope: string) => {
+  const hasGoogleAccess = useCallback(async (scope: string) => {
     const result = await authClient.listAccounts();
     if (result.error) {
-      throw new Error(result.error.message ?? 'Could not check Microsoft connection');
+      throw new Error(result.error.message ?? 'Could not check Google connection');
     }
 
     const accounts = readAuthAccounts(result.data);
-    const microsoftAccount = accounts.find((account) => account.providerId === 'microsoft');
+    const googleAccount = accounts.find((account) => account.providerId === 'google');
 
-    if (!microsoftAccount) return false;
+    if (!googleAccount) return false;
 
-    return normalizeMicrosoftScopes(microsoftAccount).includes(scope);
+    return normalizeGoogleScopes(googleAccount).includes(scope);
   }, []);
 
-  const hasMicrosoftLinked = useCallback(async () => {
+  const hasGoogleLinked = useCallback(async () => {
     const result = await authClient.listAccounts();
     if (result.error) return false;
 
-    return readAuthAccounts(result.data).some((account) => account.providerId === 'microsoft');
+    return readAuthAccounts(result.data).some((account) => account.providerId === 'google');
   }, []);
 
-  const requestMicrosoftConnection = useCallback((action: PendingMicrosoftAction) => {
-    setPendingMicrosoftAction(action);
-    setMicrosoftConnectOpen(true);
+  const requestGoogleConnection = useCallback((action: PendingGoogleAction) => {
+    setPendingGoogleAction(action);
+    setGoogleConnectOpen(true);
   }, []);
 
   const runStageAction = useCallback(
-    async (action: PendingMicrosoftAction, options?: { skipMicrosoftCheck?: boolean }) => {
+    async (action: PendingGoogleAction, options?: { skipGoogleCheck?: boolean }) => {
       const permissionError = permissionErrorForAction(action, permissions);
       if (permissionError) {
         toast.error(permissionError);
         return;
       }
 
-      if (!options?.skipMicrosoftCheck && actionNeedsMicrosoft(action)) {
-        const hasAccess = await hasMicrosoftAccess(requiredMicrosoftScope());
+      if (!options?.skipGoogleCheck && actionNeedsGoogle(action)) {
+        const hasAccess = await hasGoogleAccess(requiredGoogleScope());
         if (!hasAccess) {
-          requestMicrosoftConnection(action);
+          requestGoogleConnection(action);
           return;
         }
       }
@@ -465,23 +465,23 @@ export function AtsKanbanBoard({
         });
         setRenamingStage(null);
       } catch (error) {
-        if (!options?.skipMicrosoftCheck && isMicrosoftConnectError(error)) {
-          requestMicrosoftConnection(action);
+        if (!options?.skipGoogleCheck && isGoogleConnectError(error)) {
+          requestGoogleConnection(action);
           return;
         }
         toast.error(readActionError(error, action.kind === 'create-stage' ? 'Failed to create stage' : 'Failed to update stage'));
       }
     },
-    [allBoardApplications, createStage, hasMicrosoftAccess, permissions, requestMicrosoftConnection, updateStage],
+    [allBoardApplications, createStage, hasGoogleAccess, permissions, requestGoogleConnection, updateStage],
   );
 
   useEffect(() => {
     if (!jobPostingId) return;
 
     const url = new URL(window.location.href);
-    if (!url.searchParams.has(MICROSOFT_CONNECT_RETURN_PARAM)) return;
+    if (!url.searchParams.has(GOOGLE_CONNECT_RETURN_PARAM)) return;
 
-    url.searchParams.delete(MICROSOFT_CONNECT_RETURN_PARAM);
+    url.searchParams.delete(GOOGLE_CONNECT_RETURN_PARAM);
     window.history.replaceState(null, '', url.toString());
 
     const storedAction = window.sessionStorage.getItem(pendingStorageKey);
@@ -490,12 +490,12 @@ export function AtsKanbanBoard({
     window.sessionStorage.removeItem(pendingStorageKey);
 
     try {
-      const action = JSON.parse(storedAction) as PendingMicrosoftAction;
+      const action = JSON.parse(storedAction) as PendingGoogleAction;
       window.setTimeout(() => {
         void runStageAction(action);
       }, 0);
     } catch {
-      toast.error('Microsoft connected, but the pending stage change could not be restored');
+      toast.error('Google connected, but the pending stage change could not be restored');
     }
   }, [jobPostingId, pendingStorageKey, runStageAction]);
 
@@ -672,30 +672,30 @@ export function AtsKanbanBoard({
     // Scheduling from kanban happens only after the interviewer accepts and picks candidate-facing slots.
   }
 
-  async function connectMicrosoftForEvaluation() {
-    if (!pendingMicrosoftAction) return;
+  async function connectGoogleForEvaluation() {
+    if (!pendingGoogleAction) return;
 
     try {
-      setIsConnectingMicrosoft(true);
-      window.sessionStorage.setItem(pendingStorageKey, JSON.stringify(pendingMicrosoftAction));
+      setIsConnectingGoogle(true);
+      window.sessionStorage.setItem(pendingStorageKey, JSON.stringify(pendingGoogleAction));
       const callbackUrl = new URL(window.location.href);
-      callbackUrl.searchParams.set(MICROSOFT_CONNECT_RETURN_PARAM, '1');
+      callbackUrl.searchParams.set(GOOGLE_CONNECT_RETURN_PARAM, '1');
 
-      const requiredScope = requiredMicrosoftScope();
-      const alreadyLinked = await hasMicrosoftLinked();
+      const requiredScope = requiredGoogleScope();
+      const alreadyLinked = await hasGoogleLinked();
 
       const result = await authClient.linkSocial({
-        provider: 'microsoft',
+        provider: 'google',
         callbackURL: callbackUrl.toString(),
-        scopes: ['User.Read', requiredScope, 'offline_access'],
+        scopes: [requiredScope],
         disableRedirect: true,
       });
 
       if (result.error) {
         if (alreadyLinked && result.error.message?.includes('already linked')) {
-          console.log('Requesting additional scopes for existing Microsoft account');
+          console.log('Requesting additional scopes for existing Google account');
         } else {
-          throw new Error(result.error.message ?? 'Microsoft connection failed');
+          throw new Error(result.error.message ?? 'Google connection failed');
         }
       }
 
@@ -705,13 +705,13 @@ export function AtsKanbanBoard({
         return;
       }
 
-      toast.error('Microsoft did not return a connection URL');
+      toast.error('Google did not return a connection URL');
       window.sessionStorage.removeItem(pendingStorageKey);
     } catch (error) {
       window.sessionStorage.removeItem(pendingStorageKey);
-      toast.error(error instanceof Error ? error.message : 'Microsoft connection failed');
+      toast.error(error instanceof Error ? error.message : 'Google connection failed');
     } finally {
-      setIsConnectingMicrosoft(false);
+      setIsConnectingGoogle(false);
     }
   }
 
@@ -1195,28 +1195,28 @@ export function AtsKanbanBoard({
         onCreateDefault={createSetupDefaultPipeline}
         onImport={importSetupPipeline}
       />
-      <Dialog open={microsoftConnectOpen} onOpenChange={setMicrosoftConnectOpen}>
+      <Dialog open={googleConnectOpen} onOpenChange={setGoogleConnectOpen}>
         <DialogContent>
           <DialogHeader>
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary-ghost text-primary">
               <CalendarPlus className="size-5" />
             </div>
-            <DialogTitle>Connect Microsoft Calendar</DialogTitle>
+            <DialogTitle>Connect Google Calendar</DialogTitle>
             <DialogDescription>
-              Interview meetings need Microsoft Calendar access to create a Teams link and email the candidate.
+              Interview meetings need Google Calendar access to create a Meet link and email the candidate.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => setMicrosoftConnectOpen(false)}
-              disabled={isConnectingMicrosoft}
+              onClick={() => setGoogleConnectOpen(false)}
+              disabled={isConnectingGoogle}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={connectMicrosoftForEvaluation} disabled={isConnectingMicrosoft}>
-              {isConnectingMicrosoft ? 'Opening Microsoft' : 'Connect Microsoft'}
+            <Button type="button" onClick={connectGoogleForEvaluation} disabled={isConnectingGoogle}>
+              {isConnectingGoogle ? 'Opening Google' : 'Connect Google'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1231,64 +1231,25 @@ export function AtsKanbanBoard({
         }}
         onSubmit={submitAcceptedInterviewSlots}
       />
-      <Dialog
+      <CompleteInterviewDialog
         open={completingApplication !== null}
+        candidateName={
+          completingApplication
+            ? `${completingApplication.candidate.firstName} ${completingApplication.candidate.lastName}`.trim()
+            : null
+        }
+        detail={completingApplication?.currentStage ?? null}
+        note={completionNote}
+        isSubmitting={completeInterviewMeeting.isPending}
+        onNoteChange={setCompletionNote}
         onOpenChange={(open) => {
           if (!open) {
             setCompletingApplication(null);
             setCompletionNote('');
           }
         }}
-      >
-        <DialogContent className="sm:max-w-lg rounded-2xl bg-surface p-0 shadow-[var(--shadow-4)]">
-          <DialogHeader className="px-6 pt-6">
-            <DialogTitle className="text-xl font-semibold text-neutral-900">Complete interview</DialogTitle>
-            <DialogDescription>
-              Add a note for this candidate before closing the interview.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 px-6 py-5">
-            {completingApplication ? (
-              <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
-                <p className="text-sm font-medium text-neutral-900">
-                  {`${completingApplication.candidate.firstName} ${completingApplication.candidate.lastName}`.trim()}
-                </p>
-                <p className="text-xs text-neutral-500">{completingApplication.currentStage}</p>
-              </div>
-            ) : null}
-            <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
-              Note
-              <Textarea
-                value={completionNote}
-                onChange={(event) => setCompletionNote(event.target.value)}
-                placeholder="Add a candidate note"
-                className="min-h-24 resize-none"
-                maxLength={1000}
-              />
-            </label>
-          </div>
-          <DialogFooter className="border-t border-neutral-100 px-6 py-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={completeInterviewMeeting.isPending}
-              onClick={() => {
-                setCompletingApplication(null);
-                setCompletionNote('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={completeInterviewMeeting.isPending || completionNote.trim().length === 0}
-              onClick={markInterviewCompleted}
-            >
-              {completeInterviewMeeting.isPending ? 'Completing' : 'Complete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onSubmit={markInterviewCompleted}
+      />
     </>
   );
 }

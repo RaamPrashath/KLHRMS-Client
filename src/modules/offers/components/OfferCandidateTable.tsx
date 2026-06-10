@@ -11,6 +11,7 @@ import {
   Search,
   X,
 } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,7 +30,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { ResumePreviewAction } from '@/modules/offers/components/ResumePreviewAction';
 import type {
   OfferStageSummary,
   OfferWorkspaceCandidate,
@@ -54,6 +54,8 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 interface OfferCandidateTableProps {
+  readonly orgSlug: string;
+  readonly jobSlug: string;
   readonly candidates: OfferWorkspaceCandidate[];
   readonly totalFiltered: number;
   readonly selectedApplicationIds: ReadonlySet<string>;
@@ -85,7 +87,7 @@ function candidateName(candidate: OfferWorkspaceCandidate): string {
 }
 
 function formatDate(value: string | null | undefined): string {
-  if (!value) return '-';
+  if (!value) return '—';
   return new Intl.DateTimeFormat('en-IN', {
     day: '2-digit',
     month: 'short',
@@ -100,7 +102,7 @@ function statusClasses(status: string): string {
   if (status === 'EXPIRED' || status === 'WITHDRAWN') return 'bg-warning-bg text-warning-text';
   if (status === 'SENT') return 'bg-info-bg text-info-text';
   if (status === 'DRAFT') return 'bg-warning-bg text-warning-text';
-  return 'bg-neutral-50 text-neutral-500';
+  return 'bg-neutral-100 text-neutral-500';
 }
 
 function statusLabel(status: string): string {
@@ -129,20 +131,6 @@ function renderStatusBadge(
   );
 }
 
-function colWidth(columnId: string): string {
-  const map: Record<string, string> = {
-    checkbox: 'w-[40px]',
-    candidate: 'w-[26%]',
-    status: 'w-[12%]',
-    lastSent: 'w-[12%]',
-    expires: 'w-[12%]',
-    resume: 'w-[12%]',
-    latestPdf: 'w-[12%]',
-    actions: 'w-[12%]',
-  };
-  return map[columnId] ?? 'w-[12%]';
-}
-
 function buildPageNumbers(current: number, total: number): (number | '...')[] {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1);
@@ -157,37 +145,17 @@ function buildPageNumbers(current: number, total: number): (number | '...')[] {
   return pages;
 }
 
-// ─── Column definitions ────────────────────────────────────────────────────────
-
-interface ColumnDef {
-  id: string;
-  label: string;
-}
-
-const COLUMNS: ColumnDef[] = [
-  { id: 'checkbox', label: '' },
-  { id: 'candidate', label: 'Candidate' },
-  { id: 'status', label: 'Offer status' },
-  { id: 'lastSent', label: 'Last sent' },
-  { id: 'expires', label: 'Expires' },
-  { id: 'resume', label: 'Resume' },
-  { id: 'latestPdf', label: 'Latest PDF' },
-  { id: 'actions', label: 'Actions' },
-];
-
 // ─── Pagination sub-component ──────────────────────────────────────────────────
 
 function OfferPagination({
   page,
   totalPages,
-  total,
   pageSize,
   onPageChange,
   onPageSizeChange,
 }: {
   page: number;
   totalPages: number;
-  total: number;
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
@@ -196,26 +164,24 @@ function OfferPagination({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[13px] text-neutral-500">Show</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(v) => onPageSizeChange(Number(v))}
-          >
-            <SelectTrigger className="h-8 w-[72px] text-xs" size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={String(size)} className="text-xs">
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-[13px] text-neutral-500">per page</span>
-        </div>
+      <div className="flex items-center gap-2">
+        <span className="text-[13px] text-neutral-500">Show</span>
+        <Select
+          value={String(pageSize)}
+          onValueChange={(v) => onPageSizeChange(Number(v))}
+        >
+          <SelectTrigger className="h-8 w-[72px] text-xs" size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <SelectItem key={size} value={String(size)} className="text-xs">
+                {size}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-[13px] text-neutral-500">per page</span>
       </div>
 
       <div className="flex items-center gap-1">
@@ -263,9 +229,23 @@ function OfferPagination({
   );
 }
 
+// ─── Column definitions ────────────────────────────────────────────────────────
+
+const COLUMNS = [
+  { id: 'checkbox', label: '', width: 'w-10' },
+  { id: 'candidate', label: 'Candidate', width: 'w-[32%]' },
+  { id: 'status', label: 'Offer status', width: 'w-[14%]' },
+  { id: 'lastSent', label: 'Last sent', width: 'w-[14%]' },
+  { id: 'expires', label: 'Expires', width: 'w-[14%]' },
+  { id: 'latestPdf', label: 'Latest PDF', width: 'w-[14%]' },
+  { id: 'actions', label: 'Actions', width: 'w-[12%]' },
+] as const;
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function OfferCandidateTable({
+  orgSlug,
+  jobSlug,
   candidates,
   totalFiltered,
   selectedApplicationIds,
@@ -305,85 +285,82 @@ export function OfferCandidateTable({
   );
 
   return (
-    <div className="flex flex-col flex-1 mx-7 mb-7">
-      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
-        {/* ── Layer 1: Filters ── */}
-        <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
-          <div className="flex items-center gap-2">
+    <TooltipProvider>
+      <div className="flex flex-col flex-1 mx-7 mb-7">
+        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+
+          {/* ── Filters bar ── */}
+          <div className="flex items-center gap-3 border-b border-black/[0.04] px-3.5 py-3.5">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
               <Input
-                placeholder="Search candidates"
+                placeholder="Search candidates…"
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
+                className="h-9 pl-9 text-sm bg-canvas border-transparent focus:border-primary focus:ring-[3px] focus:ring-primary/10"
               />
             </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Select
-                value={statusFilter}
-                onValueChange={onStatusFilterChange}
+            <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+              <SelectTrigger className="h-9 w-36 text-sm border-transparent bg-canvas">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_FILTER_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={onClearAll}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-surface px-3 text-[13px] text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
               >
-                <SelectTrigger className="h-9 w-40 text-sm border-0 bg-canvas">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_FILTER_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={onClearAll}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 py-2 text-[13px] text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
-                >
-                  <X className="size-3.5" />
-                  Clear
-                </button>
-              )}
-            </div>
+                <X className="size-3.5" />
+                Clear
+              </button>
+            )}
           </div>
-        </div>
 
-        {/* ── Layer 2: Header row ── */}
-        <div className="flex justify-around items-center border-b border-black/[0.04] bg-canvas/50 py-3 px-8">
-          {COLUMNS.map((col) => (
-            <div
-              key={col.id}
-              className={cn(colWidth(col.id), 'shrink-0 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider', col.id === 'checkbox' ? '' : 'text-left')}
-            >
-              {col.id === 'checkbox' ? headerCheckbox : col.label}
-            </div>
-          ))}
-        </div>
+          {/* ── Column headers ── */}
+          <div className="flex items-center border-b border-black/[0.04] bg-canvas/50 pl-6 pr-6 py-3">
+            {COLUMNS.map((col) => (
+              <div
+                key={col.id}
+                className={cn(
+                  col.width,
+                  'shrink-0 text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
+                  col.id === 'actions' ? 'text-right' : 'text-left',
+                )}
+              >
+                {col.id === 'checkbox' ? headerCheckbox : col.label}
+              </div>
+            ))}
+          </div>
 
-        {/* ── Layer 3: Body ── */}
-        <div className="px-4">
-          {candidates.length > 0 ? (
-            <div className="flex flex-col divide-y divide-black/4 bg-surface">
-              {candidates.map((candidate) => {
+          {/* ── Body ── */}
+          <div className="flex flex-col bg-surface divide-y divide-black/[0.04]">
+            {candidates.length > 0 ? (
+              candidates.map((candidate) => {
                 const name = candidateName(candidate);
                 const moving = movingApplicationId === candidate.applicationId;
                 const alreadyResponded =
                   candidate.offerStatus === 'ACCEPTED' || candidate.offerStatus === 'REJECTED';
                 const checked = selectedApplicationIds.has(candidate.applicationId);
+                const profileHref = `/${orgSlug}/candidates/${jobSlug}/${candidate.applicationId}`;
 
                 return (
                   <div
                     key={candidate.applicationId}
                     className={cn(
-                      'flex justify-around items-center border-b border-black/4 transition-colors hover:bg-black/[0.02] py-3 px-4',
-                      checked && 'bg-primary-ghost',
+                      'flex items-center pl-6 pr-6 py-3 transition-colors hover:bg-black/[0.02]',
+                      checked && 'bg-primary-ghost/40',
                     )}
                   >
                     {/* Checkbox */}
-                    <div className={cn(colWidth('checkbox'), 'shrink-0 flex items-center')}>
+                    <div className="w-10 shrink-0 flex items-center">
                       <Checkbox
                         aria-label={`Select ${name}`}
                         checked={checked}
@@ -392,18 +369,23 @@ export function OfferCandidateTable({
                       />
                     </div>
 
-                    {/* Candidate */}
-                    <div className={cn(colWidth('candidate'), 'shrink-0 min-w-0')}>
-                      <p className="truncate text-sm font-medium text-neutral-900" title={name}>
+                    {/* Candidate — name is a link, email is plain text */}
+                    <div className="w-[32%] shrink-0 min-w-0">
+                      <Link
+                        href={profileHref}
+                        className="block truncate text-sm font-medium text-neutral-900 hover:text-primary transition-colors"
+                        title={name}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {name}
-                      </p>
+                      </Link>
                       <p className="truncate text-[11px] text-neutral-500" title={candidate.candidate.email ?? undefined}>
                         {candidate.candidate.email || 'No email'}
                       </p>
                     </div>
 
                     {/* Offer status */}
-                    <div className={cn(colWidth('status'), 'shrink-0')}>
+                    <div className="w-[14%] shrink-0">
                       {renderStatusBadge(candidate.offerStatus, acceptedStage, rejectedStage)}
                       {candidate.latestOffer?.emailError ? (
                         <p className="mt-1 line-clamp-2 text-xs text-destructive-text leading-tight">
@@ -413,24 +395,19 @@ export function OfferCandidateTable({
                     </div>
 
                     {/* Last sent */}
-                    <div className={cn(colWidth('lastSent'), 'shrink-0 font-mono text-xs text-neutral-500')}>
+                    <div className="w-[14%] shrink-0 font-mono text-xs text-neutral-500">
                       {formatDate(candidate.latestOffer?.sentAt ?? candidate.latestOffer?.emailSentAt)}
                     </div>
 
                     {/* Expires */}
-                    <div className={cn(colWidth('expires'), 'shrink-0 font-mono text-xs text-neutral-500')}>
+                    <div className="w-[14%] shrink-0 font-mono text-xs text-neutral-500">
                       {formatDate(candidate.latestOffer?.expiresAt)}
                     </div>
 
-                    {/* Resume */}
-                    <div className={cn(colWidth('resume'), 'shrink-0')}>
-                      <ResumePreviewAction resumeUrl={candidate.candidate.resumeUrl} candidateName={name} />
-                    </div>
-
                     {/* Latest PDF */}
-                    <div className={cn(colWidth('latestPdf'), 'shrink-0')}>
+                    <div className="w-[14%] shrink-0">
                       {candidate.latestOffer?.pdfUrl ? (
-                        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-700">
+                        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-600 hover:text-primary">
                           <a
                             href={candidate.latestOffer.pdfUrl}
                             target="_blank"
@@ -442,84 +419,81 @@ export function OfferCandidateTable({
                           </a>
                         </Button>
                       ) : (
-                        <span className="text-xs text-neutral-400">No PDF</span>
+                        <span className="text-xs text-neutral-400">—</span>
                       )}
                     </div>
 
                     {/* Actions */}
-                    <div className={cn(colWidth('actions'), 'shrink-0')}>
-                      <div className="flex items-center gap-1.5">
-                        {!alreadyResponded && acceptedStage && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon-sm"
-                                className="size-7"
-                                disabled={moving}
-                                onClick={() => onMoveToStage(candidate.applicationId, acceptedStage)}
-                                aria-label={`Manually accept ${name}`}
-                              >
-                                {moving ? (
-                                  <Loader2 className="size-3 animate-spin" />
-                                ) : (
-                                  <CircleCheck className="size-3.5 text-success-text" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Manual accept</TooltipContent>
-                          </Tooltip>
-                        )}
-                        {!alreadyResponded && rejectedStage && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon-sm"
-                                className="size-7"
-                                disabled={moving}
-                                onClick={() => onMoveToStage(candidate.applicationId, rejectedStage)}
-                                aria-label={`Manually reject ${name}`}
-                              >
-                                {moving ? (
-                                  <Loader2 className="size-3 animate-spin" />
-                                ) : (
-                                  <CircleX className="size-3.5 text-destructive-text" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Manual reject</TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
+                    <div className="w-[12%] shrink-0 flex items-center justify-end gap-1.5">
+                      {!alreadyResponded && acceptedStage && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              className="size-7"
+                              disabled={moving}
+                              onClick={() => onMoveToStage(candidate.applicationId, acceptedStage)}
+                              aria-label={`Manually accept ${name}`}
+                            >
+                              {moving ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : (
+                                <CircleCheck className="size-3.5 text-success-text" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Manual accept</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {!alreadyResponded && rejectedStage && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              className="size-7"
+                              disabled={moving}
+                              onClick={() => onMoveToStage(candidate.applicationId, rejectedStage)}
+                              aria-label={`Manually reject ${name}`}
+                            >
+                              {moving ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : (
+                                <CircleX className="size-3.5 text-destructive-text" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Manual reject</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          ) : (
-            <div className="bg-surface py-16 text-center text-sm text-neutral-400">
-              No candidates match your search.
+              })
+            ) : (
+              <div className="py-20 text-center text-sm text-neutral-400">
+                No candidates match your search.
+              </div>
+            )}
+          </div>
+
+          {/* ── Pagination ── */}
+          {totalFiltered > 0 && (
+            <div className="mt-auto border-t border-black/[0.04] bg-surface px-6 py-4">
+              <OfferPagination
+                page={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                onPageChange={onPageChange}
+                onPageSizeChange={onPageSizeChange}
+              />
             </div>
           )}
         </div>
-
-        {/* ── Layer 4: Pagination ── */}
-        {totalFiltered > 0 && (
-          <div className="px-8 py-6 mt-auto border-t border-black/[0.04] bg-surface">
-            <OfferPagination
-              page={page}
-              totalPages={totalPages}
-              total={totalFiltered}
-              pageSize={pageSize}
-              onPageChange={onPageChange}
-              onPageSizeChange={onPageSizeChange}
-            />
-          </div>
-        )}
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

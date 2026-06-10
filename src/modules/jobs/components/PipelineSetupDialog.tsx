@@ -198,14 +198,16 @@ function StageConfigTable({
 }>) {
   if (stages.length === 0) {
     return (
-      <div className="flex h-full min-h-[280px] items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-canvas">
-        <p className="text-sm text-neutral-500">{emptyMessage}</p>
+      <div className="p-5">
+        <div className="flex h-full min-h-[280px] items-center justify-center rounded-2xl bg-surface px-6 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <p className="text-sm text-neutral-500">{emptyMessage}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-100 bg-surface">
+    <div className="w-full">
       <Table>
         <TableHeader className="bg-canvas">
           <TableRow>
@@ -220,9 +222,6 @@ function StageConfigTable({
             </TableHead>
             <TableHead className="px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
               Due date
-            </TableHead>
-            <TableHead className="px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Config
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -246,16 +245,6 @@ function StageConfigTable({
               </TableCell>
               <TableCell className="px-4 py-3 text-sm text-neutral-700">
                 {stage.dueDate ? formatDateLabel(stage.dueDate) : 'Not set'}
-              </TableCell>
-              <TableCell className="px-4 py-3">
-                <div className="flex flex-wrap gap-1.5">
-                  {stage.isDefault ? <ConfigPill>Default</ConfigPill> : null}
-                  {stage.isFinal ? <ConfigPill>Final</ConfigPill> : null}
-                  {stage.extendToNextWorkingDay ? <ConfigPill>Extends</ConfigPill> : null}
-                  {!stage.isDefault && !stage.isFinal && !stage.extendToNextWorkingDay ? (
-                    <ConfigPill>Standard</ConfigPill>
-                  ) : null}
-                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -350,12 +339,12 @@ function NewColumnForm({
               shouldValidate: true,
             })
           }
-          className="grid grid-cols-2 gap-2 xl:grid-cols-5"
+          className="grid grid-cols-2 gap-2"
         >
           {PIPELINE_STAGE_TYPES.map((type) => (
             <label
               key={type}
-              className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-neutral-100 bg-surface px-3 py-2 text-sm text-neutral-700 transition-colors hover:bg-neutral-50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary-ghost has-[[data-state=checked]]:text-primary"
+              className="flex min-h-10 cursor-pointer items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-colors hover:bg-neutral-50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary-ghost has-[[data-state=checked]]:text-primary"
             >
               <RadioGroupItem value={type} disabled={submitting} />
               {STAGE_TYPE_LABELS[type]}
@@ -426,9 +415,9 @@ export function PipelineSetupDialog({
       <DialogContent showCloseButton={false} className="h-[80vh] w-[80vw] max-w-[80vw] gap-0 overflow-hidden bg-surface p-0 sm:max-w-[80vw] max-sm:h-[92vh] max-sm:w-[calc(100vw-1rem)] max-sm:max-w-[calc(100vw-1rem)]">
         <div className="grid h-full min-h-0 grid-cols-1 md:grid-cols-[30%_70%]">
           <aside className="flex min-h-0 flex-col border-b border-neutral-100 bg-canvas md:border-b-0 md:border-r">
-            <div className="border-b border-neutral-100 p-4">
+            <div className=" pt-5 px-5">
               <DialogHeader className="gap-1">
-                <DialogTitle className="text-[17px] font-semibold text-neutral-900">Pipeline setup</DialogTitle>
+                <DialogTitle className="text-2xl font-semibold text-neutral-900">Pipeline setup</DialogTitle>
                 <DialogDescription className="sr-only">
                   Create, default, or import pipeline stages for this job posting.
                 </DialogDescription>
@@ -516,9 +505,11 @@ export function PipelineSetupDialog({
           </aside>
 
           <section className="flex min-h-0 flex-col bg-surface">
-            <div className="flex items-start justify-between gap-4  px-5 py-4">
+            <div className={cn(
+              "flex items-center justify-between gap-4 pt-1 border-neutral-100 p-5"
+            )}>
               <div>
-                <h2 className="text-xl font-semibold text-neutral-900">{contentTitle}</h2>
+                <h2 className="text-2xl font-semibold text-neutral-900">{contentTitle}</h2>
               </div>
 
               {selection === 'new' ? (
@@ -547,7 +538,10 @@ export function PipelineSetupDialog({
               ) : null}
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto bg-surface p-5">
+            <div className={cn(
+              "min-h-0 flex-1 overflow-y-auto bg-surface",
+              selection === 'new' ? "px-5 pb-5 pt-3" : "p-0"
+            )}>
               {selection === 'new' ? (
                 <NewColumnForm submitting={creatingStage} onSubmit={onCreateStage} />
               ) : null}

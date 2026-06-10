@@ -1,11 +1,17 @@
 'use client';
 
-import { Copy, Edit, FilePlus2, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { Copy, Edit, FilePlus2, RotateCcw, Search, Trash2, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useCopyOfferTemplate } from '@/modules/offers/hooks/useOfferTemplates';
 import type { OfferTemplateListItem } from '@/modules/offers/types/offerTypes';
@@ -53,10 +59,12 @@ function TemplateRow({
   readonly onDuplicate: () => void;
   readonly duplicating: boolean;
 }) {
+  const categoryNames = template.categoryNames.filter((name) => name !== 'General');
+
   return (
     <div
       className={cn(
-        'flex w-full items-start gap-3 border-b border-neutral-100 px-4 py-3 text-left transition-colors last:border-0 hover:bg-neutral-50',
+        'flex w-full items-start gap-3 border-b border-neutral-100 px-4 py-3 text-left transition-colors last:border-0 hover:bg-neutral-50 relative',
         selected && 'bg-primary-ghost',
       )}
     >
@@ -65,7 +73,7 @@ function TemplateRow({
           'mt-1 size-2 rounded-full',
           selected ? 'bg-primary' : 'bg-neutral-200',
         )} />
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 flex-1 pr-6">
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate text-sm font-medium text-neutral-900">{template.name}</span>
             {badge ? (
@@ -74,41 +82,67 @@ function TemplateRow({
               </span>
             ) : null}
           </span>
-          <span className="mt-1 line-clamp-1 text-xs text-neutral-500">
-            {template.categoryNames.length > 0 ? template.categoryNames.join(', ') : 'No categories'}
-          </span>
+          {categoryNames.length > 0 ? (
+            <span className="mt-1 block line-clamp-1 text-xs text-neutral-500">
+              {categoryNames.join(', ')}
+            </span>
+          ) : null}
           <span className="mt-1 block font-mono text-xs text-neutral-400">
-            Last used {formatDate(template.lastUsedAt)}
+            {template.lastUsedAt ? `Last used ${formatDate(template.lastUsedAt)}` : 'Never used'}
           </span>
         </span>
       </button>
-      <span className="flex shrink-0 items-center gap-1">
-        <Button asChild variant="ghost" size="icon-sm" aria-label={`Edit ${template.name}`}>
-          <a href={`/${orgSlug}/offer/${template.id}`} target="_blank" rel="noopener noreferrer">
-            <Edit className="size-4" />
-          </a>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Duplicate ${template.name}`}
-          disabled={duplicating}
-          onClick={onDuplicate}
-        >
-          <Copy className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="text-destructive-text hover:bg-destructive-bg hover:text-destructive-text"
-          aria-label={`Delete ${template.name}`}
-          onClick={onDeleteTemplate}
-        >
-          <Trash2 className="size-4" />
-        </Button>
-      </span>
+      <div className="absolute right-3 bottom-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="h-8 w-8 text-neutral-400 hover:text-neutral-700"
+              aria-label="Actions"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <MoreVertical className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36 bg-surface shadow-md">
+            <DropdownMenuItem asChild>
+              <a
+                href={`/${orgSlug}/offer/${template.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center gap-2 cursor-pointer"
+              >
+                <Edit className="size-4" />
+                <span>Edit</span>
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={duplicating}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDuplicate();
+              }}
+              className="flex w-full items-center gap-2 cursor-pointer"
+            >
+              <Copy className="size-4" />
+              <span>Duplicate</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteTemplate();
+              }}
+              className="flex w-full items-center gap-2 cursor-pointer text-destructive-text focus:bg-destructive-bg focus:text-destructive-text"
+            >
+              <Trash2 className="size-4" />
+              <span>Delete</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }
@@ -127,9 +161,7 @@ export function OfferTemplatePicker({
   onReloadTemplates,
 }: OfferTemplatePickerProps) {
   const copyTemplate = useCopyOfferTemplate(orgSlug, memberId);
-  const visibleTemplates = recentTemplate
-    ? templates.filter((template) => template.id !== recentTemplate.id)
-    : templates;
+  const visibleTemplates = templates;
 
   async function duplicateTemplateRow(template: OfferTemplateListItem) {
     try {
@@ -191,19 +223,6 @@ export function OfferTemplatePicker({
               </div>
             ))}
           </div>
-        ) : null}
-
-        {!loading && recentTemplate ? (
-          <TemplateRow
-            orgSlug={orgSlug}
-            template={recentTemplate}
-            selected={selectedTemplateId === recentTemplate.id}
-            badge="Recent"
-            onSelect={() => onSelectTemplate(recentTemplate.id)}
-            onDeleteTemplate={() => onDeleteTemplate(recentTemplate)}
-            onDuplicate={() => void duplicateTemplateRow(recentTemplate)}
-            duplicating={copyTemplate.isPending}
-          />
         ) : null}
 
         {!loading && visibleTemplates.map((template) => (

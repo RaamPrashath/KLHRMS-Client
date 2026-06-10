@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Clock3, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -390,95 +391,95 @@ export function SchedulingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] w-[min(94vw,680px)] overflow-hidden gap-0 rounded-2xl border border-neutral-100 bg-surface p-0 shadow-[var(--shadow-4)] sm:max-w-[680px]">
+      <DialogContent className="max-h-[88vh] w-[min(94vw,680px)] overflow-hidden gap-0 rounded-2xl border border-neutral-100 bg-surface p-0 shadow-[0_12px_40px_rgba(0,0,0,0.08)] sm:max-w-[680px]">
         <DialogHeader className="border-b border-neutral-100 bg-canvas/50 px-6 pt-6 pb-5 sm:px-7">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-ghost text-primary">
-              <CalendarDays className="size-5" />
-            </div>
-            <div className="min-w-0 space-y-1">
-              <DialogTitle className="text-xl font-semibold text-neutral-900">
-                {isReschedule ? 'Reschedule Interview' : 'Accept Interview'}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-neutral-500">
-                Propose time slots for the candidate to choose from.
-              </DialogDescription>
-              {interview ? (
-                <div className="truncate text-sm font-medium text-neutral-700">
-                  {candidateName} <span className="font-normal text-neutral-400">/</span> {interview.stageName}
-                </div>
-              ) : null}
-            </div>
+          <div className="min-w-0 space-y-1">
+            <DialogTitle className="text-xl font-semibold text-neutral-900">
+              {isReschedule ? 'Reschedule Interview' : 'Accept Interview'}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-neutral-500">
+              Propose time slots for the candidate to choose from.
+            </DialogDescription>
+            {interview ? (
+              <div className="truncate text-sm font-medium text-neutral-700">
+                {candidateName} <span className="font-normal text-neutral-400">/</span> {interview.stageName}
+              </div>
+            ) : null}
           </div>
         </DialogHeader>
 
-        <div className="max-h-[calc(88vh-156px)] overflow-y-auto px-6 py-5 sm:px-7">
+        <div className="max-h-[calc(88vh-156px)] overflow-y-auto bg-canvas/30 px-6 py-5 sm:px-7 no-scrollbar">
           <div className="grid min-w-0 content-start gap-4">
             <div className="flex items-center justify-between">
               <div>
                 <label className="text-sm font-semibold text-neutral-900">
                   Time slots
                 </label>
-                <p className="text-xs text-neutral-500">IST</p>
+                <p className="text-xs text-neutral-400">IST</p>
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={addSlot}
-                className="gap-1"
+                className="gap-1 active:scale-[0.97] transition-transform duration-100"
               >
                 <Plus className="size-3.5" />
                 Add slot
               </Button>
             </div>
 
-            <div className="grid gap-3">
-              {slots.map((slot, index) => (
-                <div key={slot.id} className="flex items-start gap-3 rounded-xl border border-neutral-100 bg-canvas/70 p-3 shadow-[var(--shadow-1)]">
-                  <div className="grid min-w-0 flex-1 gap-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-neutral-500">
+            <div className="flex flex-col gap-2">
+              <AnimatePresence initial={false}>
+                {slots.map((slot, index) => (
+                  <motion.div
+                    key={slot.id}
+                    initial={{ opacity: 0, height: 0, scale: 0.96, filter: 'blur(4px)' }}
+                    animate={{ opacity: 1, height: 'auto', scale: 1, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, height: 0, scale: 0.96, filter: 'blur(4px)' }}
+                    transition={{ type: 'spring', duration: 0.25, bounce: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex items-center gap-3 bg-surface p-2 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-neutral-50/50 my-1">
+                      <span className="text-xs font-mono font-semibold text-neutral-500 px-2.5 py-1.5 bg-neutral-50 rounded-lg shrink-0">
                         Slot {index + 1}
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-xs text-neutral-500">
-                        <Clock3 className="size-3" />
-                        {durationMinutes.trim() || DEFAULT_DURATION_MINUTES} min
-                      </span>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-[1.2fr_1fr]">
-                      <label className="grid gap-1.5 text-[13px] font-medium text-neutral-700">
-                        Date
+                      <div className="flex-1 min-w-[140px]">
                         <DateField
                           value={slot.date}
                           minDate={todayStart}
                           maxDate={dueDate}
                           onChange={(value) => updateSlot(slot.id, 'date', value)}
                         />
-                      </label>
-                      <label className="grid gap-1.5 text-[13px] font-medium text-neutral-700">
-                        Start time
+                      </div>
+                      <div className="w-[120px] shrink-0">
                         <TimeField
                           value={slot.startTime}
                           onChange={(value) => updateSlot(slot.id, 'startTime', value)}
                         />
-                      </label>
+                      </div>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-neutral-50 px-2.5 py-1.5 text-xs text-neutral-500 shrink-0 font-medium font-mono">
+                        <Clock3 className="size-3.5" />
+                        {durationMinutes.trim() || DEFAULT_DURATION_MINUTES}m
+                      </span>
+                      {slots.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeSlot(slot.id)}
+                          className="size-9 shrink-0 text-neutral-400 hover:text-destructive-text hover:bg-destructive-bg/10 active:scale-95 transition-all rounded-lg"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                  {slots.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeSlot(slot.id)}
-                      className="mt-1 shrink-0 text-neutral-400 hover:text-destructive-text transition-colors"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
 
-            <div className="flex flex-col gap-2 rounded-xl border border-neutral-100 bg-surface-subtle/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 rounded-xl bg-surface p-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-neutral-50/50 sm:flex-row sm:items-center sm:justify-between">
               <label className="text-sm font-medium text-neutral-700">
                 Duration <span className="font-normal text-neutral-400">(optional)</span>
               </label>
@@ -489,10 +490,10 @@ export function SchedulingModal({
                   max={MAX_DURATION_MINUTES}
                   placeholder={String(DEFAULT_DURATION_MINUTES)}
                   value={durationMinutes}
-                  className="h-10 w-24 bg-surface text-sm"
+                  className="h-10 w-24 bg-surface text-sm font-mono"
                   onChange={(event) => setDurationMinutes(event.target.value)}
                 />
-                <span className="text-sm text-neutral-500">minutes</span>
+                <span className="text-sm text-neutral-500 font-medium">minutes</span>
               </div>
             </div>
             {dueDate ? (
@@ -515,12 +516,13 @@ export function SchedulingModal({
             variant="outline"
             disabled={isSubmitting}
             onClick={() => onOpenChange(false)}
+            className="active:scale-[0.97] transition-transform duration-100"
           >
             Cancel
           </Button>
           <Button
             type="button"
-            className="bg-primary hover:bg-primary-hover"
+            className="bg-primary hover:bg-primary-hover active:scale-[0.97] transition-transform duration-100"
             disabled={isSubmitting || !hasCompleteSlot || !hasValidDuration}
             onClick={handleSubmit}
           >

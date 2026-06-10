@@ -2,8 +2,9 @@
 
 import { use, useCallback, useEffect, useState } from 'react';
 import { Check, Clock, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
-import { Button } from '@/components/ui/button';
+import { WaveBackground } from '@/components/auth/shared/WaveBackground';
 import { getHrmsApiUrl } from '@/lib/deployment-env';
 
 interface ProposedSlot {
@@ -113,119 +114,138 @@ export default function InterviewSlotPickerPage({
     }
   }, [selectedSlotId, token]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f7]">
-        <div className="flex items-center gap-3 text-neutral-500">
-          <Loader2 className="size-5 animate-spin" />
-          <span className="text-sm">Loading your interview slots...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f7]">
-        <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-destructive-bg text-destructive-text">
-            <Clock className="size-6" />
-          </div>
-          <h1 className="mb-2 text-lg font-semibold text-neutral-900">Link Expired or Invalid</h1>
-          <p className="text-sm text-neutral-500">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (confirmed) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f7]">
-        <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-success-bg text-success-text">
-            <Check className="size-6" />
-          </div>
-          <h1 className="mb-2 text-lg font-semibold text-neutral-900">Interview Confirmed!</h1>
-          <p className="text-sm text-neutral-500">
-            Your interview time has been booked. Check your email for the confirmation details.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f5f7] p-4">
-      <div className="w-full max-w-lg">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Choose Your Interview Time</h1>
-        </div>
+    <div className="relative min-h-screen overflow-x-hidden bg-white font-sans text-neutral-900">
+      <WaveBackground />
 
-        <div className="mb-6 rounded-2xl bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-          <div className="mb-5 grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">Candidate</p>
-              <p className="mt-0.5 font-medium text-neutral-900">{data?.candidateName}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">Position</p>
-              <p className="mt-0.5 font-medium text-neutral-900">{data?.jobTitle}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">Interviewer</p>
-              <p className="mt-0.5 font-medium text-neutral-900">{data?.interviewerName}</p>
-            </div>
+      <h1 className="sr-only">Choose your interview slot</h1>
+
+      <main className="ui-overlay" id="interview-slot-overlay">
+        <div className="flex w-full flex-col pt-14">
+          <div className="brand-logo-container">
+            <Image
+              src="/kovan-logo.svg"
+              alt="Kovan Labs Logo"
+              width={156}
+              height={34}
+              className="login-logo"
+              priority
+            />
           </div>
 
-          <p className="mb-3 text-sm font-medium text-neutral-700">Available slots</p>
+          <div className="login-header">
+            <h2>{confirmed ? 'Interview booked' : error ? 'Interview link unavailable' : 'Choose your slot'}</h2>
+            <p>
+              {confirmed
+                ? 'Your interview time is confirmed.'
+                : error
+                  ? 'We could not load this interview invitation.'
+                  : 'Select a convenient time for your interview.'}
+            </p>
+          </div>
 
-          {data?.slots.length === 0 && (
-            <p className="text-sm text-neutral-400">No available slots at this time.</p>
-          )}
-
-          <div className="grid gap-2">
-            {data?.slots.map((slot) => (
-              <button
-                key={slot.id}
-                type="button"
-                onClick={() => setSelectedSlotId(slot.id)}
-                className={`w-full rounded-xl border p-4 text-left transition-all ${
-                  selectedSlotId === slot.id
-                    ? 'border-primary bg-primary-ghost ring-1 ring-primary'
-                    : 'border-neutral-100 bg-neutral-50 hover:border-neutral-200 hover:bg-neutral-100'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-neutral-900">
-                    {formatSlotTime(slot.startTime, slot.endTime)}
-                  </span>
-                  {selectedSlotId === slot.id && (
-                    <span className="flex size-5 items-center justify-center rounded-lg bg-primary text-white">
-                      <Check className="size-3" />
-                    </span>
-                  )}
+          {loading ? (
+            <div className="flex items-center gap-3 py-4 text-sm text-neutral-500" role="status" aria-live="polite">
+              <Loader2 className="size-5 animate-spin text-primary" aria-hidden="true" />
+              <span>Loading your interview slots...</span>
+            </div>
+          ) : error ? (
+            <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-4 text-sm text-destructive">
+              <div className="mb-2 flex items-center gap-2 font-medium">
+                <Clock className="size-4" aria-hidden="true" />
+                <span>Link expired or invalid</span>
+              </div>
+              <p className="leading-relaxed text-destructive-text">{error}</p>
+            </div>
+          ) : confirmed ? (
+            <div className="rounded-xl border border-success-border bg-success-bg px-4 py-4 text-sm text-success-text">
+              <div className="mb-2 flex items-center gap-2 font-medium">
+                <Check className="size-4" aria-hidden="true" />
+                <span>Interview confirmed</span>
+              </div>
+              <p className="leading-relaxed">
+                Your interview time has been booked. Check your email for the confirmation details.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-5 grid gap-3 text-sm">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">Candidate</p>
+                  <p className="mt-0.5 font-medium text-neutral-900">{data?.candidateName}</p>
                 </div>
-              </button>
-            ))}
-          </div>
-        </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">Position</p>
+                  <p className="mt-0.5 font-medium text-neutral-900">{data?.jobTitle}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">Interviewer</p>
+                  <p className="mt-0.5 font-medium text-neutral-900">{data?.interviewerName}</p>
+                </div>
+              </div>
 
-        <div className="text-center">
-          <Button
-            type="button"
-            size="lg"
-            disabled={!selectedSlotId || isSubmitting}
-            onClick={handleSelect}
-            className="w-full max-w-xs"
-          >
-            {isSubmitting ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-            Confirm Selection
-          </Button>
-          {submitError ? (
-            <p className="mx-auto mt-3 max-w-md text-sm text-destructive-text">{submitError}</p>
-          ) : null}
+              <p className="mb-3 text-sm font-medium text-neutral-900">Available slots</p>
+
+              {data?.slots.length === 0 ? (
+                <p className="rounded-xl border border-neutral-100 bg-white px-4 py-3 text-sm text-neutral-400">
+                  No available slots at this time.
+                </p>
+              ) : (
+                <div className="grid gap-2">
+                  {data?.slots.map((slot) => {
+                    const isSelected = selectedSlotId === slot.id;
+
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        onClick={() => setSelectedSlotId(slot.id)}
+                        className={`w-full rounded-lg border bg-white px-4 py-3 text-left transition-all focus:outline-none focus:ring-[3px] focus:ring-primary/10 ${
+                          isSelected
+                            ? 'border-primary shadow-[0_0_0_1px_var(--primary)]'
+                            : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium leading-relaxed text-neutral-900">
+                            {formatSlotTime(slot.startTime, slot.endTime)}
+                          </span>
+                          <span
+                            className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${
+                              isSelected
+                                ? 'border-primary bg-primary text-white'
+                                : 'border-neutral-200 bg-white'
+                            }`}
+                            aria-hidden="true"
+                          >
+                            {isSelected ? <Check className="size-3" /> : null}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="btn-submit mt-4 inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                id="btn-book-interview"
+                disabled={!selectedSlotId || isSubmitting}
+                onClick={handleSelect}
+              >
+                {isSubmitting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                {isSubmitting ? 'Booking...' : 'Book Interview'}
+              </button>
+
+              {submitError ? (
+                <p className="mt-3 text-sm text-destructive-text">{submitError}</p>
+              ) : null}
+            </>
+          )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

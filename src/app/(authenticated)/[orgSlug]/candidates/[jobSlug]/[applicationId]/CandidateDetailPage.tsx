@@ -20,6 +20,7 @@ import {
   Phone,
   RotateCcw,
   Save,
+  Search,
   Send,
   ShieldAlert,
   Sparkles,
@@ -27,7 +28,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
@@ -35,7 +36,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useMyEmployeeProfileQuery } from '@/modules/employees/hooks/useEmployeeDetailQuery';
 import { CandidateMergedProfile } from '@/modules/candidates/components/CandidateMergedProfile';
 import {
   useCandidateApplicationDetail,
@@ -258,7 +261,7 @@ function AnalysisStatusPanel({
   const isFailed = analysis.status === 'FAILED';
 
   return (
-    <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+    <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -315,7 +318,7 @@ function AtsScoreTab({
 
   if (!analysis) {
     return (
-      <div className="flex min-h-64 items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-canvas px-6 text-center">
+      <div className="flex min-h-64 items-center justify-center rounded-2xl bg-surface px-6 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div>
           <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-surface text-neutral-300 shadow-[var(--shadow-1)]">
             <Gauge className="size-5" />
@@ -343,7 +346,7 @@ function AtsScoreTab({
     <div className="space-y-5">
       <AnalysisStatusPanel analysis={analysis} onRetry={onRetry} retrying={retrying} />
 
-      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+      <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">AI ATS score</p>
@@ -427,7 +430,7 @@ function AtsScoreTab({
       ) : null}
 
       {facts?.explicitKnockoutRule ? (
-        <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+        <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <p className="text-sm font-semibold text-neutral-900">Explicit knockout rule</p>
           <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-700">{facts.explicitKnockoutRule}</p>
           {facts.explicitKnockoutAssessment ? (
@@ -450,7 +453,7 @@ function AtsScoreTab({
         </section>
       ) : null}
 
-      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+      <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <p className="text-sm font-semibold text-neutral-900">Extracted facts</p>
         <div className="mt-3 grid gap-3">
           {facts?.targetRoleAlignment ? (
@@ -492,12 +495,12 @@ function AtsScoreTab({
         </div>
       </section>
 
-      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+      <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <p className="text-sm font-semibold text-neutral-900">Extracted skills</p>
         {skills.length > 0 ? (
           <div className="mt-3 space-y-2">
             {skills.map((skill) => (
-              <div key={`${skill.normalizedSkill ?? skill.skill}-${skill.evidence}`} className="rounded-md border border-neutral-100 px-3 py-2">
+              <div key={`${skill.normalizedSkill ?? skill.skill}-${skill.evidence}`} className="rounded-2xl bg-surface px-3 py-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium text-neutral-900">{skill.normalizedSkill ?? skill.skill}</p>
                   <span className="font-mono text-xs text-neutral-500">{confidenceLabel(skill.confidence)}</span>
@@ -515,7 +518,7 @@ function AtsScoreTab({
       </section>
 
       {certifications.length > 0 || warnings.length > 0 || parserWarnings.length > 0 ? (
-        <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+        <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <p className="text-sm font-semibold text-neutral-900">Review notes</p>
           <div className="mt-3 space-y-2 text-xs text-neutral-600">
             {certifications.map((certification) => (
@@ -538,14 +541,14 @@ function FeedbackTable({ event }: { readonly event: ApplicationInterviewEvent })
   const feedbacks = event.feedbacks ?? [];
   if (feedbacks.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-neutral-200 bg-canvas px-3 py-3 text-sm text-neutral-500">
+      <div className="rounded-2xl bg-surface px-3 py-3 text-sm text-neutral-500 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         No feedback notes submitted for this interview yet.
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-neutral-100 bg-surface">
+    <div className="overflow-hidden rounded-2xl bg-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-xs">
           <thead className="bg-canvas text-[11px] font-semibold uppercase tracking-wider text-neutral-500 border-b border-neutral-100">
@@ -577,7 +580,7 @@ function InterviewBlock({ event, index }: { readonly event: ApplicationInterview
   const guests = event.participants.filter((participant) => participant.memberId !== lead?.memberId);
 
   return (
-    <div className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 transition-colors hover:bg-surface">
+    <div className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-colors">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
@@ -600,7 +603,7 @@ function InterviewBlock({ event, index }: { readonly event: ApplicationInterview
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[280px_1fr]">
-        <div className="rounded-md border border-neutral-100 bg-surface p-3">
+        <div className="rounded-2xl bg-surface p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Interview panel</p>
           <div className="mt-3 space-y-2">
             <div className="flex items-center gap-2.5 text-sm text-neutral-900 font-medium">
@@ -643,7 +646,7 @@ function HistoryTab({ detail }: { readonly detail: CandidateApplicationDetail })
             <span className="absolute -left-[25px] top-5 flex size-7 items-center justify-center rounded-full border border-neutral-200 bg-surface text-neutral-600 shadow-sm">
               {entry.type === 'applied' ? <FileDown className="size-4" /> : <ArrowRight className="size-3.5" />}
             </span>
-            <section className="rounded-lg border border-neutral-100 bg-surface p-4 transition-colors hover:bg-neutral-50">
+            <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-colors">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-neutral-900">
@@ -662,7 +665,7 @@ function HistoryTab({ detail }: { readonly detail: CandidateApplicationDetail })
               </div>
 
               {entry.type === 'stage' && entry.history.note ? (
-                <p className="mt-3 rounded-md border border-neutral-100 bg-surface px-3 py-2 text-sm text-neutral-700">{entry.history.note}</p>
+                <p className="mt-3 rounded-2xl bg-surface px-3 py-2 text-sm text-neutral-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">{entry.history.note}</p>
               ) : null}
 
               {entry.type === 'stage' && entry.interviews.length > 0 ? (
@@ -726,7 +729,7 @@ function NoteCard({
           ) : null}
         </div>
 
-        <div className="rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-[var(--shadow-1)]">
+        <div className="rounded-2xl bg-surface px-4 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           {editing ? (
             <div className="space-y-3">
               <Textarea
@@ -786,17 +789,28 @@ function NotesComposer({
   readonly onSubmit: () => void;
   readonly pending: boolean;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
   return (
     <form
-      className="shrink-0 bg-surface px-5 py-4"
+      className="shrink-0 bg-transparent py-4"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
     >
-      <div className="rounded-xl border border-neutral-200 bg-surface p-3 shadow-[var(--shadow-1)] focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/10">
+      <div className="rounded-2xl bg-surface p-3 border border-neutral-200 focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/10">
         <Textarea
-          className="min-h-24 resize-none border-0 p-0 text-sm leading-6 shadow-none focus-visible:ring-0"
+          ref={textareaRef}
+          className="min-h-[40px] max-h-48 resize-none border-0 p-0 text-sm leading-6 shadow-none focus-visible:ring-0 overflow-y-auto"
+          rows={1}
           placeholder="Add a note..."
           value={value}
           maxLength={1000}
@@ -824,17 +838,31 @@ function NotesTab({
   detail,
   createNote,
   updateNote,
+  orgSlug,
+  memberId,
 }: {
   readonly detail: CandidateApplicationDetail;
   readonly createNote: ReturnType<typeof useCreateCandidateApplicationNote>;
   readonly updateNote: ReturnType<typeof useUpdateCandidateApplicationNote>;
+  readonly orgSlug: string;
+  readonly memberId: string;
 }) {
   const [composer, setComposer] = useState('');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const myProfileQuery = useMyEmployeeProfileQuery(orgSlug, memberId);
+  const myProfileName = myProfileQuery.data?.name ?? 'You';
+  const myProfileEmail = myProfileQuery.data?.contact.email ?? '';
 
   async function handleCreate() {
     if (!composer.trim()) return;
-    await createNote.mutateAsync({ applicationId: detail.id, body: composer.trim() });
+    await createNote.mutateAsync({
+      applicationId: detail.id,
+      body: composer.trim(),
+      authorName: myProfileName,
+      authorEmail: myProfileEmail,
+    });
     setComposer('');
   }
 
@@ -844,14 +872,47 @@ function NotesTab({
     await updateNote.mutateAsync({ applicationId: detail.id, noteId: note.id, body });
   }
 
+  const sortedNotes = useMemo(() => {
+    const notes = [...(detail.notes ?? [])];
+    return notes.sort(
+      (a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+    );
+  }, [detail.notes]);
+
+  const filteredNotes = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return sortedNotes;
+    return sortedNotes.filter((note) =>
+      (note.authorName ?? '').toLowerCase().includes(query)
+    );
+  }, [sortedNotes, searchQuery]);
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-surface">
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+    <div className="flex flex-1 min-h-0 flex-col bg-transparent">
+      {(detail.notes ?? []).length > 0 ? (
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+            <Input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search by commentator name..."
+              className="bg-neutral-50 pl-9"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="min-h-0 flex-1 overflow-y-auto py-1">
         {(detail.notes ?? []).length === 0 ? (
           <NotesEmptyState />
+        ) : filteredNotes.length === 0 ? (
+          <div className="flex h-full min-h-32 items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-canvas px-6 text-center text-sm text-neutral-500">
+            No notes found for "{searchQuery}"
+          </div>
         ) : (
           <div className="space-y-5">
-            {detail.notes.map((note) => (
+            {filteredNotes.map((note) => (
               <NoteCard
                 key={note.id}
                 note={note}
@@ -931,9 +992,9 @@ export function CandidateDetailPage({
   }
 
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div className="flex min-h-dvh flex-col bg-canvas" style={{ scrollbarGutter: 'stable' }}>
       {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-neutral-100 bg-canvas/95 backdrop-blur">
+      <div className="sticky top-0 z-20 shrink-0 border-b border-neutral-100 bg-canvas/95 backdrop-blur">
         <div className="flex flex-wrap items-center gap-4 px-6 py-4">
           <button
             type="button"
@@ -1025,7 +1086,7 @@ export function CandidateDetailPage({
       </div>
 
       {/* Content */}
-      <div className="mx-auto max-w-7xl px-6 py-6">
+      <div className="mx-auto w-full max-w-7xl px-6 py-6 flex-1 flex flex-col min-h-0">
         {detailQuery.isLoading ? (
           <div className="grid gap-4">
             <Skeleton className="h-12 rounded-xl" />
@@ -1054,15 +1115,15 @@ export function CandidateDetailPage({
             ) : null}
 
             {activeSection === 'notes' ? (
-              <div className="min-h-0">
-                <NotesTab detail={detail} createNote={createNote} updateNote={updateNote} />
+              <div className="min-h-0 flex-1 flex flex-col">
+                <NotesTab detail={detail} createNote={createNote} updateNote={updateNote} orgSlug={orgSlug} memberId={memberId} />
               </div>
             ) : null}
           </>
         ) : null}
 
         {!detailQuery.isLoading && !detail ? (
-          <div className="flex min-h-64 items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-canvas px-6 text-center">
+          <div className="flex min-h-64 items-center justify-center rounded-2xl bg-surface px-6 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <div>
               <p className="text-sm font-medium text-neutral-900">Candidate not found</p>
               <p className="mt-1 text-xs text-neutral-500">

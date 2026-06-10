@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronLeft, Loader2, RotateCcw, Search, Send, ExternalLink } from 'lucide-react';
+import { ChevronLeft, Loader2, RotateCcw, Search, Send, ExternalLink, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -181,22 +181,22 @@ export function OnboardStageShell({
   }
 
   return (
-    <div className="min-h-full bg-canvas px-4 py-5 sm:px-8">
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full pb-7">
+      <div className="flex flex-col gap-4 ml-7 mt-7 mr-7 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="mt-1 text-neutral-500 hover:text-neutral-900"
+            className="mt-1.5 text-neutral-500 hover:text-neutral-900"
             onClick={handleBackToPipeline}
             aria-label="Back to candidate pipeline"
           >
             <ChevronLeft className="size-5" />
           </Button>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold text-neutral-900 sm:text-3xl">{workspace.stage.name}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">{workspace.stage.name}</h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
               <span className="size-1 rounded-full bg-neutral-300" />
               <span className="font-mono text-xs font-medium uppercase tracking-wider text-neutral-400">
@@ -205,192 +205,195 @@ export function OnboardStageShell({
             </div>
           </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void workspaceQuery.refetch()}
-            disabled={workspaceQuery.isFetching}
-          >
-            {workspaceQuery.isFetching ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
-            Refresh
-          </Button>
-        </div>
       </div>
 
-      <div className="mb-4">
-        <div className="relative min-w-0 max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search candidates"
-            placeholder="Search candidates"
-            className="bg-neutral-50 pl-9"
-          />
-        </div>
-      </div>
+      <div className="flex flex-col flex-1 mx-7">
+        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+          <div className="flex flex-col gap-2 border-b border-black/[0.04] px-3.5 py-3.5">
+            <div className="flex items-center gap-2">
+              <div className="relative w-full max-w-[280px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  aria-label="Search candidates"
+                  placeholder="Search candidates"
+                  className="h-9 border-0 bg-canvas px-3 py-2.5 pl-9 text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10"
+                />
+              </div>
+              {search.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 py-2 text-[13px] text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
+                >
+                  <X className="size-3.5" />
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
 
-      <div className="overflow-x-auto rounded-xl border border-neutral-100 bg-surface shadow-[var(--shadow-1)]">
-        <Table>
-          <TableHeader className="bg-canvas">
-            <TableRow className="hover:bg-canvas">
-              <TableHead className="min-w-[200px] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                Candidate
-              </TableHead>
-              <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                Status
-              </TableHead>
-              <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                Aadhar
-              </TableHead>
-              <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                PAN
-              </TableHead>
-              <TableHead className="min-w-[140px] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                Role
-              </TableHead>
-              <TableHead className="min-w-[180px] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                Email
-              </TableHead>
-              <TableHead className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                Action
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredCandidates.length > 0 ? (
-              filteredCandidates.map((candidate) => {
-                const canSend = candidate.onboardingStatus === 'DOCUMENTS_SUBMITTED';
-                const isSending = sendingState[candidate.applicationId] ?? false;
-                const credsSent = candidate.onboardingStatus === 'CREDENTIALS_SENT';
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-canvas/50">
+                <TableRow className="border-black/[0.04] hover:bg-transparent">
+                  <TableHead className="pl-6 pr-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
+                    Candidate
+                  </TableHead>
+                  <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
+                    Status
+                  </TableHead>
+                  <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
+                    Aadhar
+                  </TableHead>
+                  <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
+                    PAN
+                  </TableHead>
+                  <TableHead className="min-w-[140px] px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
+                    Role
+                  </TableHead>
+                  <TableHead className="min-w-[180px] px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
+                    Email
+                  </TableHead>
+                  <TableHead className="pr-6 pl-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
+                    Action
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="bg-surface">
+                {filteredCandidates.length > 0 ? (
+                  filteredCandidates.map((candidate) => {
+                    const canSend = candidate.onboardingStatus === 'DOCUMENTS_SUBMITTED';
+                    const isSending = sendingState[candidate.applicationId] ?? false;
+                    const credsSent = candidate.onboardingStatus === 'CREDENTIALS_SENT';
 
-                return (
-                  <TableRow
-                    key={candidate.applicationId}
-                    className="border-b border-neutral-100 hover:bg-canvas"
-                  >
-                    <TableCell className="px-4 py-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-neutral-900">{candidateName(candidate)}</p>
-                        <p className="truncate text-xs text-neutral-500">{candidate.candidate.email || 'No email'}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-2">
-                      <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', statusClasses(candidate.onboardingStatus))}>
-                        {statusLabel(candidate.onboardingStatus)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="px-4 py-2">
-                      {candidate.aadharUrl && candidate.aadharUrl.startsWith('http') ? (
-                        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-700">
-                          <a href={candidate.aadharUrl} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="size-3.5" />
-                            View
-                          </a>
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-neutral-400">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-2">
-                      {candidate.panUrl && candidate.panUrl.startsWith('http') ? (
-                        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-700">
-                          <a href={candidate.panUrl} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="size-3.5" />
-                            View
-                          </a>
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-neutral-400">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-2">
-                      {credsSent ? (
-                        <span className="text-xs text-neutral-500">
-                          {roles.find((r) => r.id === candidate.assignedRoleId)?.name ?? 'Assigned'}
-                        </span>
-                      ) : (
-                        <Select
-                          value={roleSelections[candidate.applicationId] ?? ''}
-                          onValueChange={(value) =>
-                            setRoleSelections((prev) => ({ ...prev, [candidate.applicationId]: value }))
-                          }
-                          disabled={!canSend || isSending}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {rolesQuery.isLoading ? (
-                              <SelectItem value="loading" disabled>Loading...</SelectItem>
-                            ) : roles.length === 0 ? (
-                              <SelectItem value="none" disabled>No roles available</SelectItem>
-                            ) : (
-                              roles.map((role) => (
-                                <SelectItem key={role.id} value={role.id}>
-                                  {role.name}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-2">
-                      {credsSent ? (
-                        <span className="text-xs text-neutral-500">{candidate.assignedEmail}</span>
-                      ) : (
-                        <Input
-                          value={emailInputs[candidate.applicationId] ?? candidate.candidate.email ?? ''}
-                          onChange={(e) =>
-                            setEmailInputs((prev) => ({ ...prev, [candidate.applicationId]: e.target.value }))
-                          }
-                          placeholder="Enter email"
-                          className="h-8 text-xs"
-                          disabled={!canSend || isSending}
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-2">
-                      {credsSent ? (
-                        <span className="rounded-full bg-success-bg px-2 py-0.5 text-xs font-medium text-success-text">
-                          Sent
-                        </span>
-                      ) : (
-                        <Button
-                          type="button"
-                          size="sm"
-                          className={cn('h-7 px-3 text-xs', canSend ? 'bg-primary hover:bg-primary-hover' : 'bg-neutral-200 text-neutral-400')}
-                          disabled={!canSend || isSending}
-                          onClick={() => void handleSendCredentials(candidate)}
-                        >
-                          {isSending ? (
-                            <Loader2 className="size-3 animate-spin" />
+                    return (
+                      <TableRow
+                        key={candidate.applicationId}
+                        className="border-black/4 transition-colors hover:bg-black/[0.02]"
+                      >
+                        <TableCell className="pl-6 pr-3 py-3 whitespace-nowrap text-left">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-neutral-900">{candidateName(candidate)}</p>
+                            <p className="truncate text-xs text-neutral-500">{candidate.candidate.email || 'No email'}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-3 py-3 whitespace-nowrap text-left">
+                          <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', statusClasses(candidate.onboardingStatus))}>
+                            {statusLabel(candidate.onboardingStatus)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-3 py-3 whitespace-nowrap text-left">
+                          {candidate.aadharUrl && candidate.aadharUrl.startsWith('http') ? (
+                            <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-700">
+                              <a href={candidate.aadharUrl} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="size-3.5" />
+                                View
+                              </a>
+                            </Button>
                           ) : (
-                            <Send className="size-3" />
+                            <span className="text-xs text-neutral-400">-</span>
                           )}
-                          Send
-                        </Button>
-                      )}
-                      {candidate.credentialsEmailError ? (
-                        <p className="mt-1 text-xs text-destructive-text">{candidate.credentialsEmailError}</p>
-                      ) : null}
+                        </TableCell>
+                        <TableCell className="px-3 py-3 whitespace-nowrap text-left">
+                          {candidate.panUrl && candidate.panUrl.startsWith('http') ? (
+                            <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-700">
+                              <a href={candidate.panUrl} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="size-3.5" />
+                                View
+                              </a>
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-neutral-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-3 py-3 whitespace-nowrap text-left">
+                          {credsSent ? (
+                            <span className="text-xs text-neutral-500">
+                              {roles.find((r) => r.id === candidate.assignedRoleId)?.name ?? 'Assigned'}
+                            </span>
+                          ) : (
+                            <Select
+                              value={roleSelections[candidate.applicationId] ?? ''}
+                              onValueChange={(value) =>
+                                setRoleSelections((prev) => ({ ...prev, [candidate.applicationId]: value }))
+                              }
+                              disabled={!canSend || isSending}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Select role" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {rolesQuery.isLoading ? (
+                                  <SelectItem value="loading" disabled>Loading...</SelectItem>
+                                ) : roles.length === 0 ? (
+                                  <SelectItem value="none" disabled>No roles available</SelectItem>
+                                ) : (
+                                  roles.map((role) => (
+                                    <SelectItem key={role.id} value={role.id}>
+                                      {role.name}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-3 py-3 whitespace-nowrap text-left">
+                          {credsSent ? (
+                            <span className="text-xs text-neutral-500">{candidate.assignedEmail}</span>
+                          ) : (
+                            <Input
+                              value={emailInputs[candidate.applicationId] ?? candidate.candidate.email ?? ''}
+                              onChange={(e) =>
+                                setEmailInputs((prev) => ({ ...prev, [candidate.applicationId]: e.target.value }))
+                              }
+                              placeholder="Enter email"
+                              className="h-8 text-xs"
+                              disabled={!canSend || isSending}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="pr-6 pl-3 py-3 whitespace-nowrap text-left">
+                          {credsSent ? (
+                            <span className="rounded-full bg-success-bg px-2 py-0.5 text-xs font-medium text-success-text">
+                              Sent
+                            </span>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className={cn('h-7 px-3 text-xs', canSend ? 'bg-primary hover:bg-primary-hover' : 'bg-neutral-200 text-neutral-400')}
+                              disabled={!canSend || isSending}
+                              onClick={() => void handleSendCredentials(candidate)}
+                            >
+                              {isSending ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : (
+                                <Send className="size-3" />
+                              )}
+                              Send
+                            </Button>
+                          )}
+                          {candidate.credentialsEmailError ? (
+                            <p className="mt-1 text-xs text-destructive-text">{candidate.credentialsEmailError}</p>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow className="border-black/4 hover:bg-transparent">
+                    <TableCell colSpan={7} className="py-16 text-center text-sm text-neutral-500">
+                      No candidates in this stage.
                     </TableCell>
                   </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="h-28 px-4 text-center text-sm text-neutral-500">
-                  No candidates in this stage.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </div>
     </div>
   );

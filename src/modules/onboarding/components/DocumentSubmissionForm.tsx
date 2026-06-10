@@ -39,7 +39,7 @@ export function DocumentSubmissionForm({ token }: DocumentSubmissionFormProps) {
 
   if (onboardingQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
+      <div className="flex min-h-screen items-center justify-center  p-4">
         <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-white px-4 py-3 text-sm text-neutral-500 shadow-sm">
           <Loader2 className="size-4 animate-spin text-primary" />
           Loading...
@@ -62,8 +62,8 @@ export function DocumentSubmissionForm({ token }: DocumentSubmissionFormProps) {
 
   if (onboarding.status !== 'PENDING') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
-        <div className="max-w-md rounded-xl border border-neutral-100 bg-white p-8 text-center shadow-sm">
+      <div className="flex min-h-screen items-center justify-center px-4 pb-4">
+        <div className="max-w-md rounded-xl border border-neutral-100 p-8 text-center shadow-sm">
           <CheckCircle2 className="mx-auto mb-4 size-12 text-success-text" />
           <h1 className="mb-2 text-xl font-semibold text-neutral-900">Documents Already Submitted</h1>
           <p className="text-sm text-neutral-500">
@@ -79,8 +79,8 @@ export function DocumentSubmissionForm({ token }: DocumentSubmissionFormProps) {
 
   if (submitted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
-        <div className="max-w-md rounded-xl border border-neutral-100 bg-white p-8 text-center shadow-sm">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="max-w-md rounded-xl border border-neutral-100  p-8 text-center shadow-sm">
           <CheckCircle2 className="mx-auto mb-4 size-12 text-success-text" />
           <h1 className="mb-2 text-xl font-semibold text-neutral-900">Documents Submitted!</h1>
           <p className="text-sm text-neutral-500">
@@ -130,8 +130,8 @@ export function DocumentSubmissionForm({ token }: DocumentSubmissionFormProps) {
   const isComplete = aadharFile !== null && panFile !== null;
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="border-b border-neutral-100 bg-white">
+    <div className="min-h-screen pt-20">
+      <header>
         <div className="mx-auto flex h-14 max-w-3xl items-center px-4">
           <span className="text-sm font-semibold text-neutral-900">{onboarding.organizationName}</span>
           <span className="mx-2 text-neutral-300">&middot;</span>
@@ -259,7 +259,7 @@ export function DocumentSubmissionForm({ token }: DocumentSubmissionFormProps) {
           </div>
         </div>
 
-        <div className="mt-8 flex items-center justify-between rounded-lg border border-neutral-100 bg-white p-4">
+        <div className="mt-8 flex items-center justify-between rounded-lg  border-neutral-100 bg-white">
           <div className="text-sm text-neutral-500">
             {isComplete ? (
               <span className="flex items-center gap-1.5 text-success-text">
@@ -267,7 +267,7 @@ export function DocumentSubmissionForm({ token }: DocumentSubmissionFormProps) {
                 Both documents selected
               </span>
             ) : (
-              'Select both documents to continue'
+              ''
             )}
           </div>
           <Button

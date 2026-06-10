@@ -97,7 +97,7 @@ function OverviewCard({
   readonly icon: LucideIcon;
 }) {
   return (
-    <div className="rounded-xl border border-neutral-100 bg-surface p-5 shadow-[var(--shadow-1)]">
+    <div className="rounded-2xl bg-surface p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[13px] font-medium text-neutral-500">{label}</p>
@@ -122,7 +122,7 @@ function Panel({
   readonly children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-neutral-100 bg-surface shadow-[var(--shadow-1)]">
+    <section className="rounded-2xl bg-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="border-b border-neutral-100 px-5 py-4">
         {eyebrow ? <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">{eyebrow}</p> : null}
         <h2 className="text-[17px] font-semibold text-neutral-900">{title}</h2>
@@ -272,7 +272,7 @@ export function AtsJobOverviewDashboard({
 
   if (boardQuery.isError) {
     return (
-      <div className="rounded-xl border border-neutral-100 bg-surface p-8 text-sm text-neutral-500">
+      <div className="rounded-2xl bg-surface p-8 text-sm text-neutral-500 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         This job posting was not found.
       </div>
     );

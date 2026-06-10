@@ -14,13 +14,6 @@ const authProtocol = publicAppUrl.startsWith("http://")
         ? "https"
         : "auto";
 const resendFromEmail = getResendFromEmail();
-const microsoftClientId = process.env.MICROSOFT_CLIENT_ID || process.env.AZURE_AD_CLIENT_ID;
-const microsoftClientSecret = process.env.MICROSOFT_CLIENT_SECRET || process.env.AZURE_AD_CLIENT_SECRET;
-const microsoftAuthorityTenant = "common";
-// Multitenant / tenant-locked mode:
-// When asked to switch back to Entra-only multitenant auth, replace the
-// `common` authority above with:
-// process.env.MICROSOFT_TENANT_ID || process.env.AZURE_AD_TENANT_ID || "organizations"
 type MicrosoftProfile = {
     email?: string;
     preferred_username?: string;
@@ -49,16 +42,15 @@ export const auth = betterAuth({
     account: {
         accountLinking: {
             enabled: true,
-            trustedProviders: ["microsoft"],
+            trustedProviders: ["microsoft", "google"],
             allowDifferentEmails: true,
         },
     },
     socialProviders: {
         microsoft: {
-            clientId: microsoftClientId!,
-            clientSecret: microsoftClientSecret!,
-            tenantId: microsoftAuthorityTenant,
-            scope: ["User.Read", "Calendars.ReadWrite", "offline_access"],
+            clientId: (process.env.MICROSOFT_CLIENT_ID || process.env.AZURE_AD_CLIENT_ID)!,
+            clientSecret: (process.env.MICROSOFT_CLIENT_SECRET || process.env.AZURE_AD_CLIENT_SECRET)!,
+            scope: ["User.Read"],
             mapProfileToUser: (profile: MicrosoftProfile) => {
                 const fallbackEmail =
                     profile.email ||

@@ -212,13 +212,13 @@ function MetricCard({
   readonly icon: LucideIcon;
 }) {
   const toneClass = {
-    info: 'bg-info-bg text-info-text border-info-border',
-    success: 'bg-success-bg text-success-text border-success-border',
-    warning: 'bg-warning-bg text-warning-text border-warning-border',
+    info: 'bg-info-bg text-info-text',
+    success: 'bg-success-bg text-success-text',
+    warning: 'bg-warning-bg text-warning-text',
   }[tone];
 
   return (
-    <div className={cn('rounded-xl border p-4 shadow-[var(--shadow-1)]', toneClass)}>
+    <div className={cn('rounded-xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]', toneClass)}>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-wider">{label}</p>
         <Icon className="size-4" />
@@ -238,7 +238,7 @@ function SectionPanel({
   readonly children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-neutral-100 bg-surface p-5 shadow-[var(--shadow-1)]">
+    <section className="rounded-2xl bg-surface p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="mb-4 flex items-center gap-2">
         <Icon className="size-4 text-primary" />
         <h2 className="text-[17px] font-semibold text-neutral-900">{title}</h2>
@@ -301,7 +301,7 @@ function BulletPanel({
 
 function EmptyProfileSections() {
   return (
-    <section className="rounded-xl border border-dashed border-neutral-200 bg-canvas px-6 py-10 text-center">
+    <section className="rounded-2xl bg-surface px-6 py-10 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <FileText className="mx-auto size-8 text-neutral-300" />
       <p className="mt-3 text-sm font-medium text-neutral-900">Resume sections are not available yet</p>
       <p className="mt-1 text-xs text-neutral-500">
@@ -399,7 +399,7 @@ function AnalysisNotice({
 }) {
   if (!analysis) {
     return (
-      <section className="rounded-xl border border-dashed border-neutral-200 bg-canvas p-5 text-center">
+      <section className="rounded-2xl bg-surface p-5 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <Gauge className="mx-auto size-8 text-neutral-300" />
         <p className="mt-3 text-sm font-medium text-neutral-900">No ATS analysis yet</p>
         <p className="mt-1 text-xs text-neutral-500">
@@ -413,7 +413,7 @@ function AnalysisNotice({
   const failed = analysis.status === 'FAILED';
 
   return (
-    <section className="rounded-xl border border-neutral-100 bg-surface p-4 shadow-[var(--shadow-1)]">
+    <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -445,12 +445,34 @@ function AnalysisNotice({
   );
 }
 
+function parseFirewallItem(item: unknown): {
+  page?: number | null;
+  text?: string | null;
+  type?: string | null;
+  details?: string | null;
+  severity?: string | null;
+} {
+  if (!item) return {};
+  if (typeof item === 'string') {
+    try {
+      const parsed = JSON.parse(item);
+      if (parsed && typeof parsed === 'object') {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      return { text: item };
+    }
+  }
+  if (typeof item === 'object') {
+    return item as Record<string, unknown>;
+  }
+  return { text: String(item) };
+}
+
 function RiskSections({ analysis }: { readonly analysis?: CandidateResumeAnalysis }) {
   if (!analysis) return null;
   const facts = analysis.extractedFacts;
-  const failedKnockouts = analysis.failedKnockouts ?? [];
   const firewallItems = [...(analysis.firewallFlags ?? []), ...(analysis.removedSuspiciousText ?? [])];
-  const parserWarnings = analysis.parserWarnings ?? [];
 
   return (
     <div className="space-y-4">
@@ -458,42 +480,54 @@ function RiskSections({ analysis }: { readonly analysis?: CandidateResumeAnalysi
         <section className="rounded-xl border border-warning-border bg-warning-bg p-4">
           <div className="flex items-start gap-3">
             <ShieldAlert className="mt-0.5 size-5 shrink-0 text-warning-text" />
-            <div className="min-w-0">
+            <div className="min-w-0 w-full">
               <p className="text-sm font-semibold text-warning-text">Suspicious hidden resume text found</p>
               <p className="mt-1 text-sm text-warning-text/90">
                 These snippets were removed before sending resume text to AI. This is a warning, not an automatic rejection.
               </p>
               <div className="mt-3 space-y-2">
-                {firewallItems.slice(0, 6).map((item, index) => (
-                  <div key={`${formatUnknown(item)}-${index}`} className="rounded-md border border-warning-border bg-surface px-3 py-2 text-xs text-neutral-700">
-                    {formatUnknown(item)}
-                  </div>
-                ))}
+                {firewallItems.slice(0, 6).map((rawItem, index) => {
+                  const item = parseFirewallItem(rawItem);
+                  const displayType = item.type === 'white_text' ? 'White Text' : (item.type ?? 'Flagged Text');
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-lg border border-warning-border/50 bg-surface p-3 text-sm text-neutral-700 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="font-semibold text-neutral-900 break-all">
+                          {item.details ?? (item.text ? `"${item.text}"` : 'Suspicious item')}
+                        </span>
+                        {item.severity ? (
+                          <span className="rounded bg-warning-bg px-1.5 py-0.5 text-[10px] font-semibold text-warning-text uppercase tracking-wider shrink-0 border border-warning-border/30">
+                            {item.severity}
+                          </span>
+                        ) : null}
+                      </div>
+                      
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-500">
+                        {item.page ? (
+                          <span className="rounded bg-neutral-50 px-2 py-0.5 font-medium border border-neutral-100">
+                            Page {item.page}
+                          </span>
+                        ) : null}
+                        {displayType ? (
+                          <span className="rounded bg-neutral-50 px-2 py-0.5 font-medium border border-neutral-100">
+                            {displayType}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
         </section>
       ) : null}
 
-      {failedKnockouts.length > 0 ? (
-        <section className="rounded-xl border border-destructive-border bg-destructive-bg p-4">
-          <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-destructive-text">
-            <AlertTriangle className="size-4" />
-            Knockout rules failed
-          </p>
-          <div className="space-y-2">
-            {failedKnockouts.map((item, index) => (
-              <div key={`${item.type ?? 'knockout'}-${index}`} className="rounded-md bg-surface px-3 py-2 text-xs text-neutral-700">
-                <span className="font-semibold text-neutral-900">{item.type ?? 'Rule'}</span>
-                <span className="ml-2">Required {formatUnknown(item.required ?? item.missing)}, found {formatUnknown(item.found)}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       {facts?.explicitKnockoutRule ? (
-        <section className="rounded-xl border border-neutral-100 bg-surface p-4">
+        <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <p className="text-sm font-semibold text-neutral-900">Explicit knockout rule</p>
           <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-700">{facts.explicitKnockoutRule}</p>
           {facts.explicitKnockoutAssessment ? (
@@ -513,17 +547,6 @@ function RiskSections({ analysis }: { readonly analysis?: CandidateResumeAnalysi
           ) : (
             <p className="mt-2 text-xs text-warning-text">This rule could not be assessed automatically.</p>
           )}
-        </section>
-      ) : null}
-
-      {parserWarnings.length > 0 ? (
-        <section className="rounded-xl border border-warning-border bg-warning-bg p-4">
-          <p className="text-sm font-semibold text-warning-text">Parser warnings</p>
-          <div className="mt-2 space-y-1 text-xs text-warning-text/90">
-            {parserWarnings.map((warning, index) => (
-              <p key={`${formatUnknown(warning)}-${index}`}>{formatUnknown(warning)}</p>
-            ))}
-          </div>
         </section>
       ) : null}
     </div>
@@ -597,7 +620,7 @@ export function CandidateMergedProfile({
         <MetricCard label="Missing Skills" value={missingSkills.length} tone="warning" icon={AlertTriangle} />
       </div>
 
-      <section className="rounded-xl border border-neutral-100 bg-surface p-5 shadow-[var(--shadow-1)]">
+      <section className="rounded-2xl bg-surface p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Sparkles className="size-4 text-primary" />
@@ -641,13 +664,13 @@ export function CandidateMergedProfile({
 
         <aside className="space-y-5">
           <SectionPanel title="Profile Details" icon={UserRound}>
-            <div className="rounded-lg border border-neutral-100 bg-surface px-4">
+            <div className="rounded-2xl bg-surface px-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <ProfileField label="Email" icon={Mail} value={detail.candidate.email} />
               <ProfileField label="Phone" icon={Phone} value={detail.candidate.phone ?? 'Not provided'} />
               <ProfileField label="Applied" icon={CalendarClock} value={formatDateTime(detail.appliedAt)} />
               <ProfileField label="Current stage" icon={MapPin} value={detail.currentStage} />
             </div>
-            <div className="mt-4 rounded-lg border border-neutral-100 bg-surface px-4">
+            <div className="mt-4 rounded-2xl bg-surface px-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <FileDown className="size-4 shrink-0 text-neutral-400" />

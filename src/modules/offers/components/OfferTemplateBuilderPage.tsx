@@ -421,6 +421,8 @@ function previewTemplateFromDraft(template: OfferTemplate, categoryId: string, d
   };
 }
 
+const pendingCreations = new Set<string>();
+
 export function OfferTemplateBuilderPage({
   orgSlug,
   memberId,
@@ -443,6 +445,8 @@ export function OfferTemplateBuilderPage({
     websiteUrl: 'http://www.kovanlabs.com',
     status: 'DRAFT',
   });
+  const [activeTab, setActiveTab] = useState<'header' | 'body' | 'footer'>('header');
+  const [logoUploading, setLogoUploading] = useState(false);
   const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit');
   const [templateSave, setTemplateSave] = useState<SaveState>({ status: 'idle', message: 'Draft' });
   const [contentSave, setContentSave] = useState<SaveState>({ status: 'idle', message: 'Draft' });
@@ -480,6 +484,9 @@ export function OfferTemplateBuilderPage({
 
   useEffect(() => {
     if (mode !== 'new' || createdRef.current) return;
+    const creationKey = `${orgSlug}-${memberId}`;
+    if (pendingCreations.has(creationKey)) return;
+    pendingCreations.add(creationKey);
     createdRef.current = true;
     createTemplate.mutate(
       {
@@ -489,13 +496,17 @@ export function OfferTemplateBuilderPage({
       },
       {
         onSuccess: (createdTemplate) => {
+          pendingCreations.delete(creationKey);
           setTemplateId(createdTemplate.id);
           router.replace(`/${orgSlug}/offer/${createdTemplate.id}`);
         },
-        onError: (error) => toast.error(readActionError(error, 'Failed to create template')),
+        onError: (error) => {
+          pendingCreations.delete(creationKey);
+          toast.error(readActionError(error, 'Failed to create template'));
+        },
       },
     );
-  }, [createTemplate, mode, orgSlug, router]);
+  }, [createTemplate, mode, orgSlug, router, memberId]);
 
   const serverDraft = useMemo(() => (template ? draftFromTemplate(template) : null), [template]);
   const serverDraftSignature = useMemo(() => (serverDraft ? draftSignature(serverDraft) : ''), [serverDraft]);
@@ -738,7 +749,7 @@ export function OfferTemplateBuilderPage({
   if (mode === 'new' && !templateId) {
     return (
       <div className="flex min-h-full items-center justify-center bg-canvas p-6 text-sm text-neutral-500">
-        <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-[var(--shadow-1)]">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-sm">
           <Loader2 className="size-4 animate-spin text-primary" />
           Creating template
         </div>
@@ -749,7 +760,7 @@ export function OfferTemplateBuilderPage({
   if (templateQuery.isLoading && !template) {
     return (
       <div className="flex min-h-full items-center justify-center bg-canvas p-6 text-sm text-neutral-500">
-        <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-[var(--shadow-1)]">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-sm">
           <Loader2 className="size-4 animate-spin text-primary" />
           Loading template
         </div>
@@ -760,7 +771,7 @@ export function OfferTemplateBuilderPage({
   if (!template) {
     return (
       <div className="min-h-full bg-canvas p-6">
-        <div className="rounded-xl border border-neutral-100 bg-surface p-6 shadow-[var(--shadow-1)]">
+        <div className="rounded-xl border border-neutral-100 bg-surface p-6 shadow-sm">
           <p className="text-sm font-medium text-neutral-900">Offer template was not found.</p>
           <Button className="mt-4" variant="outline" onClick={() => router.push(`/${orgSlug}/candidates`)}>
             Back to candidates
@@ -834,32 +845,52 @@ export function OfferTemplateBuilderPage({
       <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2">
         <section className={cn('min-h-0 overflow-y-auto border-r border-neutral-100 bg-canvas p-4 lg:block lg:p-6', mobileView === 'preview' && 'hidden')}>
           <div className="space-y-4">
-            <label className="grid gap-1.5 rounded-xl border border-neutral-100 bg-surface p-4 text-[13px] font-medium text-neutral-700 shadow-[var(--shadow-1)]">
+            <label className="grid gap-1.5 rounded-xl border border-neutral-100 bg-surface p-4 text-[13px] font-medium text-neutral-700 shadow-sm">
               Template name
               <Input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
             </label>
 
-            <Tabs defaultValue="header" className="flex flex-col rounded-xl border border-neutral-100 bg-surface p-4 shadow-[var(--shadow-1)]">
-              <TabsList className="grid h-10 w-full grid-cols-3">
-                <TabsTrigger value="header">Header</TabsTrigger>
-                <TabsTrigger value="body">Body</TabsTrigger>
-                <TabsTrigger value="footer">Footer</TabsTrigger>
-              </TabsList>
+            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'header' | 'body' | 'footer')} className="flex flex-col rounded-xl border border-neutral-100 bg-surface p-4 shadow-sm">
+              <TabSlider
+                modes={[
+                  { mode: 'header', label: 'Header' },
+                  { mode: 'body', label: 'Body' },
+                  { mode: 'footer', label: 'Footer' },
+                ]}
+                activeMode={activeTab}
+                onChange={setActiveTab}
+              />
 
               <TabsContent value="header" className="mt-4 min-w-0 space-y-4">
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="grid gap-1.5 text-[13px] font-medium text-neutral-700 md:col-span-2">
                     Logo
                     <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-                      <Input value={draft.logoUrl} onChange={(event) => setDraft((current) => ({ ...current, logoUrl: event.target.value }))} placeholder="https://..." />
-                      <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-neutral-200 bg-surface px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50">
-                        <FileImage className="size-4" />
-                        Upload
+                      <Input value={draft.logoUrl} onChange={(event) => setDraft((current) => ({ ...current, logoUrl: event.target.value }))} placeholder="https://..." disabled={logoUploading} />
+                      <label className={cn(
+                        "inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-neutral-200 bg-surface px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50",
+                        logoUploading && "pointer-events-none opacity-50"
+                      )}>
+                        {logoUploading ? (
+                          <Loader2 className="size-4 animate-spin text-neutral-500" />
+                        ) : (
+                          <FileImage className="size-4" />
+                        )}
+                        {logoUploading ? 'Uploading...' : 'Upload'}
                         <input
                           className="sr-only"
                           type="file"
                           accept="image/*"
-                          onChange={(event) => void handleImageFile(event.target.files?.[0], (value) => setDraft((current) => ({ ...current, logoUrl: value })))}
+                          disabled={logoUploading}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) {
+                              setLogoUploading(true);
+                              handleImageFile(file, (value) => {
+                                setDraft((current) => ({ ...current, logoUrl: value }));
+                              }).finally(() => setLogoUploading(false));
+                            }
+                          }}
                         />
                       </label>
                     </div>
@@ -1007,6 +1038,61 @@ export function OfferTemplateBuilderPage({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function TabSlider<T extends string>({
+  modes,
+  activeMode,
+  onChange,
+}: {
+  readonly modes: { mode: T; label: string }[];
+  readonly activeMode: T;
+  readonly onChange: (mode: T) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+  const activeIdx = modes.findIndex((m) => m.mode === activeMode);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const activeBtn = container.querySelector<HTMLButtonElement>(`[data-tab-index="${activeIdx}"]`);
+    if (!activeBtn) return;
+    const cr = container.getBoundingClientRect();
+    const br = activeBtn.getBoundingClientRect();
+    setIndicatorStyle({ left: br.left - cr.left, width: br.width });
+  }, [activeIdx, modes]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="flex items-center self-stretch rounded-xl bg-neutral-50 p-1 border border-black/4 relative w-full shrink-0"
+    >
+      <div
+        className="absolute top-1 bottom-1 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+        style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+      />
+      {modes.map(({ mode, label }, idx) => (
+        <button
+          key={mode}
+          data-tab-index={idx}
+          type="button"
+          onClick={() => onChange(mode)}
+          aria-label={label}
+          aria-pressed={activeMode === mode}
+          className={cn(
+            'inline-flex items-center justify-center flex-1 h-8 px-4 text-[13px] font-medium rounded-lg relative z-10 transition-colors duration-200',
+            activeMode === mode
+              ? 'text-primary'
+              : 'text-neutral-500 hover:text-neutral-900',
+          )}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }

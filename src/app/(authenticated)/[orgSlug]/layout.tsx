@@ -29,19 +29,23 @@ export default async function OrganizationLayout({
         getScope(permissions, "employees", "edit") === "organization" ||
         getScope(permissions, "organization", "edit") === "organization";
 
-    const allOrganizationOptions = (await organizations.getOrganizationsForUser(session.user.id)).map((item) => ({
-        slug: item.slug,
-        name: item.name,
-        roleName: item.membership.role?.name ?? null,
-    }));
-
-    const dedupedOrganizationOptions = Array.from(
-        new Map(allOrganizationOptions.map((item) => [item.slug, item])).values(),
-    );
-
     const organizationOptions = canSwitchOrganizations
-        ? dedupedOrganizationOptions
-        : dedupedOrganizationOptions.filter((item) => item.slug === org.slug);
+        ? Array.from(
+            new Map(
+                (await organizations.getOrganizationsForUser(session.user.id))
+                    .map((item) => ({
+                        slug: item.slug,
+                        name: item.name,
+                        roleName: item.membership.role?.name ?? null,
+                    }))
+                    .map((item) => [item.slug, item]),
+            ).values(),
+        )
+        : [{
+            slug: org.slug,
+            name: org.name,
+            roleName: member.role?.name ?? null,
+        }];
 
     const userImage = (session.user as { image?: string | null }).image ?? null;
 
