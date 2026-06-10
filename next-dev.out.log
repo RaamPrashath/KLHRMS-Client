@@ -1,0 +1,12 @@
+
+> klhrms@0.1.0 dev
+> next dev --port 3000
+
+▲ Next.js 16.2.7 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.98.53.34:3000
+- Environments: .env
+✓ Ready in 1001ms
+
+○ Compiling /[orgSlug]/documents ...
+ GET /kovan-labs/documents 200 in 22.6s (next.js: 21.1s, application-code: 1487ms)

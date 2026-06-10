@@ -1,7 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
     Archive,
@@ -50,9 +50,14 @@ type DocScreenshot = {
     caption: string;
 };
 
+const CLOUDINARY_DOCS_IMAGE_BASE = "https://res.cloudinary.com/datgb606y/image/upload";
+
 function shot(fileName: string, alt: string, caption: string): DocScreenshot {
+    const timestamp = fileName.match(/Screenshot (\d{4}-\d{2}-\d{2}) (\d{6})\.png/);
+    const publicId = timestamp ? `screenshot-${timestamp[1]}-${timestamp[2]}` : fileName.replace(/\.png$/, "");
+
     return {
-        src: `/docs/screenshots/${encodeURIComponent(fileName)}`,
+        src: `${CLOUDINARY_DOCS_IMAGE_BASE}/${publicId}.png`,
         alt,
         caption,
     };
@@ -1365,12 +1370,12 @@ function ScreenshotGallery({
                 {screenshots.map((screenshot) => (
                     <figure key={screenshot.src} className="overflow-hidden rounded-lg border border-neutral-100 bg-canvas">
                         <div className="relative aspect-[16/9] w-full">
-                            <Image
+                            <img
                                 src={screenshot.src}
                                 alt={screenshot.alt}
-                                fill
-                                sizes="(min-width: 1024px) 560px, 100vw"
-                                className="object-cover object-top"
+                                loading="lazy"
+                                decoding="async"
+                                className="h-full w-full object-cover object-top"
                             />
                         </div>
                         <figcaption className="border-t border-neutral-100 bg-surface px-4 py-3 text-xs leading-5 text-neutral-500">
