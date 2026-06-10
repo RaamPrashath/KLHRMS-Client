@@ -47,7 +47,7 @@ export function DashboardTopBar({
   const isLoading = notificationsQuery.isLoading || unreadCountQuery.isLoading;
 
   return (
-    <div className="flex min-h-10 items-center justify-end border-b border-[#dbe4ef] px-8 text-[#365887]">
+    <div className="hidden md:flex min-h-10 items-center justify-end border-b border-[#dbe4ef] px-8 text-[#365887]">
       <div className="flex items-center gap-3">
         <Popover>
           <PopoverTrigger asChild>

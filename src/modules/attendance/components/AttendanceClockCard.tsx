@@ -646,40 +646,111 @@ export function AttendanceClockCard({
             : "rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:bg-[#0A0A0C]",
         )}
       >
-        <div
-          className={cn(
-            "relative flex justify-between gap-6",
-            isDashboard
-              ? "flex-1 flex-col gap-4 p-0 text-left md:flex-row md:items-center md:justify-between min-h-[72px]"
-              : "p-6 md:p-8 flex-col md:flex-row md:items-center md:gap-0 min-h-[100px]",
-          )}
-        >
-          <div className={isDashboard ? "flex min-w-0 flex-1 flex-col text-left" : "flex min-w-0 flex-col text-left"}>
-            {widgetState === "LOADING" ? (
-              <>
-                {isDashboard ? (
-                  <>
-                    <div className="h-6 w-48 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />
-                    <div className="mt-2.5 h-4 w-72 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800/60" />
-                  </>
-                ) : (
-                  <>
-                    <div className="h-7 w-48 animate-pulse rounded-lg bg-neutral-100" />
-                    <div className="mt-2 h-4 w-32 animate-pulse rounded-lg bg-neutral-100" />
-                  </>
+        {isDashboard ? (
+          <div className="relative flex justify-between gap-6 flex-1 flex-col gap-4 p-0 text-center md:text-left md:flex-row md:items-center md:justify-between min-h-[72px]">
+            {/* Greeting & Date block */}
+            <div className="flex min-w-0 flex-1 flex-col text-center md:text-left items-center md:items-start">
+              {widgetState === "LOADING" ? (
+                <>
+                  <div className="h-6 w-48 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+                  <div className="mt-2.5 h-4 w-72 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800/60" />
+                </>
+              ) : (
+                <div className="min-w-0">
+                  <h1 className="max-w-136 text-balance greeting-title text-center md:text-left text-lg md:text-[22px]" title={greeting}>
+                    {greeting}
+                  </h1>
+                </div>
+              )}
+            </div>
+
+            {/* Actions block */}
+            <div className="flex shrink-0 items-center justify-center md:justify-end w-full md:w-auto">
+              <AnimatePresence mode="wait">
+                {widgetState === "LOADING" && (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.96 }}
+                    transition={{ duration: 0.2 }}
+                    className="h-11 w-32 animate-pulse rounded-xl bg-zinc-200 dark:bg-white/10"
+                  />
                 )}
-              </>
-            ) : (
-              <>
-                {isDashboard ? (
-                  <div className="min-w-0">
-                    <h1 className="max-w-136 text-balance greeting-title" title={greeting}>
-                      {greeting}
-                    </h1>
-                  </div>
+                {widgetState === "NOT_CLOCKED_IN" && (
+                  <motion.div
+                    key="not-clocked-in"
+                    initial={{ opacity: 0, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, filter: "blur(4px)" }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleOpenClockInDialog}
+                      disabled={clockInMutation.isPending || isClockContextLoading}
+                      className="clock-btn btn-primary-grad disabled:opacity-60 disabled:pointer-events-none cursor-pointer text-[11px] md:text-sm px-2.5 py-1.5 md:px-6 md:py-3 whitespace-nowrap"
+                    >
+                      {clockInMutation.isPending || isClockContextLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="fill-current">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                      )}
+                      <span>{clockInMutation.isPending ? "Clocking in..." : "Clock In"}</span>
+                    </button>
+                  </motion.div>
+                )}
+                {widgetState === "CLOCKED_IN" && (
+                  <motion.div
+                    key="clocked-in"
+                    initial={{ opacity: 0, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, filter: "blur(4px)" }}
+                    transition={{ duration: 0.25 }}
+                    className="flex items-center gap-3 justify-center md:justify-end w-full md:w-auto"
+                  >
+                    <div className="flex items-center gap-2 mr-1">
+                      <span className="font-clock text-neutral-900 dark:text-neutral-100 text-2xl md:text-3xl tracking-tight select-none">
+                        {elapsedDisplay}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={handleOpenClockOutDialog}
+                        disabled={clockOutMutation.isPending}
+                        className="clock-btn active flex items-center justify-center gap-2 btn-clockout-border text-[11px] md:text-sm px-2.5 py-1.5 md:px-6 md:py-3 whitespace-nowrap disabled:opacity-60 cursor-pointer"
+                      >
+                        {clockOutMutation.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="fill-current">
+                            <rect x="6" y="6" width="12" height="12" />
+                          </svg>
+                        )}
+                        <span>{clockOutMutation.isPending ? "Clocking out..." : "Clock Out"}</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Desktop layout for Attendance tab card */}
+            <div className="hidden md:flex relative justify-between gap-6 p-6 md:p-8 items-center min-h-[100px] w-full">
+              <div className="flex min-w-0 flex-col text-left">
+                {widgetState === "LOADING" ? (
+                  <>
+                    <div className="h-7 w-48 animate-pulse rounded-lg bg-neutral-100 dark:bg-zinc-800" />
+                    <div className="mt-2 h-4 w-32 animate-pulse rounded-lg bg-neutral-100 dark:bg-zinc-900" />
+                  </>
                 ) : (
                   <>
-                    <h2 className="truncate font-sans text-xl font-medium text-neutral-900" title={greeting}>
+                    <h2 className="truncate font-sans text-xl font-medium text-neutral-900 dark:text-neutral-100" title={greeting}>
                       {greeting}
                     </h2>
                     <p className="mt-1 text-sm text-neutral-400">{todayLabel}</p>
@@ -690,141 +761,169 @@ export function AttendanceClockCard({
                     ) : null}
                   </>
                 )}
-              </>
-            )}
-          </div>
+              </div>
 
-          <div className={isDashboard ? "flex shrink-0 items-center justify-end" : "flex items-center shrink-0 min-h-[48px]"}>
-            <AnimatePresence mode="wait">
-              {widgetState === "LOADING" && (
-                <motion.div
-                  key="loading"
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.96 }}
-                  transition={{ duration: 0.2 }}
-                  className={isDashboard ? "h-11 w-32 animate-pulse rounded-xl bg-zinc-200 dark:bg-white/10" : "h-12 w-32 animate-pulse rounded-xl bg-neutral-100"}
-                />
-              )}
-
-              {widgetState === "NOT_CLOCKED_IN" && (
-                <motion.div
-                  key="not-clocked-in"
-                  initial={{ opacity: 0, filter: "blur(4px)" }}
-                  animate={{ opacity: 1, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, filter: "blur(4px)" }}
-                  transition={{ duration: 0.25 }}
-                >
-                  {isDashboard ? (
-                    <button
-                      type="button"
-                      onClick={handleOpenClockInDialog}
-                      disabled={clockInMutation.isPending || isClockContextLoading}
-                      className="clock-btn btn-primary-grad disabled:opacity-60 disabled:pointer-events-none cursor-pointer"
-                    >
-                      {clockInMutation.isPending || isClockContextLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="fill-current">
-                          <polygon points="5 3 19 12 5 21 5 3" />
-                        </svg>
-                      )}
-                      <span>{clockInMutation.isPending ? "Clocking in..." : "Clock In Now"}</span>
-                    </button>
-                  ) : (
-                    <ClockInButton
-                      onClockIn={handleOpenClockInDialog}
-                      isPending={clockInMutation.isPending || isClockContextLoading}
+              <div className="flex items-center shrink-0 min-h-[48px]">
+                <AnimatePresence mode="wait">
+                  {widgetState === "LOADING" && (
+                    <motion.div
+                      key="loading"
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.96 }}
+                      transition={{ duration: 0.2 }}
+                      className="h-12 w-32 animate-pulse rounded-xl bg-neutral-100 dark:bg-zinc-800"
                     />
                   )}
-                </motion.div>
-              )}
-
-              {widgetState === "CLOCKED_IN" && (
-                <motion.div
-                  key="clocked-in"
-                  initial={{ opacity: 0, filter: "blur(4px)" }}
-                  animate={{ opacity: 1, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, filter: "blur(4px)" }}
-                  transition={{ duration: 0.25 }}
-                  className={isDashboard ? "flex items-center gap-4" : "flex items-center gap-6"}
-                >
-                  {!isDashboard && (
-                    <div className="flex items-center gap-3">
-                      <p
-                        className="font-clock text-3xl tracking-tight text-neutral-900 dark:text-neutral-100 select-none"
-                        aria-live="polite"
-                      >
-                        {elapsedDisplay}
-                      </p>
-                      <div className="relative flex h-2 w-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-lg bg-primary opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-lg bg-primary" />
-                      </div>
-                    </div>
-                  )}
-                  {isDashboard && (
-                    <div className="flex items-center gap-2 mr-2">
-                      <span className="font-clock text-neutral-900 dark:text-neutral-100 text-3xl tracking-tight select-none">
-                        {elapsedDisplay}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3">
-                    {isDashboard ? (
-                      <button
-                        type="button"
-                        onClick={handleOpenClockOutDialog}
-                        disabled={clockOutMutation.isPending}
-                        className="clock-btn active flex items-center justify-center gap-2 btn-clockout-border text-sm px-6 py-3 disabled:opacity-60 cursor-pointer"
-                      >
-                        {clockOutMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="fill-current">
-                            <rect x="6" y="6" width="12" height="12" />
-                          </svg>
-                        )}
-                        <span>{clockOutMutation.isPending ? "Clocking out..." : "Clock Out Session"}</span>
-                      </button>
-                    ) : (
-                      <ClockOutButton
-                        onClockOut={handleOpenClockOutDialog}
-                        isPending={clockOutMutation.isPending}
+                  {widgetState === "NOT_CLOCKED_IN" && (
+                    <motion.div
+                      key="not-clocked-in"
+                      initial={{ opacity: 0, filter: "blur(4px)" }}
+                      animate={{ opacity: 1, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, filter: "blur(4px)" }}
+                      transition={{ duration: 0.25 }}
+                    >
+                      <ClockInButton
+                        onClockIn={handleOpenClockInDialog}
+                        isPending={clockInMutation.isPending || isClockContextLoading}
                       />
+                    </motion.div>
+                  )}
+                  {widgetState === "CLOCKED_IN" && (
+                    <motion.div
+                      key="clocked-in"
+                      initial={{ opacity: 0, filter: "blur(4px)" }}
+                      animate={{ opacity: 1, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, filter: "blur(4px)" }}
+                      transition={{ duration: 0.25 }}
+                      className="flex items-center gap-6"
+                    >
+                      <div className="flex items-center gap-3">
+                        <p
+                          className="font-clock text-2xl md:text-3xl tracking-tight text-neutral-900 dark:text-neutral-100 select-none"
+                          aria-live="polite"
+                        >
+                          {elapsedDisplay}
+                        </p>
+                        <div className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-lg bg-primary opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-lg bg-primary" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <ClockOutButton
+                          onClockOut={handleOpenClockOutDialog}
+                          isPending={clockOutMutation.isPending}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                  {widgetState === "COMPLETED" && completedRecord && (
+                    <motion.div
+                      key="completed"
+                      initial={{ opacity: 0, filter: "blur(4px)" }}
+                      animate={{ opacity: 1, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, filter: "blur(4px)" }}
+                      transition={{ duration: 0.25 }}
+                      className="flex items-center gap-4"
+                    >
+                      <div className="rounded-xl bg-zinc-100 px-6 py-3 text-sm font-semibold text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-300">
+                        Day complete · {formatWorkedDuration(completedRecord.totalHours)} logged
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Mobile Layout (Strict design.html format) */}
+            <div className="block md:hidden p-4 space-y-3.5 w-full">
+              {widgetState === "LOADING" ? (
+                <div className="space-y-3">
+                  <div className="h-5 w-48 animate-pulse rounded-lg bg-neutral-100 dark:bg-zinc-800" />
+                  <div className="h-4 w-32 animate-pulse rounded-lg bg-neutral-50 dark:bg-zinc-800/60" />
+                  <div className="h-16 w-full animate-pulse rounded-xl bg-neutral-50 dark:bg-zinc-850" />
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  <div className="space-y-0.5 text-left">
+                    <h2 className="text-base font-bold tracking-tight text-neutral-900 dark:text-neutral-100 leading-snug">
+                      {greeting}
+                    </h2>
+                    <p className="text-xs text-neutral-400 font-medium flex items-center gap-1">
+                      {todayLabel}
+                    </p>
+                    {clockContext?.plannedLocation ? (
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 block mt-1">
+                        Planned: {getPlanLabel(clockContext.plannedLocation)}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* Clock & Action Layout */}
+                  <div className="flex items-center justify-between gap-2 text-left">
+                    {widgetState === "NOT_CLOCKED_IN" && (
+                      <>
+                        <div className="space-y-0.5">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 block pl-0.5">
+                            Status
+                          </span>
+                          <div className="text-xs font-semibold text-neutral-500">
+                            Not Clocked In
+                          </div>
+                        </div>
+                        <ClockInButton
+                          onClockIn={handleOpenClockInDialog}
+                          isPending={clockInMutation.isPending || isClockContextLoading}
+                        />
+                      </>
+                    )}
+
+                    {widgetState === "CLOCKED_IN" && (
+                      <>
+                        <div className="font-clock text-lg font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5 select-none">
+                          <span>{elapsedDisplay}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                        </div>
+                        <ClockOutButton
+                          onClockOut={handleOpenClockOutDialog}
+                          isPending={clockOutMutation.isPending}
+                        />
+                      </>
+                    )}
+
+                    {widgetState === "COMPLETED" && completedRecord && (
+                      <div className="flex items-center justify-between w-full">
+                        <div className="space-y-0.5">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 block pl-0.5">
+                            Status
+                          </span>
+                          <div className="text-xs font-semibold text-emerald-650 dark:text-emerald-400">
+                            Day Complete
+                          </div>
+                        </div>
+                        <div className="text-xs font-bold text-neutral-600 dark:text-neutral-400 shrink-0 select-none">
+                          {formatWorkedDuration(completedRecord.totalHours)} logged
+                        </div>
+                      </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               )}
+            </div>
+          </>
+        )}
 
-              {widgetState === "COMPLETED" && completedRecord && (
-                <motion.div
-                  key="completed"
-                  initial={{ opacity: 0, filter: "blur(4px)" }}
-                  animate={{ opacity: 1, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, filter: "blur(4px)" }}
-                  transition={{ duration: 0.25 }}
-                  className="flex items-center gap-4"
-                >
-                  <div className="rounded-xl bg-zinc-100 px-6 py-3 text-sm font-semibold text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-300">
-                    Day complete · {formatWorkedDuration(completedRecord.totalHours)} logged
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {inlineError ? (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="absolute -bottom-10 rounded-lg bg-destructive-bg px-4 py-2 text-sm font-medium text-destructive-text"
-              role="alert"
-            >
-              {inlineError}
-            </motion.div>
-          ) : null}
-        </div>
+        {inlineError ? (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute bottom-2 left-4 rounded-lg bg-destructive-bg px-4 py-2 text-sm font-medium text-destructive-text"
+            role="alert"
+          >
+            {inlineError}
+          </motion.div>
+        ) : null}
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

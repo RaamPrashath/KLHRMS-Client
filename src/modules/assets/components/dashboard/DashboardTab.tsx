@@ -110,7 +110,6 @@ function buildAggregateDetail(row: BrandModelInventoryRow, details: AssetDetail[
     brand: row.brand,
     categoryDefinitionId: newestDetail?.categoryDefinitionId ?? null,
     serialNumber: units[0]?.serialNumber ?? null,
-    brand: row.brand,
     model: row.model,
     purchaseDate: null,
     purchasePrice: null,

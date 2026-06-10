@@ -214,6 +214,7 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [pivotAnchor, setPivotAnchor] = useState<Date>(() => new Date());
+  const [force8, setForce8] = useState(true);
 
   useEffect(() => {
     if (viewMode === 'list') return;
@@ -477,11 +478,11 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
   return (
     <div className="flex flex-col flex-1 mx-7 mb-7">
       <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
-        {/* ── Top section: title + view toggle + export + filters ───────── */}
-        <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
+        {/* Desktop View: Top section: title + view toggle + export + filters */}
+        <div className="hidden md:flex px-8 py-6 flex-col gap-4 border-b border-black/[0.04] dark:border-white/[0.04]">
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
             <div className="flex flex-col gap-2">
-              <h2 className="text-[17px] font-semibold text-neutral-900 tracking-tight">
+              <h2 className="text-[17px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">
                 Attendance Records
               </h2>
 
@@ -503,6 +504,8 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                 pivotRecords={items}
                 pivotDateColumns={pivotDateColumns}
                 pivotPeriodLabel={pivotPeriodLabel}
+                force8={force8}
+                setForce8={setForce8}
               />
             </div>
           </div>
@@ -514,6 +517,91 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
               showMemberFilter={showEmployeeColumn}
               selfScope={!showEmployeeColumn}
             />
+          )}
+        </div>
+
+        {/* Mobile View: Top section: title + view toggle + export + filters */}
+        <div className="flex md:hidden px-4 py-4 flex-col gap-3.5 border-b border-black/[0.04] dark:border-white/[0.04]">
+          <div className="flex flex-col gap-2">
+            <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">
+              Attendance Records
+            </h2>
+
+            <TabSlider
+              activeMode={viewMode}
+              onChange={handleViewModeChange}
+            />
+          </div>
+
+          {viewMode === 'list' && (
+            <div className="w-full">
+              <AttendanceFilters
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                showMemberFilter={showEmployeeColumn}
+                selfScope={!showEmployeeColumn}
+                exportButtons={
+                  <AttendanceExportButtons
+                    orgSlug={orgSlug}
+                    memberId={memberId}
+                    records={exportRows}
+                    showEmployeeColumn={showEmployeeColumn}
+                    title={pivotExportTitle}
+                    disabled={isLoading || isError}
+                    viewMode={viewMode}
+                    pivotRecords={items}
+                    pivotDateColumns={pivotDateColumns}
+                    pivotPeriodLabel={pivotPeriodLabel}
+                    force8={force8}
+                    setForce8={setForce8}
+                    renderMobileOnly={true}
+                  />
+                }
+              />
+            </div>
+          )}
+
+          {/* Strict Cap Calculation Toggle Box */}
+          {viewMode === 'list' && (
+            <div className="flex items-center justify-between bg-white dark:bg-zinc-900/60 border border-neutral-200/60 dark:border-zinc-800/60 p-3 rounded-xl shadow-sm">
+              <div className="space-y-0.5">
+                <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Strict Cap Calculation</span>
+                <p className="text-[10px] text-neutral-400 dark:text-zinc-500">Enforce standard maximum boundaries.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer select-none group">
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={force8}
+                    onChange={(e) => setForce8(e.target.checked)}
+                    className="peer sr-only"
+                    aria-label="Force 8 hours maximum per record"
+                  />
+                  <div className="h-3.5 w-3.5 rounded-[3px] border border-neutral-300 dark:border-zinc-700 bg-surface dark:bg-zinc-900 transition-all duration-150
+                    peer-checked:bg-primary peer-checked:border-primary
+                    peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30
+                    group-hover:border-neutral-400">
+                    {force8 && (
+                      <svg
+                        viewBox="0 0 10 8"
+                        fill="none"
+                        className="absolute inset-0 m-auto w-2.5 h-2 text-white"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M1 4l2.5 2.5L9 1"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-neutral-500 dark:text-zinc-400 ml-2">Force 8 hrs</span>
+              </label>
+            </div>
           )}
         </div>
 

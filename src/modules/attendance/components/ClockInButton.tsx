@@ -20,7 +20,7 @@ export function ClockInButton({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-      className="btn-primary-grad disabled:pointer-events-none disabled:opacity-60"
+      className="clock-btn btn-primary-grad disabled:pointer-events-none disabled:opacity-60"
     >
       <span className="relative z-10 flex items-center justify-center gap-2.5">
         {isPending ? (

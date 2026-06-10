@@ -1,8 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { FileSpreadsheet, FileText, FileDown, Loader2 } from 'lucide-react';
+import { FileSpreadsheet, FileText, FileDown, Loader2, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   exportAttendanceAction,
   type AttendanceExportFormat,
@@ -30,6 +35,10 @@ interface AttendanceExportButtonsProps {
   pivotRecords?: AttendanceRecord[];   // raw records for the pivot period
   pivotDateColumns?: string[];         // ordered YYYY-MM-DD strings
   pivotPeriodLabel?: string;
+  // external state support
+  force8?: boolean;
+  setForce8?: (val: boolean) => void;
+  renderMobileOnly?: boolean;
 }
 
 // ─── Download trigger ─────────────────────────────────────────────────────────
@@ -160,9 +169,15 @@ export function AttendanceExportButtons({
   pivotRecords = [],
   pivotDateColumns = [],
   pivotPeriodLabel = '',
+  force8,
+  setForce8,
+  renderMobileOnly = false,
 }: Readonly<AttendanceExportButtonsProps>) {
   const [pending, setPending] = useState<AttendanceExportFormat | null>(null);
-  const [force8, setForce8] = useState(true);
+  const [localForce8, setLocalForce8] = useState(true);
+
+  const activeForce8 = force8 !== undefined ? force8 : localForce8;
+  const activeSetForce8 = setForce8 !== undefined ? setForce8 : setLocalForce8;
 
   const isPivot = viewMode === 'weekly' || viewMode === 'monthly';
 
@@ -182,7 +197,7 @@ export function AttendanceExportButtons({
           pivotRecords,
           pivotDateColumns,
           pivotPeriodLabel,
-          force8,
+          activeForce8,
         );
         blob = await exportAttendanceAction({
           orgSlug,
@@ -193,7 +208,7 @@ export function AttendanceExportButtons({
           pivotData,
         });
       } else {
-        const exportRecords = force8 ? applyForce8List(records) : records;
+        const exportRecords = activeForce8 ? applyForce8List(records) : records;
         blob = await exportAttendanceAction({
           orgSlug,
           memberId,
@@ -218,10 +233,55 @@ export function AttendanceExportButtons({
 
   const isEmpty = isPivot ? pivotRecords.length === 0 : records.length === 0;
 
+  if (renderMobileOnly) {
+    return (
+      <div className="flex items-center" aria-label="Export attendance mobile">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={disabled || isEmpty || pending !== null}
+              className="inline-flex items-center justify-center size-9 rounded-xl border border-neutral-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-neutral-400 active:scale-[0.97] transition-all select-none shrink-0"
+              aria-label="Export options"
+            >
+              <MoreVertical className="size-4" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-44 p-1.5 rounded-xl border border-neutral-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg z-[200]">
+            <div className="space-y-0.5">
+              {FORMAT_CONFIG.map(({ format, label, icon }) => {
+                const isLoading = pending === format;
+                const isDisabled = disabled || isEmpty || pending !== null;
+
+                return (
+                  <button
+                    key={format}
+                    type="button"
+                    onClick={() => handleExport(format)}
+                    disabled={isDisabled}
+                    className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-left text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      icon
+                    )}
+                    <span>{label.replace('Export as ', 'Export ')}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-end gap-2">
       {/* Export buttons row */}
-      <div className="flex items-center gap-1.5" aria-label="Export attendance">
+      {/* Desktop View: Export buttons row */}
+      <div className="hidden md:flex items-center gap-1.5" aria-label="Export attendance">
         {FORMAT_CONFIG.map(({ format, label, icon }) => {
           const isLoading = pending === format;
           const isDisabled = disabled || isEmpty || pending !== null;
@@ -250,13 +310,54 @@ export function AttendanceExportButtons({
         })}
       </div>
 
+      {/* Mobile View: 3-Dot Dropdown */}
+      <div className="flex md:hidden items-center" aria-label="Export attendance mobile">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={disabled || isEmpty || pending !== null}
+              className="inline-flex items-center justify-center size-8 rounded-lg border border-neutral-200 bg-surface hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-500 active:scale-[0.97] transition-transform select-none"
+              aria-label="Export options"
+            >
+              <MoreVertical className="size-4" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-44 p-1.5 rounded-xl border border-neutral-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg z-[200]">
+            <div className="space-y-0.5">
+              {FORMAT_CONFIG.map(({ format, label, icon }) => {
+                const isLoading = pending === format;
+                const isDisabled = disabled || isEmpty || pending !== null;
+
+                return (
+                  <button
+                    key={format}
+                    type="button"
+                    onClick={() => handleExport(format)}
+                    disabled={isDisabled}
+                    className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-left text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      icon
+                    )}
+                    <span>{label.replace('Export as ', 'Export ')}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
       {/* Force 8 hours checkbox */}
       <label className="flex items-center gap-2 cursor-pointer select-none group">
         <div className="relative flex items-center justify-center">
           <input
             type="checkbox"
-            checked={force8}
-            onChange={(e) => setForce8(e.target.checked)}
+            checked={activeForce8}
+            onChange={(e) => activeSetForce8(e.target.checked)}
             className="peer sr-only"
             aria-label="Force 8 hours maximum per record"
           />
@@ -264,7 +365,7 @@ export function AttendanceExportButtons({
             peer-checked:bg-primary peer-checked:border-primary
             peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30
             group-hover:border-neutral-400">
-            {force8 && (
+            {activeForce8 && (
               <svg
                 viewBox="0 0 10 8"
                 fill="none"

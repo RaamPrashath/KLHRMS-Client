@@ -15,7 +15,7 @@ export function ClockOutButton({ onClockOut, isPending }: Readonly<ClockOutButto
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-      className="inline-flex items-center justify-center gap-2 btn-clockout-border text-sm px-8 py-3 disabled:opacity-60 disabled:pointer-events-none cursor-pointer"
+      className="clock-btn inline-flex items-center justify-center gap-2 btn-clockout-border text-sm px-8 py-3 disabled:opacity-60 disabled:pointer-events-none cursor-pointer whitespace-nowrap"
     >
       {isPending ? (
         <svg

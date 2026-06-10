@@ -78,7 +78,7 @@ export function OrgSidebarShell({
         isNotificationsRoute
 
     return (
-        <div className="fixed inset-0 flex overflow-hidden bg-canvas">
+        <div className="fixed inset-0 flex flex-col md:flex-row overflow-hidden bg-canvas">
             <AppSidebar
                 orgSlug={orgSlug}
                 orgName={orgName}
