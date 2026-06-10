@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronLeft, Loader2, RotateCcw, Search, Send, ExternalLink, X } from 'lucide-react';
+import { ChevronLeft, Loader2, RotateCcw, Search, Send, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -39,16 +39,6 @@ interface OnboardStageShellProps {
 
 function candidateName(candidate: OnboardWorkspaceCandidate): string {
   return `${candidate.candidate.firstName ?? ''} ${candidate.candidate.lastName ?? ''}`.trim() || 'Unnamed candidate';
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return '-';
-  return new Intl.DateTimeFormat('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Asia/Kolkata',
-  }).format(new Date(value));
 }
 
 function statusClasses(status: string): string {
@@ -244,12 +234,6 @@ export function OnboardStageShell({
                   <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
                     Status
                   </TableHead>
-                  <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
-                    Aadhar
-                  </TableHead>
-                  <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
-                    PAN
-                  </TableHead>
                   <TableHead className="min-w-[140px] px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
                     Role
                   </TableHead>
@@ -264,9 +248,9 @@ export function OnboardStageShell({
               <TableBody className="bg-surface">
                 {filteredCandidates.length > 0 ? (
                   filteredCandidates.map((candidate) => {
-                    const canSend = candidate.onboardingStatus === 'DOCUMENTS_SUBMITTED';
                     const isSending = sendingState[candidate.applicationId] ?? false;
                     const credsSent = candidate.onboardingStatus === 'CREDENTIALS_SENT';
+                    const canSend = !credsSent;
 
                     return (
                       <TableRow
@@ -283,30 +267,6 @@ export function OnboardStageShell({
                           <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', statusClasses(candidate.onboardingStatus))}>
                             {statusLabel(candidate.onboardingStatus)}
                           </span>
-                        </TableCell>
-                        <TableCell className="px-3 py-3 whitespace-nowrap text-left">
-                          {candidate.aadharUrl && candidate.aadharUrl.startsWith('http') ? (
-                            <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-700">
-                              <a href={candidate.aadharUrl} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="size-3.5" />
-                                View
-                              </a>
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-neutral-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-3 py-3 whitespace-nowrap text-left">
-                          {candidate.panUrl && candidate.panUrl.startsWith('http') ? (
-                            <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-700">
-                              <a href={candidate.panUrl} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="size-3.5" />
-                                View
-                              </a>
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-neutral-400">-</span>
-                          )}
                         </TableCell>
                         <TableCell className="px-3 py-3 whitespace-nowrap text-left">
                           {credsSent ? (
@@ -385,7 +345,7 @@ export function OnboardStageShell({
                   })
                 ) : (
                   <TableRow className="border-black/4 hover:bg-transparent">
-                    <TableCell colSpan={7} className="py-16 text-center text-sm text-neutral-500">
+                    <TableCell colSpan={5} className="py-16 text-center text-sm text-neutral-500">
                       No candidates in this stage.
                     </TableCell>
                   </TableRow>

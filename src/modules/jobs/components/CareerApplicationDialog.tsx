@@ -127,6 +127,10 @@ export function CareerApplicationDialog({
     }
   }, [form, open]);
 
+  function handleResumeFile(file: File | null) {
+    form.setValue('resumeFile', file, { shouldValidate: true, shouldDirty: true });
+  }
+
   async function onSubmit(values: PublicCareerApplicationFormValues) {
     if (!(values.resumeFile instanceof File)) {
       toast.error('Resume is required');
@@ -218,8 +222,14 @@ export function CareerApplicationDialog({
               type="file"
               accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                form.setValue('resumeFile', file, { shouldValidate: true, shouldDirty: true });
+                handleResumeFile(event.target.files?.[0] ?? null);
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                handleResumeFile(event.dataTransfer.files?.[0] ?? null);
               }}
             />
             <p className="text-xs text-muted-foreground">{resumeLabel}</p>

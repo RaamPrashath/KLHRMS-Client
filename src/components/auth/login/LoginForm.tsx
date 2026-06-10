@@ -94,7 +94,11 @@ export function LoginForm() {
 
             {/* Form Error Display */}
             {formError && (
-                <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-4 animate-in fade-in zoom-in-95 duration-200">
+                <div
+                    role="alert"
+                    aria-live="polite"
+                    className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-4 animate-in fade-in zoom-in-95 duration-200"
+                >
                     {formError}
                 </div>
             )}
@@ -141,10 +145,12 @@ export function LoginForm() {
                         placeholder="you@example.com"
                         autoComplete="email"
                         required
+                        aria-invalid={!!errors.email}
+                        aria-describedby={errors.email ? "login-email-error" : undefined}
                         {...register("email")}
                     />
                     {errors.email && (
-                        <span className="text-xs text-red-500 mt-1 font-medium">{errors.email.message}</span>
+                        <span id="login-email-error" className="text-xs text-red-500 mt-1 font-medium">{errors.email.message}</span>
                     )}
                 </div>
 
@@ -158,10 +164,12 @@ export function LoginForm() {
                         placeholder="••••••••"
                         autoComplete="current-password"
                         required
+                        aria-invalid={!!errors.password}
+                        aria-describedby={errors.password ? "login-password-error" : undefined}
                         {...register("password")}
                     />
                     {errors.password && (
-                        <span className="text-xs text-red-500 mt-1 font-medium">{errors.password.message}</span>
+                        <span id="login-password-error" className="text-xs text-red-500 mt-1 font-medium">{errors.password.message}</span>
                     )}
                 </div>
 
@@ -178,7 +186,7 @@ export function LoginForm() {
 
             {/* Footer */}
             <div className="login-footer mt-8">
-                Don't have an account? <Link href="/signup" id="link-signup">Sign up</Link>
+                Don&apos;t have an account? <Link href="/signup" id="link-signup">Sign up</Link>
             </div>
 
             <div className="mt-3 text-center text-xs text-muted-foreground">

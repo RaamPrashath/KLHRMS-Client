@@ -735,6 +735,20 @@ export function AttendanceClockCard({
                     </div>
                   </motion.div>
                 )}
+                {widgetState === "COMPLETED" && completedRecord && (
+                  <motion.div
+                    key="completed"
+                    initial={{ opacity: 0, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, filter: "blur(4px)" }}
+                    transition={{ duration: 0.25 }}
+                    className="flex items-center gap-2 justify-center md:justify-end w-full md:w-auto"
+                  >
+                    <div className="rounded-xl bg-zinc-100 px-3 py-1.5 md:px-6 md:py-3 text-xs md:text-sm font-semibold text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-300 whitespace-nowrap">
+                      Day complete · {formatWorkedDuration(completedRecord.totalHours)} logged
+                    </div>
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
           </div>
