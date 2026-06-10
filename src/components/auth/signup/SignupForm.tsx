@@ -28,6 +28,9 @@ export function SignupForm() {
     } = useForm<SignupInput>({
         resolver: zodResolver(signupSchema),
     });
+    const emailRegistration = register("email");
+    const passwordRegistration = register("password");
+    const confirmPasswordRegistration = register("confirmPassword");
 
     // Focus first invalid field after validation error
     useEffect(() => {
@@ -43,6 +46,7 @@ export function SignupForm() {
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setPasswordValue(val);
+        void passwordRegistration.onChange(e);
         setValue("password", val, { shouldValidate: false });
     };
 
@@ -185,9 +189,9 @@ export function SignupForm() {
                         placeholder="name@company.com"
                         autoComplete="email"
                         aria-invalid={!!errors.email}
-                        {...register("email")}
+                        {...emailRegistration}
                         ref={(e) => {
-                            register("email").ref(e);
+                            emailRegistration.ref(e);
                             emailRef.current = e;
                         }}
                     />
@@ -206,9 +210,12 @@ export function SignupForm() {
                         aria-invalid={!!errors.password}
                         showGenerator
                         value={passwordValue}
+                        name={passwordRegistration.name}
+                        onBlur={passwordRegistration.onBlur}
                         onChange={handlePasswordChange}
                         onGenerate={handleGeneratePassword}
                         ref={(e) => {
+                            passwordRegistration.ref(e);
                             passwordRef.current = e;
                         }}
                     />
@@ -230,8 +237,9 @@ export function SignupForm() {
                         placeholder="••••••••"
                         autoComplete="new-password"
                         aria-invalid={!!errors.confirmPassword}
-                        {...register("confirmPassword")}
+                        {...confirmPasswordRegistration}
                         ref={(e) => {
+                            confirmPasswordRegistration.ref(e);
                             confirmPasswordRef.current = e;
                         }}
                     />
