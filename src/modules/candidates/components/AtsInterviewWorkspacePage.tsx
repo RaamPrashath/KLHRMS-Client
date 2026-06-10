@@ -33,10 +33,10 @@ import {
 import { createInterviewMeetingAction } from '@/modules/candidates/api/atsServerActions';
 import type { StageWorkspaceCandidate, StageWorkspaceInterviewer } from '@/modules/candidates/types/atsTypes';
 
-const MICROSOFT_CALENDAR_SCOPE = 'Calendars.ReadWrite';
-const MICROSOFT_CONNECT_RETURN_PARAM = 'atsMicrosoftConnected';
+const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
 
-function normalizeMicrosoftScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
+function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
   if (Array.isArray(account.scopes)) {
     return account.scopes.filter((scope): scope is string => typeof scope === 'string');
   }
@@ -105,62 +105,62 @@ export function AtsInterviewWorkspacePage({
   const [meetLink, setMeetLink] = useState('');
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
-  const [hasMicrosoftAccess, setHasMicrosoftAccess] = useState(false);
-  const [microsoftAccessLoading, setMicrosoftAccessLoading] = useState(true);
-  const [isConnectingMicrosoft, setIsConnectingMicrosoft] = useState(false);
+  const [hasGoogleAccess, setHasGoogleAccess] = useState(false);
+  const [googleAccessLoading, setGoogleAccessLoading] = useState(true);
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const interviewersQuery = useInterviewersSearch(orgSlug, memberId, search);
-  const pendingConnectKeyRef = useRef(`ats-microsoft-connect:${orgSlug}`);
+  const pendingConnectKeyRef = useRef(`ats-google-connect:${orgSlug}`);
 
   const workspace = workspaceQuery.data;
 
   useEffect(() => {
     authClient.listAccounts().then((result) => {
       if (result.error) {
-        setHasMicrosoftAccess(false);
-        setMicrosoftAccessLoading(false);
+        setHasGoogleAccess(false);
+        setGoogleAccessLoading(false);
         return;
       }
       const accounts = Array.isArray(result.data) ? result.data : [];
 
-      const microsoftAccount = accounts.find(
+      const googleAccount = accounts.find(
         (account: { providerId?: unknown; scope?: unknown; scopes?: unknown }) =>
-          account.providerId === 'microsoft'
+          account.providerId === 'google'
       );
 
-      if (!microsoftAccount) {
-        setHasMicrosoftAccess(false);
-        setMicrosoftAccessLoading(false);
+      if (!googleAccount) {
+        setHasGoogleAccess(false);
+        setGoogleAccessLoading(false);
         return;
       }
 
-      const hasCalendar = normalizeMicrosoftScopes(microsoftAccount).includes(MICROSOFT_CALENDAR_SCOPE);
+      const hasCalendar = normalizeGoogleScopes(googleAccount).includes(GOOGLE_CALENDAR_SCOPE);
 
-      setHasMicrosoftAccess(hasCalendar);
-      setMicrosoftAccessLoading(false);
+      setHasGoogleAccess(hasCalendar);
+      setGoogleAccessLoading(false);
     });
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
-    if (!url.searchParams.has(MICROSOFT_CONNECT_RETURN_PARAM)) return;
-    url.searchParams.delete(MICROSOFT_CONNECT_RETURN_PARAM);
+    if (!url.searchParams.has(GOOGLE_CONNECT_RETURN_PARAM)) return;
+    url.searchParams.delete(GOOGLE_CONNECT_RETURN_PARAM);
     window.history.replaceState(null, '', url.toString());
-    toast.success('Microsoft Calendar connected');
-    queueMicrotask(() => setHasMicrosoftAccess(true));
+    toast.success('Google Calendar connected');
+    queueMicrotask(() => setHasGoogleAccess(true));
   }, []);
 
-  async function connectMicrosoft() {
+  async function connectGoogle() {
     try {
-      setIsConnectingMicrosoft(true);
+      setIsConnectingGoogle(true);
       const callbackUrl = new URL(window.location.href);
-      callbackUrl.searchParams.set(MICROSOFT_CONNECT_RETURN_PARAM, '1');
+      callbackUrl.searchParams.set(GOOGLE_CONNECT_RETURN_PARAM, '1');
       sessionStorage.setItem(pendingConnectKeyRef.current, '1');
 
       const result = await authClient.linkSocial({
-        provider: 'microsoft',
+        provider: 'google',
         callbackURL: callbackUrl.toString(),
-        scopes: ['User.Read', MICROSOFT_CALENDAR_SCOPE, 'offline_access'],
+        scopes: [GOOGLE_CALENDAR_SCOPE],
         disableRedirect: false,
       });
 
@@ -169,15 +169,15 @@ export function AtsInterviewWorkspacePage({
       }
     } catch (error) {
       sessionStorage.removeItem(pendingConnectKeyRef.current);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to connect Microsoft Calendar';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to connect Google Calendar';
 
       if (errorMessage.includes('different_user')) {
-        toast.error('This Microsoft account is linked to a different user. Please sign out and sign in with the correct account.');
+        toast.error('This Google account is linked to a different user. Please sign out and sign in with the correct account.');
       } else {
         toast.error(errorMessage);
       }
     } finally {
-      setIsConnectingMicrosoft(false);
+      setIsConnectingGoogle(false);
     }
   }
   async function checkAvailability(interviewer: StageWorkspaceInterviewer | null, value: string) {
@@ -207,7 +207,7 @@ export function AtsInterviewWorkspacePage({
     if (!selectedCandidate || !selectedInterviewer || !scheduledLocal) return;
     try {
       let finalMeetLink = meetLink || null;
-      if (hasMicrosoftAccess && !finalMeetLink) {
+      if (hasGoogleAccess && !finalMeetLink) {
         try {
           const meeting = await createInterviewMeetingAction({
             orgSlug,
@@ -413,25 +413,25 @@ export function AtsInterviewWorkspacePage({
               </label>
             </div>
 
-            {microsoftAccessLoading ? (
-              <p className="inline-flex items-center gap-2 text-xs text-neutral-500"><Loader2 className="size-3 animate-spin" />Checking Microsoft Calendar access...</p>
-            ) : hasMicrosoftAccess ? (
+            {googleAccessLoading ? (
+              <p className="inline-flex items-center gap-2 text-xs text-neutral-500"><Loader2 className="size-3 animate-spin" />Checking Google Calendar access...</p>
+            ) : hasGoogleAccess ? (
               <div className="rounded-xl border border-success-bg bg-success-bg/20 p-3 text-sm text-success-text">
-                <span className="inline-flex items-center gap-2 font-medium">Microsoft Calendar connected - Teams link will be auto-created.</span>
+                <span className="inline-flex items-center gap-2 font-medium">Google Calendar connected - Meet link will be auto-created.</span>
               </div>
             ) : (
               <div className="space-y-3 rounded-xl border border-neutral-100 bg-canvas p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-neutral-900">Meeting Link</p>
-                    <p className="text-xs text-neutral-500">Paste a meeting link or connect Microsoft Calendar to auto-create.</p>
+                    <p className="text-xs text-neutral-500">Paste a meeting link or connect Google Calendar to auto-create.</p>
                   </div>
-                  <Button type="button" variant="outline" size="sm" disabled={isConnectingMicrosoft} onClick={connectMicrosoft}>
+                  <Button type="button" variant="outline" size="sm" disabled={isConnectingGoogle} onClick={connectGoogle}>
                     <CalendarPlus className="mr-1.5 size-4" />
-                    {isConnectingMicrosoft ? 'Connecting...' : 'Connect Microsoft'}
+                    {isConnectingGoogle ? 'Connecting...' : 'Connect Google'}
                   </Button>
                 </div>
-                <Input value={meetLink} onChange={(event) => setMeetLink(event.target.value)} placeholder="https://teams.microsoft.com/... or paste manually" />
+                <Input value={meetLink} onChange={(event) => setMeetLink(event.target.value)} placeholder="https://meet.google.com/... or paste manually" />
               </div>
             )}
 

@@ -83,7 +83,7 @@ export function OfferLettersPanel({ orgSlug, memberId, applicationId }: OfferLet
   const offers = query.data?.offerLetters ?? [];
 
   return (
-    <section className="rounded-xl border border-neutral-100 bg-surface p-5 shadow-[var(--shadow-1)]">
+    <section className="rounded-2xl bg-surface p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <FileText className="size-4 text-primary" />

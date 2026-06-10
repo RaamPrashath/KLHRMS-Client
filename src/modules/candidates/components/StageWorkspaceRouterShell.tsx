@@ -4,7 +4,7 @@ import { Loader2, RotateCcw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { StageWorkspacePageShell } from '@/modules/candidates/components/StageWorkspacePageShell';
-import { useStageWorkspaceByJobSlug } from '@/modules/candidates/hooks/useAtsPipeline';
+import { usePipelineBoardByJobSlug, useStageWorkspaceByJobSlug } from '@/modules/candidates/hooks/useAtsPipeline';
 import { OfferStagePageShell } from '@/modules/offers/components/OfferStagePageShell';
 import { AcceptedOnboardingShell } from '@/modules/onboarding/components/AcceptedOnboardingShell';
 import { OnboardStageShell } from '@/modules/onboarding/components/OnboardStageShell';
@@ -46,13 +46,22 @@ export function StageWorkspaceRouterShell({
   jobSlug,
   stageSlug,
 }: StageWorkspaceRouterShellProps) {
-  const stageWorkspaceQuery = useStageWorkspaceByJobSlug(orgSlug, memberId, jobSlug, stageSlug);
-  const workspace = stageWorkspaceQuery.data;
-  const stageType = workspace?.stage.stageType?.toUpperCase() ?? null;
+  const boardQuery = usePipelineBoardByJobSlug(orgSlug, memberId, jobSlug);
+  const routeStage = boardQuery.data?.stages.find((stage) => stage.slug === stageSlug) ?? null;
+  const stageType = routeStage?.stageType?.toUpperCase() ?? null;
 
   const shouldLoadOfferWorkspace = stageType === 'OFFER';
   const shouldLoadAcceptedOnboardingWorkspace = stageType === 'HIRED';
   const shouldLoadOnboardWorkspace = stageType === 'ONBOARDING';
+  const shouldLoadInterviewWorkspace = stageType === 'INTERVIEW';
+
+  const stageWorkspaceQuery = useStageWorkspaceByJobSlug(
+    orgSlug,
+    memberId,
+    shouldLoadInterviewWorkspace ? jobSlug : null,
+    shouldLoadInterviewWorkspace ? stageSlug : null,
+  );
+  const workspace = stageWorkspaceQuery.data;
 
   const offerWorkspaceQuery = useOfferWorkspace(
     orgSlug,
@@ -90,7 +99,7 @@ export function StageWorkspaceRouterShell({
 
   const renderLoading = (label = 'Loading stage workspace') => (
     <div className="flex min-h-full items-center justify-center bg-canvas p-6 text-sm text-neutral-500">
-      <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-[var(--shadow-1)]">
+      <div className="inline-flex items-center gap-2 rounded-2xl bg-surface px-4 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <Loader2 className="size-4 animate-spin text-primary" />
         {label}
       </div>
@@ -110,13 +119,19 @@ export function StageWorkspaceRouterShell({
     </div>
   );
 
-  if (stageWorkspaceQuery.isLoading) {
+  if (boardQuery.isLoading) {
     return renderLoading();
   }
 
-  if (stageWorkspaceQuery.isError || !workspace) {
-    return renderError(stageWorkspaceQuery.error, () => {
-      void stageWorkspaceQuery.refetch();
+  if (boardQuery.isError) {
+    return renderError(boardQuery.error, () => {
+      void boardQuery.refetch();
+    });
+  }
+
+  if (!routeStage) {
+    return renderError(new Error('Pipeline stage was not found.'), () => {
+      void boardQuery.refetch();
     });
   }
 
@@ -184,5 +199,21 @@ export function StageWorkspaceRouterShell({
     return renderLoading('Loading onboard workspace');
   }
 
-  return renderRegularWorkspace();
+  if (shouldLoadInterviewWorkspace) {
+    if (stageWorkspaceQuery.isLoading) {
+      return renderLoading();
+    }
+
+    if (stageWorkspaceQuery.isError || !workspace) {
+      return renderError(stageWorkspaceQuery.error, () => {
+        void stageWorkspaceQuery.refetch();
+      });
+    }
+
+    return renderRegularWorkspace();
+  }
+
+  return renderError(new Error('This stage does not have a dedicated workspace.'), () => {
+    void boardQuery.refetch();
+  });
 }

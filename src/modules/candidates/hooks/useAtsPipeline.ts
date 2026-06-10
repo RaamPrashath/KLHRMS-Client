@@ -238,15 +238,51 @@ export function useUpdateCandidateApplicationDetail(orgSlug: string, memberId: s
 export function useCreateCandidateApplicationNote(orgSlug: string, memberId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (params: { applicationId: string; body: string }) =>
+    mutationFn: (params: { applicationId: string; body: string; authorName?: string; authorEmail?: string }) =>
       createCandidateApplicationNoteAction({
         orgSlug,
         memberId,
         applicationId: params.applicationId,
         body: params.body,
       }),
+    onMutate: async (newNote) => {
+      const queryKey = ['ats-application-detail', orgSlug, newNote.applicationId];
+      await queryClient.cancelQueries({ queryKey });
+
+      const previousDetail = queryClient.getQueryData<CandidateApplicationDetail>(queryKey);
+
+      if (previousDetail) {
+        const optimisticNote: import('@/modules/candidates/types/atsTypes').CandidateApplicationNote = {
+          id: `temp-${Date.now()}`,
+          body: newNote.body,
+          authorName: newNote.authorName ?? 'You',
+          authorEmail: newNote.authorEmail ?? '',
+          authorMemberId: memberId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          canEdit: false,
+        };
+
+        queryClient.setQueryData<CandidateApplicationDetail>(queryKey, {
+          ...previousDetail,
+          notes: [...(previousDetail.notes ?? []), optimisticNote],
+        });
+      }
+
+      return { previousDetail, queryKey };
+    },
+    onError: (_err, _newNote, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(context.queryKey, context.previousDetail);
+      }
+    },
     onSuccess: (data) => {
       queryClient.setQueryData(['ats-application-detail', orgSlug, data.id], data);
+    },
+    onSettled: (data, error, variables, context) => {
+      if (context?.queryKey) {
+        queryClient.invalidateQueries({ queryKey: context.queryKey });
+      }
     },
   });
 }

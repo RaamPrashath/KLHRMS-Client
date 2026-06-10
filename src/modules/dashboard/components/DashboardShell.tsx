@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   CalendarDays,
@@ -29,21 +28,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useApiClient } from "@/hooks/useApiClient";
-import { useTeamWeeklyPlanQuery } from "@/hooks/queries/weekly_plan";
 import { cn } from "@/lib/utils";
 import type { RolePermissions } from "@/lib/hrms-roles";
 import { getScope, hasPermission } from "@/lib/hrms-roles";
-import { useAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
 import { resolveAttendancePermissions } from "@/modules/attendance/utils/attendancePermissions";
 import { getTodayIST } from "@/modules/attendance/utils/attendanceFormatters";
-import { fetchLeavePageContextAction } from "@/modules/leave/api/leaveServerActions";
 import { useApproveLeaveRequest } from "@/modules/leave/hooks/useApproveLeaveRequest";
-import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
 import { useRejectLeaveRequest } from "@/modules/leave/hooks/useRejectLeaveRequest";
 import { canApproveLeaves, resolveLeavePermissions } from "@/modules/leave/utils/leavePermissions";
-import { getCurrentWeekState } from "@/modules/weekly-plan/date";
 import { InviteEmployeeDialog } from "@/modules/employees/components/InviteEmployeeDialog";
+import { useDashboardOverviewQuery } from "@/modules/dashboard/hooks/useDashboardOverviewQuery";
+import type { DashboardOverviewResponse } from "@/modules/dashboard/types/dashboardTypes";
 import { DashboardClockWidget } from "./DashboardClockWidget";
 import { DashboardTopBar } from "./DashboardTopBar";
 import { WorkLogHeatmapCard } from "./WorkLogHeatmapCard";
@@ -96,44 +91,24 @@ function MemberChip({
 }
 
 function AttendanceOverviewSection({
-  orgSlug,
-  orgId,
-  memberId,
-}: Readonly<Pick<DashboardShellProps, "orgSlug" | "orgId" | "memberId">>) {
+  overview,
+  isLoading,
+}: Readonly<{
+  overview: DashboardOverviewResponse | undefined;
+  isLoading: boolean;
+}>) {
   const today = getTodayIST();
   const [search, setSearch] = useState("");
-  const auth = useApiClient(orgId);
-  const currentWeek = useMemo(() => getCurrentWeekState(), []);
-
-  const contextQuery = useQuery({
-    queryKey: ["leave-context", orgSlug, memberId],
-    queryFn: () => fetchLeavePageContextAction({ orgSlug, memberId }),
-    staleTime: 60_000,
-  });
-  const attendanceQuery = useAttendanceQuery(orgSlug, memberId, {
-    dateFrom: today, dateTo: today, page: 1, pageSize: 200,
-  });
-  const { data: leaveData } = useLeaveRequests(orgSlug, memberId, {
-    status: "APPROVED", fromDate: today, toDate: today, page: 1, pageSize: 200,
-  });
-  const teamWeeklyPlanQuery = useTeamWeeklyPlanQuery(
-    orgSlug,
-    orgId,
-    memberId,
-    currentWeek.year,
-    currentWeek.week,
-    true,
-  );
 
   const { officeClockedInMembers, remoteClockedInMembers, notClockedInMembers, absentMembers } = useMemo(() => {
-    const members = contextQuery.data?.members ?? [];
-    const attendanceItems = attendanceQuery.data?.items ?? [];
+    const members = overview?.members ?? [];
+    const attendanceItems = overview?.attendanceToday?.items ?? [];
     const activeIds = new Set(
       attendanceItems.filter((r) => r.clockIn && !r.clockOut).map((r) => r.employeeId),
     );
-    const onLeaveMemberIds = new Set((leaveData?.items ?? []).map((l) => l.memberId));
+    const onLeaveMemberIds = new Set((overview?.approvedLeavesToday?.items ?? []).map((l) => l.memberId));
     const locationByUserId = new Map(
-      (teamWeeklyPlanQuery.data ?? [])
+      (overview?.teamWeeklyPlanToday ?? [])
         .filter((entry) => entry.date === today)
         .map((entry) => [entry.user_id, entry.work_location]),
     );
@@ -154,7 +129,7 @@ function AttendanceOverviewSection({
       absentMembers: members.filter((m) => !activeIds.has(m.memberId) && onLeaveMemberIds.has(m.memberId)),
       notClockedInMembers: members.filter((m) => !activeIds.has(m.memberId) && !onLeaveMemberIds.has(m.memberId)),
     };
-  }, [attendanceQuery.data?.items, contextQuery.data?.members, leaveData?.items, teamWeeklyPlanQuery.data, today]);
+  }, [overview?.approvedLeavesToday?.items, overview?.attendanceToday?.items, overview?.members, overview?.teamWeeklyPlanToday, today]);
 
   const filterFn = (m: { name: string | null; email: string | null }) => {
     if (!search) return true;
@@ -162,7 +137,6 @@ function AttendanceOverviewSection({
     return (m.name ?? "").toLowerCase().includes(q) || (m.email ?? "").toLowerCase().includes(q);
   };
 
-  const isLoading = attendanceQuery.isLoading || contextQuery.isLoading || (auth != null && teamWeeklyPlanQuery.isLoading);
   const sections = [
     { label: "Clocked In (Office)", members: officeClockedInMembers, color: "blue" as const },
     { label: "Clocked In (Work From Home)", members: remoteClockedInMembers, color: "purple" as const },
@@ -266,22 +240,33 @@ function AttendanceOverviewSection({
 function PendingLeaveRequestsSection({
   orgSlug,
   memberId,
-}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId">>) {
-  const leaveRequestsQuery = useLeaveRequests(orgSlug, memberId, {
-    status: "PENDING", page: 1, pageSize: 3,
-  });
+  overview,
+  isLoading,
+  onChanged,
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId"> & {
+  overview: DashboardOverviewResponse | undefined;
+  isLoading: boolean;
+  onChanged: () => void;
+}>) {
   const approveMutation = useApproveLeaveRequest(orgSlug, memberId);
   const rejectMutation = useRejectLeaveRequest(orgSlug, memberId);
+  const requests = overview?.pendingLeaveRequests?.items ?? [];
 
   function handleApprove(requestId: string) {
     approveMutation.mutateAsync({ leaveRequestId: requestId, data: { approverComment: "" } })
-      .then(() => toast.success("Leave request approved"))
+      .then(() => {
+        toast.success("Leave request approved");
+        onChanged();
+      })
       .catch((error: unknown) => toast.error(getErrorMessage(error, "Failed to approve")));
   }
 
   function handleReject(requestId: string) {
     rejectMutation.mutateAsync({ leaveRequestId: requestId, data: { approverComment: "" } })
-      .then(() => toast.success("Leave request rejected"))
+      .then(() => {
+        toast.success("Leave request rejected");
+        onChanged();
+      })
       .catch((error: unknown) => toast.error(getErrorMessage(error, "Failed to reject")));
   }
 
@@ -294,11 +279,11 @@ function PendingLeaveRequestsSection({
       <section className="rounded-2xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <h2 className="mb-4 text-base font-semibold text-neutral-900">Leave Requests</h2>
 
-        {leaveRequestsQuery.isLoading ? (
+        {isLoading ? (
           <div className="flex min-h-[180px] gap-3 rounded-xl bg-neutral-50/50 p-4">
             {[1, 2, 3].map((i) => <div key={i} className="h-12 flex-1 animate-pulse rounded-lg bg-neutral-100" />)}
           </div>
-        ) : (leaveRequestsQuery.data?.items?.length ?? 0) > 0 ? (
+        ) : requests.length > 0 ? (
           <div className="overflow-hidden rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
             <table className="w-full table-fixed">
               <colgroup>
@@ -320,7 +305,7 @@ function PendingLeaveRequestsSection({
                 </tr>
               </thead>
               <tbody>
-                {(leaveRequestsQuery.data?.items ?? []).map((request) => {
+                {requests.map((request) => {
                   const memberName = getDisplayName(request.member.name, "Unnamed member");
                   const initials = memberName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "U";
                   const startDate = new Date(`${request.startDate}T00:00:00`);
@@ -504,12 +489,15 @@ function QuickShortcutsCard({ orgSlug }: { readonly orgSlug: string }) {
 }
 
 function OpenInternalPositionsCard({
-  orgSlug,
-  memberId,
-}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId">>) {
+  overview,
+  isLoading,
+}: Readonly<{
+  overview: DashboardOverviewResponse | undefined;
+  isLoading: boolean;
+}>) {
   return (
     <div className="overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-      <JobOpeningsCard orgSlug={orgSlug} memberId={memberId} />
+      <JobOpeningsCard requisitions={overview?.jobRequisitions ?? []} isLoading={isLoading} />
     </div>
   );
 }
@@ -529,7 +517,12 @@ function MainDashboardLayout({
   orgSlug,
   memberId,
   roleName,
-}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName">>) {
+  overview,
+  isDashboardLoading,
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName"> & {
+  overview: DashboardOverviewResponse | undefined;
+  isDashboardLoading: boolean;
+}>) {
   return (
     <>
       <DashboardTopBar orgSlug={orgSlug} memberId={memberId} />
@@ -537,7 +530,7 @@ function MainDashboardLayout({
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-5">
           <QuickShortcutsCard orgSlug={orgSlug} />
-          <OpenInternalPositionsCard orgSlug={orgSlug} memberId={memberId} />
+          <OpenInternalPositionsCard overview={overview} isLoading={isDashboardLoading} />
         </div>
         <HeatmapPanel orgSlug={orgSlug} memberId={memberId} />
       </div>
@@ -547,14 +540,21 @@ function MainDashboardLayout({
 
 function AdminDashboardContent({
   orgSlug,
-  orgId,
   memberId,
   roleName,
   permissions,
-}: Readonly<DashboardShellProps>) {
+  overview,
+  isDashboardLoading,
+  onDashboardChanged,
+}: Readonly<DashboardShellProps & {
+  overview: DashboardOverviewResponse | undefined;
+  isDashboardLoading: boolean;
+  onDashboardChanged: () => void;
+}>) {
   const attendancePermissions = resolveAttendancePermissions(permissions ?? {});
   const leavePermissions = resolveLeavePermissions(permissions ?? {});
-  const canViewOrgAttendance = attendancePermissions.view === "organization";
+  const canViewOrgAttendance =
+    attendancePermissions.view === "organization" && leavePermissions.view === "organization";
   const canApproveLeave = canApproveLeaves(leavePermissions.approve);
   const canInviteEmployees = getScope(permissions, "employees", "create") !== "none";
   const canManageDepartments = hasPermission(permissions, "departments");
@@ -565,9 +565,15 @@ function AdminDashboardContent({
 
   return (
     <div className="flex flex-col gap-5 p-3">
-      <MainDashboardLayout orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
+      <MainDashboardLayout
+        orgSlug={orgSlug}
+        memberId={memberId}
+        roleName={roleName}
+        overview={overview}
+        isDashboardLoading={isDashboardLoading}
+      />
       <div className="flex flex-col gap-6">
-        {canViewOrgAttendance ? <AttendanceOverviewSection orgSlug={orgSlug} orgId={orgId} memberId={memberId} /> : null}
+        {canViewOrgAttendance ? <AttendanceOverviewSection overview={overview} isLoading={isDashboardLoading} /> : null}
         {showAdminControlPanel ? (
           <div className={cn(
             "grid gap-6",
@@ -575,7 +581,15 @@ function AdminDashboardContent({
               ? "xl:grid-cols-[minmax(0,1.9fr)_minmax(320px,0.85fr)]"
               : "xl:grid-cols-[minmax(0,1fr)]",
           )}>
-            {canApproveLeave ? <PendingLeaveRequestsSection orgSlug={orgSlug} memberId={memberId} /> : null}
+            {canApproveLeave ? (
+              <PendingLeaveRequestsSection
+                orgSlug={orgSlug}
+                memberId={memberId}
+                overview={overview}
+                isLoading={isDashboardLoading}
+                onChanged={onDashboardChanged}
+              />
+            ) : null}
 
             {(canInviteEmployees || canManageDepartments || canManageAssets || canManagePermissions) ? (
               <section className="rounded-2xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
@@ -636,10 +650,21 @@ function DefaultDashboardContent({
   orgSlug,
   memberId,
   roleName,
-}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName">>) {
+  overview,
+  isDashboardLoading,
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId" | "roleName"> & {
+  overview: DashboardOverviewResponse | undefined;
+  isDashboardLoading: boolean;
+}>) {
   return (
     <div className="flex flex-col gap-5 p-3">
-      <MainDashboardLayout orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
+      <MainDashboardLayout
+        orgSlug={orgSlug}
+        memberId={memberId}
+        roleName={roleName}
+        overview={overview}
+        isDashboardLoading={isDashboardLoading}
+      />
     </div>
   );
 }
@@ -651,18 +676,41 @@ export function DashboardShell({
   roleName,
   permissions,
 }: Readonly<DashboardShellProps>) {
+  const today = getTodayIST();
+  const dashboardOverviewQuery = useDashboardOverviewQuery(orgSlug, memberId, today);
   const attendancePermissions = resolveAttendancePermissions(permissions ?? {});
   const leavePermissions = resolveLeavePermissions(permissions ?? {});
   const showAdminDashboard =
-    attendancePermissions.view === "organization" ||
+    (attendancePermissions.view === "organization" && leavePermissions.view === "organization") ||
     canApproveLeaves(leavePermissions.approve) ||
     hasPermission(permissions, "weeklyPlan") ||
     hasPermission(permissions, "projects") ||
     hasPermission(permissions, "departments");
 
   if (!showAdminDashboard) {
-    return <DefaultDashboardContent orgSlug={orgSlug} memberId={memberId} roleName={roleName} />;
+    return (
+      <DefaultDashboardContent
+        orgSlug={orgSlug}
+        memberId={memberId}
+        roleName={roleName}
+        overview={dashboardOverviewQuery.data}
+        isDashboardLoading={dashboardOverviewQuery.isLoading}
+      />
+    );
   }
 
-  return <AdminDashboardContent orgSlug={orgSlug} orgId={orgId} memberId={memberId} roleName={roleName} permissions={permissions} />;
+  return (
+    <AdminDashboardContent
+      orgSlug={orgSlug}
+      orgId={orgId}
+      memberId={memberId}
+      roleName={roleName}
+      permissions={permissions}
+      overview={dashboardOverviewQuery.data}
+      isDashboardLoading={dashboardOverviewQuery.isLoading}
+      onDashboardChanged={() => {
+        void dashboardOverviewQuery.refetch();
+      }}
+    />
+  );
 }

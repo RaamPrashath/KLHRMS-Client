@@ -4,7 +4,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { AnimatePresence, motion } from 'framer-motion';
 import { isSameDay } from 'date-fns';
-import { Check, CheckCircle2, Clock, Copy, Gauge, Play, ShieldAlert, Sparkles, X } from 'lucide-react';
+import { Check, CheckCircle2, Clock, Copy, Gauge, Play, RotateCcw, ShieldAlert, Sparkles, X } from 'lucide-react';
 import { useState, type CSSProperties } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -69,10 +69,24 @@ function aiStatusClass(status: string | null): string {
   return 'bg-info-bg text-info-text';
 }
 
+function normalizedAssignmentStatus(status: string | null | undefined): string | null {
+  if (!status) return null;
+  return status === 'PENDING' ? 'PENDING_ACCEPTANCE' : status;
+}
+
+function hasInterviewerAcceptancePending(status: string | null): boolean {
+  return status === 'PENDING_ACCEPTANCE';
+}
+
+function hasCandidateReplyPending(status: string | null): boolean {
+  return status === 'ACCEPTED';
+}
+
 export function CandidateCard({
   application,
   onOpen,
   meetingEnabled = false,
+  onScheduleInterview,
   onStartInterview,
   onCompleteInterview,
   onAcceptInterview,
@@ -111,9 +125,13 @@ export function CandidateCard({
   const fullName = `${application.candidate.firstName} ${application.candidate.lastName}`;
   const meeting = application.interviewMeeting;
   const assignment = application.currentAssignment;
-  const hasPendingAssignment = assignment !== null && meeting === null;
+  const assignmentStatus = normalizedAssignmentStatus(assignment?.status);
+  const hasPendingInterviewerAssignment = assignment !== null && meeting === null && hasInterviewerAcceptancePending(assignmentStatus);
+  const hasPendingCandidateReply = assignment !== null && meeting === null && hasCandidateReplyPending(assignmentStatus);
+  const hasAssignmentStatus = assignment !== null && meeting === null && Boolean(assignmentStatus);
   const isOngoing = meeting?.status === 'ONGOING';
   const isPending = meeting?.status === 'PENDING';
+  const isCompleted = meeting?.status === 'COMPLETED';
   const isScheduledToday = meeting?.scheduledStartAt ? isSameDay(new Date(meeting.scheduledStartAt), new Date()) : false;
   const canDrag = draggable && !dragLocked && meeting?.status !== 'ONGOING';
   const style: CSSProperties | undefined =
@@ -141,7 +159,7 @@ export function CandidateCard({
         }
       }}
       className={cn(
-        'w-full touch-none rounded-xl bg-surface text-left shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-shadow duration-200 ease-out',
+        'w-full touch-none rounded-xl bg-white text-left shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-shadow duration-200 ease-out',
         compact ? 'p-3.5' : 'p-3',
         isOverlay
           ? 'cursor-grabbing shadow-[0_12px_28px_rgba(0,0,0,0.12)]'
@@ -156,17 +174,17 @@ export function CandidateCard({
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-neutral-900">{fullName}</p>
+          <p className="text-sm font-semibold text-neutral-900">{fullName}</p>
           <p className="truncate text-xs text-neutral-500">{application.candidate.email}</p>
         </div>
-        {meetingEnabled && (meeting || hasPendingAssignment) ? (
+        {meetingEnabled && (meeting || hasAssignmentStatus) ? (
           <div className="flex-shrink-0">
-            {hasPendingAssignment && assignment ? (
+            {hasPendingInterviewerAssignment && assignment ? (
               <Popover open={scheduledOpen} onOpenChange={setScheduledOpen}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Pending assignment"
+                    aria-label="Pending interviewer acceptance"
                     onClick={(event) => event.stopPropagation()}
                     onMouseEnter={() => setScheduledOpen(true)}
                     onMouseLeave={() => setScheduledOpen(false)}
@@ -180,6 +198,28 @@ export function CandidateCard({
                   </p>
                   <p className="mt-1 text-xs text-neutral-500">
                     Awaiting interviewer response
+                  </p>
+                </PopoverContent>
+              </Popover>
+            ) : hasPendingCandidateReply && assignment ? (
+              <Popover open={scheduledOpen} onOpenChange={setScheduledOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Waiting for candidate reply"
+                    onClick={(event) => event.stopPropagation()}
+                    onMouseEnter={() => setScheduledOpen(true)}
+                    onMouseLeave={() => setScheduledOpen(false)}
+                  >
+                    <Clock className="size-4 text-warning-text" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" className="w-60 p-3" onMouseEnter={() => setScheduledOpen(true)} onMouseLeave={() => setScheduledOpen(false)}>
+                  <p className="text-xs font-medium text-neutral-700">
+                    Waiting for candidate reply
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {assignment.interviewer?.name ?? 'Interviewer'} accepted. Candidate needs to choose a slot.
                   </p>
                 </PopoverContent>
               </Popover>
@@ -260,12 +300,52 @@ export function CandidateCard({
                   </p>
                 </PopoverContent>
               </Popover>
+            ) : assignmentStatus === 'REJECTED' ? (
+              <Popover open={scheduledOpen} onOpenChange={setScheduledOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Interview rejected"
+                    onClick={(event) => event.stopPropagation()}
+                    onMouseEnter={() => setScheduledOpen(true)}
+                    onMouseLeave={() => setScheduledOpen(false)}
+                  >
+                    <X className="size-4 text-destructive-text" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" className="w-56 p-3" onMouseEnter={() => setScheduledOpen(true)} onMouseLeave={() => setScheduledOpen(false)}>
+                  <p className="text-xs font-medium text-neutral-700">Interview rejected</p>
+                  <p className="mt-1 text-xs text-neutral-500">This assignment needs reassignment.</p>
+                </PopoverContent>
+              </Popover>
+            ) : assignmentStatus === 'SCHEDULED' && assignment ? (
+              <Popover open={scheduledOpen} onOpenChange={setScheduledOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Interview scheduled"
+                    onClick={(event) => event.stopPropagation()}
+                    onMouseEnter={() => setScheduledOpen(true)}
+                    onMouseLeave={() => setScheduledOpen(false)}
+                  >
+                    <Clock className="size-4 text-info-text" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" className="w-60 p-3" onMouseEnter={() => setScheduledOpen(true)} onMouseLeave={() => setScheduledOpen(false)}>
+                  <p className="text-xs font-medium text-neutral-700">
+                    Scheduled with {assignment.interviewer?.name ?? 'interviewer'}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {assignment.scheduledStartAt ? formatDateTime(assignment.scheduledStartAt) : 'Waiting for meeting details'}
+                  </p>
+                </PopoverContent>
+              </Popover>
             ) : null}
           </div>
         ) : null}
       </div>
 
-      {!compact && (application.aiScore !== null || aiStatus || application.isFlaggedForCheating) ? (
+      {!compact && (application.aiScore !== null || aiStatus || application.isFlaggedForCheating || (meetingEnabled && isPending && meeting?.meetingUrl)) ? (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {application.aiScore !== null ? (
             <span className="inline-flex items-center gap-1 rounded-lg bg-primary-ghost px-2 py-0.5 font-mono text-xs font-medium text-primary">
@@ -290,62 +370,46 @@ export function CandidateCard({
               {aiStatus}
             </span>
           ) : null}
+          {meetingEnabled && (isPending || isOngoing) && meeting?.meetingUrl ? (
+            <div className="ml-auto">
+              <TooltipProvider>
+                <Tooltip
+                  open={copied ? true : undefined}
+                  onOpenChange={(open) => { if (!copied && !open) setCopied(false); }}
+                >
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      className="size-6 flex-shrink-0 text-neutral-400 hover:text-neutral-700"
+                      aria-label="Copy meeting link"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (meeting.meetingUrl) {
+                          navigator.clipboard.writeText(meeting.meetingUrl)
+                            .then(() => {
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            })
+                            .catch(() => {});
+                        }
+                      }}
+                    >
+                      <Copy className="size-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="end">
+                    {copied ? 'Copied!' : 'Copy meeting link'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
       <AnimatePresence initial={false}>
-        {!compact && meetingEnabled && meeting && isPending ? (
-          <motion.div
-            key="meeting"
-            layout
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="rounded-md border border-neutral-100 bg-neutral-50 p-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-neutral-500">
-                  {meeting.interviewerName ?? 'Interview'} at {formatDateTime(meeting.scheduledStartAt)}
-                </p>
-                <TooltipProvider>
-                  <Tooltip
-                    open={copied ? true : undefined}
-                    onOpenChange={(open) => { if (!copied && !open) setCopied(false); }}
-                  >
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="ghost"
-                        className="size-6 flex-shrink-0"
-                        aria-label="Copy meeting link"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (meeting.meetingUrl) {
-                            navigator.clipboard.writeText(meeting.meetingUrl)
-                              .then(() => {
-                                setCopied(true);
-                                setTimeout(() => setCopied(false), 2000);
-                              })
-                              .catch(() => {});
-                          }
-                        }}
-                      >
-                        <Copy className="size-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" align="end">
-                      {copied ? 'Copied!' : 'Copy meeting link'}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </div>
-          </motion.div>
-        ) : null}
-
         {!compact && meetingEnabled && !isOverlay ? (
           <motion.div
             key="actions"
@@ -354,18 +418,18 @@ export function CandidateCard({
             animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
             transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-            className={cn(
-              'grid gap-2 overflow-hidden',
-              hasPendingAssignment || isPending ? 'grid-cols-2' : 'grid-cols-1',
-            )}
+            className="grid gap-2 overflow-hidden"
+            style={{
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))'
+            }}
           >
-            {hasPendingAssignment && assignment?.interviewer?.memberId === currentMemberId && onAcceptInterview && onRejectInterview ? (
-              <div className="col-span-full flex gap-2">
+            {hasPendingInterviewerAssignment && assignment?.interviewer?.memberId === currentMemberId && onAcceptInterview && onRejectInterview ? (
+              <>
                 <Button
                   type="button"
                   size="sm"
                   variant="default"
-                  className="h-8 flex-1 text-xs"
+                  className="h-8 text-xs"
                   onClick={(event) => {
                     event.stopPropagation();
                     onAcceptInterview(application.id, assignment.eventId);
@@ -378,7 +442,7 @@ export function CandidateCard({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 flex-1 text-xs text-destructive-text border-destructive-text/30 hover:bg-destructive-text/5"
+                  className="h-8 text-xs text-destructive-text border-destructive-text/30 hover:bg-destructive-text/5"
                   onClick={(event) => {
                     event.stopPropagation();
                     onRejectInterview(application.id, assignment.eventId);
@@ -387,9 +451,24 @@ export function CandidateCard({
                   <X className="size-3.5" />
                   Reject
                 </Button>
-              </div>
+              </>
             ) : null}
-            {isPending ? (
+            {(isPending || isCompleted) && onScheduleInterview ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onScheduleInterview(application);
+                }}
+              >
+                <RotateCcw className="size-3.5" />
+                Reschedule
+              </Button>
+            ) : null}
+            {(isPending || isCompleted) ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>

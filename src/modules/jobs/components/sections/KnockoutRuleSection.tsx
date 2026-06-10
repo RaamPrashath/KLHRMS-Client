@@ -13,7 +13,7 @@ interface KnockoutRuleSectionProps {
 
 export function KnockoutRuleSection({ form }: Readonly<KnockoutRuleSectionProps>) {
   return (
-    <SectionCard id="knockout-rule" title="Knockout rule">
+    <SectionCard id="knockout-rule" title="Knockout rule" hideHeaderBorder>
       <div className="flex flex-col gap-1.5">
         <Textarea
           id="knockout-rule-input"

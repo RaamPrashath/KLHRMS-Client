@@ -19,14 +19,6 @@ import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
@@ -41,10 +33,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer';
+import { CompleteInterviewDialog } from '@/modules/candidates/components/CompleteInterviewDialog';
 import { InterviewerSelectDialog } from '@/modules/candidates/components/InterviewerSelectDialog';
 import {
   useAddHiringTeamMember,
@@ -117,7 +109,7 @@ function readActionError(error: unknown, fallback: string): string {
 
 function isLockedAssignment(candidate: StageWorkspaceCandidate): boolean {
   const status = candidate.currentAssignment?.status;
-  return status === 'ACCEPTED' || status === 'SCHEDULED' || status === 'COMPLETED';
+  return status === 'ACCEPTED' || status === 'SCHEDULED' || status === 'ONGOING' || status === 'COMPLETED';
 }
 
 function allocationColumnId(memberId: string): string {
@@ -205,7 +197,7 @@ function AllocationCard({
     <CandidateCard
       application={application}
       onOpen={onOpenCandidate}
-      meetingEnabled={Boolean(stage.meetingEnabled && application.interviewMeeting)}
+      meetingEnabled={Boolean(stage.meetingEnabled)}
       onStartInterview={onStartInterview}
       onCompleteInterview={onCompleteInterview}
       draggable
@@ -426,6 +418,8 @@ export function StageWorkspacePageShell({
   const [teamWarnings, setTeamWarnings] = useState<StageInterviewWarning[]>([]);
   const [teamWarningsReviewed, setTeamWarningsReviewed] = useState(false);
   const [boardAssignments, setBoardAssignments] = useState<Record<string, string | null>>({});
+  const [optimisticTeamMembers, setOptimisticTeamMembers] = useState<StageWorkspaceInterviewer[]>([]);
+  const [optimisticRemovedMemberIds, setOptimisticRemovedMemberIds] = useState<Set<string>>(() => new Set());
   const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
 
   // Search + filter state for automatic tab
@@ -458,8 +452,21 @@ export function StageWorkspacePageShell({
   );
 
   const teamMembers = useMemo(
-    () => workspace?.teamMembers ?? [],
-    [workspace?.teamMembers],
+    () => {
+      const membersById = new Map<string, StageWorkspaceInterviewer>();
+      for (const member of workspace?.teamMembers ?? []) {
+        if (!optimisticRemovedMemberIds.has(member.memberId)) {
+          membersById.set(member.memberId, member);
+        }
+      }
+      for (const member of optimisticTeamMembers) {
+        if (!optimisticRemovedMemberIds.has(member.memberId)) {
+          membersById.set(member.memberId, member);
+        }
+      }
+      return Array.from(membersById.values());
+    },
+    [optimisticRemovedMemberIds, optimisticTeamMembers, workspace?.teamMembers],
   );
 
   const activeCandidate = useMemo(
@@ -629,6 +636,16 @@ export function StageWorkspacePageShell({
   async function addCustomTeamMember(interviewer: StageWorkspaceInterviewer) {
     setTeamWarnings([]);
     setTeamWarningsReviewed(false);
+    setAddDialogOpen(false);
+    setOptimisticRemovedMemberIds((current) => {
+      const next = new Set(current);
+      next.delete(interviewer.memberId);
+      return next;
+    });
+    setOptimisticTeamMembers((current) => {
+      if (current.some((member) => member.memberId === interviewer.memberId)) return current;
+      return [...current, interviewer];
+    });
 
     // Persist to server
     const stageId = workspace?.stage.id;
@@ -651,6 +668,7 @@ export function StageWorkspacePageShell({
         });
       }
     } catch {
+      setOptimisticTeamMembers((current) => current.filter((member) => member.memberId !== interviewer.memberId));
       toast.error('Failed to add interviewer. Please try again.');
       return;
     }
@@ -660,12 +678,23 @@ export function StageWorkspacePageShell({
 
   async function removeBoardInterviewer(memberId: string) {
     if (!memberId) return;
+    setOptimisticTeamMembers((current) => current.filter((member) => member.memberId !== memberId));
+    setOptimisticRemovedMemberIds((current) => {
+      const next = new Set(current);
+      next.add(memberId);
+      return next;
+    });
 
     // Remove from server
     if (assignmentTeamId) {
       try {
         await removeTeamMember.mutateAsync({ teamId: assignmentTeamId, memberToRemoveId: memberId });
       } catch {
+        setOptimisticRemovedMemberIds((current) => {
+          const next = new Set(current);
+          next.delete(memberId);
+          return next;
+        });
         toast.error('Failed to remove interviewer. Please try again.');
         return;
       }
@@ -1199,64 +1228,25 @@ export function StageWorkspacePageShell({
             excludedMemberIds={excludedMemberIds}
           />
         </div>
-        <Dialog
+        <CompleteInterviewDialog
           open={completingApplication !== null}
+          candidateName={
+            completingApplication
+              ? `${completingApplication.candidate.firstName} ${completingApplication.candidate.lastName}`.trim()
+              : null
+          }
+          detail={completingApplication?.currentStage ?? null}
+          note={completionNote}
+          isSubmitting={completeInterviewMeeting.isPending}
+          onNoteChange={setCompletionNote}
           onOpenChange={(open) => {
             if (!open) {
               setCompletingApplication(null);
               setCompletionNote('');
             }
           }}
-        >
-          <DialogContent className="sm:max-w-lg rounded-2xl bg-surface p-0 shadow-[var(--shadow-4)]">
-            <DialogHeader className="px-6 pt-6">
-              <DialogTitle className="text-xl font-semibold text-neutral-900">Complete interview</DialogTitle>
-              <DialogDescription>
-                Add a note for this candidate before closing the interview.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3 px-6 py-5">
-              {completingApplication ? (
-                <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
-                  <p className="text-sm font-medium text-neutral-900">
-                    {`${completingApplication.candidate.firstName} ${completingApplication.candidate.lastName}`.trim()}
-                  </p>
-                  <p className="text-xs text-neutral-500">{completingApplication.currentStage}</p>
-                </div>
-              ) : null}
-              <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
-                Note
-                <Textarea
-                  value={completionNote}
-                  onChange={(event) => setCompletionNote(event.target.value)}
-                  placeholder="Add a candidate note"
-                  className="min-h-24 resize-none"
-                  maxLength={1000}
-                />
-              </label>
-            </div>
-            <DialogFooter className="border-t border-neutral-100 px-6 py-4">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={completeInterviewMeeting.isPending}
-                onClick={() => {
-                  setCompletingApplication(null);
-                  setCompletionNote('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={completeInterviewMeeting.isPending || completionNote.trim().length === 0}
-                onClick={handleCompleteInterview}
-              >
-                {completeInterviewMeeting.isPending ? 'Completing' : 'Complete'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          onSubmit={handleCompleteInterview}
+        />
         <CandidateDrawer
           orgSlug={orgSlug}
           memberId={memberId}

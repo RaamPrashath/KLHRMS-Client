@@ -56,7 +56,7 @@ const PREVIEW_PAGE_W = 794;
 const PREVIEW_PADDING_X = 76;
 const PREVIEW_PADDING_Y = 90;
 const PREVIEW_CONTENT_CLASSES = cn(
-  'space-y-4 text-[15px] leading-[30px]',
+  'space-y-4 text-[15px] leading-[26px]',
   '[&_a]:text-primary [&_a]:underline',
   '[&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:leading-7 [&_h2]:text-neutral-900',
   '[&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:leading-6 [&_h3]:text-neutral-900',
@@ -255,7 +255,7 @@ export function SendOfferDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[80dvh] w-[80vw] !max-w-[80vw] flex-col gap-0 overflow-hidden rounded-2xl bg-surface p-0 shadow-[var(--shadow-4)]">
+        <DialogContent className="flex h-[80dvh] w-[80vw] !max-w-[80vw] flex-col gap-0 overflow-hidden rounded-2xl bg-surface p-0 shadow-2xl">
           <DialogHeader className="shrink-0 border-b border-neutral-100 px-6 py-5">
             <DialogTitle className="text-xl font-semibold text-neutral-900">Send offer letter</DialogTitle>
           </DialogHeader>
@@ -297,8 +297,14 @@ export function SendOfferDialog({
               <div className="min-h-0 flex-1 overflow-y-auto bg-canvas p-4">
                 {previewHtml ? (
                   <div
-                    className="mx-auto bg-surface shadow-[var(--shadow-2)]"
-                    style={{ width: PREVIEW_PAGE_W, padding: `${PREVIEW_PADDING_Y}px ${PREVIEW_PADDING_X}px` }}
+                    className="mx-auto bg-surface relative shadow-md"
+                    style={{
+                      width: PREVIEW_PAGE_W,
+                      paddingTop: 56,
+                      paddingBottom: PREVIEW_PADDING_Y,
+                      paddingLeft: PREVIEW_PADDING_X,
+                      paddingRight: PREVIEW_PADDING_X,
+                    }}
                   >
                     {/* Corner mark */}
                     <div className="absolute bg-primary" style={{ top: 28, left: 28, height: 68, width: 19 }} />
@@ -311,7 +317,7 @@ export function SendOfferDialog({
                       className={PREVIEW_CONTENT_CLASSES}
                       style={{
                         '--offer-header-brand-left': '-9px',
-                        '--offer-header-brand-top': '-56px',
+                        '--offer-header-brand-top': '-22px',
                       } as React.CSSProperties}
                       dangerouslySetInnerHTML={{ __html: previewHtml }}
                     />
@@ -382,7 +388,7 @@ export function SendOfferDialog({
       <AlertDialog open={deleteTarget !== null} onOpenChange={(nextOpen) => {
         if (!nextOpen) setDeleteTarget(null);
       }}>
-        <AlertDialogContent className="rounded-2xl bg-surface shadow-[var(--shadow-4)]">
+        <AlertDialogContent className="rounded-2xl bg-surface shadow-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete template?</AlertDialogTitle>
           </AlertDialogHeader>

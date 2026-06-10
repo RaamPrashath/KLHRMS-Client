@@ -162,17 +162,14 @@ export function CareerApplicationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col p-0 sm:max-w-2xl">
+        <DialogHeader className="px-6 pt-6 pb-0 shrink-0">
           <DialogTitle>Apply for {jobTitle}</DialogTitle>
-          <DialogDescription>
-            Submit your details and resume to create your candidate application.
-          </DialogDescription>
         </DialogHeader>
 
         <form
           id="career-application-form"
-          className="flex flex-col gap-4"
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6"
           onSubmit={form.handleSubmit(onSubmit)}
         >
           <div className="grid gap-4 sm:grid-cols-2">
@@ -229,14 +226,9 @@ export function CareerApplicationDialog({
             <FieldError errors={[form.formState.errors.resumeFile]} />
           </Field>
 
-          <Field>
-            <FieldLabel htmlFor="career-cover-letter">Notes / cover letter</FieldLabel>
-            <Textarea id="career-cover-letter" rows={6} {...form.register('coverLetter')} />
-            <FieldError errors={[form.formState.errors.coverLetter]} />
-          </Field>
         </form>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 px-6 pb-6 pt-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

@@ -303,57 +303,62 @@ export function OfferStagePageShell({
 
   return (
     <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">
-      {/* ── Page header ── */}
-      <div className="ml-7 mt-7 flex items-start gap-3">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="mt-1 shrink-0 text-neutral-500 hover:text-neutral-900"
-          onClick={handleBackToPipeline}
-          aria-label="Back to candidate pipeline"
-        >
-          <ChevronLeft className="size-5" />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">{workspace.stage.name}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
-            <span className="size-1 rounded-full bg-neutral-300" />
-            <span className="font-mono text-xs font-medium uppercase tracking-wider text-neutral-400">
-              {workspace.candidateCount} candidates
-            </span>
-            {workspace.latestBatch?.failureCount ? (
-              <>
-                <span className="size-1 rounded-full bg-neutral-300" />
-                <span className="rounded-full bg-destructive-bg px-2 py-0.5 text-xs font-medium text-destructive-text">
-                  {workspace.latestBatch.failureCount} failed
-                </span>
-              </>
-            ) : null}
+      {/* ── Page header — matches Departments style ── */}
+      <div className="ml-7 mt-7 mr-7 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 text-neutral-400 hover:text-neutral-700"
+            onClick={handleBackToPipeline}
+            aria-label="Back to candidate pipeline"
+          >
+            <ChevronLeft className="size-5" />
+          </Button>
+          <div className="min-w-0">
+            <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">{workspace.stage.name}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
+              <span className="size-1 rounded-full bg-neutral-300" />
+              <span className="font-mono text-xs font-medium uppercase tracking-wider text-neutral-400">
+                {workspace.candidateCount} candidates
+              </span>
+              {workspace.latestBatch?.failureCount ? (
+                <>
+                  <span className="size-1 rounded-full bg-neutral-300" />
+                  <span className="rounded-full bg-destructive-bg px-2 py-0.5 text-xs font-medium text-destructive-text">
+                    {workspace.latestBatch.failureCount} failed
+                  </span>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+
+        {/* Right-side actions */}
+        <div className="flex shrink-0 items-center gap-3">
           {selectedApplicationIds.size > 0 ? (
-            <span className="rounded-lg bg-primary-ghost px-3 py-1 text-xs font-medium text-primary">
+            <span className="rounded-lg bg-primary-ghost px-3 py-1.5 text-xs font-medium text-primary">
               {selectedApplicationIds.size} selected
             </span>
           ) : null}
-          <Button
+          <button
             type="button"
-            size="sm"
-            className="bg-primary hover:bg-primary-hover"
             disabled={selectedApplicationIds.size === 0}
             onClick={() => setSendDialogOpen(true)}
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
-            <Send className="size-3.5" />
+            <Send className="mr-2 size-4" />
             Send offer letter
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* ── Candidate table (includes filters + pagination) ── */}
       <OfferCandidateTable
+        orgSlug={orgSlug}
+        jobSlug={jobSlug}
         candidates={paginatedCandidates}
         totalFiltered={totalFiltered}
         selectedApplicationIds={selectedApplicationIds}

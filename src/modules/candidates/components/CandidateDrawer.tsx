@@ -263,7 +263,7 @@ function AnalysisStatusPanel({
   const isFailed = analysis.status === 'FAILED';
 
   return (
-    <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+    <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -348,7 +348,7 @@ function AtsScoreTab({
     <div className="space-y-5">
       <AnalysisStatusPanel analysis={analysis} onRetry={onRetry} retrying={retrying} />
 
-      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+      <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">AI ATS score</p>
@@ -432,7 +432,7 @@ function AtsScoreTab({
       ) : null}
 
       {facts?.explicitKnockoutRule ? (
-        <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+        <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <p className="text-sm font-semibold text-neutral-900">Explicit knockout rule</p>
           <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-700">{facts.explicitKnockoutRule}</p>
           {facts.explicitKnockoutAssessment ? (
@@ -455,7 +455,7 @@ function AtsScoreTab({
         </section>
       ) : null}
 
-      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+      <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <p className="text-sm font-semibold text-neutral-900">Extracted facts</p>
         <div className="mt-3 grid gap-3">
           {facts?.targetRoleAlignment ? (
@@ -497,7 +497,7 @@ function AtsScoreTab({
         </div>
       </section>
 
-      <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+      <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <p className="text-sm font-semibold text-neutral-900">Extracted skills</p>
         {skills.length > 0 ? (
           <div className="mt-3 space-y-2">
@@ -520,7 +520,7 @@ function AtsScoreTab({
       </section>
 
       {certifications.length > 0 || warnings.length > 0 || parserWarnings.length > 0 ? (
-        <section className="rounded-lg border border-neutral-100 bg-surface p-4">
+        <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <p className="text-sm font-semibold text-neutral-900">Review notes</p>
           <div className="mt-3 space-y-2 text-xs text-neutral-600">
             {certifications.map((certification) => (
@@ -648,7 +648,7 @@ function HistoryTab({ detail }: { readonly detail: CandidateApplicationDetail })
             <span className="absolute -left-[25px] top-5 flex size-7 items-center justify-center rounded-full border border-neutral-200 bg-surface text-neutral-600 shadow-sm">
               {entry.type === 'applied' ? <FileDown className="size-4" /> : <ArrowRight className="size-3.5" />}
             </span>
-            <section className="rounded-lg border border-neutral-100 bg-surface p-4 transition-colors hover:bg-neutral-50">
+            <section className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-colors hover:bg-neutral-50">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-neutral-900">

@@ -97,20 +97,8 @@ export function JobRequisitionDetailPage({
 
         <div className="mx-auto flex max-w-7xl gap-12 px-4 pb-12 sm:px-6 lg:px-8">
           <div className="min-w-0 flex-1 space-y-10">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="rounded-xl bg-surface p-6 shadow-[var(--shadow-1)]">
-                <div className="mb-5 border-b border-neutral-200 pb-3">
-                  <Skeleton className="h-6 w-48" />
-                </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <Skeleton className="h-5 w-full" />
-                    <Skeleton className="h-5 w-full" />
-                  </div>
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-5 w-1/2" />
-                </div>
-              </div>
+            {[{ h: 'h-72' }, { h: 'h-64' }, { h: 'h-56' }, { h: 'h-64' }, { h: 'h-80' }, { h: 'h-48' }].map((item, i) => (
+              <div key={i} className={`rounded-2xl bg-surface p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${item.h}`} />
             ))}
           </div>
 

@@ -8,12 +8,11 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useJobRequisitionsQuery } from "@/modules/jobs/hooks/useJobRequisitionsQuery";
 import type { JobRequisitionRecord } from "@/modules/jobs/types/jobRequisitionTypes";
 
 interface JobOpeningsCardProps {
-  orgSlug: string;
-  memberId: string;
+  requisitions: JobRequisitionRecord[];
+  isLoading: boolean;
 }
 
 function formatSalary(record: JobRequisitionRecord): string {
@@ -32,15 +31,10 @@ function formatNum(n: number): string {
   return String(n);
 }
 
-export function JobOpeningsCard({ orgSlug, memberId }: Readonly<JobOpeningsCardProps>) {
-  const { data: allReqs = [], isLoading } = useJobRequisitionsQuery(
-    orgSlug,
-    memberId,
-    "organization",
-  );
+export function JobOpeningsCard({ requisitions, isLoading }: Readonly<JobOpeningsCardProps>) {
   const [selectedReq, setSelectedReq] = useState<JobRequisitionRecord | null>(null);
 
-  const openings = useMemo(() => allReqs.filter((r) => r.status === "APPROVED"), [allReqs]);
+  const openings = useMemo(() => requisitions.filter((r) => r.status === "APPROVED"), [requisitions]);
 
   return (
     <>

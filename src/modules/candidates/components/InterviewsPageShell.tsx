@@ -16,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Tooltip,
   TooltipContent,
@@ -24,6 +23,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { SchedulingModal } from '@/modules/candidates/components/SchedulingModal';
+import { CompleteInterviewDialog } from '@/modules/candidates/components/CompleteInterviewDialog';
 import { authClient } from '@/lib/auth-client';
 import {
   useAcceptInterview,
@@ -36,10 +36,10 @@ import {
 import { cn } from '@/lib/utils';
 import type { MyInterview } from '@/modules/candidates/types/atsTypes';
 
-const MICROSOFT_CALENDAR_SCOPE = 'Calendars.ReadWrite';
-const MICROSOFT_CONNECT_RETURN_PARAM = 'atsMicrosoftConnected';
+const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
 
-function normalizeMicrosoftScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
+function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
   if (Array.isArray(account.scopes)) {
     return account.scopes.filter((scope): scope is string => typeof scope === 'string');
   }
@@ -151,81 +151,6 @@ function StatusBadge({ status }: { readonly status: string }) {
       ) : null}
       {meta.label}
     </Badge>
-  );
-}
-
-function CompleteInterviewDialog({
-  interview,
-  open,
-  isSubmitting,
-  onOpenChange,
-  onSubmit,
-}: {
-  readonly interview: MyInterview | null;
-  readonly open: boolean;
-  readonly isSubmitting: boolean;
-  readonly onOpenChange: (open: boolean) => void;
-  readonly onSubmit: (
-    payload?: {
-      notes?: string | null;
-    },
-  ) => Promise<void>;
-}) {
-  const [notes, setNotes] = useState('');
-
-  async function completeInterview() {
-    await onSubmit({
-      notes: notes.trim() || null,
-    });
-    setNotes('');
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg rounded-2xl bg-surface p-0 shadow-[var(--shadow-4)]">
-        <DialogHeader className="px-6 pt-6">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-success-bg text-success-text">
-            <Check className="size-5" />
-          </div>
-          <DialogTitle className="text-xl font-semibold text-neutral-900">Complete interview</DialogTitle>
-          <DialogDescription>
-            Add a note for this candidate before closing the interview.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 px-6 py-5">
-          {interview ? (
-            <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
-              <p className="text-sm font-medium text-neutral-900">
-                {candidateName(interview.candidate.firstName, interview.candidate.lastName)}
-              </p>
-              <p className="text-xs text-neutral-500">{interview.stageName} - {formatTimeRange(interview)}</p>
-            </div>
-          ) : null}
-
-          <label className="grid gap-1.5 text-sm font-medium text-neutral-700">
-            Notes
-            <Textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Add a candidate note"
-              className="min-h-24 resize-none"
-              maxLength={1000}
-            />
-          </label>
-        </div>
-
-        <DialogFooter className="border-t border-neutral-100 px-6 py-4">
-          <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="button" disabled={isSubmitting || notes.trim().length === 0} onClick={completeInterview}>
-            {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
-            Complete
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -425,8 +350,9 @@ export function InterviewsPageShell({
   const [reassignmentInterview, setReassignmentInterview] = useState<MyInterview | null>(null);
   const [schedulingInterview, setSchedulingInterview] = useState<MyInterview | null>(null);
   const [completingInterview, setCompletingInterview] = useState<MyInterview | null>(null);
-  const [microsoftConnectOpen, setMicrosoftConnectOpen] = useState(false);
-  const [isConnectingMicrosoft, setIsConnectingMicrosoft] = useState(false);
+  const [completionNote, setCompletionNote] = useState('');
+  const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const pendingSchedulingInterviewRef = useRef<MyInterview | null>(null);
   const interviewsQuery = useFetchMyInterviews(orgSlug, memberId);
   const acceptInterview = useAcceptInterview(orgSlug, memberId);
@@ -434,22 +360,22 @@ export function InterviewsPageShell({
   const startInterview = useStartInterviewMeeting(orgSlug, memberId, null);
   const completeInterview = useCompleteInterviewMeeting(orgSlug, memberId, null);
 
-  const checkMicrosoftAccess = useCallback(async (): Promise<boolean> => {
+  const checkGoogleAccess = useCallback(async (): Promise<boolean> => {
     const result = await authClient.listAccounts();
     if (result.error) return false;
     const accounts = readAuthAccounts(result.data);
-    const microsoftAccount = accounts.find((account) => account.providerId === 'microsoft');
-    if (!microsoftAccount) return false;
-    return normalizeMicrosoftScopes(microsoftAccount).includes(MICROSOFT_CALENDAR_SCOPE);
+    const googleAccount = accounts.find((account) => account.providerId === 'google');
+    if (!googleAccount) return false;
+    return normalizeGoogleScopes(googleAccount).includes(GOOGLE_CALENDAR_SCOPE);
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
-    if (!url.searchParams.has(MICROSOFT_CONNECT_RETURN_PARAM)) return;
-    url.searchParams.delete(MICROSOFT_CONNECT_RETURN_PARAM);
+    if (!url.searchParams.has(GOOGLE_CONNECT_RETURN_PARAM)) return;
+    url.searchParams.delete(GOOGLE_CONNECT_RETURN_PARAM);
     window.history.replaceState(null, '', url.toString());
-    toast.success('Microsoft Calendar connected');
+    toast.success('Google Calendar connected');
     const pending = pendingSchedulingInterviewRef.current;
     if (pending) {
       pendingSchedulingInterviewRef.current = null;
@@ -480,29 +406,29 @@ export function InterviewsPageShell({
 
   const interviews = interviewsQuery.data?.items ?? [];
 
-  async function promptMicrosoftConnect(interview: MyInterview) {
+  async function promptGoogleConnect(interview: MyInterview) {
     pendingSchedulingInterviewRef.current = interview;
-    setMicrosoftConnectOpen(true);
+    setGoogleConnectOpen(true);
   }
 
   async function handleAccept(interview: MyInterview) {
-    const hasMicrosoft = await checkMicrosoftAccess();
-    if (!hasMicrosoft) {
-      await promptMicrosoftConnect(interview);
+    const hasGoogle = await checkGoogleAccess();
+    if (!hasGoogle) {
+      await promptGoogleConnect(interview);
       return;
     }
     setSchedulingInterview(interview);
   }
 
-  async function connectMicrosoft() {
+  async function connectGoogle() {
     try {
-      setIsConnectingMicrosoft(true);
+      setIsConnectingGoogle(true);
       const callbackUrl = new URL(window.location.href);
-      callbackUrl.searchParams.set(MICROSOFT_CONNECT_RETURN_PARAM, '1');
+      callbackUrl.searchParams.set(GOOGLE_CONNECT_RETURN_PARAM, '1');
       const result = await authClient.linkSocial({
-        provider: 'microsoft',
+        provider: 'google',
         callbackURL: callbackUrl.toString(),
-        scopes: ['User.Read', MICROSOFT_CALENDAR_SCOPE, 'offline_access'],
+        scopes: [GOOGLE_CALENDAR_SCOPE],
         disableRedirect: false,
       });
       if (result.error && !String(result.error.message ?? '').includes('already linked')) {
@@ -510,9 +436,9 @@ export function InterviewsPageShell({
       }
     } catch (error) {
       pendingSchedulingInterviewRef.current = null;
-      toast.error(error instanceof Error ? error.message : 'Failed to connect Microsoft Calendar');
+      toast.error(error instanceof Error ? error.message : 'Failed to connect Google Calendar');
     } finally {
-      setIsConnectingMicrosoft(false);
+      setIsConnectingGoogle(false);
     }
   }
 
@@ -535,9 +461,9 @@ export function InterviewsPageShell({
   }
 
   async function handleSchedule(interview: MyInterview) {
-    const hasMicrosoft = await checkMicrosoftAccess();
-    if (!hasMicrosoft) {
-      await promptMicrosoftConnect(interview);
+    const hasGoogle = await checkGoogleAccess();
+    if (!hasGoogle) {
+      await promptGoogleConnect(interview);
       return;
     }
     setSchedulingInterview(interview);
@@ -563,20 +489,20 @@ export function InterviewsPageShell({
     );
   }
 
-  async function handleComplete(
-    payload?: {
-      notes?: string | null;
-    },
-  ) {
+  async function handleComplete() {
     if (!completingInterview) return;
+    const note = completionNote.trim();
+    if (!note) return;
+
     try {
       await completeInterview.mutateAsync({
         applicationId: completingInterview.applicationId,
         eventId: completingInterview.eventId,
-        data: payload,
+        data: { notes: note },
       });
       toast.success('Interview completed');
       setCompletingInterview(null);
+      setCompletionNote('');
     } catch {
       toast.error('Could not complete this interview');
     }
@@ -690,15 +616,15 @@ export function InterviewsPageShell({
         />
       )}
 
-      <Dialog open={microsoftConnectOpen} onOpenChange={setMicrosoftConnectOpen}>
+      <Dialog open={googleConnectOpen} onOpenChange={setGoogleConnectOpen}>
         <DialogContent>
           <DialogHeader>
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary-ghost text-primary">
               <CalendarPlus className="size-5" />
             </div>
-            <DialogTitle>Connect Microsoft Calendar</DialogTitle>
+            <DialogTitle>Connect Google Calendar</DialogTitle>
             <DialogDescription>
-              Interview meetings need Microsoft Calendar access to create a Teams link and email the candidate.
+              Interview meetings need Google Calendar access to create a Meet link and email the candidate.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -706,15 +632,15 @@ export function InterviewsPageShell({
               type="button"
               variant="outline"
               onClick={() => {
-                setMicrosoftConnectOpen(false);
+                setGoogleConnectOpen(false);
                 pendingSchedulingInterviewRef.current = null;
               }}
-              disabled={isConnectingMicrosoft}
+              disabled={isConnectingGoogle}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={connectMicrosoft} disabled={isConnectingMicrosoft}>
-              {isConnectingMicrosoft ? 'Opening Microsoft' : 'Connect Microsoft'}
+            <Button type="button" onClick={connectGoogle} disabled={isConnectingGoogle}>
+              {isConnectingGoogle ? 'Opening Google' : 'Connect Google'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -745,11 +671,21 @@ export function InterviewsPageShell({
       />
       <CompleteInterviewDialog
         key={completingInterview?.eventId ?? 'closed-complete-interview'}
-        interview={completingInterview}
         open={completingInterview !== null}
+        candidateName={
+          completingInterview
+            ? candidateName(completingInterview.candidate.firstName, completingInterview.candidate.lastName)
+            : null
+        }
+        detail={completingInterview ? `${completingInterview.stageName} - ${formatTimeRange(completingInterview)}` : null}
+        note={completionNote}
         isSubmitting={completeInterview.isPending}
+        onNoteChange={setCompletionNote}
         onOpenChange={(open) => {
-          if (!open) setCompletingInterview(null);
+          if (!open) {
+            setCompletingInterview(null);
+            setCompletionNote('');
+          }
         }}
         onSubmit={handleComplete}
       />
