@@ -496,7 +496,7 @@ function OpenInternalPositionsCard({
   isLoading: boolean;
 }>) {
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <JobOpeningsCard requisitions={overview?.jobRequisitions ?? []} isLoading={isLoading} />
     </div>
   );

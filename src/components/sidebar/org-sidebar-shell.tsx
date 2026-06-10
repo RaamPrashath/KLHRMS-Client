@@ -33,6 +33,7 @@ export function OrgSidebarShell({
     const pathname = usePathname();
     const cleanPath = pathname.replace(/\/$/, "");
     const isDashboardRoute = cleanPath === `/${orgSlug}` || cleanPath.endsWith(`/${orgSlug}`);
+    const isDocumentsRoute = cleanPath === `/${orgSlug}/documents` || cleanPath.startsWith(`/${orgSlug}/documents/`);
 
     const isLeaveRoute = pathname.includes("/leaves");
     const isCandidatesRoute = pathname.includes("/candidates");
@@ -76,6 +77,14 @@ export function OrgSidebarShell({
         isProcurementRoute ||
         isResumeParserRoute ||
         isNotificationsRoute
+
+    if (isDocumentsRoute) {
+        return (
+            <div className="fixed inset-0 overflow-hidden bg-canvas">
+                {children}
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 flex flex-col md:flex-row overflow-hidden bg-canvas">
