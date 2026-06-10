@@ -53,7 +53,7 @@ export interface AttendanceReportFilters {
   page_size?: number;
 }
 
-export type AttendanceReportExportFormat = 'xlsx' | 'pdf';
+export type AttendanceReportExportFormat = 'xlsx' | 'pdf' | 'csv';
 export type AttendanceReportExportMode = 'report' | 'timesheet';
 
 export interface AttendanceReportExportEmployee {
