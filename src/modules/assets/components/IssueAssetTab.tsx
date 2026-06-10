@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangeEvent, ReactNode, useMemo, useState } from 'react';
+import { ExportBand } from '@/modules/assets/components/ExportBand';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   flexRender,
@@ -15,6 +16,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   LaptopMinimal,
   PackageOpen,
   PackagePlus,
@@ -39,6 +41,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Combobox,
   ComboboxContent,
@@ -82,6 +97,29 @@ function IssuedAssetDetailDialog({
 
   const provision = asset.activeProvision;
   const isPendingReturn = provision?.handoverRequestedAt != null;
+  const mutations = useAssetMutations(orgSlug, memberId);
+  const [editDate, setEditDate] = useState(false);
+  const [newDate, setNewDate] = useState('');
+
+  const hasReplacement = !!provision?.replacementAssignmentId;
+  const dueDate = provision?.returnDate ? new Date(provision.returnDate) : null;
+  const today = new Date();
+  const isOverdue = dueDate && dueDate < today;
+  const isDueTomorrow = dueDate && Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) === 1;
+
+  async function handleUpdateDate() {
+    if (!newDate || !provision?.replacementAssignmentId) return;
+    try {
+      await mutations.updateReplacementReturnDate.mutateAsync({
+        assignmentId: provision.replacementAssignmentId,
+        expectedReturnDate: new Date(newDate).toISOString(),
+      });
+      toast.success('Return date updated');
+      setEditDate(false);
+    } catch (error) {
+      toast.error(readError(error, 'Failed to update date'));
+    }
+  }
 
   const statusColors: Record<string, string> = {
     AVAILABLE: 'bg-[#f3fbf5] text-[#156f3d]',
@@ -100,7 +138,7 @@ function IssuedAssetDetailDialog({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="relative z-10 mx-4 w-full max-w-lg rounded-[20px] bg-white shadow-xl"
+            className="relative z-10 mx-4 w-full max-w-2xl rounded-[20px] bg-white shadow-xl"
           >
             <div className="flex items-center justify-between border-b border-[#eef0f3] px-6 py-4">
               <h2 className="text-[16px] font-semibold text-[#111827]">Issued Asset Details</h2>
@@ -109,107 +147,92 @@ function IssuedAssetDetailDialog({
                 onClick={() => onOpenChange(false)}
                 className="flex size-7 items-center justify-center rounded-full text-[#9ca3af] hover:text-[#6b7280]"
               >
-                <X className="size-4" />
+                <span className="text-lg leading-none">&times;</span>
               </button>
             </div>
 
             <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
+              {/* Employee */}
+              <div className="flex items-center gap-3 rounded-[14px] border border-[#eef0f3] bg-[#fbfcfb] p-4">
+                <div className="flex size-10 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white">
+                  <User2 className="size-4 text-[#6b7280]" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-semibold text-[#111827]">
+                    {provision?.memberName || asset.currentHolderName || 'Unknown'}
+                  </p>
+                  {provision?.memberEmail && (
+                    <p className="text-[12px] text-[#6e6e73]">{provision.memberEmail}</p>
+                  )}
+                </div>
+              </div>
+
               {/* Asset Details */}
-              <div>
+              <div className="rounded-[14px] border border-[#eef0f3] bg-[#fbfcfb] p-4">
                 <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#86868b]">
                   Asset Details
                 </h3>
-                <div className="space-y-3 rounded-[14px] border border-[#eef0f3] bg-[#fbfcfb] p-4">
-                  <div className="flex items-start justify-between">
+                <p className="text-[14px] font-semibold text-[#111827]">{asset.name}</p>
+                <p className="mt-0.5 text-[11px] text-[#6e6e73]">{asset.assetCode}</p>
+                {asset.serialNumber && (
+                  <p className="mt-1 text-[11px] text-[#6e6e73]">S/N: {asset.serialNumber}</p>
+                )}
+                <div className="mt-3 grid grid-cols-2 gap-3 border-t border-[#eef0f3] pt-3 text-[12px]">
+                  <div>
+                    <span className="text-[#86868b]">Category</span>
+                    <p className="font-medium text-[#1d1d1f]">{humanize(asset.category)}</p>
+                  </div>
+                  <div>
+                    <span className="text-[#86868b]">Condition</span>
+                    <p className="font-medium text-[#1d1d1f]">{humanize(asset.condition)}</p>
+                  </div>
+                  {asset.model && (
                     <div>
-                      <p className="text-[15px] font-semibold text-[#111827]">{asset.name}</p>
-                      <p className="mt-0.5 text-[12px] text-[#6e6e73]">{asset.assetCode}</p>
+                      <span className="text-[#86868b]">Model</span>
+                      <p className="font-medium text-[#1d1d1f]">{asset.model}</p>
                     </div>
+                  )}
+                  <div>
+                    <span className="text-[#86868b]">Status</span>
                     <span
                       className={cn(
-                        'rounded-full px-2.5 py-0.5 text-[10px] font-medium',
+                        'mt-0.5 inline-block rounded-md border-0 text-[10px] font-semibold px-2 py-0.5',
                         statusColors[asset.status] || 'bg-[#f3f4f6] text-[#6b7280]',
                       )}
                     >
                       {humanize(asset.status)}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 text-[12px]">
-                    <div>
-                      <span className="text-[#86868b]">Category</span>
-                      <p className="font-medium text-[#1d1d1f]">{humanize(asset.category)}</p>
-                    </div>
-                    <div>
-                      <span className="text-[#86868b]">Condition</span>
-                      <p className="font-medium text-[#1d1d1f]">{humanize(asset.condition)}</p>
-                    </div>
-                    {asset.serialNumber && (
-                      <div>
-                        <span className="text-[#86868b]">Serial</span>
-                        <p className="font-medium text-[#1d1d1f]">{asset.serialNumber}</p>
-                      </div>
-                    )}
-                    {asset.model && (
-                      <div>
-                        <span className="text-[#86868b]">Model</span>
-                        <p className="font-medium text-[#1d1d1f]">{asset.model}</p>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              {/* Assignment Details */}
-              <div>
+              {/* Assignment Info */}
+              <div className="rounded-[14px] border border-[#eef0f3] bg-[#fbfcfb] p-4">
                 <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#86868b]">
-                  Assignment Details
+                  Assignment Info
                 </h3>
-                <div className="space-y-3 rounded-[14px] border border-[#eef0f3] bg-[#fbfcfb] p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white">
-                      <User2 className="size-4 text-[#6b7280]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-medium text-[#111827]">
-                        {provision?.memberName || asset.currentHolderName || 'Unknown'}
-                      </p>
-                      {provision?.memberEmail && (
-                        <p className="truncate text-[11px] text-[#6e6e73]">{provision.memberEmail}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 border-t border-[#eef0f3] pt-3 text-[12px]">
-                    {provision?.providedDate && (
-                      <div>
-                        <span className="flex items-center gap-1 text-[#86868b]">
-                          <CalendarClock className="size-3" />
-                          Provided Date
-                        </span>
-                        <p className="font-medium text-[#1d1d1f]">{formatDate(provision.providedDate)}</p>
-                      </div>
-                    )}
-                    {provision?.providedByName && (
-                      <div>
-                        <span className="flex items-center gap-1 text-[#86868b]">
-                          <User className="size-3" />
-                          Provided By
-                        </span>
-                        <p className="font-medium text-[#1d1d1f]">{provision.providedByName}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {provision?.provideNotes && (
-                    <div className="border-t border-[#eef0f3] pt-3 text-[12px]">
-                      <span className="text-[#86868b]">Notes</span>
-                      <p className="mt-0.5 text-[13px] text-[#1d1d1f]">{provision.provideNotes}</p>
+                <div className="space-y-2">
+                  {provision?.providedDate && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#86868b]">Provided Date</span>
+                      <span className="font-medium text-[#111827]">{formatDate(provision.providedDate)}</span>
                     </div>
                   )}
-
+                  {provision?.providedByName && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#86868b]">Provided By</span>
+                      <span className="font-medium text-[#111827]">{provision.providedByName}</span>
+                    </div>
+                  )}
+                  {provision?.provideNotes && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#86868b]">Notes</span>
+                      <span className="max-w-[250px] truncate text-right font-medium text-[#111827]">{provision.provideNotes}</span>
+                    </div>
+                  )}
                   {isPendingReturn && (
-                    <div className="flex items-center gap-2 rounded-lg bg-[#fff7e8] px-3 py-2">
-                      <RotateCcw className="size-3.5 text-[#8a5a00]" />
+                    <div className="mt-2 flex items-center gap-2 rounded-lg bg-[#fff7e8] px-3 py-2">
+                      <RotateCcw className="size-3.5 shrink-0 text-[#8a5a00]" />
                       <span className="text-[12px] font-medium text-[#8a5a00]">
                         Return requested — awaiting employee handover
                       </span>
@@ -218,7 +241,78 @@ function IssuedAssetDetailDialog({
                 </div>
               </div>
 
-              {/* Revoke Button */}
+              {/* Expected Return Date (only when replacement-linked) */}
+              {hasReplacement && (
+                <div className="rounded-[14px] border border-[#eef0f3] bg-[#fbfcfb] p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#86868b]">
+                        Expected Return Date
+                      </span>
+                      {editDate ? (
+                        <div className="mt-2 flex items-center gap-2">
+                          <Input
+                            type="date"
+                            value={newDate}
+                            onChange={(e) => setNewDate(e.target.value)}
+                            className="w-44 text-[13px]"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleUpdateDate}
+                            className="rounded-lg text-[12px]"
+                            disabled={mutations.updateReplacementReturnDate.isPending}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditDate(false)}
+                            className="rounded-lg text-[12px]"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : dueDate ? (
+                        <p className="mt-1 text-[14px] font-semibold text-[#111827]">
+                          {dueDate.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                          {isOverdue && (
+                            <span className="ml-2 text-[11px] font-medium text-red-500">Overdue</span>
+                          )}
+                          {isDueTomorrow && (
+                            <span className="ml-2 text-[11px] font-medium text-[#d97706]">Due Tomorrow!</span>
+                          )}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-[12px] text-[#9ca3af]">Not set</p>
+                      )}
+                    </div>
+                    {provision.replacementAssignmentId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditDate(!editDate);
+                          if (provision.returnDate) {
+                            setNewDate(provision.returnDate.split('T')[0]);
+                          }
+                        }}
+                        className="text-[12px] font-medium text-[#3862f6] hover:text-[#2563eb]"
+                      >
+                        {editDate ? 'Cancel' : 'Edit'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
               {!isPendingReturn && (
                 <div className="flex justify-end gap-3 border-t border-[#eef0f3] pt-4">
                   <Button
@@ -281,110 +375,14 @@ export function IssueAssetTab({
   const queryClient = useQueryClient();
   const mutations = useAssetMutations(orgSlug, memberId);
 
-  const [groupQuery, setGroupQuery] = useState('');
-  const [employeeQuery, setEmployeeQuery] = useState('');
-  const [selectedEmployeeMemberId, setSelectedEmployeeMemberId] = useState<string | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<AvailableAssetGroup | null>(null);
-  const [isIssuing, setIsIssuing] = useState(false);
-
-  const [isEmployeeOpen, setIsEmployeeOpen] = useState(false);
-  const [isGroupOpen, setIsGroupOpen] = useState(false);
-
   const [selectedAsset, setSelectedAsset] = useState<AssetDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
 
   const [sorting, setSorting] = useState<SortingState>([{ id: 'asset', desc: false }]);
   const [assetSearch, setAssetSearch] = useState('');
-
-  const selectedEmployee = useMemo(
-    () => members.find((m) => m.id === selectedEmployeeMemberId) ?? null,
-    [members, selectedEmployeeMemberId],
-  );
-
-  const filteredGroups = useMemo(
-    () => {
-      const q = groupQuery.toLowerCase().trim();
-      const selectedLabel = selectedGroup ? groupDisplayLabel(selectedGroup).toLowerCase().trim() : '';
-      
-      // If query is empty or matches the currently selected group, show all options
-      if (!q || q === selectedLabel) return availableGroups;
-      
-      return availableGroups.filter(
-        (g) =>
-          g.assetName.toLowerCase().includes(q) ||
-          g.assetCode.toLowerCase().includes(q) ||
-          (g.categoryName ?? '').toLowerCase().includes(q) ||
-          (g.model ?? '').toLowerCase().includes(q),
-      );
-    },
-    [availableGroups, groupQuery, selectedGroup],
-  );
-
-  const filteredEmployees = useMemo(
-    () => {
-      const q = employeeQuery.toLowerCase().trim();
-      const selectedName = selectedEmployee ? memberDisplayName(selectedEmployee).toLowerCase().trim() : '';
-      
-      // If query is empty or matches the currently selected employee, show all options
-      if (!q || q === selectedName) return members;
-      
-      return members.filter(
-        (m) =>
-          memberDisplayName(m).toLowerCase().includes(q) ||
-          (m.email ?? '').toLowerCase().includes(q),
-      );
-    },
-    [members, employeeQuery, selectedEmployee],
-  );
-
-  function handleGroupSelect(label: string) {
-    const group = availableGroups.find((g) => groupDisplayLabel(g) === label);
-    setSelectedGroup(group ?? null);
-    if (group) {
-      setGroupQuery(groupDisplayLabel(group));
-    } else {
-      setGroupQuery('');
-    }
-  }
-
-  function handleEmployeeSelect(label: string) {
-    const member = members.find((m) => memberDisplayName(m) === label);
-    setSelectedEmployeeMemberId(member?.id ?? null);
-    if (member) {
-      setEmployeeQuery(memberDisplayName(member));
-    } else {
-      setEmployeeQuery('');
-    }
-  }
-
-  function handleReset() {
-    setSelectedEmployeeMemberId(null);
-    setSelectedGroup(null);
-    setGroupQuery('');
-    setEmployeeQuery('');
-  }
-
-  async function handleIssue() {
-    if (!selectedEmployeeMemberId || !selectedGroup) return;
-    setIsIssuing(true);
-    try {
-      await onIssue({
-        memberId: selectedEmployeeMemberId,
-        groupKey: selectedGroup.groupKey,
-        quantity: 1,
-        conditionWhileProviding: 'GOOD',
-        providedByMemberId: memberId,
-        notes: '',
-      });
-      toast.success('Asset issued successfully');
-      handleReset();
-    } catch (error) {
-      toast.error(readError(error, 'Failed to issue asset'));
-    } finally {
-      setIsIssuing(false);
-    }
-  }
+  const [tableFilterEmployeeIds, setTableFilterEmployeeIds] = useState<string[]>([]);
+  const [tableEmployeeSearch, setTableEmployeeSearch] = useState('');
 
   async function handleRowClick(asset: AssetSummary) {
     setIsDetailLoading(true);
@@ -415,9 +413,19 @@ export function IssueAssetTab({
     }
   }
 
-  const isSelfAssigned = selectedEmployeeMemberId === memberId;
+
+  const tableFilteredMembers = useMemo(() => {
+    if (!tableEmployeeSearch.trim()) return members;
+    const q = tableEmployeeSearch.toLowerCase();
+    return members.filter((m) => m.label.toLowerCase().includes(q));
+  }, [members, tableEmployeeSearch]);
+
   const issuedAssets = useMemo(() => {
     let list = (assignedAssets ?? []).filter((a) => a.status === 'ASSIGNED');
+    if (tableFilterEmployeeIds.length > 0) {
+      const set = new Set(tableFilterEmployeeIds);
+      list = list.filter((a) => a.currentHolderMemberId && set.has(a.currentHolderMemberId));
+    }
     if (assetSearch.trim()) {
       const q = assetSearch.toLowerCase().trim();
       list = list.filter(
@@ -428,7 +436,7 @@ export function IssueAssetTab({
       );
     }
     return list;
-  }, [assignedAssets, assetSearch]);
+  }, [assignedAssets, assetSearch, tableFilterEmployeeIds]);
 
   function memberDisplayName(member: AssetLookupOption): string {
     const raw = (member.label || member.email || '').trim();
@@ -548,214 +556,19 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
   }, [table]);
 
   return (
-    <div className="w-full space-y-8">
-      {/* Issue Asset Form */}
+    <div className="w-full space-y-4">
+      {/* Issued Assets Header */}
       <div>
         <div className="flex items-center justify-between">
-          <h2 className="text-[18px] font-semibold text-[#111827]">Issue Asset</h2>
+          <h2 className="text-[18px] font-semibold text-[#111827]">Issued Assets</h2>
           {headerAction}
         </div>
         <Separator className="my-4" />
-
-        <div className="space-y-6 max-w-3xl">
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div>
-              <Label className="mb-1.5 block text-[12px] font-medium text-[#6b7280]">Employee</Label>
-              <Combobox
-                open={isEmployeeOpen}
-                onOpenChange={(open) => {
-                  setIsEmployeeOpen(open);
-                  if (!open) {
-                    if (selectedEmployee) {
-                      setEmployeeQuery(memberDisplayName(selectedEmployee));
-                    } else {
-                      setEmployeeQuery('');
-                    }
-                  }
-                }}
-                value={selectedEmployee ? memberDisplayName(selectedEmployee) : null}
-                onValueChange={(val) => handleEmployeeSelect(val as string)}
-                inputValue={employeeQuery}
-                onInputValueChange={setEmployeeQuery}
-              >
-                <div className="flex items-center border-b-[1.5px] border-[#d1d5db] focus-within:border-primary transition-colors duration-150 bg-transparent">
-                  <User className="mr-2 size-4 shrink-0 text-[#6b7280]" />
-                  <ComboboxInput
-                    placeholder="Search employee name or email..."
-                    showTrigger={false}
-                    showClear={false}
-                    className="w-full border-0 rounded-none shadow-none bg-transparent [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none [&>div]:bg-transparent [&>div]:h-auto"
-                  />
-                  {selectedEmployee && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedEmployeeMemberId(null);
-                        setEmployeeQuery('');
-                      }}
-                      className="ml-1 flex size-5 items-center justify-center rounded-full text-[#9ca3af] hover:text-[#6b7280]"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  )}
-                  <ComboboxTrigger className="ml-1 text-[#9ca3af]" />
-                </div>
-
-                <ComboboxContent className="p-1 shadow-none border border-[#e2e5ea] rounded-lg">
-                  <ComboboxList>
-                    {filteredEmployees.length === 0 ? (
-                      <ComboboxEmpty>No employees found</ComboboxEmpty>
-                    ) : (
-                      filteredEmployees.map((m) => (
-                        <ComboboxItem
-                          key={m.id}
-                          value={memberDisplayName(m)}
-                          className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] rounded-md data-selected:bg-[#f8f9fa]"
-                        >
-                          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] text-[#6b7280]">
-                            <User className="size-3.5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-[#111827] truncate">{memberDisplayName(m)}</p>
-                            {m.email && (
-                              <p className="text-[11px] text-[#6b7280] truncate">{m.email}</p>
-                            )}
-                          </div>
-                        </ComboboxItem>
-                      ))
-                    )}
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
-              {isSelfAssigned ? (
-                <span className="mt-1.5 flex items-center gap-1 text-[12px] font-medium text-[#156f3d]">
-                  <Check className="size-3" />
-                  Assigned to you
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedEmployeeMemberId(memberId);
-                    const me = members.find((m) => m.id === memberId);
-                    if (me) {
-                      setEmployeeQuery(memberDisplayName(me));
-                    }
-                  }}
-                  className="mt-1.5 text-[12px] font-medium text-primary hover:text-[var(--indigo-10)] transition-colors"
-                >
-                  Assign to myself
-                </button>
-              )}
-            </div>
-
-            <div>
-              <Label className="mb-1.5 block text-[12px] font-medium text-[#6b7280]">Asset</Label>
-              <Combobox
-                open={isGroupOpen}
-                onOpenChange={(open) => {
-                  setIsGroupOpen(open);
-                  if (!open) {
-                    if (selectedGroup) {
-                      setGroupQuery(groupDisplayLabel(selectedGroup));
-                    } else {
-                      setGroupQuery('');
-                    }
-                  }
-                }}
-                value={selectedGroup ? groupDisplayLabel(selectedGroup) : null}
-                onValueChange={(val) => handleGroupSelect(val as string)}
-                inputValue={groupQuery}
-                onInputValueChange={setGroupQuery}
-              >
-                <div className="flex items-center border-b-[1.5px] border-[#d1d5db] focus-within:border-primary transition-colors duration-150 bg-transparent">
-                  <LaptopMinimal className="mr-2 size-4 shrink-0 text-[#6b7280]" />
-                  <ComboboxInput
-                    placeholder="Search asset name, code, or model..."
-                    showTrigger={false}
-                    showClear={false}
-                    className="w-full border-0 rounded-none shadow-none bg-transparent [&>div]:border-0 [&>div]:rounded-none [&>div]:shadow-none [&>div]:bg-transparent [&>div]:h-auto"
-                  />
-                  {selectedGroup && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setSelectedGroup(null); setGroupQuery(''); }}
-                      className="ml-1 flex size-5 items-center justify-center rounded-full text-[#9ca3af] hover:text-[#6b7280]"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  )}
-                  <ComboboxTrigger className="ml-1 text-[#9ca3af]" />
-                </div>
-
-                <ComboboxContent className="p-1 shadow-none border border-[#e2e5ea] rounded-lg">
-                  <ComboboxList>
-                    {isGroupsLoading ? (
-                      <div className="px-3 py-4 text-center text-[13px] text-[#9ca3af]">Loading...</div>
-                    ) : filteredGroups.length === 0 ? (
-                      <ComboboxEmpty>No available assets found</ComboboxEmpty>
-                    ) : (
-                      filteredGroups.map((g) => (
-                        <ComboboxItem
-                          key={g.groupKey}
-                          value={groupDisplayLabel(g)}
-                          className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] rounded-md data-selected:bg-[#f8f9fa]"
-                        >
-                          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[#e5e7eb] bg-[#fafafa] text-[#6b7280]">
-                            <PackagePlus className="size-3.5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-[#111827] truncate">{groupDisplayLabel(g)}</p>
-                            <p className="text-[11px] text-[#6b7280]">
-                              {g.model ? `${g.model} \u00B7 ` : ''}
-                              Available: {g.availableQuantity}
-                            </p>
-                          </div>
-                          <Badge className="rounded-full bg-[#eef9f1] px-2.5 py-0.5 text-[11px] font-medium text-[#156f3d] border-0 shrink-0">
-                            {g.availableQuantity}
-                          </Badge>
-                        </ComboboxItem>
-                      ))
-                    )}
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              onClick={() => void handleIssue()}
-              disabled={!selectedEmployeeMemberId || !selectedGroup || isIssuing || !canManageAssets}
-              className="rounded-lg bg-primary px-5 py-2 text-[13px] font-medium text-white hover:bg-[var(--indigo-10)] disabled:opacity-40"
-            >
-              {isIssuing ? (
-                <span className="flex items-center gap-2">
-                  <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Issuing...
-                </span>
-              ) : (
-                'Issue Asset'
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReset}
-              disabled={isIssuing}
-              className="rounded-lg px-4 py-2 text-[13px] font-medium"
-            >
-              Reset
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* Issued Assets Table Container */}
       <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
-        {/* Search Input in Card Header */}
+        {/* Search Input + Export in Card Header */}
         <div className="px-8 py-6 border-b border-border">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="relative flex-1 max-w-xs">
@@ -767,6 +580,100 @@ function groupDisplayLabel(group: AvailableAssetGroup): string {
                 className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
               />
             </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'inline-flex items-center gap-1 px-3 h-9 rounded-lg border text-xs font-medium transition-colors',
+                    tableFilterEmployeeIds.length > 0
+                      ? 'border-border bg-muted/30 text-foreground'
+                      : 'border-border bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  )}
+                >
+                  <ChevronsUpDown className="size-4" />
+                  <span>
+                    {tableFilterEmployeeIds.length > 0
+                      ? `${tableFilterEmployeeIds.length} selected`
+                      : 'All Employees'}
+                  </span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0" align="start">
+                <Command>
+                  <CommandInput
+                    placeholder="Search employees..."
+                    value={tableEmployeeSearch}
+                    onValueChange={setTableEmployeeSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>No employees found.</CommandEmpty>
+                    <CommandGroup>
+                      {tableFilteredMembers.map((emp) => {
+                        const isSelected = tableFilterEmployeeIds.includes(emp.id);
+                        return (
+                          <CommandItem
+                            key={emp.id}
+                            onSelect={() => {
+                              setTableFilterEmployeeIds((prev) =>
+                                prev.includes(emp.id)
+                                  ? prev.filter((v) => v !== emp.id)
+                                  : [...prev, emp.id],
+                              );
+                            }}
+                          >
+                            <div
+                              className={cn(
+                                'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border',
+                                isSelected
+                                  ? 'border-[#111827] bg-[#111827] text-white'
+                                  : 'border-[#d1d5db]',
+                              )}
+                            >
+                              {isSelected && <Check className="size-3" />}
+                            </div>
+                            <span className="text-[13px]">{emp.label}</span>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                  {tableFilterEmployeeIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1 border-t border-[#e5e7eb] p-2">
+                      {members.filter((m) => tableFilterEmployeeIds.includes(m.id)).slice(0, 3).map((emp) => (
+                        <span
+                          key={emp.id}
+                          className="inline-flex items-center gap-1 rounded-md bg-[#f3f4f6] px-2 py-0.5 text-[11px] text-[#6b7280]"
+                        >
+                          {emp.label.split(' ')[0]}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTableFilterEmployeeIds((prev) => prev.filter((v) => v !== emp.id));
+                            }}
+                            className="hover:text-[#111827]"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </span>
+                      ))}
+                      {tableFilterEmployeeIds.length > 3 && (
+                        <span className="text-[11px] text-[#9ca3af]">+{tableFilterEmployeeIds.length - 3} more</span>
+                      )}
+                    </div>
+                  )}
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {canManageAssets && (
+              <ExportBand
+                orgSlug={orgSlug}
+                memberId={memberId}
+                members={members}
+                domain="issued"
+                showEmployeeFilter={false}
+              />
+            )}
           </div>
         </div>
 

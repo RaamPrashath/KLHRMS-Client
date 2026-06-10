@@ -57,6 +57,17 @@ export interface TicketAttachmentMetadata {
   contentType?: string | null;
 }
 
+export type AssetExportFormat = 'xlsx' | 'pdf' | 'csv';
+
+export type AssetExportDomain = 'register' | 'issued' | 'returned' | 'inventory';
+
+export interface AssetExportPayload {
+  format: AssetExportFormat;
+  startDate: string;
+  endDate: string;
+  employeeIds: string[];
+}
+
 export type AssetReportType =
   | 'ALL_ASSETS'
   | 'AVAILABLE_ASSETS'

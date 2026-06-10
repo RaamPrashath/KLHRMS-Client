@@ -24,10 +24,15 @@ export const manualEntrySchema = z
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
     clock_in: z.iso.datetime().optional(),
     clock_out: z.iso.datetime().optional(),
+    entry_type: z.enum(['LEAVE', 'COMP_OFF']).optional(),
   })
   .refine(
     (d) => !(d.clock_in && d.clock_out) || d.clock_out > d.clock_in,
     { message: 'clock_out must be after clock_in', path: ['clock_out'] },
+  )
+  .refine(
+    (d) => !(d.entry_type && d.clock_in),
+    { message: 'entry_type cannot be combined with clock_in', path: ['entry_type'] },
   );
 
 export const deleteDayEntrySchema = z.object({

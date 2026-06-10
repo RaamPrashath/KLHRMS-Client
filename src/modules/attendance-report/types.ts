@@ -28,6 +28,8 @@ export interface AttendanceReportRow {
   projectName: string | null;
   taskName: string | null;
   clockOutDescription: string | null;
+  leaveTypeName?: string | null;
+  entryType?: string | null;
 }
 
 export interface AttendanceReportSummary {

@@ -62,6 +62,7 @@ import type {
   AttendanceReportFilters,
   AttendanceReportRow,
 } from '@/modules/attendance-report/types';
+import type { ManualEntryInput } from '@/modules/attendance/schema/attendanceSchemas';
 
 type PeriodMode = 'weekly' | 'monthly' | 'custom';
 type ViewMode = 'report' | 'timesheet';
@@ -421,6 +422,7 @@ function TimesheetGrid({
   }, [rows]);
 
   const [editingCell, setEditingCell] = useState<{ employeeId: string; date: string } | null>(null);
+  const [activeMenuCell, setActiveMenuCell] = useState<{ employeeId: string; date: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
 
@@ -554,10 +556,100 @@ function TimesheetGrid({
       id: toYMD(day),
       header: `${MONTHS[day.getMonth()]?.slice(0, 3)} ${day.getDate()}`,
       cell: ({ row }: { row: Row<AttendanceReportEmployeeOption> }) => {
+        const dayStr = toYMD(day);
         const dayMap = byEmployee.get(row.original.id) ?? new Map<string, AttendanceReportRow>();
-        const cellRow = dayMap.get(toYMD(day));
+        const cellRow = dayMap.get(dayStr);
         const hours = cellRow?.totalHours;
-        const isEditing = editingCell?.employeeId === row.original.id && editingCell?.date === toYMD(day);
+        const leaveTypeName = cellRow?.leaveTypeName;
+        const entryType = cellRow?.entryType;
+        const isEditing = editingCell?.employeeId === row.original.id && editingCell?.date === dayStr;
+        const isMenuOpen = activeMenuCell?.employeeId === row.original.id && activeMenuCell?.date === dayStr;
+
+        if (leaveTypeName) {
+          return (
+            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-bold font-mono min-w-[58px] h-7 text-red-800 bg-red-50 border border-red-200" title={leaveTypeName}>
+              L
+            </span>
+          );
+        }
+
+        if (isMenuOpen && canEdit) {
+          return (
+            <div className="inline-flex items-center gap-0.5" onMouseLeave={() => setActiveMenuCell(null)}>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMenuCell(null);
+                  const employeeId = row.original.id;
+                  setIsSaving(true);
+                  manualMutation.mutateAsync({
+                    target_member_id: employeeId,
+                    date: dayStr,
+                    entry_type: 'LEAVE',
+                  } satisfies ManualEntryInput).then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+                  }).finally(() => setIsSaving(false));
+                }}
+                className="flex items-center justify-center w-6 h-6 rounded text-[11px] font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
+                title="Mark Leave"
+              >
+                L
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMenuCell(null);
+                  const employeeId = row.original.id;
+                  setIsSaving(true);
+                  manualMutation.mutateAsync({
+                    target_member_id: employeeId,
+                    date: dayStr,
+                    entry_type: 'COMP_OFF',
+                  } satisfies ManualEntryInput).then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+                  }).finally(() => setIsSaving(false));
+                }}
+                className="flex items-center justify-center w-6 h-6 rounded text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+                title="Mark CompOff"
+              >
+                CO
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMenuCell(null);
+                  setEditingCell({ employeeId: row.original.id, date: dayStr });
+                }}
+                className="flex items-center justify-center px-2 h-6 rounded text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
+                title="Enter custom hours"
+              >
+                Custom
+              </button>
+              {(hours != null || entryType) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMenuCell(null);
+                    const employeeId = row.original.id;
+                    setIsSaving(true);
+                    deleteMutation.mutateAsync({
+                      orgSlug,
+                      memberId,
+                      targetMemberId: employeeId,
+                      date: dayStr,
+                    }).then(() => {
+                      queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+                    }).finally(() => setIsSaving(false));
+                  }}
+                  className="flex items-center justify-center w-6 h-6 rounded text-[11px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 transition-colors"
+                  title="Clear"
+                >
+                  X
+                </button>
+              )}
+            </div>
+          );
+        }
 
         if (isEditing) {
           return (
@@ -565,10 +657,12 @@ function TimesheetGrid({
               type="text"
               className="w-16 h-8 text-center text-xs font-semibold font-mono border-primary focus-visible:ring-primary focus-visible:ring-1 mx-auto bg-surface"
               defaultValue={hours != null ? hours.toFixed(1) : ''}
-              onBlur={(e) => handleSave(row.original.id, toYMD(day), e.target.value)}
+              onBlur={(e) => {
+                handleSave(row.original.id, dayStr, e.target.value);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  handleSave(row.original.id, toYMD(day), e.currentTarget.value);
+                  handleSave(row.original.id, dayStr, e.currentTarget.value);
                 } else if (e.key === 'Escape') {
                   setEditingCell(null);
                 }
@@ -579,11 +673,41 @@ function TimesheetGrid({
           );
         }
 
+        if (entryType === 'LEAVE') {
+          return (
+            <span
+              onClick={() => { if (canEdit && !isSaving) setActiveMenuCell({ employeeId: row.original.id, date: dayStr }); }}
+              className={cn(
+                "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-bold font-mono min-w-[58px] h-7 border transition-all duration-150 select-none",
+                "text-red-700 bg-red-50 border-red-200",
+                canEdit && "cursor-pointer hover:bg-red-100/70",
+              )}
+            >
+              L
+            </span>
+          );
+        }
+
+        if (entryType === 'COMP_OFF') {
+          return (
+            <span
+              onClick={() => { if (canEdit && !isSaving) setActiveMenuCell({ employeeId: row.original.id, date: dayStr }); }}
+              className={cn(
+                "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-bold font-mono min-w-[58px] h-7 border transition-all duration-150 select-none",
+                "text-amber-700 bg-amber-50 border-amber-200",
+                canEdit && "cursor-pointer hover:bg-amber-100/70",
+              )}
+            >
+              CO
+            </span>
+          );
+        }
+
         return (
           <span
             onClick={() => {
               if (canEdit && !isSaving) {
-                setEditingCell({ employeeId: row.original.id, date: toYMD(day) });
+                setActiveMenuCell({ employeeId: row.original.id, date: dayStr });
               }
             }}
             className={cn(
@@ -608,7 +732,7 @@ function TimesheetGrid({
         return <span className="font-mono text-sm font-semibold text-neutral-900">{total.toFixed(1)}h</span>;
       },
     },
-  ], [days, byEmployee, editingCell, canEdit, isSaving, handleSave]);
+  ], [days, byEmployee, editingCell, activeMenuCell, canEdit, isSaving, orgSlug, memberId, manualMutation, deleteMutation, queryClient, handleSave]);
 
   const table = useReactTable({
     data: employees,

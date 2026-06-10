@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   Archive,
   ArrowLeftRight,
-  BarChart3,
   ClipboardList,
   DoorOpen,
   Hammer,
@@ -29,7 +28,7 @@ import type { AssetMaintenanceSummary, AssetReportType } from '@/modules/assets/
 
 export const ACTION_GREEN = 'var(--indigo-9)';
 
-export type AssetTabValue = 'dashboard' | 'register' | 'categories' | 'provide' | 'returned' | 'access-control' | 'inventory' | 'reports';
+export type AssetTabValue = 'dashboard' | 'register' | 'categories' | 'provide' | 'returned' | 'access-control' | 'inventory';
 
 const ASSET_TABS: Array<{
   value: AssetTabValue;
@@ -43,7 +42,6 @@ const ASSET_TABS: Array<{
   { value: 'returned', label: 'Returned Assets', icon: RotateCw },
   { value: 'access-control', label: 'Access Control', icon: DoorOpen },
   { value: 'inventory', label: 'Inventory', icon: ClipboardList },
-  { value: 'reports', label: 'Reports', icon: BarChart3 },
 ];
 
 export function getAssetTabOptions(canManage: boolean) {

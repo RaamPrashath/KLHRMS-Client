@@ -9,6 +9,8 @@ import {
   Search,
   X,
 } from 'lucide-react';
+import { ExportBand } from '@/modules/assets/components/ExportBand';
+import type { AssetLookupOption } from '@/modules/assets/types/assetTypes';
 import {
   ColumnDef,
   flexRender,
@@ -71,6 +73,10 @@ const StatusDot = memo(function StatusDot({ status }: { status: string }) {
 export function AssetRegisterTab({
   assets,
   isLoading,
+  canManageAssets,
+  orgSlug,
+  memberId,
+  members,
   onOpenDetail,
   onEdit,
   onProvide,
@@ -79,6 +85,10 @@ export function AssetRegisterTab({
 }: {
   assets: AssetSummary[];
   isLoading: boolean;
+  canManageAssets: boolean;
+  orgSlug: string;
+  memberId: string;
+  members: AssetLookupOption[];
   onOpenDetail: (assetId: string) => void;
   onEdit: (asset: AssetSummary | AssetDetail) => void;
   onProvide: (asset: AssetSummary) => void;
@@ -357,6 +367,15 @@ export function AssetRegisterTab({
               </Button>
             )}
           </div>
+          {canManageAssets && (
+            <ExportBand
+              orgSlug={orgSlug}
+              memberId={memberId}
+              members={members}
+              domain="register"
+              showEmployeeFilter={false}
+            />
+          )}
         </div>
       </div>
 
