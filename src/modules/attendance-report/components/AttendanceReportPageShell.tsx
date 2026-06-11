@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   Download,
   FileSpreadsheet,
   FileText,
@@ -13,26 +15,35 @@ import {
   Search,
   X,
 } from 'lucide-react';
+import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+  type Row,
+} from '@tanstack/react-table';
 import { type DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
-import { EmployeePagination } from '@/modules/employees/components/EmployeePagination';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Table,
+  TableBody as ShadcnTableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { EmployeePagination } from '@/modules/employees/components/EmployeePagination';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMemberPermissionsQuery } from '@/modules/attendance/hooks/queries/attendance';
@@ -51,6 +62,7 @@ import type {
   AttendanceReportFilters,
   AttendanceReportRow,
 } from '@/modules/attendance-report/types';
+import type { ManualEntryInput } from '@/modules/attendance/schema/attendanceSchemas';
 
 type PeriodMode = 'weekly' | 'monthly' | 'custom';
 type ViewMode = 'report' | 'timesheet';
@@ -113,16 +125,6 @@ function periodLabel(mode: PeriodMode, dateFrom: string, dateTo: string): string
   const startLabel = `${MONTHS[start.getMonth()]?.slice(0, 3)} ${start.getDate()}`;
   const endLabel = `${MONTHS[end.getMonth()]?.slice(0, 3)} ${end.getDate()}, ${end.getFullYear()}`;
   return `${startLabel} - ${endLabel}`;
-}
-
-function initials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
 }
 
 function groupByEmployee(rows: AttendanceReportRow[]) {
@@ -246,123 +248,146 @@ function EmployeeCell({
   name: string;
   detail?: string | null;
 }) {
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase();
+
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-info-bg text-xs font-semibold text-info-text">
-        {initials(name) || 'E'}
+    <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary text-[10px] font-bold">
+        {initials || 'E'}
       </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
-        <p className="truncate text-xs text-neutral-500">{detail || 'No Dept'}</p>
+      <div className="flex flex-col min-w-0 overflow-hidden">
+        <span
+          className="text-[13px] font-medium text-neutral-900 leading-tight truncate"
+          title={name}
+        >
+          {name}
+        </span>
+        {detail && (
+          <span className="text-[11px] text-neutral-400 leading-tight truncate">{detail}</span>
+        )}
       </div>
     </div>
   );
 }
 
+const SKELETON_COUNT = 20;
+const SKELETON_IDS = Array.from({ length: SKELETON_COUNT }, (_, i) => `skeleton-row-${i}`);
+
+
+
 function ReportTable({
   rows,
   isLoading,
-  selectedEmployeeIds,
-  onToggleEmployee,
-  onToggleManyEmployees,
 }: {
   rows: AttendanceReportRow[];
   isLoading: boolean;
-  selectedEmployeeIds: string[];
-  onToggleEmployee: (employeeId: string, checked: boolean) => void;
-  onToggleManyEmployees: (employeeIds: string[], checked: boolean) => void;
 }) {
-  const groups = groupByEmployee(rows);
-  const selectedSet = new Set(selectedEmployeeIds);
-  const visibleEmployeeIds = groups.map((group) => group.employee.employeeId);
-  const visibleSelectedCount = visibleEmployeeIds.filter((id) => selectedSet.has(id)).length;
-  const allVisibleSelected = visibleEmployeeIds.length > 0 && visibleSelectedCount === visibleEmployeeIds.length;
-  const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
-  const selectAllState: boolean | 'indeterminate' = allVisibleSelected
-    ? true
-    : someVisibleSelected
-      ? 'indeterminate'
-      : false;
+  const groups = useMemo(() => groupByEmployee(rows), [rows]);
+
+  const headerRow = (
+    <TableRow className="border-black/[0.04] hover:bg-transparent">
+      <TableHead className="w-[20%] h-auto py-3 px-4 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500 sticky left-0 z-10 bg-canvas/50">Employee</TableHead>
+      <TableHead className="w-[15%] h-auto py-3 px-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Date</TableHead>
+      <TableHead className="w-[45%] h-auto py-3 px-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Description</TableHead>
+      <TableHead className="w-[10%] h-auto py-3 px-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500 text-right">Hours</TableHead>
+      <TableHead className="w-[10%] h-auto py-3 px-4 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500 text-right border-l border-black/[0.04]">Total</TableHead>
+    </TableRow>
+  );
+
   if (isLoading) {
-    return <div className="h-80 animate-pulse rounded-b-xl bg-neutral-50" />;
+    return (
+      <div className="overflow-x-auto">
+        <Table className="table-fixed min-w-[960px]">
+          <TableHeader className="bg-canvas/50">{headerRow}</TableHeader>
+          <ShadcnTableBody className="bg-surface">
+            {SKELETON_IDS.slice(0, 10).map((id) => (
+              <TableRow key={id} className="border-black/4 hover:bg-transparent">
+                <TableCell colSpan={5} className="p-6">
+                  <div className="h-12 w-full animate-pulse rounded-xl bg-neutral-100" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </ShadcnTableBody>
+        </Table>
+      </div>
+    );
   }
+
   if (groups.length === 0) {
-    return <div className="py-16 text-center text-sm text-neutral-500">No report rows match the current filters.</div>;
+    return (
+      <div className="overflow-x-auto">
+        <Table className="table-fixed min-w-[960px]">
+          <TableHeader className="bg-canvas/50">{headerRow}</TableHeader>
+          <ShadcnTableBody className="bg-surface">
+            <TableRow className="border-black/4 hover:bg-transparent">
+              <TableCell colSpan={5} className="py-16 text-center text-sm text-neutral-400">
+                No report rows match the current filters.
+              </TableCell>
+            </TableRow>
+          </ShadcnTableBody>
+        </Table>
+      </div>
+    );
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[960px] border-collapse text-left">
-        <thead>
-          <tr className="border-b border-neutral-200 bg-canvas">
-            <th className="w-[52px] px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              <Checkbox
-                checked={selectAllState}
-                onCheckedChange={(value) => onToggleManyEmployees(visibleEmployeeIds, value === true)}
-                aria-label="Select all visible employees"
-              />
-            </th>
-            <th className="w-[280px] px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">Employee</th>
-            <th className="w-[170px] border-r border-neutral-100 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">Date</th>
-            <th className="border-r border-neutral-100 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">Description</th>
-            <th className="w-[120px] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">Hours</th>
-            <th className="w-[150px] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">Period Total</th>
-          </tr>
-        </thead>
-        <tbody className="bg-surface">
-          {groups.map((group) =>
-            group.rows.map((row, index) => (
-              <tr key={row.attendanceRecordId} className="border-b border-neutral-100 hover:bg-canvas/60">
-                {index === 0 && (
-                  <td rowSpan={group.rows.length} className="border-r border-neutral-100 px-4 py-3 align-middle">
-                    <Checkbox
-                      checked={selectedSet.has(group.employee.employeeId)}
-                      onCheckedChange={(value) => onToggleEmployee(group.employee.employeeId, value === true)}
-                      aria-label={`Toggle ${group.employee.employeeName}`}
-                    />
-                  </td>
-                )}
-                {index === 0 && (
-                  <td rowSpan={group.rows.length} className="border-r border-neutral-100 px-4 py-3 align-middle">
+      <Table className="table-fixed min-w-[960px]">
+        <TableHeader className="bg-canvas/50">{headerRow}</TableHeader>
+        <ShadcnTableBody className="bg-surface">
+          {groups.map((group) => {
+            const rowCount = group.rows.length;
+            return group.rows.map((row, rowIdx) => (
+              <TableRow key={row.attendanceRecordId} className="border-black/4 transition-colors hover:bg-black/[0.02]">
+                {rowIdx === 0 && (
+                  <TableCell
+                    className="px-4 py-3 align-top whitespace-nowrap sticky left-0 z-10 bg-surface border-r border-neutral-100"
+                    rowSpan={rowCount}
+                  >
                     <EmployeeCell name={group.employee.employeeName} detail={group.employee.departmentName} />
-                  </td>
+                  </TableCell>
                 )}
-                <td className="border-r border-neutral-100 px-4 py-3 align-top">
+                <TableCell className="px-4 py-3 align-top whitespace-nowrap">
                   <p className="text-sm font-medium text-neutral-900">{formatDate(row.date)}</p>
                   <p className="text-xs text-neutral-500">{WEEKDAY[parseYMD(row.date).getDay()]}</p>
-                </td>
-                <td className="border-r border-neutral-100 px-4 py-3 align-top">
+                </TableCell>
+                <TableCell className="px-4 py-3 align-top whitespace-nowrap">
                   <p className="text-sm text-neutral-700">
-                    {row.projectName && (
-                      <span className="font-semibold text-primary">{row.projectName}</span>
-                    )}
+                    {row.projectName && <span className="font-semibold text-primary">{row.projectName}</span>}
                     {row.projectName && row.taskName && ', '}
-                    {row.taskName && (
-                      <span className="font-semibold text-neutral-900">{row.taskName}</span>
-                    )}
+                    {row.taskName && <span className="font-semibold text-neutral-900">{row.taskName}</span>}
                   </p>
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-5 text-neutral-700">
                     {row.clockOutDescription || 'No clock-out description'}
                   </p>
-                </td>
-                <td className="px-4 py-3 text-right align-top font-mono text-[13px] text-neutral-900">
+                </TableCell>
+                <TableCell className="px-4 py-3 align-top whitespace-nowrap text-right font-mono text-[13px] text-neutral-900">
                   {row.totalHours != null ? (
                     `${formatHours(row.totalHours)}h`
                   ) : (
                     <span className="text-warning-text">0.0h</span>
                   )}
-                </td>
-                {index === 0 && (
-                  <td rowSpan={group.rows.length} className="border-l border-neutral-100 bg-surface px-4 py-3 text-right align-middle">
+                </TableCell>
+                {rowIdx === 0 && (
+                  <TableCell
+                    className="px-4 py-3 align-top whitespace-nowrap text-right border-l border-black/[0.04]"
+                    rowSpan={rowCount}
+                  >
                     <p className="font-mono text-xl font-semibold text-neutral-900">{group.total.toFixed(1)}</p>
                     <p className="text-xs text-neutral-500">hours</p>
-                  </td>
+                  </TableCell>
                 )}
-              </tr>
-            )),
-          )}
-        </tbody>
-      </table>
+              </TableRow>
+            ));
+          })}
+        </ShadcnTableBody>
+      </Table>
     </div>
   );
 }
@@ -375,11 +400,7 @@ function TimesheetGrid({
   dateFrom,
   dateTo,
   isLoading,
-  selectedEmployeeIds,
-  onToggleEmployee,
-  onToggleManyEmployees,
   canEdit,
-  allEmployeeIds,
 }: {
   orgSlug: string;
   memberId: string;
@@ -388,11 +409,7 @@ function TimesheetGrid({
   dateFrom: string;
   dateTo: string;
   isLoading: boolean;
-  selectedEmployeeIds: string[];
-  onToggleEmployee: (employeeId: string, checked: boolean) => void;
-  onToggleManyEmployees: (employeeIds: string[], checked: boolean) => void;
   canEdit: boolean;
-  allEmployeeIds: string[];
 }) {
   const days = daysBetween(dateFrom, dateTo);
   const byEmployee = useMemo(() => {
@@ -405,6 +422,7 @@ function TimesheetGrid({
   }, [rows]);
 
   const [editingCell, setEditingCell] = useState<{ employeeId: string; date: string } | null>(null);
+  const [activeMenuCell, setActiveMenuCell] = useState<{ employeeId: string; date: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
 
@@ -415,7 +433,6 @@ function TimesheetGrid({
     setEditingCell(null);
     const trimmed = value.trim();
     if (trimmed === '' || trimmed === '-') {
-      // If empty or dashboard placeholder "-", delete the record
       setIsSaving(true);
       try {
         await deleteMutation.mutateAsync({
@@ -445,7 +462,6 @@ function TimesheetGrid({
     }
 
     if (newHours === 0) {
-      // Delete the record
       setIsSaving(true);
       try {
         await deleteMutation.mutateAsync({
@@ -468,7 +484,6 @@ function TimesheetGrid({
       return;
     }
 
-    // Find if there is an existing record
     const employeeRows = byEmployee.get(employeeId);
     const existingRow = employeeRows?.get(dayString);
 
@@ -499,7 +514,6 @@ function TimesheetGrid({
     const endHour = Math.floor(endMinutesSinceMidnight / 60) % 24;
     const endMinute = endMinutesSinceMidnight % 60;
 
-    // Helper function to combine date + time into ISO datetime string (Asia/Kolkata timezone)
     const toISOFromIST = (dateStr: string, timeStr: string): string => {
       const istString = `${dateStr}T${timeStr}:00+05:30`;
       return new Date(istString).toISOString();
@@ -530,123 +544,306 @@ function TimesheetGrid({
     }
   }
 
-  const selectedSet = new Set(selectedEmployeeIds);
-  const totalSelectedCount = allEmployeeIds.filter((id) => selectedSet.has(id)).length;
-  const allSelected = allEmployeeIds.length > 0 && totalSelectedCount === allEmployeeIds.length;
-  const someSelected = totalSelectedCount > 0 && !allSelected;
-  const selectAllState: boolean | 'indeterminate' = allSelected
-    ? true
-    : someSelected
-      ? 'indeterminate'
-      : false;
+  const columns = useMemo<ColumnDef<AttendanceReportEmployeeOption>[]>(() => [
+    {
+      id: 'employee',
+      header: 'Employee',
+      cell: ({ row }) => (
+        <EmployeeCell name={row.original.name} />
+      ),
+    },
+    ...days.map((day) => ({
+      id: toYMD(day),
+      header: `${MONTHS[day.getMonth()]?.slice(0, 3)} ${day.getDate()}`,
+      cell: ({ row }: { row: Row<AttendanceReportEmployeeOption> }) => {
+        const dayStr = toYMD(day);
+        const dayMap = byEmployee.get(row.original.id) ?? new Map<string, AttendanceReportRow>();
+        const cellRow = dayMap.get(dayStr);
+        const hours = cellRow?.totalHours;
+        const leaveTypeName = cellRow?.leaveTypeName;
+        const entryType = cellRow?.entryType;
+        const isEditing = editingCell?.employeeId === row.original.id && editingCell?.date === dayStr;
+        const isMenuOpen = activeMenuCell?.employeeId === row.original.id && activeMenuCell?.date === dayStr;
 
-  console.log("TIMESHEET GRID STATE:", {
-    allEmployeeIds,
-    selectedEmployeeIds,
-    totalSelectedCount,
-    allSelected,
-    someSelected,
-    selectAllState,
+        if (leaveTypeName) {
+          return (
+            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-bold font-mono min-w-[58px] h-7 text-red-800 bg-red-50 border border-red-200" title={leaveTypeName}>
+              L
+            </span>
+          );
+        }
+
+        if (isMenuOpen && canEdit) {
+          return (
+            <div className="inline-flex items-center gap-0.5" onMouseLeave={() => setActiveMenuCell(null)}>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMenuCell(null);
+                  const employeeId = row.original.id;
+                  setIsSaving(true);
+                  manualMutation.mutateAsync({
+                    target_member_id: employeeId,
+                    date: dayStr,
+                    entry_type: 'LEAVE',
+                  } satisfies ManualEntryInput).then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+                  }).finally(() => setIsSaving(false));
+                }}
+                className="flex items-center justify-center w-6 h-6 rounded text-[11px] font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
+                title="Mark Leave"
+              >
+                L
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMenuCell(null);
+                  const employeeId = row.original.id;
+                  setIsSaving(true);
+                  manualMutation.mutateAsync({
+                    target_member_id: employeeId,
+                    date: dayStr,
+                    entry_type: 'COMP_OFF',
+                  } satisfies ManualEntryInput).then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+                  }).finally(() => setIsSaving(false));
+                }}
+                className="flex items-center justify-center w-6 h-6 rounded text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+                title="Mark CompOff"
+              >
+                CO
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMenuCell(null);
+                  setEditingCell({ employeeId: row.original.id, date: dayStr });
+                }}
+                className="flex items-center justify-center px-2 h-6 rounded text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
+                title="Enter custom hours"
+              >
+                Custom
+              </button>
+              {(hours != null || entryType) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMenuCell(null);
+                    const employeeId = row.original.id;
+                    setIsSaving(true);
+                    deleteMutation.mutateAsync({
+                      orgSlug,
+                      memberId,
+                      targetMemberId: employeeId,
+                      date: dayStr,
+                    }).then(() => {
+                      queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+                    }).finally(() => setIsSaving(false));
+                  }}
+                  className="flex items-center justify-center w-6 h-6 rounded text-[11px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 transition-colors"
+                  title="Clear"
+                >
+                  X
+                </button>
+              )}
+            </div>
+          );
+        }
+
+        if (isEditing) {
+          return (
+            <Input
+              type="text"
+              className="w-16 h-8 text-center text-xs font-semibold font-mono border-primary focus-visible:ring-primary focus-visible:ring-1 mx-auto bg-surface"
+              defaultValue={hours != null ? hours.toFixed(1) : ''}
+              onBlur={(e) => {
+                handleSave(row.original.id, dayStr, e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSave(row.original.id, dayStr, e.currentTarget.value);
+                } else if (e.key === 'Escape') {
+                  setEditingCell(null);
+                }
+              }}
+              autoFocus
+              disabled={isSaving}
+            />
+          );
+        }
+
+        if (entryType === 'LEAVE') {
+          return (
+            <span
+              onClick={() => { if (canEdit && !isSaving) setActiveMenuCell({ employeeId: row.original.id, date: dayStr }); }}
+              className={cn(
+                "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-bold font-mono min-w-[58px] h-7 border transition-all duration-150 select-none",
+                "text-red-700 bg-red-50 border-red-200",
+                canEdit && "cursor-pointer hover:bg-red-100/70",
+              )}
+            >
+              L
+            </span>
+          );
+        }
+
+        if (entryType === 'COMP_OFF') {
+          return (
+            <span
+              onClick={() => { if (canEdit && !isSaving) setActiveMenuCell({ employeeId: row.original.id, date: dayStr }); }}
+              className={cn(
+                "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-bold font-mono min-w-[58px] h-7 border transition-all duration-150 select-none",
+                "text-amber-700 bg-amber-50 border-amber-200",
+                canEdit && "cursor-pointer hover:bg-amber-100/70",
+              )}
+            >
+              CO
+            </span>
+          );
+        }
+
+        return (
+          <span
+            onClick={() => {
+              if (canEdit && !isSaving) {
+                setActiveMenuCell({ employeeId: row.original.id, date: dayStr });
+              }
+            }}
+            className={cn(
+              "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-semibold border font-mono min-w-[58px] select-none transition-all duration-150 h-7",
+              hours != null
+                ? "text-emerald-600 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/20 dark:border-emerald-900/30 hover:bg-emerald-100/70"
+                : "text-neutral-400 border-transparent hover:text-neutral-950",
+              canEdit && "cursor-pointer",
+            )}
+          >
+            {hours != null ? `${hours.toFixed(1)}h` : '-'}
+          </span>
+        );
+      },
+    })),
+    {
+      id: 'total',
+      header: 'Total',
+      cell: ({ row }) => {
+        const dayMap = byEmployee.get(row.original.id) ?? new Map<string, AttendanceReportRow>();
+        const total = Array.from(dayMap.values()).reduce((sum, r) => sum + (r.totalHours ?? 0), 0);
+        return <span className="font-mono text-sm font-semibold text-neutral-900">{total.toFixed(1)}h</span>;
+      },
+    },
+  ], [days, byEmployee, editingCell, activeMenuCell, canEdit, isSaving, orgSlug, memberId, manualMutation, deleteMutation, queryClient, handleSave]);
+
+  const table = useReactTable({
+    data: employees,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
   });
 
+  const columnCount = table.getAllLeafColumns().length;
+
   if (isLoading) {
-    return <div className="h-80 animate-pulse rounded-b-xl bg-neutral-50" />;
+    return (
+      <div className="overflow-x-auto">
+        <Table className="table-fixed" style={{ minWidth: Math.max(812, 412 + days.length * 112) }}>
+          <TableHeader className="bg-canvas/50">
+            <TableRow className="border-black/[0.04] hover:bg-transparent">
+              <TableHead className="sticky left-0 z-10 bg-canvas w-[300px] border-r border-black/[0.04]">Employee</TableHead>
+              {days.map((day) => (
+                <TableHead key={toYMD(day)} className="text-center">{MONTHS[day.getMonth()]?.slice(0, 3)} {day.getDate()}</TableHead>
+              ))}
+              <TableHead className="text-right border-l border-black/[0.04]">Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <ShadcnTableBody className="bg-surface">
+            {SKELETON_IDS.slice(0, 8).map((id) => (
+              <TableRow key={id} className="border-black/4 hover:bg-transparent">
+                <TableCell colSpan={columnCount} className="p-6">
+                  <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </ShadcnTableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  if (employees.length === 0) {
+    return (
+      <div className="overflow-x-auto">
+        <Table className="table-fixed" style={{ minWidth: Math.max(812, 412 + days.length * 112) }}>
+          <TableHeader className="bg-canvas/50">
+            <TableRow className="border-black/[0.04] hover:bg-transparent">
+              <TableHead className="sticky left-0 z-10 bg-canvas px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 w-[300px] border-r border-black/[0.04]">Employee</TableHead>
+              {days.map((day) => (
+                <TableHead key={toYMD(day)} className="min-w-[104px] px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  <div>{`${MONTHS[day.getMonth()]?.slice(0, 3)} ${day.getDate()}`}</div>
+                  <div className="text-[10px] text-neutral-400">{WEEKDAY[day.getDay()]}</div>
+                </TableHead>
+              ))}
+              <TableHead className="w-[120px] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-neutral-500 border-l border-black/[0.04]">Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <ShadcnTableBody className="bg-surface">
+            <TableRow className="border-black/4 hover:bg-transparent">
+              <TableCell colSpan={columnCount} className="py-16 text-center text-sm text-neutral-400">
+                No employees match the current filters.
+              </TableCell>
+            </TableRow>
+          </ShadcnTableBody>
+        </Table>
+      </div>
+    );
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-left" style={{ minWidth: Math.max(812, 412 + days.length * 112) }}>
-        <thead>
-          <tr className="border-b border-neutral-200 bg-canvas">
-            <th className="sticky left-0 z-10 w-[52px] bg-canvas px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              <Checkbox
-                checked={selectAllState}
-                onCheckedChange={(value) => onToggleManyEmployees(allEmployeeIds, value === true)}
-                aria-label="Select all employees"
-              />
-            </th>
-            <th className="sticky left-[52px] z-10 w-[320px] border-r border-neutral-100 bg-canvas px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">Employee</th>
-            {days.map((day) => (
-              <th key={toYMD(day)} className="min-w-[104px] px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                <div>{`${MONTHS[day.getMonth()]?.slice(0, 3)} ${day.getDate()}`}</div>
-                <div className="text-[10px] text-neutral-400">{WEEKDAY[day.getDay()]}</div>
-              </th>
-            ))}
-            <th className="w-[120px] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">Total</th>
-          </tr>
-        </thead>
-        <tbody className="bg-surface">
-          {employees.length === 0 ? (
-            <tr>
-              <td colSpan={days.length + 3} className="py-16 text-center text-sm text-neutral-500">No employees match the current filters.</td>
-            </tr>
-          ) : (
-            employees.map((employee) => {
-              const dayMap = byEmployee.get(employee.id) ?? new Map<string, AttendanceReportRow>();
-              const total = Array.from(dayMap.values()).reduce((sum, row) => sum + (row.totalHours ?? 0), 0);
-              return (
-                <tr key={employee.id} className="border-b border-neutral-100 hover:bg-canvas/60">
-                  <td className="sticky left-0 z-10 border-r border-neutral-100 bg-surface px-4 py-3 align-middle">
-                    <Checkbox
-                      checked={selectedSet.has(employee.id)}
-                      onCheckedChange={(value) => onToggleEmployee(employee.id, value === true)}
-                      aria-label={`Toggle ${employee.name}`}
-                    />
-                  </td>
-                  <td className="sticky left-[52px] z-10 border-r border-neutral-100 bg-surface px-4 py-3">
-                    <EmployeeCell name={employee.name} detail={employee.email} />
-                  </td>
-                  {days.map((day) => {
-                    const row = dayMap.get(toYMD(day));
-                    const hours = row?.totalHours;
-                    const isEditing = editingCell?.employeeId === employee.id && editingCell?.date === toYMD(day);
+      <Table className="table-fixed" style={{ minWidth: Math.max(812, 412 + days.length * 112) }}>
+        <TableHeader className="bg-canvas/50">
+          {table.getHeaderGroups().map((hg) => (
+            <TableRow key={hg.id} className="border-black/[0.04] hover:bg-transparent">
+              {hg.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  className={cn(
+                    header.id === 'employee' ? 'sticky left-0 z-10 bg-canvas w-[300px] border-r border-black/[0.04]' : 'w-[100px]',
+                    'px-3 py-2 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
+                    header.id === 'total' ? 'text-right w-[100px] border-l border-black/[0.04]' : 'text-center',
+                  )}
+                >
+                  {header.isPlaceholder
+                    ? ''
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
 
-                    return (
-                      <td key={toYMD(day)} className="px-3 py-3 text-center align-middle">
-                        {isEditing ? (
-                          <Input
-                            type="text"
-                            className="w-16 h-8 text-center text-xs font-semibold font-mono border-primary focus-visible:ring-primary focus-visible:ring-1 mx-auto bg-surface"
-                            defaultValue={hours != null ? hours.toFixed(1) : ''}
-                            onBlur={(e) => handleSave(employee.id, toYMD(day), e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleSave(employee.id, toYMD(day), e.currentTarget.value);
-                              } else if (e.key === 'Escape') {
-                                setEditingCell(null);
-                              }
-                            }}
-                            autoFocus
-                            disabled={isSaving}
-                          />
-                        ) : (
-                          <span
-                            onClick={() => {
-                              if (canEdit && !isSaving) {
-                                setEditingCell({ employeeId: employee.id, date: toYMD(day) });
-                              }
-                            }}
-                            className={cn(
-                              "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-semibold border font-mono min-w-[58px] select-none transition-all duration-150 h-7",
-                              hours != null
-                                ? "text-emerald-600 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/20 dark:border-emerald-900/30 hover:bg-emerald-100/70"
-                                : "text-neutral-400 border-transparent hover:text-neutral-950",
-                              canEdit && "cursor-pointer"
-                            )}
-                          >
-                            {hours != null ? `${hours.toFixed(1)}h` : '-'}
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                  <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-neutral-900">{total.toFixed(1)}h</td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
+        <ShadcnTableBody className="bg-surface">
+          {table.getRowModel().rows.map((row) => {
+            const dayMap = byEmployee.get(row.original.id) ?? new Map<string, AttendanceReportRow>();
+            const total = Array.from(dayMap.values()).reduce((sum, r) => sum + (r.totalHours ?? 0), 0);
+            return (
+              <TableRow key={row.id} className="border-black/4 transition-colors hover:bg-black/[0.02]">
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    className={cn(
+                      cell.column.id === 'employee' ? 'sticky left-0 z-10 bg-surface w-[300px] border-r border-black/[0.04]' : '',
+                      'px-3 py-3 align-middle whitespace-nowrap',
+                      cell.column.id === 'total' ? 'text-right border-l border-black/[0.04]' : 'text-center',
+                    )}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            );
+          })}
+        </ShadcnTableBody>
+      </Table>
     </div>
   );
 }
@@ -676,10 +873,46 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [force8, setForce8] = useState(false);
   const [pendingExport, setPendingExport] = useState<AttendanceReportExportFormat | null>(null);
-  const [timesheetPage, setTimesheetPage] = useState(1);
-  const [timesheetPageSize, setTimesheetPageSize] = useState(10);
+  const timesheetPage = useMemo(() => {
+    const p = searchParams.get('page');
+    return p ? Math.max(1, parseInt(p, 10)) : 1;
+  }, [searchParams]);
 
-  useEffect(() => { setTimesheetPage(1); }, [employeeSearch, projectId]);
+  const timesheetPageSize = useMemo(() => {
+    const s = searchParams.get('pageSize');
+    return s ? Math.max(1, parseInt(s, 10)) : 10;
+  }, [searchParams]);
+
+  function updateSearchParams(updates: Record<string, string | null>) {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function handleTimesheetPageChange(page: number) {
+    updateSearchParams({ page: page === 1 ? null : String(page) });
+  }
+
+  function handleTimesheetPageSizeChange(size: number) {
+    updateSearchParams({ pageSize: String(size), page: null });
+  }
+
+  const prevFilterKey = useRef(`${employeeSearch}|${projectId}`);
+  useEffect(() => {
+    const key = `${employeeSearch}|${projectId}`;
+    if (key !== prevFilterKey.current && searchParams.has('page')) {
+      prevFilterKey.current = key;
+      updateSearchParams({ page: null });
+    } else {
+      prevFilterKey.current = key;
+    }
+  }, [employeeSearch, projectId, searchParams]);
 
   function handleViewChange(next: ViewMode) {
     if (next === viewMode) return;
@@ -780,33 +1013,48 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
       .map((employee) => employee.id);
   }, [eligibleEmployees, employeeSearch]);
 
-  const hasActiveFilters = employeeSearch.trim() !== '' || projectId !== ALL_PROJECTS;
+  const hasActiveFilters = employeeSearch.trim() !== '' || projectId !== ALL_PROJECTS || selectedEmployeeIds.length > 0;
 
   function handleProjectChange(value: string) {
     setProjectId(value);
     setSelectedEmployeeIds([]);
-    setTimesheetPage(1);
+    updateSearchParams({ page: null });
   }
 
   function handleClearFilters() {
     setEmployeeSearch('');
     setProjectId(ALL_PROJECTS);
-    setTimesheetPage(1);
+    setSelectedEmployeeIds([]);
+    updateSearchParams({ page: null });
   }
 
   const rows = useMemo(() => reportQuery.data?.items ?? [], [reportQuery.data?.items]);
 
   const searchFilteredRows = useMemo(() => {
-    if (!searchFilteredEmployees) return rows;
-    const allowed = new Set(searchFilteredEmployees);
-    return rows.filter((row) => allowed.has(row.employeeId));
-  }, [rows, searchFilteredEmployees]);
+    let filtered = rows;
+    if (searchFilteredEmployees) {
+      const allowed = new Set(searchFilteredEmployees);
+      filtered = filtered.filter((row) => allowed.has(row.employeeId));
+    }
+    if (effectiveSelectedEmployeeIds.length > 0) {
+      const selectedSet = new Set(effectiveSelectedEmployeeIds);
+      filtered = filtered.filter((row) => selectedSet.has(row.employeeId));
+    }
+    return filtered;
+  }, [rows, searchFilteredEmployees, effectiveSelectedEmployeeIds]);
 
   const visibleEmployeesForView = useMemo(() => {
-    if (!searchFilteredEmployees) return eligibleEmployees;
-    const allowed = new Set(searchFilteredEmployees);
-    return eligibleEmployees.filter((employee) => allowed.has(employee.id));
-  }, [eligibleEmployees, searchFilteredEmployees]);
+    let list = eligibleEmployees;
+    if (searchFilteredEmployees) {
+      const allowed = new Set(searchFilteredEmployees);
+      list = list.filter((employee) => allowed.has(employee.id));
+    }
+    if (effectiveSelectedEmployeeIds.length > 0) {
+      const selectedSet = new Set(effectiveSelectedEmployeeIds);
+      list = list.filter((employee) => selectedSet.has(employee.id));
+    }
+    return list;
+  }, [eligibleEmployees, searchFilteredEmployees, effectiveSelectedEmployeeIds]);
 
   const timesheetTotalEmployees = visibleEmployeesForView.length;
   const timesheetTotalPages = Math.max(1, Math.ceil(timesheetTotalEmployees / timesheetPageSize));
@@ -865,6 +1113,9 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
     }
   }
 
+  const [employeeFilterOpen, setEmployeeFilterOpen] = useState(false);
+  const [projectFilterOpen, setProjectFilterOpen] = useState(false);
+
   if (permissionsQuery.isLoading) {
     return (
       <main className="min-h-full bg-canvas p-7">
@@ -885,157 +1136,229 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
 
   return (
     <main className="min-h-full bg-canvas p-7">
-      <div className="mb-8">
-        <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">Reports Dashboard</h1>
-      </div>
+      <h1 className="mb-6 text-4xl font-semibold tracking-tight text-neutral-900">Reports Dashboard</h1>
 
-      <section className="overflow-hidden rounded-2xl bg-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-        <div className="space-y-5 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <TabSlider
-                modes={VIEW_MODES}
-                activeMode={viewMode}
-                onChange={handleViewChange}
-              />
-              <TabSlider
-                modes={PERIOD_MODES}
-                activeMode={periodMode}
-                onChange={handlePeriodChange}
-              />
-              <div className="flex items-center gap-1">
-                {periodMode !== 'custom' ? (
-                  <div className="inline-flex items-center bg-muted/30 border border-border rounded-lg overflow-hidden h-9">
-                    <button
-                      type="button"
-                      onClick={() => shiftPeriod(-1)}
-                      aria-label="Previous period"
-                      className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                    >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    <span className="px-3 text-xs font-semibold tracking-tight text-foreground border-x border-border/80 h-full flex items-center bg-card/25 min-w-[170px] justify-center select-none font-mono">
-                      {periodLabel(periodMode, dateRange.dateFrom, dateRange.dateTo)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => shiftPeriod(1)}
-                      aria-label="Next period"
-                      className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                    >
-                      <ChevronRight className="size-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="h-9 px-4 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted/50 text-foreground hover:text-foreground transition-all flex items-center justify-center gap-2 font-mono shadow-sm"
-                      >
-                        <CalendarDays className="size-4 text-muted-foreground" />
-                        {periodLabel(periodMode, dateRange.dateFrom, dateRange.dateTo)}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar
-                        mode="range"
-                        selected={{ from: parseYMD(customFrom), to: parseYMD(customTo) }}
-                        onSelect={(range: DateRange | undefined) => {
-                          if (range?.from) setCustomFrom(toYMD(range.from));
-                          if (range?.to) setCustomTo(toYMD(range.to));
-                        }}
-                        numberOfMonths={1}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end gap-2">
-              <div className="flex flex-wrap items-center gap-1.5">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+        {/* Band 1: Navigation — tab sliders + period nav + export actions */}
+        <div className="flex flex-wrap items-center gap-3 px-8 py-6">
+          <TabSlider
+            modes={VIEW_MODES}
+            activeMode={viewMode}
+            onChange={handleViewChange}
+          />
+          <TabSlider
+            modes={PERIOD_MODES}
+            activeMode={periodMode}
+            onChange={handlePeriodChange}
+          />
+          <div className="flex items-center gap-1">
+            {periodMode !== 'custom' ? (
+              <div className="inline-flex items-center bg-muted/30 border border-border rounded-lg overflow-hidden h-9">
                 <button
                   type="button"
-                  onClick={() => handleExport('xlsx')}
-                  disabled={pendingExport !== null || reportQuery.isLoading || optionsQuery.isLoading}
-                  className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium text-neutral-500 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 border border-transparent hover:border-black/[0.04] disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={() => shiftPeriod(-1)}
+                  aria-label="Previous period"
+                  className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
-                  {pendingExport === 'xlsx' ? <Loader2 className="size-4 animate-spin" /> : <FileSpreadsheet className="size-4" />}
-                  Excel
+                  <ChevronLeft className="size-4" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => toast.info('CSV export is ignored for now.')}
-                  className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium text-neutral-500 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 border border-transparent hover:border-black/[0.04]"
-                >
-                  <Download className="size-4" />
-                  CSV
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleExport('pdf')}
-                  disabled={pendingExport !== null || reportQuery.isLoading || optionsQuery.isLoading}
-                  className="inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[13px] font-medium text-neutral-500 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 border border-transparent hover:border-black/[0.04] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {pendingExport === 'pdf' ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
-                  PDF
-                </button>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer select-none group">
-                <Checkbox
-                  checked={force8}
-                  onCheckedChange={(value) => setForce8(value === true)}
-                  aria-label="Force 8 hours maximum per record"
-                />
-                <span className="text-[11px] font-medium text-neutral-500 group-hover:text-neutral-700 transition-colors duration-150">
-                  Force 8 hrs max
+                <span className="px-3 text-xs font-semibold tracking-tight text-foreground border-x border-border/80 h-full flex items-center bg-card/25 min-w-[170px] justify-center select-none font-mono">
+                  {periodLabel(periodMode, dateRange.dateFrom, dateRange.dateTo)}
                 </span>
-              </label>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
-              <Input
-                placeholder="Search employees..."
-                value={employeeSearch}
-                onChange={(event) => setEmployeeSearch(event.target.value)}
-                className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
-              />
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Select
-                value={projectId}
-                onValueChange={handleProjectChange}
-              >
-                <SelectTrigger className="h-9 w-[180px] text-sm border-0 bg-canvas">
-                  <SelectValue placeholder="All Projects" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_PROJECTS}>All Projects</SelectItem>
-                  {(optionsQuery.data?.projects ?? []).map((project) => (
-                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {hasActiveFilters && (
                 <button
                   type="button"
-                  onClick={handleClearFilters}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 py-2 text-[13px] text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
+                  onClick={() => shiftPeriod(1)}
+                  aria-label="Next period"
+                  className="h-full px-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
-                  <X className="size-3.5" />
-                  Clear
+                  <ChevronRight className="size-4" />
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="h-9 px-4 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted/50 text-foreground hover:text-foreground transition-all flex items-center justify-center gap-2 font-mono shadow-sm"
+                  >
+                    <CalendarDays className="size-4 text-muted-foreground" />
+                    {periodLabel(periodMode, dateRange.dateFrom, dateRange.dateTo)}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={{ from: parseYMD(customFrom), to: parseYMD(customTo) }}
+                    onSelect={(range: DateRange | undefined) => {
+                      if (range?.from) setCustomFrom(toYMD(range.from));
+                      if (range?.to) setCustomTo(toYMD(range.to));
+                    }}
+                    numberOfMonths={1}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              type="button"
+              onClick={() => handleExport('xlsx')}
+              disabled={pendingExport !== null || reportQuery.isLoading || optionsQuery.isLoading}
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg text-[13px] font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {pendingExport === 'xlsx' ? <Loader2 className="size-4 animate-spin" /> : <FileSpreadsheet className="size-4" />}
+              Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExport('pdf')}
+              disabled={pendingExport !== null || reportQuery.isLoading || optionsQuery.isLoading}
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg text-[13px] font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {pendingExport === 'pdf' ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+              PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExport('csv')}
+              disabled={pendingExport !== null || reportQuery.isLoading || optionsQuery.isLoading}
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg text-[13px] font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {pendingExport === 'csv' ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              CSV
+            </button>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer select-none group">
+            <Checkbox
+              checked={force8}
+              onCheckedChange={(value) => setForce8(value === true)}
+              aria-label="Force 8 hours maximum per record"
+            />
+            <span className="text-[11px] font-medium text-neutral-500 group-hover:text-neutral-700 transition-colors duration-150">
+              Force 8 hrs max
+            </span>
+          </label>
+        </div>
+
+        {/* Band 2: Filters — search + project select + employee multi-select + clear */}
+        <div className="flex items-center gap-3 border-t border-black/[0.04] px-8 py-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+            <Input
+              placeholder="Search employees..."
+              value={employeeSearch}
+              onChange={(event) => setEmployeeSearch(event.target.value)}
+              className="h-9 pl-9 border border-neutral-200 bg-surface focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
+            />
+          </div>
+          <Popover open={projectFilterOpen} onOpenChange={setProjectFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-9 w-[180px] justify-between border border-neutral-200 bg-surface text-sm font-normal text-neutral-700"
+              >
+                {projectId === ALL_PROJECTS ? 'All Projects' : (selectedProject?.name ?? 'All Projects')}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search projects..." />
+                <CommandList>
+                  <CommandEmpty>No projects found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value={ALL_PROJECTS}
+                      onSelect={() => {
+                        handleProjectChange(ALL_PROJECTS);
+                        setProjectFilterOpen(false);
+                      }}
+                    >
+                      <div className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                        projectId === ALL_PROJECTS ? "bg-primary border-primary" : "border-neutral-300",
+                      )}>
+                        {projectId === ALL_PROJECTS && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      All Projects
+                    </CommandItem>
+                    {(optionsQuery.data?.projects ?? []).map((project) => (
+                      <CommandItem
+                        key={project.id}
+                        value={project.id}
+                        onSelect={() => {
+                          handleProjectChange(project.id);
+                          setProjectFilterOpen(false);
+                        }}
+                      >
+                        <div className={cn(
+                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                          projectId === project.id ? "bg-primary border-primary" : "border-neutral-300",
+                        )}>
+                          {projectId === project.id && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        {project.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          <Popover open={employeeFilterOpen} onOpenChange={setEmployeeFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-9 w-[220px] justify-between border border-neutral-200 bg-surface text-sm font-normal text-neutral-700"
+              >
+                {effectiveSelectedEmployeeIds.length > 0
+                  ? `${effectiveSelectedEmployeeIds.length} employee${effectiveSelectedEmployeeIds.length > 1 ? 's' : ''} selected`
+                  : 'All Employees'}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[280px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search employees..." />
+                <CommandList>
+                  <CommandEmpty>No employees found.</CommandEmpty>
+                  <CommandGroup>
+                    {eligibleEmployees.map((emp) => (
+                      <CommandItem
+                        key={emp.id}
+                        onSelect={() => toggleEmployee(emp.id, !effectiveSelectedEmployeeIds.includes(emp.id))}
+                      >
+                        <div className={cn(
+                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-neutral-300",
+                          effectiveSelectedEmployeeIds.includes(emp.id) && "bg-primary border-primary",
+                        )}>
+                          {effectiveSelectedEmployeeIds.includes(emp.id) && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        <span className="truncate">{emp.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          {hasActiveFilters && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleClearFilters}
+              className="h-9 px-3 text-[13px] text-neutral-500 hover:text-neutral-700"
+            >
+              <X className="size-3.5 mr-1" />
+              Clear
+            </Button>
+          )}
         </div>
 
         {reportQuery.isError && (
-          <div className="border-t border-neutral-100 bg-destructive-bg px-5 py-3 text-sm text-destructive-text">
+          <div className="border-b border-black/[0.04] bg-destructive-bg px-5 py-3 text-sm text-destructive-text">
             Failed to load attendance report.
           </div>
         )}
@@ -1044,9 +1367,6 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
           <ReportTable
             rows={searchFilteredRows}
             isLoading={reportQuery.isLoading || optionsQuery.isLoading}
-            selectedEmployeeIds={effectiveSelectedEmployeeIds}
-            onToggleEmployee={toggleEmployee}
-            onToggleManyEmployees={toggleManyEmployees}
           />
         ) : (
           <>
@@ -1058,28 +1378,21 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
               dateFrom={dateRange.dateFrom}
               dateTo={dateRange.dateTo}
               isLoading={reportQuery.isLoading || optionsQuery.isLoading}
-              selectedEmployeeIds={effectiveSelectedEmployeeIds}
-              onToggleEmployee={toggleEmployee}
-              onToggleManyEmployees={toggleManyEmployees}
               canEdit={canEdit}
-              allEmployeeIds={visibleEmployeesForView.map((emp) => emp.id)}
             />
-            <div className="border-t border-neutral-100 px-5 py-4">
+            <div className="border-t border-black/[0.04] px-6 py-4">
               <EmployeePagination
                 page={timesheetPage}
                 totalPages={timesheetTotalPages}
                 total={timesheetTotalEmployees}
                 pageSize={timesheetPageSize}
-                onPageChange={(p) => setTimesheetPage(p)}
-                onPageSizeChange={(size) => {
-                  setTimesheetPageSize(size);
-                  setTimesheetPage(1);
-                }}
+                onPageChange={handleTimesheetPageChange}
+                onPageSizeChange={handleTimesheetPageSizeChange}
               />
             </div>
           </>
         )}
-      </section>
+      </div>
     </main>
   );
 }

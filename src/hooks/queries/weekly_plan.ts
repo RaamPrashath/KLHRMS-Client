@@ -6,6 +6,7 @@ import {
   fetchMyMonthlyPlan,
   fetchMyWeeklyPlan,
   fetchPlanLocations,
+  fetchTeamMonthlyPlan,
   fetchTeamWeeklyPlan,
   type PlanApiAuth,
 } from "@/hooks/functions/weekly_plan";
@@ -19,6 +20,8 @@ export const weeklyPlanKeys = {
     [...weeklyPlanKeys.all, "my-week", orgSlug, year, week] as const,
   teamWeek: (orgSlug: string, year: number, week: number) =>
     [...weeklyPlanKeys.all, "team-week", orgSlug, year, week] as const,
+  teamMonth: (orgSlug: string, year: number, month: number) =>
+    [...weeklyPlanKeys.all, "team-month", orgSlug, year, month] as const,
   myMonth: (orgSlug: string, year: number, month: number) =>
     [...weeklyPlanKeys.all, "my-month", orgSlug, year, month] as const,
 };
@@ -72,6 +75,23 @@ export function getTeamWeeklyPlanQueryOptions(
   return {
     queryKey: weeklyPlanKeys.teamWeek(orgSlug, year, week),
     queryFn: () => fetchTeamWeeklyPlan(auth!, year, week),
+    enabled: !!auth,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 15,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  } as const;
+}
+
+export function getTeamMonthlyPlanQueryOptions(
+  auth: PlanApiAuth | null,
+  orgSlug: string,
+  year: number,
+  month: number,
+) {
+  return {
+    queryKey: weeklyPlanKeys.teamMonth(orgSlug, year, month),
+    queryFn: () => fetchTeamMonthlyPlan(auth!, year, month),
     enabled: !!auth,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 15,
@@ -141,6 +161,28 @@ export function useTeamWeeklyPlanQuery(
         orgSlug,
         year,
         week,
+      ),
+      enabled: enabled && !!auth,
+    },
+  );
+}
+
+export function useTeamMonthlyPlanQuery(
+  orgSlug: string,
+  orgId: string,
+  memberId: string,
+  year: number,
+  month: number,
+  enabled = true,
+) {
+  const auth = useApiClient(orgId);
+  return useQuery(
+    {
+      ...getTeamMonthlyPlanQueryOptions(
+        makePlanAuth(auth?.token, orgSlug, memberId),
+        orgSlug,
+        year,
+        month,
       ),
       enabled: enabled && !!auth,
     },

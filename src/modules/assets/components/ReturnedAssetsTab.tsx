@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { ExportBand } from '@/modules/assets/components/ExportBand';
 import { useQuery } from '@tanstack/react-query';
 import {
   flexRender,
@@ -201,9 +202,13 @@ function ReturnedAssetDetailDialog({
 export function ReturnedAssetsTab({
   orgSlug,
   memberId,
+  canManageAssets,
+  members,
 }: {
   orgSlug: string;
   memberId: string;
+  canManageAssets: boolean;
+  members: { id: string; label: string }[];
 }) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['returned-assets', orgSlug],
@@ -215,8 +220,13 @@ export function ReturnedAssetsTab({
   const [sorting, setSorting] = useState<SortingState>([{ id: 'returnDate', desc: true }]);
   const [selectedItem, setSelectedItem] = useState<ReturnedAssetItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [filterEmployeeIds, setFilterEmployeeIds] = useState<string[]>([]);
 
-  const items = data ?? [];
+  const items = useMemo(() => {
+    const all = data ?? [];
+    if (filterEmployeeIds.length === 0) return all;
+    return all.filter((item) => filterEmployeeIds.includes(item.employeeMemberId));
+  }, [data, filterEmployeeIds]);
 
   const columns = useMemo(
     () => [
@@ -448,6 +458,16 @@ export function ReturnedAssetsTab({
                       className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
                     />
                   </div>
+                  {canManageAssets && (
+                    <ExportBand
+                      orgSlug={orgSlug}
+                      memberId={memberId}
+                      members={members}
+                      domain="returned"
+                      selectedEmployeeIds={filterEmployeeIds}
+                      onEmployeeFilterChange={setFilterEmployeeIds}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -548,7 +568,7 @@ export function ReturnedAssetsTab({
           />
         </div>
       ) : (
-        <ReplacementTab orgSlug={orgSlug} memberId={memberId} />
+        <ReplacementTab orgSlug={orgSlug} memberId={memberId} canManageAssets={canManageAssets} members={members} />
       )}
     </div>
   );

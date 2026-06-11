@@ -28,6 +28,8 @@ export interface AttendanceReportRow {
   projectName: string | null;
   taskName: string | null;
   clockOutDescription: string | null;
+  leaveTypeName?: string | null;
+  entryType?: string | null;
 }
 
 export interface AttendanceReportSummary {
@@ -53,7 +55,7 @@ export interface AttendanceReportFilters {
   page_size?: number;
 }
 
-export type AttendanceReportExportFormat = 'xlsx' | 'pdf';
+export type AttendanceReportExportFormat = 'xlsx' | 'pdf' | 'csv';
 export type AttendanceReportExportMode = 'report' | 'timesheet';
 
 export interface AttendanceReportExportEmployee {

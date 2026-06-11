@@ -8,6 +8,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { AlertTriangle, LaptopMinimal, PackageOpen, Search } from 'lucide-react';
+import { ExportBand } from '@/modules/assets/components/ExportBand';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -794,9 +795,13 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
 export function InventoryTab({
   orgSlug,
   memberId,
+  canManageAssets,
+  members,
 }: {
   orgSlug: string;
   memberId: string;
+  canManageAssets: boolean;
+  members: { id: string; label: string }[];
 }) {
   const [subTab, setSubTab] = useState<SubTab>('brand-model');
 
@@ -815,6 +820,17 @@ export function InventoryTab({
         </p>
       </div>
 
+      {canManageAssets && (
+        <div className="mb-4">
+          <ExportBand
+            orgSlug={orgSlug}
+            memberId={memberId}
+            members={members}
+            domain="inventory"
+            showEmployeeFilter={false}
+          />
+        </div>
+      )}
       <div className="mb-4 inline-flex items-center rounded-xl border border-black/4 bg-neutral-50 p-1">
         {subTabs.map((tab) => (
           <button

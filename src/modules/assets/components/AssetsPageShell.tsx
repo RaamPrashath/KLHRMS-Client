@@ -24,12 +24,12 @@ import { EmployeeAssetGallery } from '@/modules/assets/components/EmployeeAssetG
 import { EmployeeAssetTable } from '@/modules/assets/components/EmployeeAssetTable';
 import { IssueAssetTab } from '@/modules/assets/components/IssueAssetTab';
 import { RaiseTicketDialog } from '@/modules/assets/components/RaiseTicketDialog';
-import { ReportsTab } from '@/modules/assets/components/ReportsTab';
 import { ReturnedAssetsTab } from '@/modules/assets/components/ReturnedAssetsTab';
 import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog';
 import { AssetFormDialog } from '@/modules/assets/components/AssetFormDialog';
 import { AssetSettingsDialog } from '@/modules/assets/components/AssetSettingsDialog';
 import { ReplacementDialog } from '@/modules/assets/components/ReplacementDialog';
+import { IssueAssetDialog } from '@/modules/assets/components/IssueAssetDialog';
 import {
   ACTION_GREEN,
   defaultAssetForm,
@@ -83,6 +83,7 @@ export function AssetsPageShell({
   const [ticketDialogMode, setTicketDialogMode] = useState<'issue' | 'return'>('issue');
   const [ticketDialogAssetId, setTicketDialogAssetId] = useState<string | null>(null);
   const [replacementDialogOpen, setReplacementDialogOpen] = useState(false);
+  const [issueAssetDialogOpen, setIssueAssetDialogOpen] = useState(false);
 
   const router = useRouter();
   const tabOptions = useMemo(() => getAssetTabOptions(canManageAssets), [canManageAssets]);
@@ -454,6 +455,10 @@ export function AssetsPageShell({
           <AssetRegisterTab
             assets={allFetchedAssets}
             isLoading={registerQuery.isLoading}
+            canManageAssets={canManageAssets}
+            orgSlug={orgSlug}
+            memberId={memberId}
+            members={members}
             onOpenDetail={openDetail}
             onEdit={() => {}}
             onProvide={seedProvideForm}
@@ -507,21 +512,36 @@ export function AssetsPageShell({
             assignedAssets={allFetchedAssets}
             headerAction={
               canManageAssets && (
-                <button
-                  type="button"
-                  onClick={() => setReplacementDialogOpen(true)}
-                  className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0"
-                >
-                  <RefreshCcw className="mr-1.5 size-3.5" />
-                  Replacement Option
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIssueAssetDialogOpen(true)}
+                    className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0"
+                  >
+                    <PackagePlus className="mr-1.5 size-3.5" />
+                    Issue Asset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReplacementDialogOpen(true)}
+                    className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0"
+                  >
+                    <RefreshCcw className="mr-1.5 size-3.5" />
+                    Replacement Option
+                  </button>
+                </div>
               )
             }
           />
         </TabsContent>
 
         <TabsContent value="returned" className="mt-0">
-          <ReturnedAssetsTab orgSlug={orgSlug} memberId={memberId} />
+          <ReturnedAssetsTab
+            orgSlug={orgSlug}
+            memberId={memberId}
+            canManageAssets={canManageAssets}
+            members={members}
+          />
         </TabsContent>
 
         <TabsContent value="access-control" className="mt-0">
@@ -529,13 +549,10 @@ export function AssetsPageShell({
         </TabsContent>
 
         <TabsContent value="inventory" className="mt-0">
-          <InventoryTab orgSlug={orgSlug} memberId={memberId} />
-        </TabsContent>
-
-        <TabsContent value="reports" className="mt-0">
-          <ReportsTab
+          <InventoryTab
             orgSlug={orgSlug}
             memberId={memberId}
+            canManageAssets={canManageAssets}
             members={members}
           />
         </TabsContent>
@@ -567,6 +584,17 @@ export function AssetsPageShell({
         orgSlug={orgSlug}
         memberId={memberId}
         members={metaQuery.data?.members ?? []}
+      />
+
+      <IssueAssetDialog
+        open={issueAssetDialogOpen}
+        onOpenChange={setIssueAssetDialogOpen}
+        members={members}
+        availableGroups={availableGroups}
+        memberId={memberId}
+        onIssue={handleIssueGroupAsset}
+        isGroupsLoading={availableGroupsQuery.isLoading}
+        canManageAssets={canManageAssets}
       />
 
       <AssetSettingsDialog

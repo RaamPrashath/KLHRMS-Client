@@ -74,6 +74,21 @@ export async function fetchMyWeeklyPlan(
   return response.json() as Promise<WeeklyPlanEntry[]>;
 }
 
+export async function fetchTeamMonthlyPlan(
+  auth: PlanApiAuth,
+  year: number,
+  month: number,
+): Promise<WeeklyPlanEntry[]> {
+  const query = new URLSearchParams({ year: String(year), month: String(month) });
+  const response = await fetch(`${baseUrl}/weekly-plans/team/month?${query}`, {
+    method: "GET",
+    credentials: "include",
+    headers: buildHeaders(auth),
+  });
+  await throwIfNotOk(response);
+  return response.json() as Promise<WeeklyPlanEntry[]>;
+}
+
 export async function fetchTeamWeeklyPlan(
   auth: PlanApiAuth,
   year: number,
