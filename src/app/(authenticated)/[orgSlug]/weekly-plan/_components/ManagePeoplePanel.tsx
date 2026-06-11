@@ -58,6 +58,8 @@ import type {
   PlanExportFormat,
   PlanExportPayload,
   PlanExportRow,
+  PlanExportPivotDay,
+  PlanExportPivotRow,
 } from "@/modules/weekly-plan/types";
 import { exportWeeklyPlanReportAction } from "@/modules/weekly-plan/api/exportWeeklyPlanReportAction";
 import { cn } from "@/lib/utils";
@@ -253,51 +255,68 @@ function TabSlider<T extends string>({
   );
 }
 
-// ─── Monthly Plan Flat List Table ────────────────────────────────────────────
+// ─── Monthly Plan Pivot Table ────────────────────────────────────────────────
 
 function MonthlyPlanTable({
-  entries,
+  pivotRows,
+  weekDays,
   isLoading,
   search,
 }: {
-  entries: WeeklyPlanEntry[];
+  pivotRows: PlanExportPivotRow[];
+  weekDays: { iso: string }[];
   isLoading: boolean;
   search: string;
 }) {
   const rows = useMemo(() => {
-    const sorted = [...entries].sort((a, b) => {
-      if (a.user_name !== b.user_name) return (a.user_name ?? "").localeCompare(b.user_name ?? "");
-      return a.date.localeCompare(b.date);
-    });
-    if (!search.trim()) return sorted;
+    if (!search.trim()) return pivotRows;
     const q = search.toLowerCase();
-    return sorted.filter((r) => r.user_name?.toLowerCase().includes(q));
-  }, [entries, search]);
+    return pivotRows.filter((r) => r.name.toLowerCase().includes(q));
+  }, [pivotRows, search]);
 
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
+  const PAGE_SIZE = 10;
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pagedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   if (isLoading) {
     return (
       <div className="overflow-x-auto w-full">
-        <Table style={{ minWidth: 600 }}>
+        <Table style={{ minWidth: 640 }}>
           <TableHeader>
             <TableRow className="bg-canvas/60 border-b border-neutral-200 hover:bg-canvas/60">
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Date</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Day</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Location</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Project</TableHead>
+              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap w-[200px] max-w-[200px] sticky left-0 bg-[#f5f5f7] z-10">
+                Employee
+              </TableHead>
+              {weekDays.map((d) => {
+                const date = parseISO(d.iso);
+                return (
+                  <TableHead key={d.iso} className="px-2 py-2.5 text-center whitespace-nowrap min-w-[80px]">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+                        {dateFnsFormat(date, "MMM d")}
+                      </span>
+                      <span className="text-[9px] font-medium uppercase tracking-widest text-neutral-400">
+                        {dateFnsFormat(date, "EEE")}
+                      </span>
+                    </div>
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
             {Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i} className="border-b border-neutral-100">
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <TableCell key={j} className="px-4 py-3">
-                    <div className="h-3 w-full animate-pulse rounded bg-neutral-100" />
+              <TableRow key={i} className={cn("border-b border-neutral-100", i % 2 === 0 && "bg-neutral-50/30")}>
+                <TableCell className="px-4 py-3 sticky left-0 bg-white z-10 min-w-[180px]">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="h-3 w-20 animate-pulse rounded bg-neutral-100" />
+                    <div className="h-2 w-10 animate-pulse rounded bg-neutral-100" />
+                  </div>
+                </TableCell>
+                {weekDays.map((_, j) => (
+                  <TableCell key={j} className="px-2 py-3 text-center">
+                    <div className="h-10 w-14 animate-pulse rounded-md bg-neutral-100 mx-auto" />
                   </TableCell>
                 ))}
               </TableRow>
@@ -311,19 +330,26 @@ function MonthlyPlanTable({
   if (rows.length === 0) {
     return (
       <div className="overflow-x-auto w-full">
-        <Table style={{ minWidth: 600 }}>
+        <Table style={{ minWidth: 640 }}>
           <TableHeader>
             <TableRow className="bg-canvas/60 border-b border-neutral-200 hover:bg-canvas/60">
               <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Date</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Day</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Location</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Project</TableHead>
+              {weekDays.map((d) => {
+                const date = parseISO(d.iso);
+                return (
+                  <TableHead key={d.iso} className="px-2 py-2.5 text-center whitespace-nowrap min-w-[80px]">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{dateFnsFormat(date, "MMM d")}</span>
+                      <span className="text-[9px] font-medium uppercase tracking-widest text-neutral-400">{dateFnsFormat(date, "EEE")}</span>
+                    </div>
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow>
-              <TableCell colSpan={5} className="py-16 text-center text-sm text-neutral-400">
+              <TableCell colSpan={weekDays.length + 1} className="py-16 text-center text-sm text-neutral-400">
                 {search ? "No entries match your search." : "No monthly plan entries found."}
               </TableCell>
             </TableRow>
@@ -335,46 +361,81 @@ function MonthlyPlanTable({
 
   return (
     <div className="overflow-x-auto w-full">
-      <Table style={{ minWidth: 600 }}>
+      <Table style={{ minWidth: 640 }}>
         <TableHeader>
           <TableRow className="bg-canvas/60 border-b border-neutral-200 hover:bg-canvas/60">
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</TableHead>
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Date</TableHead>
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Day</TableHead>
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Location</TableHead>
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Project</TableHead>
+            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap w-[200px] max-w-[200px] sticky left-0 bg-[#f5f5f7] z-10">
+              Employee
+            </TableHead>
+            {weekDays.map((d) => {
+              const date = parseISO(d.iso);
+              const today = isToday(date);
+              return (
+                <TableHead key={d.iso} className="px-2 py-2.5 text-center whitespace-nowrap min-w-[80px]">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className={cn("text-[10px] font-semibold uppercase tracking-wider", today ? "text-primary" : "text-neutral-500")}>
+                      {dateFnsFormat(date, "MMM d")}
+                    </span>
+                    <span className={cn("text-[9px] font-medium uppercase tracking-widest", today ? "text-primary/70" : "text-neutral-400")}>
+                      {dateFnsFormat(date, "EEE")}
+                    </span>
+                  </div>
+                </TableHead>
+              );
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pagedRows.map((entry) => {
-            const d = parseISO(entry.date);
-            return (
-              <TableRow key={`${entry.user_id}-${entry.date}`} className="border-b border-neutral-100 hover:bg-canvas/60">
-                <TableCell className="px-4 py-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary text-[10px] font-bold">
-                      {initials(entry.user_name ?? entry.user_id)}
+          <TooltipProvider>
+            {pagedRows.map((row) => {
+              const hasMismatch = row.days.some((d) => {
+                if (!d.planned || !d.actualLocation) return false;
+                return d.planned !== d.actualLocation && d.actualLocation !== null;
+              });
+              return [
+                <tr key={`${row.userId}-plan`} className={cn("transition-colors duration-100", hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60")}>
+                  <td className="px-4 py-2 sticky left-0 bg-white z-10 border-r border-neutral-100 border-b border-neutral-200 w-[200px] max-w-[200px] overflow-hidden" rowSpan={2}>
+                    <div className="flex items-center gap-2">
+                      <EmployeeCell name={row.name} />
+                      {hasMismatch && (
+                        <Tooltip>
+                          <TooltipTrigger asChild><AlertCircle className="size-3.5 shrink-0 text-red-400" /></TooltipTrigger>
+                          <TooltipContent side="right" className="text-xs">Plan vs Actual mismatch detected</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
-                    <span className="text-[13px] font-medium text-neutral-900 truncate">
-                      {entry.user_name ?? entry.user_id}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="px-4 py-2 text-[13px] text-neutral-700">
-                  {dateFnsFormat(d, "MMM d, yyyy")}
-                </TableCell>
-                <TableCell className="px-4 py-2 text-[13px] text-neutral-500">
-                  {dateFnsFormat(d, "EEE")}
-                </TableCell>
-                <TableCell className="px-4 py-2">
-                  <LocationBadge location={entry.work_location} />
-                </TableCell>
-                <TableCell className="px-4 py-2 text-[13px] text-neutral-700 max-w-[200px] truncate">
-                  {entry.project || <span className="text-neutral-300">—</span>}
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                  </td>
+                  {row.days.map((d) => (
+                    <td key={d.iso} className="px-2 py-2 text-center border-b border-neutral-200">
+                      <div className="flex items-center justify-center"><LocationBadge location={d.planned} /></div>
+                    </td>
+                  ))}
+                </tr>,
+                <tr key={`${row.userId}-actual`} className={cn("transition-colors duration-100 border-b border-neutral-200", hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60")}>
+                  {row.days.map((d) => {
+                    const date = parseISO(d.iso);
+                    const today = isToday(date);
+                    const isFut = date > new Date(new Date().setHours(0, 0, 0, 0));
+                    const mismatch = !isFut && d.planned && d.actualLocation && d.planned !== d.actualLocation;
+                    return (
+                      <td key={d.iso} className={cn("px-2 py-2 text-center", today && "bg-primary/3")}>
+                        {isFut ? (
+                          <span className="text-[10px] font-medium text-neutral-200">—</span>
+                        ) : d.actualLocation ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <LocationBadge location={d.actualLocation as PlanLocationValue} />
+                            {mismatch && <AlertCircle className="size-2.5 text-red-400 shrink-0" />}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-medium text-neutral-200">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>,
+              ];
+            })}
+          </TooltipProvider>
         </TableBody>
       </Table>
       {totalPages > 1 && (
@@ -383,12 +444,8 @@ function MonthlyPlanTable({
             Showing <span className="font-semibold text-neutral-900">{(page - 1) * PAGE_SIZE + 1}</span>–<span className="font-semibold text-neutral-900">{Math.min(page * PAGE_SIZE, rows.length)}</span> of <span className="font-semibold text-neutral-900">{rows.length}</span>
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
-              Next
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
           </div>
         </div>
       )}
@@ -508,17 +565,13 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
   const eligibleEmployees = useMemo(() => {
     const seen = new Set<string>();
     const result: { id: string; name: string; email: string | null }[] = [];
-    const planUsers = new Set(activeEntries.map((e) => e.user_id));
     if (employeeData?.items) {
       for (const emp of employeeData.items) {
         if (seen.has(emp.user_id)) continue;
         seen.add(emp.user_id);
-        if (planUsers.has(emp.user_id)) {
-          result.push({ id: emp.user_id, name: emp.name, email: null });
-        }
+        result.push({ id: emp.user_id, name: emp.name, email: null });
       }
     }
-    // Also add users from plan data not in employee list
     for (const entry of activeEntries) {
       if (!seen.has(entry.user_id)) {
         seen.add(entry.user_id);
@@ -563,6 +616,36 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
     return list;
   }, [viewMode, activeEntries, search, effectiveSelectedEmployeeIds]);
 
+  // Monthly pivot rows (same pivot format as weekly)
+  const monthlyPivotRows = useMemo(() => {
+    if (viewMode !== "monthly") return [];
+    const byUser = new Map<string, Map<string, PlanLocationValue>>();
+    for (const entry of filteredMonthlyEntries) {
+      if (!byUser.has(entry.user_id)) byUser.set(entry.user_id, new Map());
+      byUser.get(entry.user_id)!.set(entry.date, entry.work_location);
+    }
+    const seen = new Set<string>();
+    return eligibleEmployees
+      .filter((e) => seen.has(e.id) ? false : (seen.add(e.id), true))
+      .map((emp) => ({
+        userId: emp.id,
+        name: emp.name,
+        days: weekDays.map((d) => {
+          const parsed = parseISO(d.iso);
+          const userAttendance = attendanceByUserId.get(emp.id);
+          const record = userAttendance?.get(d.iso);
+          const actualLocation = record ? (record.isRemote ? "WFH" : "OFFICE") : null;
+          return {
+            iso: d.iso,
+            dayLabel: dateFnsFormat(parsed, "EEEE"),
+            dateLabel: dateFnsFormat(parsed, "MMM d"),
+            planned: byUser.get(emp.id)?.get(d.iso) ?? null,
+            actualLocation,
+          } satisfies PlanExportPivotDay;
+        }),
+      }));
+  }, [viewMode, filteredMonthlyEntries, weekDays, attendanceByUserId, eligibleEmployees]);
+
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const pagedRows = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -594,6 +677,39 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
   function clearFilters() {
     setEffectiveSelectedEmployeeIds([]);
     setSearch("");
+  }
+
+  function buildPivotExportData(
+    filteredRows_: PlanExportRow[],
+    days: { iso: string }[],
+    attendanceByUserId: Map<string, Map<string, AttendanceRecord>>,
+  ): PlanExportPivotRow[] {
+    const byUser = new Map<string, Map<string, PlanLocationValue | null>>();
+    for (const r of filteredRows_) {
+      if (!byUser.has(r.user_id)) byUser.set(r.user_id, new Map());
+      byUser.get(r.user_id)!.set(r.date, r.work_location);
+    }
+
+    const seen = new Set<string>();
+    return eligibleEmployees
+      .filter((e) => seen.has(e.id) ? false : (seen.add(e.id), true))
+      .map((emp) => ({
+        userId: emp.id,
+        name: emp.name,
+        days: days.map((d) => {
+          const parsed = parseISO(d.iso);
+          const userAttendance = attendanceByUserId.get(emp.id);
+          const record = userAttendance?.get(d.iso);
+          const actualLocation = record ? (record.isRemote ? "WFH" : "OFFICE") : null;
+          return {
+            iso: d.iso,
+            dayLabel: dateFnsFormat(parsed, "EEEE"),
+            dateLabel: dateFnsFormat(parsed, "MMM d"),
+            planned: byUser.get(emp.id)?.get(d.iso) ?? null,
+            actualLocation,
+          } satisfies PlanExportPivotDay;
+        }),
+      }));
   }
 
   async function handleExport(format: PlanExportFormat) {
@@ -638,17 +754,22 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
         ? getWeekRangeLabel(weekState.year, weekState.week)
         : getMonthLabel(monthState.year, monthState.month);
 
+      const isMonthlyView = viewMode === "monthly";
+      const pivot = isMonthlyView
+        ? monthlyPivotRows.filter((r) => employeeIdSet.has(r.userId))
+        : buildPivotExportData(rowsForExport, weekDays, attendanceByUserId);
       const payload: PlanExportPayload = {
         format,
         title,
         periodLabel: label,
-        dateColumns: [currentDateFrom, currentDateTo],
+        viewMode: isMonthlyView ? "monthly_pivot" : "weekly",
         employees: employeesForExport.map((emp) => ({
           id: emp.id,
           name: emp.name,
           email: emp.email,
         })),
-        rows: rowsForExport,
+        rows: isMonthlyView ? rowsForExport : undefined,
+        pivotData: pivot,
       };
 
       const blob = await exportWeeklyPlanReportAction({ orgSlug, memberId, payload });
@@ -949,9 +1070,10 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
             )}
           </div>
         ) : (
-          /* Monthly flat list table */
+          /* Monthly pivot table */
           <MonthlyPlanTable
-            entries={filteredMonthlyEntries}
+            pivotRows={monthlyPivotRows}
+            weekDays={weekDays}
             isLoading={isLoading}
             search={search}
           />

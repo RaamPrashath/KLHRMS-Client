@@ -1079,8 +1079,17 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
 
   async function handleExport(format: AttendanceReportExportFormat) {
     if (pendingExport || reportQuery.isLoading || optionsQuery.isLoading) return;
-    if (selectedVisibleEmployees.length === 0) {
-      toast.error('Select at least one visible employee to export.');
+
+    const exportEmployees = selectedVisibleEmployees.length > 0
+      ? selectedVisibleEmployees
+      : visibleEmployeesForView;
+
+    const exportRows = selectedVisibleEmployees.length > 0
+      ? selectedVisibleRows
+      : searchFilteredRows;
+
+    if (exportEmployees.length === 0) {
+      toast.error('No employee data available to export.');
       return;
     }
 
@@ -1096,12 +1105,12 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
           title,
           periodLabel: periodLabel(periodMode, dateRange.dateFrom, dateRange.dateTo),
           dateColumns: daysBetween(dateRange.dateFrom, dateRange.dateTo).map(toYMD),
-          employees: selectedVisibleEmployees.map((employee) => ({
+          employees: exportEmployees.map((employee) => ({
             id: employee.id,
             name: employee.name,
             email: employee.email,
           })),
-          rows: selectedVisibleRows,
+          rows: exportRows,
           force8,
         },
       });

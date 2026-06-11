@@ -17,12 +17,14 @@ import {
   Edit3,
   LayoutGrid,
   Plus,
+  Search,
   Trash2,
   Layers,
   Settings,
   Database,
   Info,
   Laptop,
+  X,
   Cpu,
   Smartphone,
   Network,
@@ -86,6 +88,8 @@ export function CategoryTab({
   onAddField,
   onEditCategory,
   onDeleteCategory,
+  onCreateCategory,
+  onSearchChange,
 }: {
   categories: AssetCategoryDefinition[];
   categorySearch: string;
@@ -94,6 +98,8 @@ export function CategoryTab({
   onAddField: (categoryId: string, data: AssetCategoryFieldCreateInput) => Promise<void>;
   onEditCategory: (categoryId: string, name: string, assetCode?: string | null) => Promise<void>;
   onDeleteCategory: (categoryId: string) => Promise<void>;
+  onCreateCategory: () => void;
+  onSearchChange: (value: string) => void;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [catAddFieldTarget, setCatAddFieldTarget] = useState<string | null>(null);
@@ -112,11 +118,17 @@ export function CategoryTab({
     pageIndex: 0,
     pageSize: 10,
   });
+  const [schemaFilter, setSchemaFilter] = useState<'ALL' | 'HAS_FIELDS' | 'EMPTY'>('ALL');
 
-  const filteredCategories = useMemo(
-    () => categories.filter((c) => c.name.toLowerCase().includes(categorySearch.toLowerCase())),
-    [categories, categorySearch],
-  );
+  const filteredCategories = useMemo(() => {
+    let result = categories.filter((c) => c.name.toLowerCase().includes(categorySearch.toLowerCase()));
+    if (schemaFilter === 'HAS_FIELDS') {
+      result = result.filter((c) => (c.fields?.length ?? 0) > 0);
+    } else if (schemaFilter === 'EMPTY') {
+      result = result.filter((c) => (c.fields?.length ?? 0) === 0);
+    }
+    return result;
+  }, [categories, categorySearch, schemaFilter]);
 
   const catEditCategory = categories.find((c) => c.id === catEditTarget);
   const catDeleteCategory = categories.find((c) => c.id === catDeleteTarget);
@@ -465,6 +477,63 @@ export function CategoryTab({
 
       {/* Main Table Shell */}
       <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
+        {/* Search and Create Section inside Card Container */}
+        <div className="px-8 py-6 border-b border-border">
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search categories..."
+                value={categorySearch}
+                onChange={(e) => {
+                  onSearchChange(e.target.value);
+                  setPagination({ pageIndex: 0, pageSize: 10 });
+                }}
+                className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
+              />
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Select
+                value={schemaFilter}
+                onValueChange={(value) => {
+                  setSchemaFilter(value as 'ALL' | 'HAS_FIELDS' | 'EMPTY');
+                  setPagination({ pageIndex: 0, pageSize: 10 });
+                }}
+              >
+                <SelectTrigger className="h-9 w-[140px] text-xs border border-border bg-card rounded-xl">
+                  <SelectValue placeholder="Schema Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL" className="text-xs">All</SelectItem>
+                  <SelectItem value="HAS_FIELDS" className="text-xs">Has Fields</SelectItem>
+                  <SelectItem value="EMPTY" className="text-xs">Empty</SelectItem>
+                </SelectContent>
+              </Select>
+              {schemaFilter !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSchemaFilter('ALL');
+                    setPagination({ pageIndex: 0, pageSize: 10 });
+                  }}
+                  className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+              {canManageAssets && (
+                <button
+                  type="button"
+                  onClick={onCreateCategory}
+                  className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0"
+                >
+                  <Plus className="mr-1.5 size-4" />
+                  Create Category
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
         {isLoading ? (
           <div className="space-y-2 p-4">
             {Array.from({ length: 4 }).map((_, i) => (
