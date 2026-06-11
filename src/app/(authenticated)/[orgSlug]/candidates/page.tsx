@@ -27,15 +27,13 @@ export default async function CandidatesPage({
   const sorted = [...postings].sort((a, b) => a.title.localeCompare(b.title));
 
   return (
-    <div className="min-h-full bg-canvas">
-      <div className="flex min-h-full flex-1 flex-col gap-6">
-        <div className="flex items-start justify-between px-4 pb-2 pt-8 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-semibold tracking-tight text-neutral-900">
-            Candidates
-          </h1>
-        </div>
-        <CandidatesLandingTable orgSlug={orgSlug} postings={sorted} />
+    <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">
+      <div className="flex items-center justify-between ml-7 mt-7 mr-7">
+        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
+          Candidates
+        </h1>
       </div>
+      <CandidatesLandingTable orgSlug={orgSlug} postings={sorted} />
     </div>
   );
 }

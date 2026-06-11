@@ -1,10 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarPlus, Check, Clock, Loader2, Play, RotateCcw, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarPlus, Check, ChevronLeft, ChevronRight, Clock, Loader2, Play, RotateCcw, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  type ColumnDef,
+} from '@tanstack/react-table';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +22,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody as ShadcnTableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Tooltip,
   TooltipContent,
@@ -289,6 +311,41 @@ function InterviewActionsCell({
 
 const SKELETON_IDS = Array.from({ length: 8 }, (_, i) => `skeleton-row-${i}`);
 
+function buildPageNumbers(current: number, total: number): (number | '...')[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages: (number | '...')[] = [];
+  pages.push(1);
+  if (current > 4) pages.push('...');
+  const start = Math.max(2, current - 2);
+  const end = Math.min(total - 1, current + 2);
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (current < total - 3) pages.push('...');
+  pages.push(total);
+  return pages;
+}
+
+function colWidth(id: string): string {
+  const map: Record<string, string> = {
+    candidate: 'w-[26%]',
+    position: 'w-[22%]',
+    current: 'w-[20%]',
+    status: 'w-[14%]',
+  };
+  return map[id] ?? 'w-[14%]';
+}
+
+function colCellPadding(id: string): string {
+  if (id === 'candidate') return 'pl-6 pr-3';
+  return 'px-3';
+}
+
+function colHeadPadding(id: string): string {
+  if (id === 'candidate') return 'pl-6 pr-3';
+  return 'px-3';
+}
+
 export function InterviewsPageShell({
   orgSlug,
   memberId,
@@ -313,6 +370,11 @@ export function InterviewsPageShell({
   const startInterview = useStartInterviewMeeting(orgSlug, memberId, null);
   const completeInterview = useCompleteInterviewMeeting(orgSlug, memberId, null);
 
+  // ── Search & pagination state ─────────────────────────────────────────────
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const checkGoogleAccess = useCallback(async (): Promise<boolean> => {
     const result = await authClient.listAccounts();
     if (result.error) return false;
@@ -336,28 +398,104 @@ export function InterviewsPageShell({
     }
   }, []);
 
-  if (interviewsQuery.isLoading) {
-    return (
-      <div className="min-h-full bg-canvas flex flex-col gap-6 flex-1">
-        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight ml-7 mt-7">
-          My Interviews
-        </h1>
-        <div className="flex flex-col mx-7 mb-7">
-          <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
-            <div className="flex flex-col divide-y divide-black/4 bg-surface px-4">
-              {SKELETON_IDS.map((id) => (
-                <div key={id} className="border-b border-black/4 p-6">
-                  <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const interviews = interviewsQuery.data?.items ?? [];
+
+  const filteredInterviews = useMemo(() => {
+    if (!search.trim()) return interviews;
+    const q = search.toLowerCase();
+    return interviews.filter(
+      (i) =>
+        candidateName(i.candidate.firstName, i.candidate.lastName).toLowerCase().includes(q) ||
+        i.jobTitle.toLowerCase().includes(q) ||
+        i.stageName.toLowerCase().includes(q) ||
+        normalizeInterviewStatus(i.status).toLowerCase().includes(q),
+    );
+  }, [interviews, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInterviews.length / pageSize));
+
+  const paginatedInterviews = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredInterviews.slice(start, start + pageSize);
+  }, [filteredInterviews, page, pageSize]);
+
+  const columns = useMemo<ColumnDef<MyInterview>[]>(
+    () => [
+      {
+        id: 'candidate',
+        header: 'Candidate',
+        cell: ({ row }) => (
+          <button
+            type="button"
+            className="flex items-center gap-3 min-w-0 text-left"
+            onClick={() => {
+              if (row.original.jobSlug) {
+                router.push(`/${orgSlug}/candidates/${row.original.jobSlug}/${row.original.applicationId}`);
+              }
+            }}
+          >
+            <div className="min-w-0 text-left">
+              <p className="truncate text-sm font-medium text-neutral-900 hover:text-primary transition-colors">
+                {candidateName(row.original.candidate.firstName, row.original.candidate.lastName)}
+              </p>
+              <p className="truncate text-[11px] text-neutral-500">{row.original.candidate.email}</p>
+            </div>
+          </button>
+        ),
+      },
+      {
+        id: 'position',
+        header: 'Position',
+        cell: ({ row }) =>
+          row.original.jobSlug ? (
+            <Link
+              href={`/${orgSlug}/jobs/${row.original.jobSlug}`}
+              className="block truncate text-sm text-neutral-700 transition-colors hover:text-primary"
+            >
+              {row.original.jobTitle}
+            </Link>
+          ) : (
+            <span className="block truncate text-sm text-neutral-700">{row.original.jobTitle}</span>
+          ),
+      },
+      {
+        id: 'current',
+        header: 'Current',
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <span className="block truncate text-sm text-neutral-700">{row.original.stageName}</span>
+            {row.original.scheduledStartAt ? (
+              <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                {formatDate(row.original.scheduledStartAt)} - {formatTimeRange(row.original)}
+              </span>
+            ) : row.original.proposedSlots.some((slot) => slot.proposedBy === 'CANDIDATE') ? (
+              <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                Candidate proposed {row.original.proposedSlots.filter((slot) => slot.proposedBy === 'CANDIDATE').length} slot(s)
+              </span>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <StatusBadge status={row.original.status} />
+          </div>
+        ),
+      },
+    ],
+    [orgSlug, router],
+  );
+
+  const table = useReactTable({
+    data: paginatedInterviews,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    pageCount: totalPages,
+  });
 
   async function promptGoogleConnect(interview: MyInterview) {
     pendingSchedulingInterviewRef.current = interview;
@@ -490,105 +628,217 @@ export function InterviewsPageShell({
 
   return (
     <div className="min-h-full bg-canvas flex flex-col gap-6 flex-1">
-      <div className="ml-7 mt-7 mr-7 flex items-start justify-between">
-        <div>
-          <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
-            My Interviews
-          </h1>
-        </div>
+      <div className="flex items-center justify-between ml-7 mt-7 mr-7">
+        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
+          My Interviews
+        </h1>
       </div>
 
-      <div className="flex flex-col mx-7 mb-7">
-        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-x-auto flex flex-col">
-          {interviews.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 bg-surface">
-              <Clock className="mb-2 size-8 text-neutral-300" />
-              <p className="text-sm text-neutral-400">No interviews assigned</p>
+      <div className="flex flex-col flex-1 mx-7 mb-7">
+        <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+          <div className="flex flex-col gap-2 border-b border-black/[0.04] px-3.5 py-3.5">
+            <div className="flex items-center gap-2">
+              <div className="relative w-full max-w-[280px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+                <Input
+                  placeholder="Search Interviews"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="h-9 border-0 bg-canvas px-3 py-2.5 pl-9 text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10"
+                />
+              </div>
+              {search.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setPage(1);
+                  }}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-3 py-2 text-[13px] text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
+                >
+                  <X className="size-3.5" />
+                  Clear
+                </button>
+              )}
             </div>
-          ) : (
-            <>
-              <div className="grid min-w-[1120px] grid-cols-5 items-center gap-4 border-b border-black/[0.04] bg-canvas/50 px-8 py-3">
-                <div className="text-left text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Candidate</div>
-                <div className="text-left text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Position</div>
-                <div className="text-left text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Current</div>
-                <div className="text-left text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Status</div>
-                <div className="text-right text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Action</div>
-              </div>
+          </div>
 
-              <div className="flex flex-col bg-surface px-4">
-                {interviews.map((interview) => (
-                  <div
-                    key={interview.eventId}
-                    className="grid min-w-[1120px] grid-cols-5 items-center gap-4 border-b border-black/4 px-4 py-3 transition-colors hover:bg-black/[0.02]"
-                  >
-                    <div className="min-w-0">
-                      <button
-                        type="button"
-                        className="flex items-center gap-3 min-w-0 text-left"
-                        onClick={() => {
-                          if (interview.jobSlug) {
-                            router.push(`/${orgSlug}/candidates/${interview.jobSlug}/${interview.applicationId}`);
-                          }
-                        }}
-                      >
-                        <div className="min-w-0 text-left">
-                          <p className="truncate text-sm font-medium text-neutral-900 hover:text-primary transition-colors">
-                            {candidateName(interview.candidate.firstName, interview.candidate.lastName)}
-                          </p>
-                          <p className="truncate text-[11px] text-neutral-500">{interview.candidate.email}</p>
-                        </div>
-                      </button>
-                    </div>
-
-                    <div className="min-w-0">
-                      {interview.jobSlug ? (
-                        <Link
-                          href={`/${orgSlug}/jobs/${interview.jobSlug}`}
-                          className="block truncate text-sm text-neutral-700 transition-colors hover:text-primary"
+          <div className="w-full">
+            <div>
+              <Table className="table-fixed">
+                <TableHeader className="bg-canvas/50">
+                  {table.getHeaderGroups().map((hg) => (
+                    <TableRow key={hg.id} className="border-black/[0.04] hover:bg-transparent">
+                      {hg.headers.map((header) => (
+                        <TableHead
+                          key={header.id}
+                          className={cn(
+                            colWidth(header.id),
+                            colHeadPadding(header.id),
+                            'h-auto py-3 whitespace-nowrap text-[12.5px] font-semibold tracking-wider text-neutral-500',
+                            header.id === 'candidate' || header.id === 'position' || header.id === 'current' ? 'text-left' : 'text-center',
+                          )}
                         >
-                          {interview.jobTitle}
-                        </Link>
-                      ) : (
-                        <span className="block truncate text-sm text-neutral-700">{interview.jobTitle}</span>
-                      )}
-                    </div>
+                          {header.isPlaceholder
+                            ? ''
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                      <TableHead className="w-[18%] py-3 pr-6 pl-3 text-right text-[12.5px] font-semibold tracking-wider text-neutral-500">
+                        Action
+                      </TableHead>
+                    </TableRow>
+                  ))}
+                </TableHeader>
 
-                    <div className="min-w-0">
-                      <span className="block truncate text-sm text-neutral-700">{interview.stageName}</span>
-                      {interview.scheduledStartAt ? (
-                        <span className="mt-0.5 block truncate text-xs text-neutral-500">
-                          {formatDate(interview.scheduledStartAt)} - {formatTimeRange(interview)}
-                        </span>
-                      ) : interview.proposedSlots.some((slot) => slot.proposedBy === 'CANDIDATE') ? (
-                        <span className="mt-0.5 block truncate text-xs text-neutral-500">
-                          Candidate proposed {interview.proposedSlots.filter((slot) => slot.proposedBy === 'CANDIDATE').length} slot(s)
-                        </span>
-                      ) : null}
-                    </div>
+                <ShadcnTableBody className="bg-surface">
+                  {interviewsQuery.isLoading ? (
+                    SKELETON_IDS.slice(0, pageSize).map((id) => (
+                      <TableRow key={id} className="border-black/4 hover:bg-transparent">
+                        <TableCell colSpan={5} className="p-6">
+                          <div className="h-10 w-full animate-pulse rounded-xl bg-neutral-100" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : paginatedInterviews.length === 0 ? (
+                    <TableRow className="border-black/4 hover:bg-transparent">
+                      <TableCell colSpan={5} className="py-16 text-center text-sm text-neutral-400">
+                        No Interviews Found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="border-black/4 transition-colors hover:bg-black/[0.02]"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell
+                            key={cell.id}
+                            className={cn(
+                              colWidth(cell.column.id),
+                              colCellPadding(cell.column.id),
+                              'py-3 whitespace-nowrap',
+                              cell.column.id === 'candidate' || cell.column.id === 'position' || cell.column.id === 'current' ? 'text-left' : 'text-center',
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'flex',
+                                cell.column.id === 'candidate' || cell.column.id === 'position' || cell.column.id === 'current'
+                                  ? 'justify-start'
+                                  : 'justify-center',
+                              )}
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </div>
+                          </TableCell>
+                        ))}
 
-                    <div className="min-w-0">
-                      <StatusBadge status={interview.status} />
-                    </div>
+                        <TableCell className="w-[18%] py-3 pr-6 pl-3 text-right">
+                          <div className="flex justify-end">
+                            <InterviewActionsCell
+                              interview={row.original}
+                              onAccept={handleAccept}
+                              onReject={handleReject}
+                              onSchedule={handleSchedule}
+                              onReviewCandidateSlots={handleReviewCandidateSlots}
+                              onStart={handleStart}
+                              onComplete={(item) => setCompletingInterview(item)}
+                              isAccepting={acceptInterview.isPending}
+                              isRejecting={rejectInterview.isPending}
+                              isBookingSlot={bookCandidateSlot.isPending}
+                              isStarting={startInterview.isPending}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </ShadcnTableBody>
+              </Table>
+            </div>
+          </div>
 
-                    <div className="min-w-0">
-                      <InterviewActionsCell
-                        interview={interview}
-                        onAccept={handleAccept}
-                        onReject={handleReject}
-                        onSchedule={handleSchedule}
-                        onReviewCandidateSlots={handleReviewCandidateSlots}
-                        onStart={handleStart}
-                        onComplete={(item) => setCompletingInterview(item)}
-                        isAccepting={acceptInterview.isPending}
-                        isRejecting={rejectInterview.isPending}
-                        isBookingSlot={bookCandidateSlot.isPending}
-                        isStarting={startInterview.isPending}
-                      />
-                    </div>
+          {!interviewsQuery.isLoading && filteredInterviews.length > 0 && (
+            <div className="px-8 py-6 mt-auto border-t border-black/[0.04] bg-surface">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-neutral-500">Show</span>
+                    <Select
+                      value={String(pageSize)}
+                      onValueChange={(v) => {
+                        setPageSize(Number(v));
+                        setPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-[72px] text-xs" size="sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 25, 50, 100].map((size) => (
+                          <SelectItem key={size} value={String(size)} className="text-xs">
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-[13px] text-neutral-500">Per Page</span>
                   </div>
-                ))}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page <= 1}
+                    className="inline-flex size-8 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Previous Page"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+
+                  {buildPageNumbers(page, totalPages).map((p, idx) =>
+                    p === '...' ? (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="inline-flex size-8 items-center justify-center text-[13px] text-neutral-400"
+                      >
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPage(p as number)}
+                        className={`inline-flex size-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors ${
+                          p === page
+                            ? 'bg-primary text-white'
+                            : 'border border-neutral-200 bg-surface text-neutral-700 hover:bg-neutral-50'
+                        }`}
+                        aria-current={p === page ? 'page' : undefined}
+                      >
+                        {p}
+                      </button>
+                    ),
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= totalPages}
+                    className="inline-flex size-8 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Next Page"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

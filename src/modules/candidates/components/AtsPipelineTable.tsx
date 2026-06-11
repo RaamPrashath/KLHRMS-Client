@@ -16,8 +16,6 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Loader2,
   ShieldAlert,
   Sparkles,
@@ -77,6 +75,21 @@ interface PipelineTableRow {
 }
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+function buildPageNumbers(current: number, total: number): (number | '...')[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages: (number | '...')[] = [];
+  pages.push(1);
+  if (current > 4) pages.push('...');
+  const start = Math.max(2, current - 2);
+  const end = Math.min(total - 1, current + 2);
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (current < total - 3) pages.push('...');
+  pages.push(total);
+  return pages;
+}
 
 function getInitials(name: string): string {
   return name
@@ -151,7 +164,7 @@ function SortButton({
       type="button"
       variant="ghost"
       size="sm"
-      className="-ml-2 h-8 text-xs font-semibold uppercase tracking-wider text-neutral-500 hover:text-neutral-900"
+      className="-ml-2 h-8 px-2 text-[12.5px] font-semibold tracking-wider text-neutral-500 hover:text-neutral-900"
       onClick={onClick}
     >
       {label}
@@ -416,9 +429,12 @@ export function AtsPipelineTable({
   const filteredCount = table.getFilteredRowModel().rows.length;
   const pageRows = table.getRowModel().rows;
 
+  const pageNum = table.getState().pagination.pageIndex + 1;
+  const pageCount = table.getPageCount() || 1;
+
   return (
-    <div className="rounded-xl border border-neutral-100 bg-surface shadow-[var(--shadow-1)]">
-      <div className="flex flex-col gap-3 border-b border-neutral-100 p-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+      <div className="flex flex-col gap-3 border-b border-black/[0.04] px-3.5 py-3.5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <Select
             value={(table.getColumn('currentStage')?.getFilterValue() as string | undefined) ?? 'all'}
@@ -426,7 +442,7 @@ export function AtsPipelineTable({
               table.getColumn('currentStage')?.setFilterValue(value === 'all' ? undefined : value)
             }
           >
-            <SelectTrigger className="h-9 w-[180px] bg-surface">
+            <SelectTrigger className="h-9 w-[180px] border-0 bg-canvas text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10">
               <SelectValue placeholder="Filter stage" />
             </SelectTrigger>
             <SelectContent>
@@ -443,7 +459,7 @@ export function AtsPipelineTable({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <span className="text-sm font-medium text-neutral-700">{selectedCount} selected</span>
           <Select value={targetStageId || 'all'} onValueChange={setTargetStageId}>
-            <SelectTrigger className="h-9 w-full bg-surface sm:w-[190px]">
+            <SelectTrigger className="h-9 w-full border-0 bg-canvas text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10 sm:w-[190px]">
               <SelectValue placeholder="Select stage" />
             </SelectTrigger>
             <SelectContent>
@@ -467,114 +483,137 @@ export function AtsPipelineTable({
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="bg-canvas hover:bg-canvas">
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="px-4 py-2.5">
-                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
+      <div className="w-full">
+        <div>
+          <Table className="table-fixed">
+            <TableHeader className="bg-canvas/50">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="border-black/[0.04] hover:bg-transparent">
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className={cn(
+                        'h-auto py-3 px-4 whitespace-nowrap text-[12.5px] font-semibold tracking-wider text-neutral-500',
+                        header.column.id !== 'select' && header.column.id !== 'name' && 'text-center',
+                      )}
+                    >
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {pageRows.length > 0 ? (
-            pageRows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() ? 'selected' : undefined}
-                className={cn(
-                  'cursor-pointer border-neutral-100 hover:bg-canvas',
-                  row.getIsSelected() && 'bg-primary-ghost',
-                )}
-                onClick={() => onOpenCandidate(row.original.id)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-4 py-3">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </TableHeader>
+            <TableBody className="bg-surface">
+              {pageRows.length > 0 ? (
+                pageRows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() ? 'selected' : undefined}
+                    className={cn(
+                      'cursor-pointer border-black/4 transition-colors hover:bg-black/[0.02]',
+                      row.getIsSelected() && 'bg-primary-ghost',
+                    )}
+                    onClick={() => onOpenCandidate(row.original.id)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(
+                          'py-3 px-4 whitespace-nowrap',
+                          cell.column.id !== 'select' && cell.column.id !== 'name' && 'text-center',
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow className="border-black/4 hover:bg-transparent">
+                  <TableCell colSpan={columns.length} className="py-16 text-center text-sm text-neutral-400">
+                    No candidates match the current search and filters.
                   </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-28 text-center text-sm text-neutral-500">
-                No candidates match the current search and filters.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-
-      <div className="flex flex-col gap-3 border-t border-neutral-100 p-4 lg:flex-row lg:items-center lg:justify-between">
-        <p className="text-sm text-neutral-500">
-          Showing {pageRows.length} of {filteredCount} candidates
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-          <Select
-            value={String(table.getState().pagination.pageSize)}
-            onValueChange={(value) => table.setPageSize(Number(value))}
-          >
-            <SelectTrigger className="h-9 w-[140px] bg-surface">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-neutral-500">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              aria-label="First page"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <ChevronsLeft className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              aria-label="Previous page"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              aria-label="Next page"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              aria-label="Last page"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-            >
-              <ChevronsRight className="size-4" />
-            </Button>
-          </div>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
+
+      {filteredCount > 0 && (
+        <div className="px-8 py-6 mt-auto border-t border-black/[0.04] bg-surface">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-neutral-500">Show</span>
+                <Select
+                  value={String(table.getState().pagination.pageSize)}
+                  onValueChange={(value) => table.setPageSize(Number(value))}
+                >
+                  <SelectTrigger className="h-8 w-[72px] text-xs" size="sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)} className="text-xs">
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-[13px] text-neutral-500">Per Page</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="inline-flex size-8 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Previous Page"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+
+              {buildPageNumbers(pageNum, pageCount).map((p, idx) =>
+                p === '...' ? (
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="inline-flex size-8 items-center justify-center text-[13px] text-neutral-400"
+                  >
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => table.setPageIndex((p as number) - 1)}
+                    className={`inline-flex size-8 items-center justify-center rounded-md text-[13px] font-medium transition-colors ${
+                      p === pageNum
+                        ? 'bg-primary text-white'
+                        : 'border border-neutral-200 bg-surface text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                    aria-current={p === pageNum ? 'page' : undefined}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+
+              <button
+                type="button"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="inline-flex size-8 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Next Page"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

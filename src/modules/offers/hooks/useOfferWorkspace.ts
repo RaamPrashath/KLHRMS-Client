@@ -37,7 +37,12 @@ export function useOfferWorkspace(
     enabled: !!orgSlug && !!memberId && !!jobSlug && !!stageSlug,
     initialData,
     retry: false,
-    refetchInterval: 30_000,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return 30_000;
+      const hasDraft = data.candidates.some((c) => c.offerStatus === 'DRAFT');
+      return hasDraft ? 3_000 : 30_000;
+    },
   });
 }
 

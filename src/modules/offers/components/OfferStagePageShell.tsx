@@ -320,10 +320,6 @@ export function OfferStagePageShell({
             <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">{workspace.stage.name}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-neutral-500">{workspace.jobPosting.title}</span>
-              <span className="size-1 rounded-full bg-neutral-300" />
-              <span className="font-mono text-xs font-medium uppercase tracking-wider text-neutral-400">
-                {workspace.candidateCount} candidates
-              </span>
               {workspace.latestBatch?.failureCount ? (
                 <>
                   <span className="size-1 rounded-full bg-neutral-300" />
@@ -338,11 +334,6 @@ export function OfferStagePageShell({
 
         {/* Right-side actions */}
         <div className="flex shrink-0 items-center gap-3">
-          {selectedApplicationIds.size > 0 ? (
-            <span className="rounded-lg bg-primary-ghost px-3 py-1.5 text-xs font-medium text-primary">
-              {selectedApplicationIds.size} selected
-            </span>
-          ) : null}
           <button
             type="button"
             disabled={selectedApplicationIds.size === 0}
