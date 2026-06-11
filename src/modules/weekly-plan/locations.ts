@@ -19,7 +19,7 @@ export const FALLBACK_PLAN_LOCATIONS: PlanLocationOption[] = [
   {
     value: "OFFICE",
     label: "Office",
-    short_label: "OFF",
+    short_label: "OFC",
     color: "#0f766e",
   },
   {

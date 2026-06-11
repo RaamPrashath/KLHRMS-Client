@@ -26,6 +26,7 @@ export interface AttendanceReportRow {
   totalHours: number | null;
   departmentName: string | null;
   projectName: string | null;
+  clientName: string | null;
   taskName: string | null;
   clockOutDescription: string | null;
   leaveTypeName?: string | null;
@@ -73,4 +74,7 @@ export interface AttendanceReportExportPayload {
   employees: AttendanceReportExportEmployee[];
   rows: AttendanceReportRow[];
   force8: boolean;
+  projectId?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }

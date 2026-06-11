@@ -32,7 +32,7 @@ function monthKey(iso: string): string {
 
 function locationShort(value: string | null): string {
   if (!value) return "\u2014";
-  const map: Record<string, string> = { OFFICE: "OFF", WFH: "WFH", LEAVE: "LV", HOLIDAY: "HD" };
+  const map: Record<string, string> = { OFFICE: "OFC", WFH: "WFH", LEAVE: "LV", HOLIDAY: "HD" };
   return map[value] ?? value;
 }
 
@@ -51,7 +51,7 @@ function generateCsv(payload: PlanExportPayload): Uint8Array {
     const headers = ["Employee", ...days.flatMap((d) => [`${dateHeader(d.iso)} Plan`, `${dateHeader(d.iso)} Actual`])];
     lines.push(headers.join(","));
     for (const row of payload.pivotData) {
-      const vals = [esc(row.name), ...row.days.flatMap((d) => [esc(locationShort(d.planned)), esc(d.actualLocation ?? "\u2014")])];
+      const vals = [esc(row.name), ...row.days.flatMap((d) => [esc(locationShort(d.planned)), esc(locationShort(d.actualLocation))])];
       lines.push(vals.join(","));
     }
   } else {
@@ -210,12 +210,12 @@ async function generateXlsx(payload: PlanExportPayload): Promise<Uint8Array> {
       ws.getColumn(5).width = 36;
     }
   } else {
-    // ─── WEEKLY SINGLE SHEET ────────────────────────────────────────────────
+    // ─── WEEKLY / MONTHLY PIVOT SINGLE SHEET ────────────────────────────────
     const ws = wb.addWorksheet("Plan Export", { properties: { tabColor: { argb: "FF1F4E78" } } });
 
     if (payload.pivotData?.length) {
       const days = payload.pivotData[0].days;
-      const colCount = 1 + days.length * 2;
+      const colCount = 2 + days.length; // Employee, Type, and days columns
 
       ws.mergeCells(1, 1, 1, colCount);
       ws.getCell(1, 1).value = payload.title ?? "Plan Export";
@@ -228,29 +228,63 @@ async function generateXlsx(payload: PlanExportPayload): Promise<Uint8Array> {
       const startRow = payload.periodLabel ? 3 : 2;
 
       ws.getCell(startRow, 1).value = "Employee";
-      let c = 2;
+      ws.getCell(startRow, 2).value = "Type";
+      let c = 3;
       for (const d of days) {
-        ws.getCell(startRow, c++).value = `${dateHeader(d.iso)} Plan`;
-        ws.getCell(startRow, c++).value = `${dateHeader(d.iso)} Actual`;
+        ws.getCell(startRow, c++).value = `${dateHeader(d.iso)} (${dayOfWeek(d.iso)})`;
       }
       styleHeader(ws, startRow, colCount);
       ws.getCell(startRow, 1).alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+      ws.getCell(startRow, 2).alignment = { horizontal: "center", vertical: "middle", wrapText: true };
 
       let r = startRow + 1;
+      let empIndex = 0;
       for (const row of payload.pivotData) {
+        const isAlt = empIndex % 2 === 1;
+
+        // Row r: Planned values
         ws.getCell(r, 1).value = row.name;
-        c = 2;
+        ws.getCell(r, 2).value = "Planned";
+        c = 3;
         for (const d of row.days) {
           ws.getCell(r, c++).value = locationShort(d.planned);
-          ws.getCell(r, c++).value = d.actualLocation ?? "\u2014";
         }
-        for (let col = 1; col <= colCount; col++) styleCell(ws, r, col, { bold: col === 1, align: col === 1 ? "left" : "center" });
+
+        // Row r+1: Actual values
+        ws.getCell(r + 1, 1).value = ""; // Will be merged
+        ws.getCell(r + 1, 2).value = "Actual";
+        c = 3;
+        for (const d of row.days) {
+          ws.getCell(r + 1, c++).value = locationShort(d.actualLocation);
+        }
+
+        // Merge Employee column vertically
+        ws.mergeCells(r, 1, r + 1, 1);
+
+        // Apply styles and background fills for both rows
+        for (let col = 1; col <= colCount; col++) {
+          const cell1 = ws.getCell(r, col);
+          cell1.font = col === 1 ? EMP_FONT : (col === 2 ? { bold: true, size: 10, color: { argb: "FF475569" } } : CELL_FONT);
+          cell1.alignment = { horizontal: col === 1 ? "left" : "center", vertical: "middle" };
+          cell1.border = BDR;
+          if (isAlt) cell1.fill = ALT_ROW;
+
+          const cell2 = ws.getCell(r + 1, col);
+          cell2.font = col === 1 ? EMP_FONT : (col === 2 ? { bold: true, size: 10, color: { argb: "FF475569" } } : CELL_FONT);
+          cell2.alignment = { horizontal: col === 1 ? "left" : "center", vertical: "middle" };
+          cell2.border = BDR;
+          if (isAlt) cell2.fill = ALT_ROW;
+        }
+
         ws.getRow(r).height = 22;
-        r++;
+        ws.getRow(r + 1).height = 22;
+        r += 2;
+        empIndex++;
       }
 
       ws.getColumn(1).width = 28;
-      for (let col = 2; col <= colCount; col++) ws.getColumn(col).width = 16;
+      ws.getColumn(2).width = 12;
+      for (let col = 3; col <= colCount; col++) ws.getColumn(col).width = 16;
     } else {
       const rows = payload.rows ?? [];
       const headers = ["Employee", "Date", "Day", "Location", "Project"];
@@ -328,15 +362,18 @@ async function generatePdf(payload: PlanExportPayload): Promise<Uint8Array> {
 
   function drawBadge(x: number, ry: number, w: number, value: string | null) {
     const label = locationShort(value ?? "");
-    const f = boldFont;
-    const tw = f.widthOfTextAtSize(label, 8);
-    const bx = x + (w - tw - 12) / 2;
-    const badgeH = 16;
     if (!value) { drawDash(x, ry, w); return; }
+
     const badge = BADGE[value];
-    drawRect(bx, ry - 2, tw + 12, badgeH, badge ? badge.bg : ALT_BG);
-    page.drawCircle({ x: bx + 6, y: ry - 10, size: 3, color: rgb(badge ? badge.fg[0]! : GRAY[0]!, badge ? badge.fg[1]! : GRAY[1]!, badge ? badge.fg[2]! : GRAY[2]!) });
-    page.drawText(label, { x: bx + 12, y: ry - 2 - badgeH / 2 + 8 * 0.35, size: 8, font: boldFont, color: rgb(badge ? badge.fg[0]! : GRAY[0]!, badge ? badge.fg[1]! : GRAY[1]!, badge ? badge.fg[2]! : GRAY[2]!) });
+    const tw = boldFont.widthOfTextAtSize(label, 8);
+    const textX = x + (w - tw) / 2;
+    page.drawText(label, {
+      x: textX,
+      y: ry - 11 + 8 * 0.35,
+      size: 8,
+      font: boldFont,
+      color: rgb(badge ? badge.fg[0]! : GRAY[0]!, badge ? badge.fg[1]! : GRAY[1]!, badge ? badge.fg[2]! : GRAY[2]!)
+    });
   }
 
   function drawDash(x: number, ry: number, w: number) {
@@ -353,32 +390,65 @@ async function generatePdf(payload: PlanExportPayload): Promise<Uint8Array> {
     y -= 22;
   }
 
-  // ─── WEEKLY PIVOT TABLE (Image 1 format) ────────────────────────────────────
-  if (payload.viewMode === "weekly" && payload.pivotData?.length) {
+  // ─── WEEKLY / MONTHLY PIVOT TABLE ───────────────────────────────────────────
+  if ((payload.viewMode === "weekly" || payload.viewMode === "monthly_pivot") && payload.pivotData?.length) {
     const days = payload.pivotData[0].days;
     const DAY_W = Math.min(110, Math.floor((CONTENT_W - 170) / days.length));
     const EMP_W = CONTENT_W - DAY_W * days.length;
     const ROW_H = 22;
     const HEADER_H = 30;
 
-    ensureSpace(HEADER_H + ROW_H * 2 + 10);
+    function drawTableHeader() {
+      drawRect(MARGIN, y, CONTENT_W, HEADER_H, HEADER_BG);
+      
+      // employee column header
+      page.drawText("EMPLOYEE", { x: MARGIN + 12, y: y - 18, size: 9, font: boldFont, color: rgb(1, 1, 1) });
+      
+      // type column header
+      const tW = boldFont.widthOfTextAtSize("TYPE", 8);
+      page.drawText("TYPE", { x: MARGIN + EMP_W - 60 + (60 - tW) / 2, y: y - 18, size: 8, font: boldFont, color: rgb(1, 1, 1) });
 
-    // ── Header row ──
-    drawRect(MARGIN, y, CONTENT_W, HEADER_H, HEADER_BG);
-    page.drawText("EMPLOYEE", { x: MARGIN + 12, y: y - 10, size: 9, font: boldFont, color: rgb(1, 1, 1) });
-    for (let i = 0; i < days.length; i++) {
-      const cx = MARGIN + EMP_W + i * DAY_W;
-      const d = days[i]!;
-      const dayLabel = dayOfWeek(d.iso);
-      const dateLabel = dateHeader(d.iso);
-      const isToday = new Date().toISOString().slice(0, 10) === d.iso;
-      const tc = isToday ? [0.12, 0.31, 0.47] : [1, 1, 1];
-      const dc = isToday ? [0.6, 0.8, 1] : [0.75, 0.78, 0.82];
+      for (let i = 0; i < days.length; i++) {
+        const cx = MARGIN + EMP_W + i * DAY_W;
+        const d = days[i]!;
+        const dayLabel = dayOfWeek(d.iso);
+        const dateLabel = dateHeader(d.iso);
+        const isToday = new Date().toISOString().slice(0, 10) === d.iso;
+        const tc = isToday ? [0.12, 0.31, 0.47] : [1, 1, 1];
+        const dc = isToday ? [0.6, 0.8, 1] : [0.75, 0.78, 0.82];
 
-      page.drawText(dateLabel, { x: cx + 4, y: y - 4, size: 8, font: boldFont, color: rgb(tc[0]!, tc[1]!, tc[2]!) });
-      page.drawText(dayLabel, { x: cx + 4, y: y - 24, size: 7, font, color: rgb(dc[0]!, dc[1]!, dc[2]!) });
+        const dateW = boldFont.widthOfTextAtSize(dateLabel, DAY_W < 45 ? 6 : 8);
+        const dayW = font.widthOfTextAtSize(dayLabel, DAY_W < 45 ? 5 : 7);
+
+        page.drawText(dateLabel, {
+          x: cx + (DAY_W - dateW) / 2,
+          y: y - (DAY_W < 45 ? 12 : 10),
+          size: DAY_W < 45 ? 6 : 8,
+          font: boldFont,
+          color: rgb(tc[0]!, tc[1]!, tc[2]!)
+        });
+        page.drawText(dayLabel, {
+          x: cx + (DAY_W - dayW) / 2,
+          y: y - (DAY_W < 45 ? 22 : 24),
+          size: DAY_W < 45 ? 5 : 7,
+          font,
+          color: rgb(dc[0]!, dc[1]!, dc[2]!)
+        });
+      }
+      y -= HEADER_H;
     }
-    y -= HEADER_H;
+
+    function ensureSpaceWithHeader(needed: number) {
+      if (y - needed < 50) {
+        page = doc.addPage([PAGE_W, PAGE_H]);
+        y = PAGE_H - MARGIN;
+        drawTableHeader();
+      }
+    }
+
+    // Draw initial table header
+    ensureSpaceWithHeader(HEADER_H + ROW_H * 2 + 10);
+    drawTableHeader();
 
     // ── Employee rows ──
     const empColX = MARGIN;
@@ -387,7 +457,7 @@ async function generatePdf(payload: PlanExportPayload): Promise<Uint8Array> {
     for (let ei = 0; ei < payload.pivotData.length; ei++) {
       const emp = payload.pivotData[ei]!;
       const employeeHeight = ROW_H * 2;
-      ensureSpace(employeeHeight + 4);
+      ensureSpaceWithHeader(employeeHeight + 4);
 
       const rowBg = ei % 2 === 1 ? ALT_BG : WHITE;
       const hasMismatch = emp.days.some((d) => {
@@ -396,23 +466,34 @@ async function generatePdf(payload: PlanExportPayload): Promise<Uint8Array> {
       });
       const empBg = hasMismatch ? RED_BG : rowBg;
 
-      // ── Employee cell (spans 2 rows) ──
-      drawRect(empColX, y, EMP_W, employeeHeight, empBg);
-      drawBorder(empColX, y, EMP_W, employeeHeight);
+      // ── Employee cell (spans 2 rows, height 44, no avatar badge) ──
+      drawRect(empColX, y, EMP_W - 60, employeeHeight, empBg);
+      drawBorder(empColX, y, EMP_W - 60, employeeHeight);
 
-      const empInit = initials(emp.name);
-      drawRect(empColX + 10, y - 16, 22, 22, [0.94, 0.96, 1]);
-      page.drawText(empInit, { x: empColX + 15, y: y - 24, size: 8, font: boldFont, color: rgb(HEADER_BG[0]!, HEADER_BG[1]!, HEADER_BG[2]!) });
-      page.drawText(emp.name, { x: empColX + 38, y: y - 8, size: 9, font: boldFont, color: rgb(TEXT[0]!, TEXT[1]!, TEXT[2]!) });
-      page.drawText("No Dept", { x: empColX + 38, y: y - 31, size: 7, font, color: rgb(GRAY[0]!, GRAY[1]!, GRAY[2]!) });
+      // Name & Dept (centered vertically inside height 44)
+      page.drawText(emp.name, { x: empColX + 12, y: y - 18, size: 9, font: boldFont, color: rgb(TEXT[0]!, TEXT[1]!, TEXT[2]!) });
+      page.drawText("No Dept", { x: empColX + 12, y: y - 30, size: 7, font, color: rgb(GRAY[0]!, GRAY[1]!, GRAY[2]!) });
+
+      // ── Type column (Row 1: Planned, Row 2: Actual) ──
+      // Row 1 (Planned)
+      drawRect(empColX + EMP_W - 60, y, 60, ROW_H, empBg);
+      drawBorder(empColX + EMP_W - 60, y, 60, ROW_H);
+      const pW = boldFont.widthOfTextAtSize("Planned", 7);
+      page.drawText("Planned", { x: empColX + EMP_W - 60 + (60 - pW) / 2, y: y - 13, size: 7, font: boldFont, color: rgb(0.28, 0.33, 0.41) });
+
+      // Row 2 (Actual)
+      drawRect(empColX + EMP_W - 60, y - ROW_H, 60, ROW_H, empBg);
+      drawBorder(empColX + EMP_W - 60, y - ROW_H, 60, ROW_H);
+      const aW = boldFont.widthOfTextAtSize("Actual", 7);
+      page.drawText("Actual", { x: empColX + EMP_W - 60 + (60 - aW) / 2, y: y - ROW_H - 13, size: 7, font: boldFont, color: rgb(0.28, 0.33, 0.41) });
 
       // ── Plan row ──
       for (let di = 0; di < days.length; di++) {
         const cx = dayColStart + di * DAY_W;
         drawBorder(cx, y, DAY_W, ROW_H);
         drawRect(cx, y, DAY_W, ROW_H, empBg);
-        if (days[di]!.planned) {
-          drawBadge(cx, y, DAY_W, days[di]!.planned);
+        if (emp.days[di]?.planned) {
+          drawBadge(cx, y, DAY_W, emp.days[di]!.planned);
         } else {
           drawDash(cx, y, DAY_W);
         }
@@ -423,7 +504,7 @@ async function generatePdf(payload: PlanExportPayload): Promise<Uint8Array> {
       // ── Actual row ──
       for (let di = 0; di < days.length; di++) {
         const cx = dayColStart + di * DAY_W;
-        const d = days[di]!;
+        const d = emp.days[di]!;
         drawBorder(cx, y, DAY_W, ROW_H);
         drawRect(cx, y, DAY_W, ROW_H, empBg);
 

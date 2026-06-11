@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { format as dateFnsFormat, parseISO, isToday } from "date-fns";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { type DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -40,6 +42,7 @@ import { useTeamWeeklyPlanQuery, useTeamMonthlyPlanQuery } from "@/hooks/queries
 import { useApiClient } from "@/hooks/useApiClient";
 import { useEmployeesQuery } from "@/modules/employees/hooks/useEmployeesQuery";
 import { useAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
+import { useManualAttendanceMutation } from "@/modules/attendance/hooks/mutations/attendance";
 import type { AttendanceRecord } from "@/modules/attendance/types/attendanceTypes";
 import {
   getCurrentWeekState,
@@ -143,11 +146,13 @@ function LocationBadge({ location }: { location: PlanLocationValue | null }) {
   );
 }
 
-function ActualLocationBadge({ record }: { record: AttendanceRecord | undefined }) {
-  if (!record) {
+function ActualLocationBadge({ record, isRemote }: { record?: AttendanceRecord | undefined; isRemote?: boolean }) {
+  const remote = isRemote ?? record?.isRemote ?? false;
+  const hasRecord = record !== undefined || isRemote !== undefined;
+  if (!hasRecord) {
     return <span className="text-[10px] font-medium text-neutral-300">—</span>;
   }
-  if (record.isRemote) {
+  if (remote) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-700">
         <span className="size-1.5 rounded-full bg-blue-500" />
@@ -158,7 +163,7 @@ function ActualLocationBadge({ record }: { record: AttendanceRecord | undefined 
   return (
     <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-teal-50 text-teal-700">
       <span className="size-1.5 rounded-full bg-teal-500" />
-      OFF
+      OFC
     </span>
   );
 }
@@ -262,11 +267,17 @@ function MonthlyPlanTable({
   weekDays,
   isLoading,
   search,
+  orgSlug,
+  memberId,
+  userIdToMemberId,
 }: {
   pivotRows: PlanExportPivotRow[];
   weekDays: { iso: string }[];
   isLoading: boolean;
   search: string;
+  orgSlug: string;
+  memberId: string;
+  userIdToMemberId: Map<string, string>;
 }) {
   const rows = useMemo(() => {
     if (!search.trim()) return pivotRows;
@@ -278,6 +289,56 @@ function MonthlyPlanTable({
   const PAGE_SIZE = 10;
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pagedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const [activeMenuCellM, setActiveMenuCellM] = useState<{ userId: string; date: string } | null>(null);
+  const [menuPosM, setMenuPosM] = useState<{ x: number; y: number } | null>(null);
+  const [isSavingActualM, setIsSavingActualM] = useState(false);
+  const menuRefM = useRef<HTMLDivElement | null>(null);
+  const queryClientM = useQueryClient();
+  const actualMutationM = useManualAttendanceMutation(orgSlug, memberId);
+
+  useEffect(() => {
+    if (!activeMenuCellM) {
+      setMenuPosM(null);
+      return;
+    }
+    const raf = requestAnimationFrame(() => {
+      if (menuRefM.current) {
+        const rect = menuRefM.current.getBoundingClientRect();
+        setMenuPosM({ x: rect.left + rect.width / 2 - 24, y: rect.bottom });
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeMenuCellM]);
+
+  async function handleActualLocationSaveM(userId: string, date: string, isRemote: boolean) {
+    setActiveMenuCellM(null);
+    setMenuPosM(null);
+    const employeeMid = userIdToMemberId.get(userId);
+    if (!employeeMid) {
+      toast.error("Could not resolve employee");
+      return;
+    }
+    setIsSavingActualM(true);
+    try {
+      await actualMutationM.mutateAsync({
+        target_member_id: employeeMid,
+        date,
+        is_remote: isRemote,
+      });
+      await queryClientM.invalidateQueries({ queryKey: ['attendance', orgSlug] });
+      await queryClientM.invalidateQueries({ queryKey: ['weekly-plan', orgSlug] });
+      toast.success('Actual location updated');
+    } catch (err: unknown) {
+      let message = 'Failed to update actual location';
+      if (err instanceof Error) {
+        try { message = (JSON.parse(err.message) as { message: string }).message; } catch { message = err.message; }
+      }
+      toast.error(message);
+    } finally {
+      setIsSavingActualM(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -393,7 +454,7 @@ function MonthlyPlanTable({
                 return d.planned !== d.actualLocation && d.actualLocation !== null;
               });
               return [
-                <tr key={`${row.userId}-plan`} className={cn("transition-colors duration-100", hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60")}>
+                <tr key={`${row.userId}-plan`} className="transition-colors duration-100 hover:bg-canvas/60">
                   <td className="px-4 py-2 sticky left-0 bg-white z-10 border-r border-neutral-100 border-b border-neutral-200 w-[200px] max-w-[200px] overflow-hidden" rowSpan={2}>
                     <div className="flex items-center gap-2">
                       <EmployeeCell name={row.name} />
@@ -411,23 +472,67 @@ function MonthlyPlanTable({
                     </td>
                   ))}
                 </tr>,
-                <tr key={`${row.userId}-actual`} className={cn("transition-colors duration-100 border-b border-neutral-200", hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60")}>
-                  {row.days.map((d) => {
-                    const date = parseISO(d.iso);
+                <tr key={`${row.userId}-actual`} className="transition-colors duration-100 border-b border-neutral-200 hover:bg-canvas/60">
+                  {row.days.map((dayData) => {
+                    const date = parseISO(dayData.iso);
                     const today = isToday(date);
                     const isFut = date > new Date(new Date().setHours(0, 0, 0, 0));
-                    const mismatch = !isFut && d.planned && d.actualLocation && d.planned !== d.actualLocation;
+                    const mismatch = !isFut && dayData.planned && dayData.actualLocation && dayData.planned !== dayData.actualLocation;
+                    const isMenuOpen = activeMenuCellM?.userId === row.userId && activeMenuCellM?.date === dayData.iso;
+                    const isRemoteM = dayData.actualLocation === "WFH";
                     return (
-                      <td key={d.iso} className={cn("px-2 py-2 text-center", today && "bg-primary/3")}>
+                      <td
+                        key={dayData.iso}
+                        className={cn("px-2 py-2 text-center", today && "bg-primary/3")}
+                        onClick={() => {
+                          if (!isFut && !isSavingActualM) {
+                            setActiveMenuCellM({ userId: row.userId, date: dayData.iso });
+                          }
+                        }}
+                      >
                         {isFut ? (
                           <span className="text-[10px] font-medium text-neutral-200">—</span>
-                        ) : d.actualLocation ? (
-                          <div className="flex items-center justify-center gap-1">
-                            <LocationBadge location={d.actualLocation as PlanLocationValue} />
-                            {mismatch && <AlertCircle className="size-2.5 text-red-400 shrink-0" />}
-                          </div>
+                        ) : isMenuOpen ? (
+                          <>
+                            <div ref={menuRefM} className="inline-flex">
+                              {dayData.actualLocation ? (
+                                <LocationBadge location={dayData.actualLocation as PlanLocationValue} />
+                              ) : (
+                                <span className="text-[10px] font-medium text-neutral-300">—</span>
+                              )}
+                            </div>
+                            {createPortal(
+                              <div
+                                className="fixed z-[9999] bg-white rounded-lg shadow-lg border border-neutral-200 py-1 min-w-[48px]"
+                                style={{ left: menuPosM ? menuPosM.x : 0, top: menuPosM ? menuPosM.y : 0 }}
+                                onMouseLeave={() => { setActiveMenuCellM(null); setMenuPosM(null); }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleActualLocationSaveM(row.userId, dayData.iso, false)}
+                                  className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-teal-700 hover:bg-neutral-100 transition-colors"
+                                >
+                                  OFC
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleActualLocationSaveM(row.userId, dayData.iso, true)}
+                                  className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-blue-700 hover:bg-neutral-100 transition-colors"
+                                >
+                                  WFH
+                                </button>
+                              </div>,
+                              document.body,
+                            )}
+                          </>
                         ) : (
-                          <span className="text-[10px] font-medium text-neutral-200">—</span>
+                          <div className={cn(!isFut && "cursor-pointer")}>
+                            {dayData.actualLocation ? (
+                              <LocationBadge location={dayData.actualLocation as PlanLocationValue} />
+                            ) : (
+                              <span className="text-[10px] font-medium text-neutral-300">—</span>
+                            )}
+                          </div>
                         )}
                       </td>
                     );
@@ -483,6 +588,56 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
   const [customDateTo, setCustomDateTo] = useState<string | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [pendingExport, setPendingExport] = useState<PlanExportFormat | null>(null);
+  const [activeMenuCell, setActiveMenuCell] = useState<{ userId: string; date: string } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [isSavingActual, setIsSavingActual] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const queryClient = useQueryClient();
+  const actualMutation = useManualAttendanceMutation(orgSlug, memberId);
+
+  useEffect(() => {
+    if (!activeMenuCell) {
+      setMenuPos(null);
+      return;
+    }
+    const raf = requestAnimationFrame(() => {
+      if (menuRef.current) {
+        const rect = menuRef.current.getBoundingClientRect();
+        setMenuPos({ x: rect.left + rect.width / 2 - 24, y: rect.bottom });
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeMenuCell]);
+
+  async function handleActualLocationSave(userId: string, date: string, isRemote: boolean) {
+    setActiveMenuCell(null);
+    setMenuPos(null);
+    const employeeMid = userIdToMemberId.get(userId);
+    if (!employeeMid) {
+      toast.error("Could not resolve employee");
+      return;
+    }
+    setIsSavingActual(true);
+    try {
+      await actualMutation.mutateAsync({
+        target_member_id: employeeMid,
+        date,
+        is_remote: isRemote,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
+      await queryClient.invalidateQueries({ queryKey: ['weekly-plan', orgSlug] });
+      toast.success('Actual location updated');
+    } catch (err: unknown) {
+      let message = 'Failed to update actual location';
+      if (err instanceof Error) {
+        try { message = (JSON.parse(err.message) as { message: string }).message; } catch { message = err.message; }
+      }
+      toast.error(message);
+    } finally {
+      setIsSavingActual(false);
+    }
+  }
+
   const auth = useApiClient(orgId);
 
   const VIEW_MODES: { mode: PlanTeamView; label: string }[] = [
@@ -991,7 +1146,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                         return isMismatch(planned, employeeAttendance?.get(date)?.status ?? null);
                       });
                       return [
-                        <tr key={`${row.userId}-plan`} className={cn("transition-colors duration-100", hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60")}>
+                        <tr key={`${row.userId}-plan`} className="transition-colors duration-100 hover:bg-canvas/60">
                           <td className="px-4 py-2 sticky left-0 bg-white z-10 border-r border-neutral-100 border-b border-neutral-200 w-[200px] max-w-[200px] overflow-hidden" rowSpan={2}>
                             <div className="flex items-center gap-2">
                               <EmployeeCell name={row.name} />
@@ -1009,7 +1164,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                             </td>
                           ))}
                         </tr>,
-                        <tr key={`${row.userId}-actual`} className={cn("transition-colors duration-100 border-b border-neutral-200", hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60")}>
+                        <tr key={`${row.userId}-actual`} className="transition-colors duration-100 border-b border-neutral-200 hover:bg-canvas/60">
                           {weekDatesTuple.map(({ key, date }) => {
                             const d = parseISO(date);
                             const today = isToday(d);
@@ -1017,14 +1172,72 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                             const actualRecord = employeeAttendance?.get(date);
                             const planned = weekDatesTuple.find((w) => w.key === key)?.planned ?? null;
                             const mismatch = !isFut && isMismatch(planned, actualRecord?.status ?? null);
+                            const isMenuOpen = activeMenuCell?.userId === row.userId && activeMenuCell?.date === date;
                             return (
-                              <td key={key} className={cn("px-2 py-2 text-center", today && "bg-primary/3")}>
+                              <td
+                                key={key}
+                                className={cn("px-2 py-2 text-center", today && "bg-primary/3")}
+                                onClick={() => {
+                                  if (!isFut && !isSavingActual) {
+                                    setActiveMenuCell({ userId: row.userId, date });
+                                  }
+                                }}
+                              >
                                 {isFut ? (
                                   <span className="text-[10px] font-medium text-neutral-200">—</span>
+                                ) : isMenuOpen ? (
+                                  <>
+                                    <div ref={menuRef} className="inline-flex">
+                                      <ActualLocationBadge record={actualRecord} />
+                                    </div>
+                                    {createPortal(
+                                      <div
+                                        className="fixed z-[9999] bg-white rounded-lg shadow-lg border border-neutral-200 py-1 min-w-[48px]"
+                                        style={{ left: menuPos ? menuPos.x : 0, top: menuPos ? menuPos.y : 0 }}
+                                        onMouseLeave={() => { setActiveMenuCell(null); setMenuPos(null); }}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => handleActualLocationSave(row.userId, date, false)}
+                                          className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-teal-700 hover:bg-neutral-100 transition-colors"
+                                        >
+                                          OFC
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleActualLocationSave(row.userId, date, true)}
+                                          className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-blue-700 hover:bg-neutral-100 transition-colors"
+                                        >
+                                          WFH
+                                        </button>
+                                        {actualRecord && (
+                                          <>
+                                            <div className="border-t border-neutral-100 mx-2" />
+                                            <button
+                                              type="button"
+                                              onClick={async () => {
+                                                setActiveMenuCell(null);
+                                                setMenuPos(null);
+                                                setIsSavingActual(true);
+                                                try {
+                                                  await handleActualLocationSave(row.userId, date, !actualRecord.isRemote);
+                                                } finally {
+                                                  setIsSavingActual(false);
+                                                }
+                                              }}
+                                              className="flex items-center justify-center w-full px-3 py-1 text-xs font-mono text-neutral-400 hover:bg-neutral-100 transition-colors"
+                                            >
+                                              Toggle
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>,
+                                      document.body,
+                                    )}
+                                  </>
                                 ) : (
-                                  <div className="flex items-center justify-center gap-1">
+                                  <div className={cn(!isFut && "cursor-pointer")}>
                                     <ActualLocationBadge record={actualRecord} />
-                                    {mismatch && <AlertCircle className="size-2.5 text-red-400 shrink-0" />}
                                   </div>
                                 )}
                               </td>
@@ -1076,6 +1289,9 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
             weekDays={weekDays}
             isLoading={isLoading}
             search={search}
+            orgSlug={orgSlug}
+            memberId={memberId}
+            userIdToMemberId={userIdToMemberId}
           />
         )}
       </div>

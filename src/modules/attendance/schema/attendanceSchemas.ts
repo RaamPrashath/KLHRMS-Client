@@ -24,7 +24,8 @@ export const manualEntrySchema = z
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
     clock_in: z.iso.datetime().optional(),
     clock_out: z.iso.datetime().optional(),
-    entry_type: z.enum(['LEAVE', 'COMP_OFF']).optional(),
+    entry_type: z.enum(['LEAVE', 'COMP_OFF', 'HOLIDAY', 'FLOATING_HOLIDAY']).optional(),
+    is_remote: z.boolean().optional(),
   })
   .refine(
     (d) => !(d.clock_in && d.clock_out) || d.clock_out > d.clock_in,
