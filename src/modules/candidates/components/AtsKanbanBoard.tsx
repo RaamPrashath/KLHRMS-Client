@@ -38,15 +38,18 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
+import { CandidateSlotReviewDialog } from '@/modules/candidates/components/CandidateSlotReviewDialog';
 import { CompleteInterviewDialog } from '@/modules/candidates/components/CompleteInterviewDialog';
 import { AtsPipelineTable } from '@/modules/candidates/components/AtsPipelineTable';
 import { KanbanColumn } from '@/modules/candidates/components/KanbanColumn';
+import { RejectInterviewDialog } from '@/modules/candidates/components/RejectInterviewDialog';
 import { StageConfigDrawer } from '@/modules/candidates/components/StageConfigDrawer';
 import { PipelineSetupCard } from '@/modules/jobs/components/PipelineSetupCard';
 import { PipelineSetupDialog } from '@/modules/jobs/components/PipelineSetupDialog';
 import { authClient } from '@/lib/auth-client';
 import {
   useAcceptInterview,
+  useBookCandidateProposedSlot,
   useCreatePipelineStage,
   useCompleteInterviewMeeting,
   useRejectInterview,
@@ -65,7 +68,7 @@ import type {
   CreatePipelineStageInput,
   UpdatePipelineStageInput,
 } from '@/modules/candidates/schema/atsSchemas';
-import type { MyInterview, PipelineApplication, PipelineStage } from '@/modules/candidates/types/atsTypes';
+import type { MyInterview, PipelineApplication, PipelineStage, RejectInterviewRequest } from '@/modules/candidates/types/atsTypes';
 import type { CreatePipelineStageInput as SetupCreatePipelineStageInput } from '@/modules/jobs/schema/jobRequisitionSchemas';
 import type { RolePermissions } from '@/modules/roles/types/role';
 
@@ -184,6 +187,7 @@ function schedulingInterviewFromApplication(application: PipelineApplication, ev
     applicationId: application.id,
     stageId: application.pipelineStageId,
     stageName: application.currentStage,
+    stageSlug: assignment?.stageSlug ?? null,
     candidate: application.candidate,
     jobTitle: '',
     jobPostingId: application.jobPostingId,
@@ -195,7 +199,7 @@ function schedulingInterviewFromApplication(application: PipelineApplication, ev
     isBackup: false,
     meetingUrl: assignment?.meetLink ?? application.interviewMeeting?.meetingUrl ?? null,
     stageDueDate: null,
-    proposedSlots: [],
+    proposedSlots: assignment?.proposedSlots ?? [],
   };
 }
 
@@ -366,6 +370,7 @@ export function AtsKanbanBoard({
   const completeInterviewMeeting = useCompleteInterviewMeeting(orgSlug, memberId, jobPostingId);
   const acceptInterview = useAcceptInterview(orgSlug, memberId);
   const rejectInterview = useRejectInterview(orgSlug, memberId);
+  const bookCandidateSlot = useBookCandidateProposedSlot(orgSlug, memberId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const pendingStorageKey = useMemo(
     () => `ats-google-pending:${orgSlug}:${jobPostingId ?? 'none'}`,
@@ -375,6 +380,15 @@ export function AtsKanbanBoard({
   const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const [schedulingRequest, setSchedulingRequest] = useState<{ application: PipelineApplication; eventId: string } | null>(null);
+  const [candidateSlotInterview, setCandidateSlotInterview] = useState<MyInterview | null>(null);
+  const [selectedCandidateSlotId, setSelectedCandidateSlotId] = useState<string | null>(null);
+  const [rejectRequest, setRejectRequest] = useState<{
+    applicationId: string;
+    eventId: string;
+    candidateName: string;
+    jobPostingId: string;
+    stageId: string;
+  } | null>(null);
   const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
   const [completionNote, setCompletionNote] = useState('');
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
@@ -668,8 +682,13 @@ export function AtsKanbanBoard({
     });
   }
 
-  function openScheduleInterview() {
-    // Scheduling from kanban happens only after the interviewer accepts and picks candidate-facing slots.
+  function openScheduleInterview(application: PipelineApplication) {
+    const eventId = application.currentAssignment?.eventId ?? application.interviewMeeting?.id;
+    if (!eventId) {
+      toast.error('Interview assignment could not be found. Refresh the pipeline and try again.');
+      return;
+    }
+    void runStageAction({ kind: 'accept-interview', applicationId: application.id, eventId });
   }
 
   async function connectGoogleForEvaluation() {
@@ -836,12 +855,54 @@ export function AtsKanbanBoard({
     }
   }
 
-  function handleRejectInterview(_applicationId: string, eventId: string) {
+  function handleChooseCandidateSlot(application: PipelineApplication) {
+    const assignment = application.currentAssignment;
+    if (!assignment) return;
+    const interview = schedulingInterviewFromApplication(application, assignment.eventId);
+    const firstCandidateSlot = interview.proposedSlots.find((slot) => slot.proposedBy === 'CANDIDATE');
+    setSelectedCandidateSlotId(firstCandidateSlot?.id ?? null);
+    setCandidateSlotInterview(interview);
+  }
+
+  async function handleBookCandidateSlot() {
+    if (!candidateSlotInterview || !selectedCandidateSlotId) return;
+    try {
+      await bookCandidateSlot.mutateAsync({
+        eventId: candidateSlotInterview.eventId,
+        slotId: selectedCandidateSlotId,
+      });
+      toast.success('Interview slot confirmed');
+      setCandidateSlotInterview(null);
+      setSelectedCandidateSlotId(null);
+      await boardQuery.refetch();
+    } catch (error) {
+      toast.error(readActionError(error, 'Could not confirm this slot'));
+    }
+  }
+
+  function handleRejectInterview(applicationId: string, eventId: string) {
+    const application = allBoardApplications.find((item) => item.id === applicationId);
+    if (!application) {
+      toast.error('Candidate could not be found. Refresh the pipeline and try again.');
+      return;
+    }
+    setRejectRequest({
+      applicationId,
+      eventId,
+      candidateName: `${application.candidate.firstName} ${application.candidate.lastName}`.trim() || application.candidate.email,
+      jobPostingId: application.jobPostingId,
+      stageId: application.pipelineStageId,
+    });
+  }
+
+  function submitRejectInterview(payload: RejectInterviewRequest) {
+    if (!rejectRequest) return;
     rejectInterview.mutate(
-      { eventId },
+      { eventId: rejectRequest.eventId, data: payload },
       {
-        onSuccess: () => {
-          toast.success('Interview rejected');
+        onSuccess: (result) => {
+          setRejectRequest(null);
+          toast.success(result.status === 'UNASSIGNED' ? 'Interview rejected and unassigned' : 'Interview rejected and reassigned');
           void boardQuery.refetch();
         },
         onError: (error) => {
@@ -1053,6 +1114,7 @@ export function AtsKanbanBoard({
               onStartInterview={handleStartInterview}
               onAcceptInterview={handleAcceptInterview}
               onRejectInterview={handleRejectInterview}
+              onChooseCandidateSlot={handleChooseCandidateSlot}
               currentMemberId={memberId}
             />
             <div className="flex min-h-0 items-center justify-center">
@@ -1143,6 +1205,7 @@ export function AtsKanbanBoard({
                   onStartInterview={handleStartInterview}
                   onAcceptInterview={handleAcceptInterview}
                   onRejectInterview={handleRejectInterview}
+                  onChooseCandidateSlot={handleChooseCandidateSlot}
                   currentMemberId={memberId}
                 />
               );
@@ -1230,6 +1293,31 @@ export function AtsKanbanBoard({
           if (!open) setSchedulingRequest(null);
         }}
         onSubmit={submitAcceptedInterviewSlots}
+      />
+      <CandidateSlotReviewDialog
+        interview={candidateSlotInterview}
+        selectedSlotId={selectedCandidateSlotId}
+        isSubmitting={bookCandidateSlot.isPending}
+        onSelectedSlotChange={setSelectedCandidateSlotId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCandidateSlotInterview(null);
+            setSelectedCandidateSlotId(null);
+          }
+        }}
+        onSubmit={handleBookCandidateSlot}
+      />
+      <RejectInterviewDialog
+        key={rejectRequest?.eventId ?? 'reject-interview-dialog'}
+        open={rejectRequest !== null}
+        interview={rejectRequest}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        isSubmitting={rejectInterview.isPending}
+        onOpenChange={(open) => {
+          if (!open) setRejectRequest(null);
+        }}
+        onSubmit={submitRejectInterview}
       />
       <CompleteInterviewDialog
         open={completingApplication !== null}

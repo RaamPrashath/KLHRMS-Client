@@ -29,6 +29,7 @@ import type {
   PipelineBoard,
   PipelineJobPosting,
   PipelineStage,
+  RejectInterviewRequest,
   ReshuffleRequest,
   ReshuffleResponse,
   TeamDistributionRequest,
@@ -607,12 +608,27 @@ export async function rejectInterviewAction(params: {
   orgSlug: string;
   memberId: string;
   eventId: string;
+  data?: RejectInterviewRequest;
 }): Promise<RejectInterviewResponse> {
   const res = await fetch(`${getApiUrl()}/candidates/interviews/${params.eventId}/reject`, {
     method: 'POST',
     headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data ?? { mode: 'AUTO' }),
   });
   return handleResponse<RejectInterviewResponse>(res);
+}
+
+export async function bookCandidateProposedSlotAction(params: {
+  orgSlug: string;
+  memberId: string;
+  eventId: string;
+  slotId: string;
+}): Promise<InterviewMeeting> {
+  const res = await fetch(`${getApiUrl()}/candidates/interviews/${params.eventId}/slots/${params.slotId}/book`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<InterviewMeeting>(res);
 }
 
 export async function createReassignmentRequestAction(params: {

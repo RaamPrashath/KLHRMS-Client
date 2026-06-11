@@ -121,6 +121,7 @@ export function KanbanColumn({
   onStartInterview,
   onAcceptInterview,
   onRejectInterview,
+  onChooseCandidateSlot,
   filteredApplications,
   previewApplication,
   isUpdating = false,
@@ -146,6 +147,7 @@ export function KanbanColumn({
   ) => void;
   readonly onAcceptInterview?: (applicationId: string, eventId: string) => void;
   readonly onRejectInterview?: (applicationId: string, eventId: string) => void;
+  readonly onChooseCandidateSlot?: (application: PipelineApplication) => void;
   readonly filteredApplications: PipelineApplication[];
   readonly previewApplication?: PipelineApplication | null;
   readonly isUpdating?: boolean;
@@ -187,6 +189,7 @@ export function KanbanColumn({
         onStartInterview={onStartInterview}
         onAcceptInterview={onAcceptInterview}
         onRejectInterview={onRejectInterview}
+        onChooseCandidateSlot={onChooseCandidateSlot}
         currentMemberId={currentMemberId}
       />
     );

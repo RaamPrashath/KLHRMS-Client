@@ -22,19 +22,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { CandidateSlotReviewDialog } from '@/modules/candidates/components/CandidateSlotReviewDialog';
 import { SchedulingModal } from '@/modules/candidates/components/SchedulingModal';
 import { CompleteInterviewDialog } from '@/modules/candidates/components/CompleteInterviewDialog';
+import { RejectInterviewDialog } from '@/modules/candidates/components/RejectInterviewDialog';
 import { authClient } from '@/lib/auth-client';
 import {
+  useBookCandidateProposedSlot,
   useAcceptInterview,
   useCompleteInterviewMeeting,
-  useCreateReassignmentRequest,
   useFetchMyInterviews,
   useRejectInterview,
   useStartInterviewMeeting,
 } from '@/modules/candidates/hooks/useAtsPipeline';
 import { cn } from '@/lib/utils';
-import type { MyInterview } from '@/modules/candidates/types/atsTypes';
+import type { MyInterview, RejectInterviewRequest } from '@/modules/candidates/types/atsTypes';
 
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
@@ -122,10 +124,13 @@ function statusMeta(status: string): { label: string; className: string } {
     case 'PENDING':
     case 'PENDING_ACCEPTANCE':
       return { label: 'Pending acceptance', className: 'bg-warning-bg text-warning-text border-warning-border' };
+    case 'CANDIDATE_PENDING':
     case 'ACCEPTED':
     case 'PENDING_CANDIDATE':
     case 'PENDING_CANDIDATE_ACCEPTANCE':
-      return { label: 'Pending candidate', className: 'bg-warning-bg text-warning-text border-warning-border' };
+      return { label: 'Candidate Pending', className: 'bg-warning-bg text-warning-text border-warning-border' };
+    case 'PENDING_INTERVIEWER':
+      return { label: 'Pending interviewer', className: 'bg-info-bg text-info-text border-info-border' };
     case 'SCHEDULED':
       return { label: 'Scheduled', className: 'bg-info-bg text-info-text border-info-border' };
     case 'ONGOING':
@@ -134,6 +139,8 @@ function statusMeta(status: string): { label: string; className: string } {
       return { label: 'Completed', className: 'bg-success-bg text-success-text border-success-border' };
     case 'REJECTED':
       return { label: 'Rejected', className: 'bg-destructive-bg text-destructive-text border-destructive-border' };
+    case 'CLOSED':
+      return { label: 'Closed', className: 'bg-neutral-50 text-neutral-500 border-neutral-100' };
     default:
       return {
         label: status.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
@@ -159,24 +166,29 @@ function InterviewActionsCell({
   onAccept,
   onReject,
   onSchedule,
+  onReviewCandidateSlots,
   onStart,
   onComplete,
   isAccepting,
   isRejecting,
+  isBookingSlot,
   isStarting,
 }: {
   readonly interview: MyInterview;
   readonly onAccept: (interview: MyInterview) => void;
   readonly onReject: (interview: MyInterview) => void;
   readonly onSchedule: (interview: MyInterview) => void;
+  readonly onReviewCandidateSlots: (interview: MyInterview) => void;
   readonly onStart: (interview: MyInterview) => void;
   readonly onComplete: (interview: MyInterview) => void;
   readonly isAccepting: boolean;
   readonly isRejecting: boolean;
+  readonly isBookingSlot: boolean;
   readonly isStarting: boolean;
 }) {
   const status = normalizeInterviewStatus(interview.status);
   const canJoinToday = isScheduledToday(interview);
+  const candidateProposedSlots = interview.proposedSlots.filter((slot) => slot.proposedBy === 'CANDIDATE');
 
   if (status === 'PENDING' || status === 'PENDING_ACCEPTANCE') {
     return (
@@ -199,7 +211,22 @@ function InterviewActionsCell({
     );
   }
 
-  if (status === 'ACCEPTED' || status === 'PENDING_CANDIDATE' || status === 'PENDING_CANDIDATE_ACCEPTANCE') {
+  if (status === 'ACCEPTED' || status === 'CANDIDATE_PENDING' || status === 'PENDING_CANDIDATE' || status === 'PENDING_CANDIDATE_ACCEPTANCE' || status === 'PENDING_INTERVIEWER') {
+    if (candidateProposedSlots.length > 0) {
+      return (
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant="default"
+            disabled={isBookingSlot}
+            onClick={() => onReviewCandidateSlots(interview)}
+          >
+            <CalendarPlus className="size-4" />
+            Choose slot
+          </Button>
+        </div>
+      );
+    }
     return null;
   }
 
@@ -216,11 +243,7 @@ function InterviewActionsCell({
 
   if (status === 'SCHEDULED') {
     return (
-      <div className="flex items-center justify-end gap-2">
-        <Button size="sm" variant="outline" onClick={() => onSchedule(interview)}>
-          <RotateCcw className="size-4" />
-          Reschedule
-        </Button>
+      <div className="flex items-center justify-end">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -259,82 +282,9 @@ function InterviewActionsCell({
   }
 
   if (status === 'REJECTED') return null;
+  if (status === 'CLOSED') return null;
 
   return null;
-}
-
-function ReassignmentDialog({
-  interview,
-  onClose,
-  memberId,
-  orgSlug,
-}: {
-  readonly interview: MyInterview;
-  readonly onClose: () => void;
-  readonly memberId: string;
-  readonly orgSlug: string;
-}) {
-  const [reason, setReason] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const createRequest = useCreateReassignmentRequest(orgSlug, memberId);
-
-  const handleSubmit = async () => {
-    if (!reason.trim()) {
-      toast.error('Please provide a reason for reassignment');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await createRequest.mutateAsync({
-        eventId: interview.eventId,
-        data: { reason: reason.trim() },
-      });
-      toast.success('Reassignment request sent to HR');
-      onClose();
-    } catch {
-      toast.error('Failed to send reassignment request');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-        <h3 className="mb-4 text-lg font-semibold text-neutral-900">
-          Request Reassignment
-        </h3>
-        <p className="mb-4 text-sm text-neutral-600">
-          Candidate: {candidateName(interview.candidate.firstName, interview.candidate.lastName)}
-        </p>
-        <textarea
-          placeholder="Please provide a reason for requesting reassignment..."
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          className="mb-4 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          rows={4}
-        />
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Sending...' : 'Send Request'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 const SKELETON_IDS = Array.from({ length: 8 }, (_, i) => `skeleton-row-${i}`);
@@ -347,8 +297,10 @@ export function InterviewsPageShell({
   readonly memberId: string;
 }) {
   const router = useRouter();
-  const [reassignmentInterview, setReassignmentInterview] = useState<MyInterview | null>(null);
+  const [rejectRequest, setRejectRequest] = useState<MyInterview | null>(null);
   const [schedulingInterview, setSchedulingInterview] = useState<MyInterview | null>(null);
+  const [candidateSlotInterview, setCandidateSlotInterview] = useState<MyInterview | null>(null);
+  const [selectedCandidateSlotId, setSelectedCandidateSlotId] = useState<string | null>(null);
   const [completingInterview, setCompletingInterview] = useState<MyInterview | null>(null);
   const [completionNote, setCompletionNote] = useState('');
   const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
@@ -356,6 +308,7 @@ export function InterviewsPageShell({
   const pendingSchedulingInterviewRef = useRef<MyInterview | null>(null);
   const interviewsQuery = useFetchMyInterviews(orgSlug, memberId);
   const acceptInterview = useAcceptInterview(orgSlug, memberId);
+  const bookCandidateSlot = useBookCandidateProposedSlot(orgSlug, memberId);
   const rejectInterview = useRejectInterview(orgSlug, memberId);
   const startInterview = useStartInterviewMeeting(orgSlug, memberId, null);
   const completeInterview = useCompleteInterviewMeeting(orgSlug, memberId, null);
@@ -443,14 +396,20 @@ export function InterviewsPageShell({
   }
 
   function handleReject(interview: MyInterview) {
+    setRejectRequest(interview);
+  }
+
+  function submitRejectInterview(payload: RejectInterviewRequest) {
+    if (!rejectRequest) return;
     rejectInterview.mutate(
-      { eventId: interview.eventId },
+      { eventId: rejectRequest.eventId, data: payload },
       {
         onSuccess: (result) => {
+          setRejectRequest(null);
           if (result.status === 'ESCALATED') {
-            toast.success('Interview rejected. Assigning to the next available interviewer.');
+            toast.success('Interview rejected and reassigned.');
           } else {
-            toast.success('Interview rejected. The candidate is back in the unassigned pool.');
+            toast.success('Interview rejected and unassigned.');
           }
         },
         onError: () => {
@@ -487,6 +446,27 @@ export function InterviewsPageShell({
         },
       },
     );
+  }
+
+  function handleReviewCandidateSlots(interview: MyInterview) {
+    const firstCandidateSlot = interview.proposedSlots.find((slot) => slot.proposedBy === 'CANDIDATE');
+    setSelectedCandidateSlotId(firstCandidateSlot?.id ?? null);
+    setCandidateSlotInterview(interview);
+  }
+
+  async function handleBookCandidateSlot() {
+    if (!candidateSlotInterview || !selectedCandidateSlotId) return;
+    try {
+      await bookCandidateSlot.mutateAsync({
+        eventId: candidateSlotInterview.eventId,
+        slotId: selectedCandidateSlotId,
+      });
+      toast.success('Interview slot confirmed');
+      setCandidateSlotInterview(null);
+      setSelectedCandidateSlotId(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not confirm this slot');
+    }
   }
 
   async function handleComplete() {
@@ -579,6 +559,10 @@ export function InterviewsPageShell({
                         <span className="mt-0.5 block truncate text-xs text-neutral-500">
                           {formatDate(interview.scheduledStartAt)} - {formatTimeRange(interview)}
                         </span>
+                      ) : interview.proposedSlots.some((slot) => slot.proposedBy === 'CANDIDATE') ? (
+                        <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                          Candidate proposed {interview.proposedSlots.filter((slot) => slot.proposedBy === 'CANDIDATE').length} slot(s)
+                        </span>
                       ) : null}
                     </div>
 
@@ -592,10 +576,12 @@ export function InterviewsPageShell({
                         onAccept={handleAccept}
                         onReject={handleReject}
                         onSchedule={handleSchedule}
+                        onReviewCandidateSlots={handleReviewCandidateSlots}
                         onStart={handleStart}
                         onComplete={(item) => setCompletingInterview(item)}
                         isAccepting={acceptInterview.isPending}
                         isRejecting={rejectInterview.isPending}
+                        isBookingSlot={bookCandidateSlot.isPending}
                         isStarting={startInterview.isPending}
                       />
                     </div>
@@ -607,14 +593,23 @@ export function InterviewsPageShell({
         </div>
       </div>
 
-      {reassignmentInterview && (
-        <ReassignmentDialog
-          interview={reassignmentInterview}
-          onClose={() => setReassignmentInterview(null)}
-          memberId={memberId}
-          orgSlug={orgSlug}
-        />
-      )}
+      <RejectInterviewDialog
+        key={rejectRequest?.eventId ?? 'reject-interview-dialog'}
+        open={rejectRequest !== null}
+        interview={rejectRequest ? {
+          eventId: rejectRequest.eventId,
+          jobPostingId: rejectRequest.jobPostingId,
+          stageId: rejectRequest.stageId,
+          candidateName: candidateName(rejectRequest.candidate.firstName, rejectRequest.candidate.lastName),
+        } : null}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        isSubmitting={rejectInterview.isPending}
+        onOpenChange={(open) => {
+          if (!open) setRejectRequest(null);
+        }}
+        onSubmit={submitRejectInterview}
+      />
 
       <Dialog open={googleConnectOpen} onOpenChange={setGoogleConnectOpen}>
         <DialogContent>
@@ -668,6 +663,19 @@ export function InterviewsPageShell({
             toast.error(isReschedule ? 'Could not reschedule this interview' : 'Could not send slots');
           }
         }}
+      />
+      <CandidateSlotReviewDialog
+        interview={candidateSlotInterview}
+        selectedSlotId={selectedCandidateSlotId}
+        isSubmitting={bookCandidateSlot.isPending}
+        onSelectedSlotChange={setSelectedCandidateSlotId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCandidateSlotInterview(null);
+            setSelectedCandidateSlotId(null);
+          }
+        }}
+        onSubmit={handleBookCandidateSlot}
       />
       <CompleteInterviewDialog
         key={completingInterview?.eventId ?? 'closed-complete-interview'}

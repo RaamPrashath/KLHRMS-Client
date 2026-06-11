@@ -4,7 +4,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { AnimatePresence, motion } from 'framer-motion';
 import { isSameDay } from 'date-fns';
-import { Check, CheckCircle2, Clock, Copy, Gauge, Play, RotateCcw, ShieldAlert, Sparkles, X } from 'lucide-react';
+import { CalendarPlus, Check, CheckCircle2, Clock, Copy, Gauge, Play, RotateCcw, ShieldAlert, Sparkles, X } from 'lucide-react';
 import { useState, type CSSProperties } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -79,7 +79,11 @@ function hasInterviewerAcceptancePending(status: string | null): boolean {
 }
 
 function hasCandidateReplyPending(status: string | null): boolean {
-  return status === 'ACCEPTED';
+  return status === 'ACCEPTED' || status === 'CANDIDATE_PENDING';
+}
+
+function hasInterviewerSlotPending(status: string | null): boolean {
+  return status === 'PENDING_INTERVIEWER';
 }
 
 export function CandidateCard({
@@ -91,6 +95,7 @@ export function CandidateCard({
   onCompleteInterview,
   onAcceptInterview,
   onRejectInterview,
+  onChooseCandidateSlot,
   isOverlay = false,
   compact = false,
   draggable = true,
@@ -110,6 +115,7 @@ export function CandidateCard({
   ) => void;
   onAcceptInterview?: (applicationId: string, eventId: string) => void;
   onRejectInterview?: (applicationId: string, eventId: string) => void;
+  onChooseCandidateSlot?: (application: PipelineApplication) => void;
   isOverlay?: boolean;
   compact?: boolean;
   draggable?: boolean;
@@ -128,6 +134,7 @@ export function CandidateCard({
   const assignmentStatus = normalizedAssignmentStatus(assignment?.status);
   const hasPendingInterviewerAssignment = assignment !== null && meeting === null && hasInterviewerAcceptancePending(assignmentStatus);
   const hasPendingCandidateReply = assignment !== null && meeting === null && hasCandidateReplyPending(assignmentStatus);
+  const hasPendingInterviewerSlot = assignment !== null && meeting === null && hasInterviewerSlotPending(assignmentStatus);
   const hasAssignmentStatus = assignment !== null && meeting === null && Boolean(assignmentStatus);
   const isOngoing = meeting?.status === 'ONGOING';
   const isPending = meeting?.status === 'PENDING';
@@ -223,6 +230,28 @@ export function CandidateCard({
                   </p>
                 </PopoverContent>
               </Popover>
+            ) : hasPendingInterviewerSlot && assignment ? (
+              <Popover open={scheduledOpen} onOpenChange={setScheduledOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Candidate proposed slots"
+                    onClick={(event) => event.stopPropagation()}
+                    onMouseEnter={() => setScheduledOpen(true)}
+                    onMouseLeave={() => setScheduledOpen(false)}
+                  >
+                    <Clock className="size-4 text-info-text" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" className="w-60 p-3" onMouseEnter={() => setScheduledOpen(true)} onMouseLeave={() => setScheduledOpen(false)}>
+                  <p className="text-xs font-medium text-neutral-700">
+                    Candidate proposed slots
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {assignment.interviewer?.name ?? 'Interviewer'} needs to choose one slot.
+                  </p>
+                </PopoverContent>
+              </Popover>
             ) : meeting?.status === 'PENDING' ? (
               <Popover open={scheduledOpen} onOpenChange={setScheduledOpen}>
                 <PopoverTrigger asChild>
@@ -233,7 +262,7 @@ export function CandidateCard({
                     onMouseEnter={() => setScheduledOpen(true)}
                     onMouseLeave={() => setScheduledOpen(false)}
                   >
-                    <Clock className="size-4 text-warning-text" />
+                    <Clock className="size-4 text-success-text" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent side="top" align="end" className="w-60 p-3" onMouseEnter={() => setScheduledOpen(true)} onMouseLeave={() => setScheduledOpen(false)}>
@@ -328,7 +357,7 @@ export function CandidateCard({
                     onMouseEnter={() => setScheduledOpen(true)}
                     onMouseLeave={() => setScheduledOpen(false)}
                   >
-                    <Clock className="size-4 text-info-text" />
+                    <Clock className="size-4 text-success-text" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent side="top" align="end" className="w-60 p-3" onMouseEnter={() => setScheduledOpen(true)} onMouseLeave={() => setScheduledOpen(false)}>
@@ -345,7 +374,7 @@ export function CandidateCard({
         ) : null}
       </div>
 
-      {!compact && (application.aiScore !== null || aiStatus || application.isFlaggedForCheating || (meetingEnabled && isPending && meeting?.meetingUrl)) ? (
+      {!compact && (application.aiScore !== null || aiStatus || application.isFlaggedForCheating || (meetingEnabled && (isPending || isOngoing) && meeting?.meetingUrl)) ? (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {application.aiScore !== null ? (
             <span className="inline-flex items-center gap-1 rounded-lg bg-primary-ghost px-2 py-0.5 font-mono text-xs font-medium text-primary">
@@ -453,7 +482,22 @@ export function CandidateCard({
                 </Button>
               </>
             ) : null}
-            {(isPending || isCompleted) && onScheduleInterview ? (
+            {hasPendingInterviewerSlot && assignment?.interviewer?.memberId === currentMemberId && onChooseCandidateSlot ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="default"
+                className="h-8 text-xs"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onChooseCandidateSlot(application);
+                }}
+              >
+                <CalendarPlus className="size-3.5" />
+                Choose slot
+              </Button>
+            ) : null}
+            {isCompleted && onScheduleInterview ? (
               <Button
                 type="button"
                 size="sm"
@@ -468,7 +512,7 @@ export function CandidateCard({
                 Reschedule
               </Button>
             ) : null}
-            {(isPending || isCompleted) ? (
+            {isPending ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>

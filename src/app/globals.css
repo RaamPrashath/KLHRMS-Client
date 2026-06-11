@@ -202,10 +202,10 @@
        SHADOWS / ELEVATION
        Soft, layered — never hard or dramatic
     ---------------------------------------------------------- */
-    --shadow-1: 1px 1px 0px 0px var(--slate-8);
-    --shadow-2: 2px 2px 0px 0px var(--indigo-9);
-    --shadow-3: 3px 3px 0px 0px var(--indigo-9);
-    --shadow-4: 5px 5px 0px 0px var(--indigo-9);
+    --shadow-1: 0 8px 30px rgb(0 0 0 / 0.04);
+    --shadow-2: 0 12px 36px rgb(0 0 0 / 0.06);
+    --shadow-3: 0 18px 48px rgb(0 0 0 / 0.08);
+    --shadow-4: 0 24px 70px rgb(0 0 0 / 0.12);
     --shadow-focus: 0 0 0 3px var(--indigo-4);
     --shadow-focus-error: 0 0 0 3px rgba(234, 67, 53, 0.12);
 
@@ -957,4 +957,4 @@ body.Sessions23Wave--isLoaded .Sessions23Wave canvas {
     font-size: 11px !important;
     gap: 0.25rem !important;
   }
-}
+}

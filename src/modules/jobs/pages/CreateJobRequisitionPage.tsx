@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, ArrowLeft, Brain, CheckCircle2, Send, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Brain } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
@@ -11,8 +11,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getScope, type RolePermissions } from '@/lib/hrms-roles';
 import { BasicInfoSection } from '@/modules/jobs/components/sections/BasicInfoSection';
-import { CandidateRequirementsSection } from '@/modules/jobs/components/sections/CandidateRequirementsSection';
-import { CompensationSection } from '@/modules/jobs/components/sections/CompensationSection';
 import { HiringContextSection } from '@/modules/jobs/components/sections/HiringContextSection';
 import { KnockoutRuleSection } from '@/modules/jobs/components/sections/KnockoutRuleSection';
 import { PostingContentSection } from '@/modules/jobs/components/sections/PostingContentSection';
@@ -170,20 +168,15 @@ export function CreateJobRequisitionPage({
   const sectionCompletion = useMemo(
     () => ({
       basicInfo: !!(watchedValues.title && watchedValues.departmentId),
-      hiringContext: !!watchedValues.hiringReason,
-      compensation: watchedValues.salaryMin != null || watchedValues.salaryMax != null,
-      requirements:
+      hiringContext:
+        !!watchedValues.hiringReason ||
         (watchedValues.skills?.length ?? 0) > 0 ||
         (watchedValues.certifications?.length ?? 0) > 0 ||
         !!watchedValues.experienceLevel ||
         watchedValues.minExperience != null ||
         !!watchedValues.education?.trim(),
-      postingContent:
-        !!watchedValues.roleSummary?.trim() ||
-        !!watchedValues.responsibilities?.trim() ||
-        !!watchedValues.requirementsRich?.trim() ||
-        !!watchedValues.benefits?.trim() ||
-        !!watchedValues.aboutTeam?.trim(),
+      postingContent: !!watchedValues.roleSummary?.trim(),
+      knockoutRule: !!watchedValues.knockoutRule?.trim(),
     }),
     [watchedValues],
   );
@@ -245,23 +238,6 @@ export function CreateJobRequisitionPage({
               </Link>
             </Button>
           ) : null}
-          {isReview ? (
-            <>
-              <Button type="button" variant="destructive" onClick={onReject} disabled={approveLoading || rejectLoading}>
-                <XCircle className="size-4" />
-                Reject
-              </Button>
-              <Button type="submit" form="job-requisition-form" disabled={approveLoading || rejectLoading}>
-                <CheckCircle2 className="size-4" />
-                {approveLoading ? 'Approving...' : 'Approve'}
-              </Button>
-            </>
-          ) : isReadOnly ? null : (
-            <Button type="submit" form="job-requisition-form" disabled={submitMutation.isPending || isSaving}>
-              <Send className="size-4" />
-              {submitMutation.isPending ? 'Submitting...' : 'Submit for Approval'}
-            </Button>
-          )}
         </div>
       </div>
 
@@ -274,8 +250,6 @@ export function CreateJobRequisitionPage({
           <fieldset disabled={isReadOnly} className="space-y-10">
             <BasicInfoSection form={form} departments={departments} />
             <HiringContextSection form={form} orgMembers={orgMembers} />
-            <CompensationSection form={form} />
-            <CandidateRequirementsSection form={form} />
             <PostingContentSection form={form} readOnly={isReadOnly} />
             <KnockoutRuleSection form={form} />
           </fieldset>
@@ -285,6 +259,15 @@ export function CreateJobRequisitionPage({
           sectionCompletion={sectionCompletion}
           approvals={initialData?.approvals}
           showApprovals={!!initialData && initialData.status !== 'DRAFT'}
+          formId="job-requisition-form"
+          mode={pageMode}
+          isSubmitPending={submitMutation.isPending}
+          isSaving={isSaving}
+          approveLoading={approveLoading}
+          rejectLoading={rejectLoading}
+          onSubmitForApproval={handleSubmitForApproval}
+          onApprove={handleApprove}
+          onReject={onReject}
         />
       </div>
     </div>

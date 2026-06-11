@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils";
 type DocArticle = {
     id: string;
     title: string;
-    eyebrow: string;
     summary: string;
     icon: LucideIcon;
     screenshots?: DocScreenshot[];
@@ -70,7 +69,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "login",
                 title: "Log in to HRMS",
-                eyebrow: "Account access",
                 summary: "Use this when you need to enter the employee portal and reach your workspace.",
                 icon: KeyRound,
                 screenshots: [
@@ -102,7 +100,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "navigation",
                 title: "Move around the portal",
-                eyebrow: "Navigation",
                 summary: "Use the sidebar to open the module you need, then use page tabs or buttons for the task.",
                 icon: LayoutDashboard,
                 screenshots: [
@@ -110,11 +107,6 @@ const docGroups: DocGroup[] = [
                         "Screenshot 2026-06-10 183706.png",
                         "Kovan HRMS dashboard with the left navigation sidebar and quick shortcuts.",
                         "Dashboard: use the left sidebar to switch modules, or use quick shortcuts for common tasks.",
-                    ),
-                    shot(
-                        "Screenshot 2026-06-10 175120.png",
-                        "Documentation guide layout with a docs sidebar and article content.",
-                        "Docs layout reference: pick a topic on the left, then read the matching steps on the right.",
                     ),
                 ],
                 when: [
@@ -144,15 +136,9 @@ const docGroups: DocGroup[] = [
             {
                 id: "clock-in",
                 title: "Clock in",
-                eyebrow: "Daily attendance",
                 summary: "Start your workday by recording where you are working and what you plan to work on.",
                 icon: Clock3,
                 screenshots: [
-                    shot(
-                        "Screenshot 2026-06-10 183717.png",
-                        "Clock-in confirmation popover showing detected office location and empty project fields.",
-                        "Clock-in popover: confirm Office or Remote, then choose project, task, and work summary.",
-                    ),
                     shot(
                         "Screenshot 2026-06-10 184717.png",
                         "Clock-in popover filled with project, task, and work summary before submitting.",
@@ -193,16 +179,8 @@ const docGroups: DocGroup[] = [
             {
                 id: "clock-out",
                 title: "Clock out",
-                eyebrow: "Daily attendance",
                 summary: "End your active session and submit the work summary for the day.",
                 icon: CheckCircle2,
-                screenshots: [
-                    shot(
-                        "Screenshot 2026-06-10 185839.png",
-                        "Attendance page showing an active timer and Clock Out button.",
-                        "Attendance page while clocked in: use Clock Out at the top-right when the work session is complete.",
-                    ),
-                ],
                 when: [
                     "You are done working for the day.",
                     "You need to close an active clock-in session.",
@@ -232,7 +210,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "my-attendance",
                 title: "Check my attendance",
-                eyebrow: "Attendance history",
                 summary: "Review your attendance days, statuses, hours, and work summaries.",
                 icon: CalendarCheck2,
                 screenshots: [
@@ -289,7 +266,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "timesheet",
                 title: "Fill timesheet or work logs",
-                eyebrow: "Work logging",
                 summary: "Use work logs when your team needs a detailed project-wise breakdown of time.",
                 icon: ClipboardCheck,
                 screenshots: [
@@ -334,7 +310,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "weekly-plan",
                 title: "Save weekly or monthly plan",
-                eyebrow: "Work planning",
                 summary: "Plan whether you will work from office, remote, or another allowed location.",
                 icon: ListChecks,
                 when: [
@@ -370,15 +345,9 @@ const docGroups: DocGroup[] = [
             {
                 id: "apply-leave",
                 title: "Apply for leave",
-                eyebrow: "Leave request",
                 summary: "Submit a leave request for approval and track its status.",
                 icon: CalendarCheck2,
                 screenshots: [
-                    shot(
-                        "Screenshot 2026-06-10 190347.png",
-                        "Apply Leave side drawer with empty leave type, dates, days, and reason fields.",
-                        "Apply Leave drawer: start by choosing the leave type, start date, and end date.",
-                    ),
                     shot(
                         "Screenshot 2026-06-10 190410.png",
                         "Apply Leave drawer filled with casual leave, dates, calculated days, and reason field.",
@@ -416,7 +385,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "leave-status",
                 title: "Track leave status",
-                eyebrow: "Leave history",
                 summary: "Check whether your leave is pending, approved, rejected, or cancelled.",
                 icon: FileText,
                 screenshots: [
@@ -450,7 +418,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "leave-calendar",
                 title: "Use the leave calendar",
-                eyebrow: "Team visibility",
                 summary: "See leave days and holidays in a calendar view.",
                 icon: CalendarCheck2,
                 screenshots: [
@@ -483,7 +450,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "employees",
                 title: "Find an employee",
-                eyebrow: "Employee directory",
                 summary: "Search employee details, role, department, manager, and contact information.",
                 icon: Users,
                 when: [
@@ -509,7 +475,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "departments",
                 title: "Create or update a department",
-                eyebrow: "Departments",
                 summary: "Use departments to group employees, heads, and related projects.",
                 icon: Building2,
                 when: [
@@ -540,7 +505,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "projects",
                 title: "Create a project and add members",
-                eyebrow: "Projects",
                 summary: "Projects organize work and feed project selection in attendance work logs.",
                 icon: BriefcaseBusiness,
                 when: [
@@ -575,7 +539,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "permissions",
                 title: "Update permissions",
-                eyebrow: "Roles",
                 summary: "Roles decide which modules and actions a member can use.",
                 icon: ShieldCheck,
                 when: [
@@ -608,7 +571,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "job-requisition",
                 title: "Create a job requisition",
-                eyebrow: "Hiring request",
                 summary: "Raise a request for a new role before publishing or moving candidates.",
                 icon: BriefcaseBusiness,
                 screenshots: [
@@ -616,11 +578,6 @@ const docGroups: DocGroup[] = [
                         "Screenshot 2026-06-10 190505.png",
                         "Job Requisitions page with draft, pending, approved, and approval status columns.",
                         "Job requisitions list: open an existing request or click New Requisition to create one.",
-                    ),
-                    shot(
-                        "Screenshot 2026-06-10 170034.png",
-                        "Create Requisition page showing basic information and hiring context fields.",
-                        "Create requisition form: fill the required sections, then submit for approval when ready.",
                     ),
                     shot(
                         "Screenshot 2026-06-10 190535.png",
@@ -654,7 +611,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "recruitment-kanban",
                 title: "Use the candidate Kanban board",
-                eyebrow: "Candidate pipeline",
                 summary: "Move candidates through hiring stages from application to final decision.",
                 icon: LayoutDashboard,
                 screenshots: [
@@ -704,7 +660,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "screening-stage",
                 title: "Screen candidates",
-                eyebrow: "Default stage",
                 summary: "Use regular stages like Applied, Screening, Shortlist, or Review for flexible candidate sorting.",
                 icon: ListChecks,
                 screenshots: [
@@ -737,7 +692,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "interview-stage",
                 title: "Schedule and manage interviews",
-                eyebrow: "Interview stage",
                 summary: "Use interview stages when candidates need interviewer assignment and meetings.",
                 icon: Users,
                 screenshots: [
@@ -750,11 +704,6 @@ const docGroups: DocGroup[] = [
                         "Screenshot 2026-06-10 190759.png",
                         "Interview Kanban column with candidate cards and Join or Reschedule actions.",
                         "Interview column: candidate cards show actions like Join or Reschedule when interviews are assigned.",
-                    ),
-                    shot(
-                        "Screenshot 2026-06-10 191013.png",
-                        "Interview assignment page with interviewer columns and assigned candidate cards.",
-                        "Interview assignments: check each interviewer column, then save assignments when balanced.",
                     ),
                 ],
                 when: [
@@ -790,7 +739,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "offer-stage",
                 title: "Send an offer",
-                eyebrow: "Offer stage",
                 summary: "Prepare and send an offer letter to selected candidates.",
                 icon: FileText,
                 screenshots: [
@@ -845,7 +793,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "hired-rejected-onboarding",
                 title: "Finish hiring",
-                eyebrow: "Final stages",
                 summary: "Use Hired, Rejected, and Onboarding stages to close the candidate journey cleanly.",
                 icon: CheckCircle2,
                 screenshots: [
@@ -888,7 +835,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "asset-create",
                 title: "Add an asset",
-                eyebrow: "Asset inventory",
                 summary: "Create inventory for laptops, monitors, phones, cards, furniture, or other company assets.",
                 icon: Laptop,
                 when: [
@@ -916,7 +862,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "asset-issue",
                 title: "Issue an asset to an employee",
-                eyebrow: "Assignment",
                 summary: "Assign available assets to employees and keep a record of who has what.",
                 icon: Archive,
                 when: [
@@ -942,7 +887,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "asset-return",
                 title: "Return an asset",
-                eyebrow: "Return flow",
                 summary: "Record returned assets and decide whether they go back to stock or need action.",
                 icon: ClipboardCheck,
                 when: [
@@ -969,7 +913,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "maintenance",
                 title: "Create a maintenance ticket",
-                eyebrow: "Repair and service",
                 summary: "Track repair, service, inspection, replacement, upgrade, warranty, or damage checks.",
                 icon: HelpCircle,
                 when: [
@@ -993,7 +936,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "procurement",
                 title: "Raise a procurement request",
-                eyebrow: "Purchase request",
                 summary: "Request purchase approval for new assets or replacements.",
                 icon: FileText,
                 when: [
@@ -1020,7 +962,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "purchase-order",
                 title: "Issue a purchase order",
-                eyebrow: "Finance approval",
                 summary: "Generate or send a purchase order after a procurement request is approved.",
                 icon: FileText,
                 when: [
@@ -1050,7 +991,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "helpdesk-ticket",
                 title: "Raise a helpdesk ticket",
-                eyebrow: "Employee support",
                 summary: "Ask for help with an asset issue or a general support request.",
                 icon: HelpCircle,
                 when: [
@@ -1087,7 +1027,6 @@ const docGroups: DocGroup[] = [
             {
                 id: "helpdesk-track",
                 title: "Track or withdraw my ticket",
-                eyebrow: "My tickets",
                 summary: "Follow ticket progress or withdraw requests that are no longer needed.",
                 icon: ClipboardCheck,
                 when: [
@@ -1133,7 +1072,6 @@ export function DocumentationPageShell({ orgSlug }: Readonly<{ orgSlug: string }
                     const haystack = [
                         group.title,
                         article.title,
-                        article.eyebrow,
                         article.summary,
                         ...article.when,
                         ...article.steps,
@@ -1216,27 +1154,10 @@ export function DocumentationPageShell({ orgSlug }: Readonly<{ orgSlug: string }
                     </label>
                 </div>
 
-                <section className="border-b border-neutral-100 bg-surface px-5 py-12 md:px-12 lg:px-20">
-                    <div className="max-w-4xl">
-                        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-primary">Kovan Docs</p>
-                        <h1 className="text-3xl font-bold tracking-tight text-neutral-900 md:text-[40px] md:leading-[1.08]">
-                            Employee helper guide
-                        </h1>
-                        <p className="mt-5 max-w-3xl text-base leading-7 text-neutral-500">
-                            Short, practical guides for everyday HRMS tasks. Pick a topic from the sidebar and follow the steps exactly as they appear in the product.
-                        </p>
-                        <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                            <HeroStat label="Guides" value={String(allArticles.length)} />
-                            <HeroStat label="Modules" value={String(docGroups.length)} />
-                            <HeroStat label="Style" value="How-to" />
-                        </div>
-                    </div>
-                </section>
-
                 <section className="px-5 py-8 md:px-12 lg:px-20">
                     <div className="max-w-4xl space-y-5">
                         {filteredGroups.length === 0 ? (
-                            <div className="rounded-xl border border-neutral-100 bg-surface p-8 text-center shadow-[var(--shadow-1)]">
+                            <div className="rounded-xl bg-surface p-8 text-center shadow-[var(--shadow-1)]">
                                 <p className="text-lg font-semibold">No guide found</p>
                                 <p className="mt-2 text-sm text-neutral-500">Try searching for clock in, leave, asset, offer, or helpdesk.</p>
                             </div>
@@ -1285,15 +1206,6 @@ function DocsBrand({ orgSlug, compact = false }: Readonly<{ orgSlug: string; com
     );
 }
 
-function HeroStat({ label, value }: Readonly<{ label: string; value: string }>) {
-    return (
-        <div className="rounded-lg border border-neutral-100 bg-canvas px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">{label}</p>
-            <p className="mt-1 text-xl font-semibold text-neutral-900">{value}</p>
-        </div>
-    );
-}
-
 function GuideArticle({
     article,
     active,
@@ -1310,8 +1222,8 @@ function GuideArticle({
             id={article.id}
             onMouseEnter={onEnter}
             className={cn(
-                "scroll-mt-8 rounded-xl border bg-surface p-5 shadow-[var(--shadow-1)] transition md:p-7",
-                active ? "border-primary/30" : "border-neutral-100",
+                "scroll-mt-8 rounded-xl bg-surface p-5 shadow-[var(--shadow-1)] transition md:p-7",
+                active && "shadow-[var(--shadow-2)]",
             )}
         >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -1319,8 +1231,7 @@ function GuideArticle({
                     <Icon className="size-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-primary">{article.eyebrow}</p>
-                    <h3 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-900">{article.title}</h3>
+                    <h3 className="text-2xl font-semibold tracking-tight text-neutral-900">{article.title}</h3>
                     <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-500">{article.summary}</p>
                 </div>
             </div>
@@ -1333,7 +1244,7 @@ function GuideArticle({
                     {article.fields ? <GuideBlock title="What to fill" items={article.fields} variant="plain" /> : null}
                     {article.after ? <GuideBlock title="What happens next" items={article.after} variant="plain" /> : null}
                 </div>
-                <aside className="h-fit rounded-lg border border-neutral-100 bg-canvas p-4">
+                <aside className="h-fit rounded-lg bg-canvas p-4 shadow-[var(--shadow-1)]">
                     <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
                         <ChevronRight className="size-4 text-primary" />
                         Quick notes
