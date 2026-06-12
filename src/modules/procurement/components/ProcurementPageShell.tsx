@@ -12,7 +12,7 @@ import {
   type SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { CheckCircle2, ChevronDown, ChevronUp, Download, FileText, MoreHorizontal, Package, RefreshCw, RotateCcw, Send, ShoppingCart, X, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Download, FileText, Loader2, MoreHorizontal, Package, RefreshCw, RotateCcw, Search, Send, ShoppingCart, X, XCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +59,7 @@ import { cn } from '@/lib/utils';
 import { formatDate, humanize, readError } from '@/modules/assets/lib/assetUtils';
 import { useProcurementMutations } from '@/modules/procurement/hooks/useProcurementMutations';
 import {
+  useProcurementAdminRecipientsQuery,
   useProcurementListQuery,
   useProcurementMetaQuery,
   useProcurementPurchaseOrdersQuery,
@@ -115,7 +116,7 @@ const REQUISITION_TABLE_SKELETON_IDS = Array.from({ length: 6 }, (_, index) => `
 const REQUISITION_COLUMN_WIDTHS = ['26%', '12%', '15%', '12%', '14%', '11%', '10%', '6%'] as const;
 const requisitionColumnHelper = createColumnHelper<ProcurementRequisitionRecord>();
 const PURCHASE_ORDER_TABLE_SKELETON_IDS = Array.from({ length: 6 }, (_, index) => `procurement-po-skeleton-${index}`);
-const PURCHASE_ORDER_COLUMN_WIDTHS = ['16%', '14%', '18%', '11%', '13%', '14%', '10%', '4%'] as const;
+const PURCHASE_ORDER_COLUMN_WIDTHS = ['12%', '14%', '18%', '11%', '9%', '13%', '14%', '10%', '6%'] as const;
 const purchaseOrderColumnHelper = createColumnHelper<ProcurementPurchaseOrderListItem>();
 
 function formatProcurementCurrency(value: number | null) {
@@ -476,8 +477,8 @@ export function ProcurementPageShell({
                 Generate PO
               </motion.button>
             </div>
-          ) : null}
-        </div>
+      ) : null}
+          </div>
 
         {activeTab === 'mine' && canCreateProcurement ? (
           <RequisitionTable
@@ -509,13 +510,14 @@ export function ProcurementPageShell({
 
         {activeTab === 'purchaseOrders' && canApproveProcurement ? (
           <PurchaseOrderTable
+            orgSlug={orgSlug}
+            memberId={memberId}
             rows={purchaseOrders}
             isLoading={purchaseOrderListQuery.isLoading}
             onDownload={handleDownloadPurchaseOrder}
             isDownloading={mutations.downloadPurchaseOrder.isPending}
           />
-        ) : null}
-      </div>
+      ) : null}
 
       <Dialog open={isComposerDialogOpen} onOpenChange={setIsComposerDialogOpen}>
         <DialogContent className="sm:max-w-[560px]">
@@ -610,6 +612,7 @@ export function ProcurementPageShell({
         orgSlug={orgSlug}
       />
 
+    </div>
     </div>
   );
 }
@@ -872,17 +875,41 @@ function RequisitionDetailDialog({
 }
 
 function PurchaseOrderTable({
+  orgSlug,
+  memberId,
   rows,
   isLoading = false,
   onDownload,
   isDownloading = false,
 }: {
+  orgSlug: string;
+  memberId: string;
   rows: ProcurementPurchaseOrderListItem[];
   isLoading?: boolean;
   onDownload: (purchaseOrderId: string) => void;
   isDownloading?: boolean;
 }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'generatedAt', desc: true }]);
+  const [sendEmailPo, setSendEmailPo] = useState<ProcurementPurchaseOrderListItem | null>(null);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string>('');
+
+  const adminRecipientsQuery = useProcurementAdminRecipientsQuery(orgSlug, memberId, !!sendEmailPo);
+  const mutations = useProcurementMutations(orgSlug, memberId);
+
+  async function handleSendEmail(recipientMemberId: string, recipientEmail: string) {
+    if (!sendEmailPo) return;
+    try {
+      await mutations.sendPurchaseOrderEmail.mutateAsync({
+        purchaseOrderId: sendEmailPo.id,
+        recipientMemberId,
+        recipientEmail,
+      });
+      toast.success('Purchase order email sent successfully');
+      setSendEmailPo(null);
+    } catch (error) {
+      toast.error(readError(error, 'Failed to send purchase order email'));
+    }
+  }
 
   const columns = useMemo(
     () => [
@@ -890,14 +917,9 @@ function PurchaseOrderTable({
         header: 'PO NUMBER',
         enableSorting: true,
         cell: (info) => (
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 text-slate-600 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
-              <FileText className="size-4.5 text-blue-500" />
-            </div>
-            <div className="min-w-0 text-left">
-              <p className="truncate font-semibold text-slate-900 dark:text-white text-[13px]">{info.getValue()}</p>
-              <p className="truncate text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">{info.row.original.fileName}</p>
-            </div>
+          <div className="min-w-0 text-left">
+            <p className="truncate font-semibold text-slate-900 dark:text-white text-[13px]">{info.getValue()}</p>
+            <p className="truncate text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">{info.row.original.fileName}</p>
           </div>
         ),
       }),
@@ -923,6 +945,34 @@ function PurchaseOrderTable({
             {humanize(info.getValue())}
           </Badge>
         ),
+      }),
+      purchaseOrderColumnHelper.accessor('sentAt', {
+        id: 'emailStatus',
+        header: 'EMAIL',
+        enableSorting: true,
+        cell: (info) => {
+          const sentAt = info.getValue();
+          const emailError = info.row.original.emailError;
+          if (sentAt) {
+            return (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+              Sent
+            </span>
+            );
+          }
+          if (emailError) {
+            return (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-semibold text-red-700 border border-red-200" title={emailError}>
+                Failed
+              </span>
+            );
+          }
+          return (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500 border border-slate-200">
+              Not sent
+            </span>
+          );
+        },
       }),
       purchaseOrderColumnHelper.accessor('generatedByName', {
         header: 'GENERATED BY',
@@ -954,20 +1004,34 @@ function PurchaseOrderTable({
         header: '',
         cell: (info) => (
           <div className="flex justify-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-8 rounded-lg text-[#0066cc] hover:bg-[#eff6ff] hover:text-[#0057ad]"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDownload(info.row.original.id);
-              }}
-              aria-label={`Download ${info.row.original.poNumber}`}
-              disabled={isDownloading}
-            >
-              <Download className="size-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 rounded-lg text-slate-500 hover:bg-black/5 hover:text-slate-900"
+                  aria-label={`Actions for ${info.row.original.poNumber}`}
+                >
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDownload(info.row.original.id);
+                  }}
+                  disabled={isDownloading}
+                >
+                  <Download className="size-3.5 mr-2" />
+                  Download
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSendEmailPo(info.row.original)}>
+                  <Send className="size-3.5 mr-2" />
+                  Send email
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ),
       }),
@@ -1120,6 +1184,94 @@ function PurchaseOrderTable({
           </div>
         </div>
       ) : null}
+
+      <Dialog open={!!sendEmailPo} onOpenChange={(open) => { if (!open) { setSendEmailPo(null); setSelectedRecipientId(''); } }}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Send purchase order email</DialogTitle>
+            <DialogDescription>
+              Select an admin or finance manager to receive the purchase order PDF.
+            </DialogDescription>
+          </DialogHeader>
+          {sendEmailPo ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-[#f8f8fb] p-3 space-y-1">
+                <p className="text-[13px] font-semibold text-slate-900">{sendEmailPo.poNumber}</p>
+                <p className="text-[11px] text-slate-600">{sendEmailPo.fileName}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-slate-700">Recipient</Label>
+                {adminRecipientsQuery.isLoading ? (
+                  <div className="flex items-center justify-center py-3 text-[13px] text-slate-500">
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Loading recipients...
+                  </div>
+                ) : adminRecipientsQuery.data?.items.length ? (
+                  <Select
+                    value={selectedRecipientId}
+                    onValueChange={setSelectedRecipientId}
+                    disabled={mutations.sendPurchaseOrderEmail.isPending}
+                  >
+                    <SelectTrigger className="w-full h-10 text-[13px]">
+                      <SelectValue placeholder="Select a recipient" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {adminRecipientsQuery.data.items.map((recipient) => (
+                        <SelectItem
+                          key={recipient.memberId}
+                          value={recipient.memberId}
+                          className="text-[13px]"
+                        >
+                          {recipient.name} ({recipient.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-[13px] text-slate-500 text-center py-3">No admin recipients found</p>
+                )}
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setSendEmailPo(null); setSelectedRecipientId(''); }}
+              disabled={mutations.sendPurchaseOrderEmail.isPending}
+              className="h-9 text-[13px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!selectedRecipientId || mutations.sendPurchaseOrderEmail.isPending}
+              onClick={() => {
+                if (!selectedRecipientId || !sendEmailPo) return;
+                const recipient = adminRecipientsQuery.data?.items.find(
+                  (r) => r.memberId === selectedRecipientId,
+                );
+                if (recipient) {
+                  handleSendEmail(recipient.memberId, recipient.email);
+                }
+              }}
+              className="h-9 text-[13px]"
+            >
+              {mutations.sendPurchaseOrderEmail.isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 size-4" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1138,6 +1290,33 @@ function RequisitionTable({
   onCancel?: (requisitionId: string) => void;
 }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+
+  const typeOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const row of rows) {
+      if (row.requestType) values.add(row.requestType);
+    }
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    let result = rows;
+    const q = search.toLowerCase().trim();
+    if (q) {
+      result = result.filter(
+        (r) =>
+          (r.requestLabel ?? '').toLowerCase().includes(q) ||
+          (r.assetName ?? '').toLowerCase().includes(q) ||
+          (r.raisedByName ?? '').toLowerCase().includes(q),
+      );
+    }
+    if (typeFilter !== 'ALL') {
+      result = result.filter((r) => r.requestType === typeFilter);
+    }
+    return result;
+  }, [rows, search, typeFilter]);
 
   const columns = useMemo(
     () => [
@@ -1261,7 +1440,7 @@ function RequisitionTable({
   );
 
   const table = useReactTable({
-    data: rows,
+    data: filteredRows,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -1273,6 +1452,44 @@ function RequisitionTable({
 
   return (
     <div className="bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
+      <div className="px-8 py-5 border-b border-border">
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search by name, asset, requester..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
+            />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="h-9 w-[140px] text-xs border border-border bg-card rounded-xl">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL" className="text-xs">All Types</SelectItem>
+                {typeOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt} className="text-xs">
+                    {humanize(opt)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(search || typeFilter !== 'ALL') && (
+              <Button
+                variant="outline"
+                onClick={() => { setSearch(''); setTypeFilter('ALL'); }}
+                className="h-9 rounded-xl border-border hover:bg-muted text-xs font-semibold px-3"
+              >
+                <X className="size-3.5 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <Table className="min-w-[960px] table-fixed">
           <colgroup>

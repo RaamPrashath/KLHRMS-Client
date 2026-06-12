@@ -112,6 +112,8 @@ export interface ProcurementPurchaseOrderListItem {
   assetName: string | null;
   storageBucket: string;
   storagePath: string;
+  sentAt: string | null;
+  emailError: string | null;
 }
 
 export interface ProcurementPurchaseOrderListResponse {

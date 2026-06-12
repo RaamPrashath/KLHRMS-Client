@@ -65,7 +65,7 @@ export function MonthlyTrendChart({ data }: { data: MonthlyTrend[] }) {
 
   return (
     <div className="h-[250px] w-full mt-2">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <AreaChart data={formattedChartData} margin={{ top: 8, right: 8, bottom: 0, left: -24 }}>
           <defs>
             <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">

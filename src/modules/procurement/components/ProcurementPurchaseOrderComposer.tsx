@@ -7,15 +7,13 @@ import {
   IconFileDescription,
   IconFileText,
   IconList,
-  IconTruck,
   IconEye,
   IconArrowRight,
   IconSend,
   IconPlus,
   IconTrash,
-  IconChevronRight
 } from '@tabler/icons-react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -194,27 +192,27 @@ function RichTextField({
   );
 }
 
-type StepType = 'branding' | 'document' | 'items' | 'delivery';
+type StepType = 'branding' | 'document' | 'items' | 'preview';
 
 const nextStepMap: Record<StepType, StepType | null> = {
   branding: 'document',
   document: 'items',
-  items: 'delivery',
-  delivery: null,
+  items: 'preview',
+  preview: null,
 };
 
 const nextStepLabelMap: Record<StepType, string> = {
   branding: 'Document',
   document: 'Line items',
-  items: 'Delivery',
-  delivery: '',
+  items: 'Preview',
+  preview: '',
 };
 
 const stepIndexMap: Record<StepType, number> = {
   branding: 0,
   document: 1,
   items: 2,
-  delivery: 3,
+  preview: 3,
 };
 
 
@@ -309,7 +307,7 @@ export function ProcurementPurchaseOrderComposer({
     { id: 'branding' as const, label: 'Branding', icon: IconTag },
     { id: 'document' as const, label: 'Document', icon: IconFileText },
     { id: 'items' as const, label: 'Line items', icon: IconList },
-    { id: 'delivery' as const, label: 'Delivery', icon: IconTruck },
+    { id: 'preview' as const, label: 'Preview', icon: IconEye },
   ];
 
   return (
@@ -352,7 +350,7 @@ export function ProcurementPurchaseOrderComposer({
             type="button"
             onClick={handleIssuePurchaseOrder}
             disabled={mutations.issuePurchaseOrder.isPending}
-            className="flex items-center justify-center gap-2 h-9 px-4 rounded-lg bg-slate-950 text-white hover:bg-slate-800 text-[12px] font-bold shadow-none cursor-pointer"
+            className="flex items-center justify-center gap-2 h-9 px-4 rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] text-[12px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] cursor-pointer"
           >
             {mutations.issuePurchaseOrder.isPending ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -466,7 +464,7 @@ export function ProcurementPurchaseOrderComposer({
                       onChange={(event) => setForm({ ...currentForm, template: { ...currentForm.template, company: { ...currentForm.template.company, logoUrl: event.target.value || null } } })}
                     />
                   </Field>
-                  <Field label="Tax ID">
+                  <Field label="GSTN">
                     <Input
                       className={inputClassName}
                       value={currentForm.template.company.taxId ?? ''}
@@ -678,7 +676,7 @@ export function ProcurementPurchaseOrderComposer({
                       onChange={(event) => setForm({ ...currentForm, document: { ...currentForm.document, document: { ...currentForm.document.document, vendor: { ...currentForm.document.document.vendor, phone: event.target.value || null } } } })}
                     />
                   </Field>
-                  <Field label="Tax ID">
+                  <Field label="GSTN">
                     <Input
                       className={inputClassName}
                       value={currentForm.document.document.vendor.taxId ?? ''}
@@ -829,52 +827,55 @@ export function ProcurementPurchaseOrderComposer({
                         </button>
                       ) : null}
                     </div>
-                    <div className="grid gap-3.5 md:grid-cols-2">
-                      <Field label="Description" className="md:col-span-2">
-                        <Textarea
-                          className={textareaClassName}
+                    <div className="space-y-3.5">
+                      <Field label="PRODUCT NAME">
+                        <Input
+                          className={inputClassName}
                           value={item.description}
                           onChange={(event) => setForm({ ...currentForm, document: { ...currentForm.document, lineItems: updateLineItem(currentForm.document.lineItems, index, { description: event.target.value }) } })}
                         />
                       </Field>
-                      <Field label="SKU / Code">
-                        <Input
-                          className={inputClassName}
-                          value={item.sku ?? ''}
-                          onChange={(event) => setForm({ ...currentForm, document: { ...currentForm.document, lineItems: updateLineItem(currentForm.document.lineItems, index, { sku: event.target.value || null }) } })}
-                        />
-                      </Field>
-                      <Field label="Quantity">
-                        <Input
-                          type="number"
-                          min={1}
-                          className={inputClassName}
-                          value={item.quantity}
-                          onChange={(event) => setForm({ ...currentForm, document: { ...currentForm.document, lineItems: updateLineItem(currentForm.document.lineItems, index, { quantity: Number(event.target.value || 1) }) } })}
-                        />
-                      </Field>
-                      <Field label="Unit price">
-                        <Input
-                          type="number"
-                          min={0}
-                          className={inputClassName}
-                          value={item.unitPrice}
-                          onChange={(event) => setForm({ ...currentForm, document: { ...currentForm.document, lineItems: updateLineItem(currentForm.document.lineItems, index, { unitPrice: Number(event.target.value || 0) }) } })}
-                        />
-                      </Field>
-                      <Field label="Tax percent">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          className={inputClassName}
-                          value={item.taxPercent}
-                          onChange={(event) => setForm({ ...currentForm, document: { ...currentForm.document, lineItems: updateLineItem(currentForm.document.lineItems, index, { taxPercent: Number(event.target.value || 0) }) } })}
-                        />
-                      </Field>
-                      <Field label="Auto total">
-                        <Input className={inputClassName} value={item.total.toFixed(2)} readOnly />
-                      </Field>
+                      <div className="grid gap-3.5 grid-cols-4">
+                        <Field label="ASSET CODE">
+                          <Input
+                            className={inputClassName}
+                            value={item.sku ?? ''}
+                            onChange={(event) => setForm({ ...currentForm, document: { ...currentForm.document, lineItems: updateLineItem(currentForm.document.lineItems, index, { sku: event.target.value || null }) } })}
+                          />
+                        </Field>
+                        <Field label="QTY">
+                          <div className="flex items-center h-10 rounded-lg border-[0.5px] border-[#d9dde3] bg-white overflow-hidden">
+                            <button
+                              type="button"
+                              disabled={item.quantity <= 1}
+                              onClick={() => setForm({ ...currentForm, document: { ...currentForm.document, lineItems: updateLineItem(currentForm.document.lineItems, index, { quantity: Math.max(1, item.quantity - 1) }) } })}
+                              className="flex items-center justify-center w-10 h-full text-[#6b7280] hover:bg-[#f3f4f6] transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <span className="flex-1 text-center text-[13px] font-medium text-[#111827] select-none">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => setForm({ ...currentForm, document: { ...currentForm.document, lineItems: updateLineItem(currentForm.document.lineItems, index, { quantity: item.quantity + 1 }) } })}
+                              className="flex items-center justify-center w-10 h-full text-[#6b7280] hover:bg-[#f3f4f6] transition cursor-pointer shrink-0"
+                            >
+                              <IconPlus className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </Field>
+                        <Field label="UNIT PRICE">
+                          <Input
+                            type="number"
+                            min={0}
+                            className={inputClassName}
+                            value={item.unitPrice}
+                            onChange={(event) => setForm({ ...currentForm, document: { ...currentForm.document, lineItems: updateLineItem(currentForm.document.lineItems, index, { unitPrice: Number(event.target.value || 0) }) } })}
+                          />
+                        </Field>
+                        <Field label="TOTAL">
+                          <Input className={inputClassName} value={item.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} readOnly />
+                        </Field>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -883,7 +884,7 @@ export function ProcurementPurchaseOrderComposer({
           )}
 
           {/* Step 4: Delivery */}
-          {activeStep === 'delivery' && (
+          {activeStep === 'preview' && (
             <section className={sectionClassName}>
               <h2 className="text-[16px] font-bold text-foreground">Recipient & Delivery</h2>
               <div className="grid gap-3.5 md:grid-cols-2">
