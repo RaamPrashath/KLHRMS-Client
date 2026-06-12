@@ -16,11 +16,26 @@ export interface PlanExportRow {
   project: string | null;
 }
 
+export interface PlanExportPivotDay {
+  iso: string;
+  dayLabel: string;
+  dateLabel: string;
+  planned: PlanLocationValue | null;
+  actualLocation: string | null;
+}
+
+export interface PlanExportPivotRow {
+  userId: string;
+  name: string;
+  days: PlanExportPivotDay[];
+}
+
 export interface PlanExportPayload {
   format: PlanExportFormat;
   title?: string;
   periodLabel?: string;
-  dateColumns?: string[];
-  employees: PlanExportEmployee[];
-  rows: PlanExportRow[];
+  viewMode: "weekly" | "monthly" | "monthly_pivot";
+  employees?: PlanExportEmployee[];
+  rows?: PlanExportRow[];
+  pivotData?: PlanExportPivotRow[];
 }

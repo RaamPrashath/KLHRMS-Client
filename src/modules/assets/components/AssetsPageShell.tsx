@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PackagePlus, Plus, RefreshCcw, Search } from 'lucide-react';
+import { PackagePlus, RefreshCcw, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -468,27 +468,6 @@ export function AssetsPageShell({
         </TabsContent>
 
         <TabsContent value="categories" className="mt-0">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="w-full sm:max-w-xs flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2">
-              <Search className="size-4 shrink-0 text-[#9ca3af]" />
-              <Input
-                value={categorySearch}
-                onChange={(event) => setCategorySearch(event.target.value)}
-                placeholder="Search categories..."
-                className="h-auto border-0 bg-transparent px-0 py-0 text-[13px] shadow-none focus-visible:ring-0 placeholder:text-[#9ca3af]"
-              />
-            </div>
-            {canManageAssets && (
-              <button
-                type="button"
-                onClick={() => { setSettingsTab('create'); setSettingsOpen(true); }}
-                className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0"
-              >
-                <Plus className="mr-1.5 size-4" />
-                Create Category
-              </button>
-            )}
-          </div>
           <CategoryTab
             categories={categories}
             categorySearch={categorySearch}
@@ -497,6 +476,8 @@ export function AssetsPageShell({
             onAddField={handleAddField}
             onEditCategory={(id, name) => handleEditCategory(id, { name })}
             onDeleteCategory={handleDeleteCategory}
+            onCreateCategory={() => { setSettingsTab('create'); setSettingsOpen(true); }}
+            onSearchChange={setCategorySearch}
           />
         </TabsContent>
 

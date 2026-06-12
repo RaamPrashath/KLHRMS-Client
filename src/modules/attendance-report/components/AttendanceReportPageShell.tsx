@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   CalendarDays,
@@ -360,8 +361,6 @@ function ReportTable({
                 <TableCell className="px-4 py-3 align-top whitespace-nowrap">
                   <p className="text-sm text-neutral-700">
                     {row.projectName && <span className="font-semibold text-primary">{row.projectName}</span>}
-                    {row.projectName && row.taskName && ', '}
-                    {row.taskName && <span className="font-semibold text-neutral-900">{row.taskName}</span>}
                   </p>
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-5 text-neutral-700">
                     {row.clockOutDescription || 'No clock-out description'}
@@ -424,10 +423,26 @@ function TimesheetGrid({
   const [editingCell, setEditingCell] = useState<{ employeeId: string; date: string } | null>(null);
   const [activeMenuCell, setActiveMenuCell] = useState<{ employeeId: string; date: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
 
   const manualMutation = useManualAttendanceMutation(orgSlug, memberId);
   const deleteMutation = useDeleteAttendanceMutation(orgSlug);
+
+  useEffect(() => {
+    if (!activeMenuCell) {
+      setMenuPos(null);
+      return;
+    }
+    const raf = requestAnimationFrame(() => {
+      if (menuRef.current) {
+        const rect = menuRef.current.getBoundingClientRect();
+        setMenuPos({ x: rect.left + rect.width / 2 - 24, y: rect.bottom });
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeMenuCell]);
 
   async function handleSave(employeeId: string, dayString: string, value: string) {
     setEditingCell(null);
@@ -575,77 +590,75 @@ function TimesheetGrid({
 
         if (isMenuOpen && canEdit) {
           return (
-            <div className="inline-flex items-center gap-0.5" onMouseLeave={() => setActiveMenuCell(null)}>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveMenuCell(null);
-                  const employeeId = row.original.id;
-                  setIsSaving(true);
-                  manualMutation.mutateAsync({
-                    target_member_id: employeeId,
-                    date: dayStr,
-                    entry_type: 'LEAVE',
-                  } satisfies ManualEntryInput).then(() => {
-                    queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
-                  }).finally(() => setIsSaving(false));
-                }}
-                className="flex items-center justify-center w-6 h-6 rounded text-[11px] font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
-                title="Mark Leave"
-              >
-                L
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveMenuCell(null);
-                  const employeeId = row.original.id;
-                  setIsSaving(true);
-                  manualMutation.mutateAsync({
-                    target_member_id: employeeId,
-                    date: dayStr,
-                    entry_type: 'COMP_OFF',
-                  } satisfies ManualEntryInput).then(() => {
-                    queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
-                  }).finally(() => setIsSaving(false));
-                }}
-                className="flex items-center justify-center w-6 h-6 rounded text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
-                title="Mark CompOff"
-              >
-                CO
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveMenuCell(null);
-                  setEditingCell({ employeeId: row.original.id, date: dayStr });
-                }}
-                className="flex items-center justify-center px-2 h-6 rounded text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
-                title="Enter custom hours"
-              >
-                Custom
-              </button>
-              {(hours != null || entryType) && (
-                <button
-                  type="button"
-                  onClick={() => {
+            <div ref={menuRef} className="relative inline-flex">
+              {createPortal(
+                <div
+                  className="fixed z-[9999] bg-white rounded-lg shadow-lg border border-neutral-200 py-1 min-w-[48px]"
+                  style={{ left: menuPos ? menuPos.x : 0, top: menuPos ? menuPos.y : 0 }}
+                  onMouseLeave={() => {
                     setActiveMenuCell(null);
-                    const employeeId = row.original.id;
-                    setIsSaving(true);
-                    deleteMutation.mutateAsync({
-                      orgSlug,
-                      memberId,
-                      targetMemberId: employeeId,
-                      date: dayStr,
-                    }).then(() => {
-                      queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
-                    }).finally(() => setIsSaving(false));
+                    setMenuPos(null);
                   }}
-                  className="flex items-center justify-center w-6 h-6 rounded text-[11px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 transition-colors"
-                  title="Clear"
                 >
-                  X
-                </button>
+                  {(['LEAVE', 'HOLIDAY', 'FLOATING_HOLIDAY', 'COMP_OFF'] as const).map((key) => {
+                    const short = key === 'LEAVE' ? 'L' : key === 'HOLIDAY' ? 'H' : key === 'FLOATING_HOLIDAY' ? 'FH' : 'CO';
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setActiveMenuCell(null);
+                          setMenuPos(null);
+                          setIsSaving(true);
+                          manualMutation.mutateAsync({
+                            target_member_id: row.original.id,
+                            date: dayStr,
+                            entry_type: key,
+                          } satisfies ManualEntryInput).then(() => {
+                            queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+                          }).finally(() => setIsSaving(false));
+                        }}
+                        className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-neutral-700 hover:bg-neutral-100 transition-colors"
+                      >
+                        {short}
+                      </button>
+                    );
+                  })}
+                  <div className="border-t border-neutral-100 mx-2" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveMenuCell(null);
+                      setMenuPos(null);
+                      setEditingCell({ employeeId: row.original.id, date: dayStr });
+                    }}
+                    className="flex items-center justify-center w-full px-3 py-1 text-xs font-mono text-neutral-500 hover:bg-neutral-100 transition-colors"
+                  >
+                    Custom
+                  </button>
+                  {(hours != null || entryType) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveMenuCell(null);
+                        setMenuPos(null);
+                        setIsSaving(true);
+                        deleteMutation.mutateAsync({
+                          orgSlug,
+                          memberId,
+                          targetMemberId: row.original.id,
+                          date: dayStr,
+                        }).then(() => {
+                          queryClient.invalidateQueries({ queryKey: ['attendance-report', orgSlug] });
+                        }).finally(() => setIsSaving(false));
+                      }}
+                      className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-neutral-400 hover:bg-neutral-100 transition-colors"
+                    >
+                      X
+                    </button>
+                  )}
+                </div>,
+                document.body,
               )}
             </div>
           );
@@ -684,6 +697,36 @@ function TimesheetGrid({
               )}
             >
               L
+            </span>
+          );
+        }
+
+        if (entryType === 'HOLIDAY') {
+          return (
+            <span
+              onClick={() => { if (canEdit && !isSaving) setActiveMenuCell({ employeeId: row.original.id, date: dayStr }); }}
+              className={cn(
+                "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-bold font-mono min-w-[58px] h-7 border transition-all duration-150 select-none",
+                "text-violet-700 bg-violet-50 border-violet-200",
+                canEdit && "cursor-pointer hover:bg-violet-100/70",
+              )}
+            >
+              H
+            </span>
+          );
+        }
+
+        if (entryType === 'FLOATING_HOLIDAY') {
+          return (
+            <span
+              onClick={() => { if (canEdit && !isSaving) setActiveMenuCell({ employeeId: row.original.id, date: dayStr }); }}
+              className={cn(
+                "inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-bold font-mono min-w-[58px] h-7 border transition-all duration-150 select-none",
+                "text-cyan-700 bg-cyan-50 border-cyan-200",
+                canEdit && "cursor-pointer hover:bg-cyan-100/70",
+              )}
+            >
+              FH
             </span>
           );
         }
@@ -1079,8 +1122,17 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
 
   async function handleExport(format: AttendanceReportExportFormat) {
     if (pendingExport || reportQuery.isLoading || optionsQuery.isLoading) return;
-    if (selectedVisibleEmployees.length === 0) {
-      toast.error('Select at least one visible employee to export.');
+
+    const exportEmployees = selectedVisibleEmployees.length > 0
+      ? selectedVisibleEmployees
+      : visibleEmployeesForView;
+
+    const exportRows = selectedVisibleEmployees.length > 0
+      ? selectedVisibleRows
+      : searchFilteredRows;
+
+    if (exportEmployees.length === 0) {
+      toast.error('No employee data available to export.');
       return;
     }
 
@@ -1096,13 +1148,16 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
           title,
           periodLabel: periodLabel(periodMode, dateRange.dateFrom, dateRange.dateTo),
           dateColumns: daysBetween(dateRange.dateFrom, dateRange.dateTo).map(toYMD),
-          employees: selectedVisibleEmployees.map((employee) => ({
+          employees: exportEmployees.map((employee) => ({
             id: employee.id,
             name: employee.name,
             email: employee.email,
           })),
-          rows: selectedVisibleRows,
+          rows: exportRows,
           force8,
+          projectId: projectId === ALL_PROJECTS ? undefined : projectId,
+          dateFrom: dateRange.dateFrom,
+          dateTo: dateRange.dateTo,
         },
       });
       triggerDownload(blob, exportFileName(viewMode, periodMode, dateRange.dateFrom, format));
@@ -1138,7 +1193,7 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
     <main className="min-h-full bg-canvas p-7">
       <h1 className="mb-6 text-4xl font-semibold tracking-tight text-neutral-900">Reports Dashboard</h1>
 
-      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+      <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
         {/* Band 1: Navigation — tab sliders + period nav + export actions */}
         <div className="flex flex-wrap items-center gap-3 px-8 py-6">
           <TabSlider

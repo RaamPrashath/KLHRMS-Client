@@ -35,7 +35,7 @@ const PAGE_SIZE = 10;
 
 // ── Brand & Model Table ──────────────────────────────────────────────────────
 
-function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: string }) {
+function BrandModelTable({ orgSlug, memberId, canManageAssets, members }: { orgSlug: string; memberId: string; canManageAssets: boolean; members: { id: string; label: string }[] }) {
   const { data, isLoading, isError } = useBrandModelAnalyticsQuery(orgSlug, memberId);
   const rows = data?.rows ?? [];
   const [pageIndex, setPageIndex] = useState(0);
@@ -192,6 +192,15 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
               className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
             />
           </div>
+          {canManageAssets && (
+            <ExportBand
+              orgSlug={orgSlug}
+              memberId={memberId}
+              members={members}
+              domain="inventory"
+              showEmployeeFilter={false}
+            />
+          )}
         </div>
       </div>
 
@@ -286,7 +295,7 @@ function BrandModelTable({ orgSlug, memberId }: { orgSlug: string; memberId: str
 
 // ── OS Distribution Table ────────────────────────────────────────────────────
 
-function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId: string }) {
+function OsDistributionTable({ orgSlug, memberId, canManageAssets, members }: { orgSlug: string; memberId: string; canManageAssets: boolean; members: { id: string; label: string }[] }) {
   const { data, isLoading, isError } = useOsDistributionQuery(orgSlug, memberId);
   const rows = data?.rows ?? [];
   const [pageIndex, setPageIndex] = useState(0);
@@ -430,6 +439,15 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
               className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
             />
           </div>
+          {canManageAssets && (
+            <ExportBand
+              orgSlug={orgSlug}
+              memberId={memberId}
+              members={members}
+              domain="inventory"
+              showEmployeeFilter={false}
+            />
+          )}
         </div>
       </div>
 
@@ -524,7 +542,7 @@ function OsDistributionTable({ orgSlug, memberId }: { orgSlug: string; memberId:
 
 // ── Upcoming Expirations Table ───────────────────────────────────────────────
 
-function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: string }) {
+function ExpirationsTable({ orgSlug, memberId, canManageAssets, members }: { orgSlug: string; memberId: string; canManageAssets: boolean; members: { id: string; label: string }[] }) {
   const { data, isLoading, isError } = useWarrantyFeedQuery(orgSlug, memberId);
   const rows = data?.items ?? [];
   const [pageIndex, setPageIndex] = useState(0);
@@ -698,6 +716,15 @@ function ExpirationsTable({ orgSlug, memberId }: { orgSlug: string; memberId: st
               className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
             />
           </div>
+          {canManageAssets && (
+            <ExportBand
+              orgSlug={orgSlug}
+              memberId={memberId}
+              members={members}
+              domain="inventory"
+              showEmployeeFilter={false}
+            />
+          )}
         </div>
       </div>
 
@@ -820,17 +847,6 @@ export function InventoryTab({
         </p>
       </div>
 
-      {canManageAssets && (
-        <div className="mb-4">
-          <ExportBand
-            orgSlug={orgSlug}
-            memberId={memberId}
-            members={members}
-            domain="inventory"
-            showEmployeeFilter={false}
-          />
-        </div>
-      )}
       <div className="mb-4 inline-flex items-center rounded-xl border border-black/4 bg-neutral-50 p-1">
         {subTabs.map((tab) => (
           <button
@@ -849,9 +865,30 @@ export function InventoryTab({
         ))}
       </div>
 
-      {subTab === 'brand-model' && <BrandModelTable orgSlug={orgSlug} memberId={memberId} />}
-      {subTab === 'os-distribution' && <OsDistributionTable orgSlug={orgSlug} memberId={memberId} />}
-      {subTab === 'expirations' && <ExpirationsTable orgSlug={orgSlug} memberId={memberId} />}
+      {subTab === 'brand-model' && (
+        <BrandModelTable
+          orgSlug={orgSlug}
+          memberId={memberId}
+          canManageAssets={canManageAssets}
+          members={members}
+        />
+      )}
+      {subTab === 'os-distribution' && (
+        <OsDistributionTable
+          orgSlug={orgSlug}
+          memberId={memberId}
+          canManageAssets={canManageAssets}
+          members={members}
+        />
+      )}
+      {subTab === 'expirations' && (
+        <ExpirationsTable
+          orgSlug={orgSlug}
+          memberId={memberId}
+          canManageAssets={canManageAssets}
+          members={members}
+        />
+      )}
     </div>
   );
 }

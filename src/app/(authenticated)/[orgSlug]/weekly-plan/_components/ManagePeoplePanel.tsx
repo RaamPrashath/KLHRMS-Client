@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { format as dateFnsFormat, parseISO, isToday } from "date-fns";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { type DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -40,6 +42,7 @@ import { useTeamWeeklyPlanQuery, useTeamMonthlyPlanQuery } from "@/hooks/queries
 import { useApiClient } from "@/hooks/useApiClient";
 import { useEmployeesQuery } from "@/modules/employees/hooks/useEmployeesQuery";
 import { useAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
+import { useManualAttendanceMutation } from "@/modules/attendance/hooks/mutations/attendance";
 import type { AttendanceRecord } from "@/modules/attendance/types/attendanceTypes";
 import {
   getCurrentWeekState,
@@ -58,6 +61,8 @@ import type {
   PlanExportFormat,
   PlanExportPayload,
   PlanExportRow,
+  PlanExportPivotDay,
+  PlanExportPivotRow,
 } from "@/modules/weekly-plan/types";
 import { exportWeeklyPlanReportAction } from "@/modules/weekly-plan/api/exportWeeklyPlanReportAction";
 import { cn } from "@/lib/utils";
@@ -141,11 +146,13 @@ function LocationBadge({ location }: { location: PlanLocationValue | null }) {
   );
 }
 
-function ActualLocationBadge({ record }: { record: AttendanceRecord | undefined }) {
-  if (!record) {
+function ActualLocationBadge({ record, isRemote }: { record?: AttendanceRecord | undefined; isRemote?: boolean }) {
+  const remote = isRemote ?? record?.isRemote ?? false;
+  const hasRecord = record !== undefined || isRemote !== undefined;
+  if (!hasRecord) {
     return <span className="text-[10px] font-medium text-neutral-300">—</span>;
   }
-  if (record.isRemote) {
+  if (remote) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-700">
         <span className="size-1.5 rounded-full bg-blue-500" />
@@ -156,7 +163,7 @@ function ActualLocationBadge({ record }: { record: AttendanceRecord | undefined 
   return (
     <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-teal-50 text-teal-700">
       <span className="size-1.5 rounded-full bg-teal-500" />
-      OFF
+      OFC
     </span>
   );
 }
@@ -253,51 +260,124 @@ function TabSlider<T extends string>({
   );
 }
 
-// ─── Monthly Plan Flat List Table ────────────────────────────────────────────
+// ─── Monthly Plan Pivot Table ────────────────────────────────────────────────
 
 function MonthlyPlanTable({
-  entries,
+  pivotRows,
+  weekDays,
   isLoading,
   search,
+  orgSlug,
+  memberId,
+  userIdToMemberId,
 }: {
-  entries: WeeklyPlanEntry[];
+  pivotRows: PlanExportPivotRow[];
+  weekDays: { iso: string }[];
   isLoading: boolean;
   search: string;
+  orgSlug: string;
+  memberId: string;
+  userIdToMemberId: Map<string, string>;
 }) {
   const rows = useMemo(() => {
-    const sorted = [...entries].sort((a, b) => {
-      if (a.user_name !== b.user_name) return (a.user_name ?? "").localeCompare(b.user_name ?? "");
-      return a.date.localeCompare(b.date);
-    });
-    if (!search.trim()) return sorted;
+    if (!search.trim()) return pivotRows;
     const q = search.toLowerCase();
-    return sorted.filter((r) => r.user_name?.toLowerCase().includes(q));
-  }, [entries, search]);
+    return pivotRows.filter((r) => r.name.toLowerCase().includes(q));
+  }, [pivotRows, search]);
 
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
+  const PAGE_SIZE = 10;
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pagedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const [activeMenuCellM, setActiveMenuCellM] = useState<{ userId: string; date: string } | null>(null);
+  const [menuPosM, setMenuPosM] = useState<{ x: number; y: number } | null>(null);
+  const [isSavingActualM, setIsSavingActualM] = useState(false);
+  const menuRefM = useRef<HTMLDivElement | null>(null);
+  const queryClientM = useQueryClient();
+  const actualMutationM = useManualAttendanceMutation(orgSlug, memberId);
+
+  useEffect(() => {
+    if (!activeMenuCellM) {
+      setMenuPosM(null);
+      return;
+    }
+    const raf = requestAnimationFrame(() => {
+      if (menuRefM.current) {
+        const rect = menuRefM.current.getBoundingClientRect();
+        setMenuPosM({ x: rect.left + rect.width / 2 - 24, y: rect.bottom });
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeMenuCellM]);
+
+  async function handleActualLocationSaveM(userId: string, date: string, isRemote: boolean) {
+    setActiveMenuCellM(null);
+    setMenuPosM(null);
+    const employeeMid = userIdToMemberId.get(userId);
+    if (!employeeMid) {
+      toast.error("Could not resolve employee");
+      return;
+    }
+    setIsSavingActualM(true);
+    try {
+      await actualMutationM.mutateAsync({
+        target_member_id: employeeMid,
+        date,
+        is_remote: isRemote,
+      });
+      await queryClientM.invalidateQueries({ queryKey: ['attendance', orgSlug] });
+      await queryClientM.invalidateQueries({ queryKey: ['weekly-plan', orgSlug] });
+      toast.success('Actual location updated');
+    } catch (err: unknown) {
+      let message = 'Failed to update actual location';
+      if (err instanceof Error) {
+        try { message = (JSON.parse(err.message) as { message: string }).message; } catch { message = err.message; }
+      }
+      toast.error(message);
+    } finally {
+      setIsSavingActualM(false);
+    }
+  }
 
   if (isLoading) {
     return (
       <div className="overflow-x-auto w-full">
-        <Table style={{ minWidth: 600 }}>
+        <Table style={{ minWidth: 640 }}>
           <TableHeader>
             <TableRow className="bg-canvas/60 border-b border-neutral-200 hover:bg-canvas/60">
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Date</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Day</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Location</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Project</TableHead>
+              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap w-[200px] max-w-[200px] sticky left-0 bg-[#f5f5f7] z-10">
+                Employee
+              </TableHead>
+              {weekDays.map((d) => {
+                const date = parseISO(d.iso);
+                return (
+                  <TableHead key={d.iso} className="px-2 py-2.5 text-center whitespace-nowrap min-w-[80px]">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+                        {dateFnsFormat(date, "MMM d")}
+                      </span>
+                      <span className="text-[9px] font-medium uppercase tracking-widest text-neutral-400">
+                        {dateFnsFormat(date, "EEE")}
+                      </span>
+                    </div>
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
             {Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i} className="border-b border-neutral-100">
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <TableCell key={j} className="px-4 py-3">
-                    <div className="h-3 w-full animate-pulse rounded bg-neutral-100" />
+              <TableRow key={i} className={cn("border-b border-neutral-100", i % 2 === 0 && "bg-neutral-50/30")}>
+                <TableCell className="px-4 py-3 sticky left-0 bg-white z-10 min-w-[180px]">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="h-3 w-20 animate-pulse rounded bg-neutral-100" />
+                    <div className="h-2 w-10 animate-pulse rounded bg-neutral-100" />
+                  </div>
+                </TableCell>
+                {weekDays.map((_, j) => (
+                  <TableCell key={j} className="px-2 py-3 text-center">
+                    <div className="h-10 w-14 animate-pulse rounded-md bg-neutral-100 mx-auto" />
                   </TableCell>
                 ))}
               </TableRow>
@@ -311,19 +391,26 @@ function MonthlyPlanTable({
   if (rows.length === 0) {
     return (
       <div className="overflow-x-auto w-full">
-        <Table style={{ minWidth: 600 }}>
+        <Table style={{ minWidth: 640 }}>
           <TableHeader>
             <TableRow className="bg-canvas/60 border-b border-neutral-200 hover:bg-canvas/60">
               <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Date</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Day</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Location</TableHead>
-              <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Project</TableHead>
+              {weekDays.map((d) => {
+                const date = parseISO(d.iso);
+                return (
+                  <TableHead key={d.iso} className="px-2 py-2.5 text-center whitespace-nowrap min-w-[80px]">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{dateFnsFormat(date, "MMM d")}</span>
+                      <span className="text-[9px] font-medium uppercase tracking-widest text-neutral-400">{dateFnsFormat(date, "EEE")}</span>
+                    </div>
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow>
-              <TableCell colSpan={5} className="py-16 text-center text-sm text-neutral-400">
+              <TableCell colSpan={weekDays.length + 1} className="py-16 text-center text-sm text-neutral-400">
                 {search ? "No entries match your search." : "No monthly plan entries found."}
               </TableCell>
             </TableRow>
@@ -335,46 +422,125 @@ function MonthlyPlanTable({
 
   return (
     <div className="overflow-x-auto w-full">
-      <Table style={{ minWidth: 600 }}>
+      <Table style={{ minWidth: 640 }}>
         <TableHeader>
           <TableRow className="bg-canvas/60 border-b border-neutral-200 hover:bg-canvas/60">
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Employee</TableHead>
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Date</TableHead>
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Day</TableHead>
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Location</TableHead>
-            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Project</TableHead>
+            <TableHead className="px-4 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap w-[200px] max-w-[200px] sticky left-0 bg-[#f5f5f7] z-10">
+              Employee
+            </TableHead>
+            {weekDays.map((d) => {
+              const date = parseISO(d.iso);
+              const today = isToday(date);
+              return (
+                <TableHead key={d.iso} className="px-2 py-2.5 text-center whitespace-nowrap min-w-[80px]">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className={cn("text-[10px] font-semibold uppercase tracking-wider", today ? "text-primary" : "text-neutral-500")}>
+                      {dateFnsFormat(date, "MMM d")}
+                    </span>
+                    <span className={cn("text-[9px] font-medium uppercase tracking-widest", today ? "text-primary/70" : "text-neutral-400")}>
+                      {dateFnsFormat(date, "EEE")}
+                    </span>
+                  </div>
+                </TableHead>
+              );
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pagedRows.map((entry) => {
-            const d = parseISO(entry.date);
-            return (
-              <TableRow key={`${entry.user_id}-${entry.date}`} className="border-b border-neutral-100 hover:bg-canvas/60">
-                <TableCell className="px-4 py-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary text-[10px] font-bold">
-                      {initials(entry.user_name ?? entry.user_id)}
+          <TooltipProvider>
+            {pagedRows.map((row) => {
+              const hasMismatch = row.days.some((d) => {
+                if (!d.planned || !d.actualLocation) return false;
+                return d.planned !== d.actualLocation && d.actualLocation !== null;
+              });
+              return [
+                <tr key={`${row.userId}-plan`} className="transition-colors duration-100 hover:bg-canvas/60">
+                  <td className="px-4 py-2 sticky left-0 bg-white z-10 border-r border-neutral-100 border-b border-neutral-200 w-[200px] max-w-[200px] overflow-hidden" rowSpan={2}>
+                    <div className="flex items-center gap-2">
+                      <EmployeeCell name={row.name} />
+                      {hasMismatch && (
+                        <Tooltip>
+                          <TooltipTrigger asChild><AlertCircle className="size-3.5 shrink-0 text-red-400" /></TooltipTrigger>
+                          <TooltipContent side="right" className="text-xs">Plan vs Actual mismatch detected</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
-                    <span className="text-[13px] font-medium text-neutral-900 truncate">
-                      {entry.user_name ?? entry.user_id}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="px-4 py-2 text-[13px] text-neutral-700">
-                  {dateFnsFormat(d, "MMM d, yyyy")}
-                </TableCell>
-                <TableCell className="px-4 py-2 text-[13px] text-neutral-500">
-                  {dateFnsFormat(d, "EEE")}
-                </TableCell>
-                <TableCell className="px-4 py-2">
-                  <LocationBadge location={entry.work_location} />
-                </TableCell>
-                <TableCell className="px-4 py-2 text-[13px] text-neutral-700 max-w-[200px] truncate">
-                  {entry.project || <span className="text-neutral-300">—</span>}
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                  </td>
+                  {row.days.map((d) => (
+                    <td key={d.iso} className="px-2 py-2 text-center border-b border-neutral-200">
+                      <div className="flex items-center justify-center"><LocationBadge location={d.planned} /></div>
+                    </td>
+                  ))}
+                </tr>,
+                <tr key={`${row.userId}-actual`} className="transition-colors duration-100 border-b border-neutral-200 hover:bg-canvas/60">
+                  {row.days.map((dayData) => {
+                    const date = parseISO(dayData.iso);
+                    const today = isToday(date);
+                    const isFut = date > new Date(new Date().setHours(0, 0, 0, 0));
+                    const mismatch = !isFut && dayData.planned && dayData.actualLocation && dayData.planned !== dayData.actualLocation;
+                    const isMenuOpen = activeMenuCellM?.userId === row.userId && activeMenuCellM?.date === dayData.iso;
+                    const isRemoteM = dayData.actualLocation === "WFH";
+                    return (
+                      <td
+                        key={dayData.iso}
+                        className={cn("px-2 py-2 text-center", today && "bg-primary/3")}
+                        onClick={() => {
+                          if (!isFut && !isSavingActualM) {
+                            setActiveMenuCellM({ userId: row.userId, date: dayData.iso });
+                          }
+                        }}
+                      >
+                        {isFut ? (
+                          <span className="text-[10px] font-medium text-neutral-200">—</span>
+                        ) : isMenuOpen ? (
+                          <>
+                            <div ref={menuRefM} className="inline-flex">
+                              {dayData.actualLocation ? (
+                                <LocationBadge location={dayData.actualLocation as PlanLocationValue} />
+                              ) : (
+                                <span className="text-[10px] font-medium text-neutral-300">—</span>
+                              )}
+                            </div>
+                            {createPortal(
+                              <div
+                                className="fixed z-[9999] bg-white rounded-lg shadow-lg border border-neutral-200 py-1 min-w-[48px]"
+                                style={{ left: menuPosM ? menuPosM.x : 0, top: menuPosM ? menuPosM.y : 0 }}
+                                onMouseLeave={() => { setActiveMenuCellM(null); setMenuPosM(null); }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleActualLocationSaveM(row.userId, dayData.iso, false)}
+                                  className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-teal-700 hover:bg-neutral-100 transition-colors"
+                                >
+                                  OFC
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleActualLocationSaveM(row.userId, dayData.iso, true)}
+                                  className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-blue-700 hover:bg-neutral-100 transition-colors"
+                                >
+                                  WFH
+                                </button>
+                              </div>,
+                              document.body,
+                            )}
+                          </>
+                        ) : (
+                          <div className={cn(!isFut && "cursor-pointer")}>
+                            {dayData.actualLocation ? (
+                              <LocationBadge location={dayData.actualLocation as PlanLocationValue} />
+                            ) : (
+                              <span className="text-[10px] font-medium text-neutral-300">—</span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>,
+              ];
+            })}
+          </TooltipProvider>
         </TableBody>
       </Table>
       {totalPages > 1 && (
@@ -383,12 +549,8 @@ function MonthlyPlanTable({
             Showing <span className="font-semibold text-neutral-900">{(page - 1) * PAGE_SIZE + 1}</span>–<span className="font-semibold text-neutral-900">{Math.min(page * PAGE_SIZE, rows.length)}</span> of <span className="font-semibold text-neutral-900">{rows.length}</span>
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
-              Next
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
           </div>
         </div>
       )}
@@ -426,6 +588,56 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
   const [customDateTo, setCustomDateTo] = useState<string | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [pendingExport, setPendingExport] = useState<PlanExportFormat | null>(null);
+  const [activeMenuCell, setActiveMenuCell] = useState<{ userId: string; date: string } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [isSavingActual, setIsSavingActual] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const queryClient = useQueryClient();
+  const actualMutation = useManualAttendanceMutation(orgSlug, memberId);
+
+  useEffect(() => {
+    if (!activeMenuCell) {
+      setMenuPos(null);
+      return;
+    }
+    const raf = requestAnimationFrame(() => {
+      if (menuRef.current) {
+        const rect = menuRef.current.getBoundingClientRect();
+        setMenuPos({ x: rect.left + rect.width / 2 - 24, y: rect.bottom });
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeMenuCell]);
+
+  async function handleActualLocationSave(userId: string, date: string, isRemote: boolean) {
+    setActiveMenuCell(null);
+    setMenuPos(null);
+    const employeeMid = userIdToMemberId.get(userId);
+    if (!employeeMid) {
+      toast.error("Could not resolve employee");
+      return;
+    }
+    setIsSavingActual(true);
+    try {
+      await actualMutation.mutateAsync({
+        target_member_id: employeeMid,
+        date,
+        is_remote: isRemote,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
+      await queryClient.invalidateQueries({ queryKey: ['weekly-plan', orgSlug] });
+      toast.success('Actual location updated');
+    } catch (err: unknown) {
+      let message = 'Failed to update actual location';
+      if (err instanceof Error) {
+        try { message = (JSON.parse(err.message) as { message: string }).message; } catch { message = err.message; }
+      }
+      toast.error(message);
+    } finally {
+      setIsSavingActual(false);
+    }
+  }
+
   const auth = useApiClient(orgId);
 
   const VIEW_MODES: { mode: PlanTeamView; label: string }[] = [
@@ -508,17 +720,13 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
   const eligibleEmployees = useMemo(() => {
     const seen = new Set<string>();
     const result: { id: string; name: string; email: string | null }[] = [];
-    const planUsers = new Set(activeEntries.map((e) => e.user_id));
     if (employeeData?.items) {
       for (const emp of employeeData.items) {
         if (seen.has(emp.user_id)) continue;
         seen.add(emp.user_id);
-        if (planUsers.has(emp.user_id)) {
-          result.push({ id: emp.user_id, name: emp.name, email: null });
-        }
+        result.push({ id: emp.user_id, name: emp.name, email: null });
       }
     }
-    // Also add users from plan data not in employee list
     for (const entry of activeEntries) {
       if (!seen.has(entry.user_id)) {
         seen.add(entry.user_id);
@@ -563,6 +771,36 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
     return list;
   }, [viewMode, activeEntries, search, effectiveSelectedEmployeeIds]);
 
+  // Monthly pivot rows (same pivot format as weekly)
+  const monthlyPivotRows = useMemo(() => {
+    if (viewMode !== "monthly") return [];
+    const byUser = new Map<string, Map<string, PlanLocationValue>>();
+    for (const entry of filteredMonthlyEntries) {
+      if (!byUser.has(entry.user_id)) byUser.set(entry.user_id, new Map());
+      byUser.get(entry.user_id)!.set(entry.date, entry.work_location);
+    }
+    const seen = new Set<string>();
+    return eligibleEmployees
+      .filter((e) => seen.has(e.id) ? false : (seen.add(e.id), true))
+      .map((emp) => ({
+        userId: emp.id,
+        name: emp.name,
+        days: weekDays.map((d) => {
+          const parsed = parseISO(d.iso);
+          const userAttendance = attendanceByUserId.get(emp.id);
+          const record = userAttendance?.get(d.iso);
+          const actualLocation = record ? (record.isRemote ? "WFH" : "OFFICE") : null;
+          return {
+            iso: d.iso,
+            dayLabel: dateFnsFormat(parsed, "EEEE"),
+            dateLabel: dateFnsFormat(parsed, "MMM d"),
+            planned: byUser.get(emp.id)?.get(d.iso) ?? null,
+            actualLocation,
+          } satisfies PlanExportPivotDay;
+        }),
+      }));
+  }, [viewMode, filteredMonthlyEntries, weekDays, attendanceByUserId, eligibleEmployees]);
+
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const pagedRows = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -594,6 +832,39 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
   function clearFilters() {
     setEffectiveSelectedEmployeeIds([]);
     setSearch("");
+  }
+
+  function buildPivotExportData(
+    filteredRows_: PlanExportRow[],
+    days: { iso: string }[],
+    attendanceByUserId: Map<string, Map<string, AttendanceRecord>>,
+  ): PlanExportPivotRow[] {
+    const byUser = new Map<string, Map<string, PlanLocationValue | null>>();
+    for (const r of filteredRows_) {
+      if (!byUser.has(r.user_id)) byUser.set(r.user_id, new Map());
+      byUser.get(r.user_id)!.set(r.date, r.work_location);
+    }
+
+    const seen = new Set<string>();
+    return eligibleEmployees
+      .filter((e) => seen.has(e.id) ? false : (seen.add(e.id), true))
+      .map((emp) => ({
+        userId: emp.id,
+        name: emp.name,
+        days: days.map((d) => {
+          const parsed = parseISO(d.iso);
+          const userAttendance = attendanceByUserId.get(emp.id);
+          const record = userAttendance?.get(d.iso);
+          const actualLocation = record ? (record.isRemote ? "WFH" : "OFFICE") : null;
+          return {
+            iso: d.iso,
+            dayLabel: dateFnsFormat(parsed, "EEEE"),
+            dateLabel: dateFnsFormat(parsed, "MMM d"),
+            planned: byUser.get(emp.id)?.get(d.iso) ?? null,
+            actualLocation,
+          } satisfies PlanExportPivotDay;
+        }),
+      }));
   }
 
   async function handleExport(format: PlanExportFormat) {
@@ -638,17 +909,22 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
         ? getWeekRangeLabel(weekState.year, weekState.week)
         : getMonthLabel(monthState.year, monthState.month);
 
+      const isMonthlyView = viewMode === "monthly";
+      const pivot = isMonthlyView
+        ? monthlyPivotRows.filter((r) => employeeIdSet.has(r.userId))
+        : buildPivotExportData(rowsForExport, weekDays, attendanceByUserId);
       const payload: PlanExportPayload = {
         format,
         title,
         periodLabel: label,
-        dateColumns: [currentDateFrom, currentDateTo],
+        viewMode: isMonthlyView ? "monthly_pivot" : "weekly",
         employees: employeesForExport.map((emp) => ({
           id: emp.id,
           name: emp.name,
           email: emp.email,
         })),
-        rows: rowsForExport,
+        rows: isMonthlyView ? rowsForExport : undefined,
+        pivotData: pivot,
       };
 
       const blob = await exportWeeklyPlanReportAction({ orgSlug, memberId, payload });
@@ -870,7 +1146,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                         return isMismatch(planned, employeeAttendance?.get(date)?.status ?? null);
                       });
                       return [
-                        <tr key={`${row.userId}-plan`} className={cn("transition-colors duration-100", hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60")}>
+                        <tr key={`${row.userId}-plan`} className="transition-colors duration-100 hover:bg-canvas/60">
                           <td className="px-4 py-2 sticky left-0 bg-white z-10 border-r border-neutral-100 border-b border-neutral-200 w-[200px] max-w-[200px] overflow-hidden" rowSpan={2}>
                             <div className="flex items-center gap-2">
                               <EmployeeCell name={row.name} />
@@ -888,7 +1164,7 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                             </td>
                           ))}
                         </tr>,
-                        <tr key={`${row.userId}-actual`} className={cn("transition-colors duration-100 border-b border-neutral-200", hasMismatch ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-canvas/60")}>
+                        <tr key={`${row.userId}-actual`} className="transition-colors duration-100 border-b border-neutral-200 hover:bg-canvas/60">
                           {weekDatesTuple.map(({ key, date }) => {
                             const d = parseISO(date);
                             const today = isToday(d);
@@ -896,14 +1172,72 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
                             const actualRecord = employeeAttendance?.get(date);
                             const planned = weekDatesTuple.find((w) => w.key === key)?.planned ?? null;
                             const mismatch = !isFut && isMismatch(planned, actualRecord?.status ?? null);
+                            const isMenuOpen = activeMenuCell?.userId === row.userId && activeMenuCell?.date === date;
                             return (
-                              <td key={key} className={cn("px-2 py-2 text-center", today && "bg-primary/3")}>
+                              <td
+                                key={key}
+                                className={cn("px-2 py-2 text-center", today && "bg-primary/3")}
+                                onClick={() => {
+                                  if (!isFut && !isSavingActual) {
+                                    setActiveMenuCell({ userId: row.userId, date });
+                                  }
+                                }}
+                              >
                                 {isFut ? (
                                   <span className="text-[10px] font-medium text-neutral-200">—</span>
+                                ) : isMenuOpen ? (
+                                  <>
+                                    <div ref={menuRef} className="inline-flex">
+                                      <ActualLocationBadge record={actualRecord} />
+                                    </div>
+                                    {createPortal(
+                                      <div
+                                        className="fixed z-[9999] bg-white rounded-lg shadow-lg border border-neutral-200 py-1 min-w-[48px]"
+                                        style={{ left: menuPos ? menuPos.x : 0, top: menuPos ? menuPos.y : 0 }}
+                                        onMouseLeave={() => { setActiveMenuCell(null); setMenuPos(null); }}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => handleActualLocationSave(row.userId, date, false)}
+                                          className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-teal-700 hover:bg-neutral-100 transition-colors"
+                                        >
+                                          OFC
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleActualLocationSave(row.userId, date, true)}
+                                          className="flex items-center justify-center w-full px-3 py-1 text-xs font-bold font-mono text-blue-700 hover:bg-neutral-100 transition-colors"
+                                        >
+                                          WFH
+                                        </button>
+                                        {actualRecord && (
+                                          <>
+                                            <div className="border-t border-neutral-100 mx-2" />
+                                            <button
+                                              type="button"
+                                              onClick={async () => {
+                                                setActiveMenuCell(null);
+                                                setMenuPos(null);
+                                                setIsSavingActual(true);
+                                                try {
+                                                  await handleActualLocationSave(row.userId, date, !actualRecord.isRemote);
+                                                } finally {
+                                                  setIsSavingActual(false);
+                                                }
+                                              }}
+                                              className="flex items-center justify-center w-full px-3 py-1 text-xs font-mono text-neutral-400 hover:bg-neutral-100 transition-colors"
+                                            >
+                                              Toggle
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>,
+                                      document.body,
+                                    )}
+                                  </>
                                 ) : (
-                                  <div className="flex items-center justify-center gap-1">
+                                  <div className={cn(!isFut && "cursor-pointer")}>
                                     <ActualLocationBadge record={actualRecord} />
-                                    {mismatch && <AlertCircle className="size-2.5 text-red-400 shrink-0" />}
                                   </div>
                                 )}
                               </td>
@@ -949,11 +1283,15 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
             )}
           </div>
         ) : (
-          /* Monthly flat list table */
+          /* Monthly pivot table */
           <MonthlyPlanTable
-            entries={filteredMonthlyEntries}
+            pivotRows={monthlyPivotRows}
+            weekDays={weekDays}
             isLoading={isLoading}
             search={search}
+            orgSlug={orgSlug}
+            memberId={memberId}
+            userIdToMemberId={userIdToMemberId}
           />
         )}
       </div>
