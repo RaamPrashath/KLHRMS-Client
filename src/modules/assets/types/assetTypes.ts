@@ -201,6 +201,8 @@ export interface AssetSummary {
   openMaintenanceCount: number;
   unitSummary: AssetUnitSummary | null;
   customFields: CustomFieldValueResponse[];
+  providedDate: string | null;
+  providedByName: string | null;
 }
 
 export interface AssetProvideRecordSummary {

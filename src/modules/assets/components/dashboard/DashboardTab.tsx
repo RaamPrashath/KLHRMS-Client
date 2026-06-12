@@ -135,6 +135,8 @@ function buildAggregateDetail(row: BrandModelInventoryRow, details: AssetDetail[
       damaged: row.maintenanceOrDamagedStock,
     },
     customFields: [],
+    providedDate: activeProvision?.providedDate ?? null,
+    providedByName: activeProvision?.providedByName ?? null,
     activeProvision,
     assetHistory: sortByNewest(assetHistory),
     maintenanceHistory: sortByNewest(maintenanceHistory),

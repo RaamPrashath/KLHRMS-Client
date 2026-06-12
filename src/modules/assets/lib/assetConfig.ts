@@ -38,7 +38,7 @@ const ASSET_TABS: Array<{
   { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { value: 'register', label: 'Asset Register', icon: LaptopMinimal },
   { value: 'categories', label: 'Categories', icon: LayoutGrid },
-  { value: 'provide', label: 'Issue Asset', icon: PackagePlus },
+  { value: 'provide', label: 'Employee Assets', icon: Users },
   { value: 'returned', label: 'Returned Assets', icon: RotateCw },
   { value: 'access-control', label: 'Access Control', icon: DoorOpen },
   { value: 'inventory', label: 'Inventory', icon: ClipboardList },

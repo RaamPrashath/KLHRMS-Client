@@ -21,6 +21,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { ACTION_GREEN } from '@/modules/assets/lib/assetConfig';
 import {
+  DateField,
   FieldSelect,
   InputField,
   NumberField,
@@ -55,7 +56,7 @@ function DynamicFieldRenderer({
         <NumberField label={fieldDef.fieldName} value={value ? Number(value) : null} onChange={(v) => onChange(v !== null ? String(v) : null)} />
       );
     case 'DATE':
-      return <InputField label={fieldDef.fieldName} value={value || ''} onChange={(v) => onChange(v || null)} />;
+      return <DateField label={fieldDef.fieldName} value={value || ''} onChange={(v) => onChange(v || null)} />;
     case 'BOOLEAN':
       return (
         <div className="grid gap-1.5">

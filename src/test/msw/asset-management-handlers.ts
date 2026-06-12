@@ -108,6 +108,8 @@ export const mockAssetDetail: AssetDetail = {
         damaged: 0,
     },
     customFields: [],
+    providedDate: null,
+    providedByName: null,
     activeProvision: null,
     assetHistory: [],
     maintenanceHistory: [],

@@ -22,7 +22,7 @@ import { CategoryTab } from '@/modules/assets/components/CategoryTab';
 import { DashboardTab } from '@/modules/assets/components/dashboard/DashboardTab';
 import { EmployeeAssetGallery } from '@/modules/assets/components/EmployeeAssetGallery';
 import { EmployeeAssetTable } from '@/modules/assets/components/EmployeeAssetTable';
-import { IssueAssetTab } from '@/modules/assets/components/IssueAssetTab';
+import { EmployeeAssetPivotTab } from '@/modules/assets/components/EmployeeAssetPivotTab';
 import { RaiseTicketDialog } from '@/modules/assets/components/RaiseTicketDialog';
 import { ReturnedAssetsTab } from '@/modules/assets/components/ReturnedAssetsTab';
 import { AssetDetailDialog } from '@/modules/assets/components/AssetDetailDialog';
@@ -482,14 +482,10 @@ export function AssetsPageShell({
         </TabsContent>
 
         <TabsContent value="provide" className="mt-0">
-          <IssueAssetTab
+          <EmployeeAssetPivotTab
             members={members}
-            availableGroups={availableGroups}
-            canManageAssets={canManageAssets}
             memberId={memberId}
             orgSlug={orgSlug}
-            onIssue={handleIssueGroupAsset}
-            isGroupsLoading={availableGroupsQuery.isLoading}
             assignedAssets={allFetchedAssets}
             headerAction={
               canManageAssets && (
