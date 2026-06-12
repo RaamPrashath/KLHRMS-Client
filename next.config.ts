@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
         source: "/public/offers/:path*",
         destination: `${API_URL}/public/offers/:path*`,
       },
+      {
+        source: "/public/interviews/:path*",
+        destination: `${API_URL}/public/interviews/:path*`,
+      },
     ];
   },
 };

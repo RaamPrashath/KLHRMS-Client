@@ -55,6 +55,7 @@ export function OrgSidebarShell({
     const isProcurementRoute = pathname.includes("/procurement")
     const isResumeParserRoute = pathname.includes("/resume-parser")
     const isNotificationsRoute = pathname.includes("/notifications");
+    const isRecruitmentReportRoute = pathname.includes("/recruitment-report");
     
     const isProcurementComposer = pathname.includes("/procurement/purchase-orders/");
     
@@ -78,7 +79,8 @@ export function OrgSidebarShell({
         isDRoute ||
         isProcurementRoute ||
         isResumeParserRoute ||
-        isNotificationsRoute
+        isNotificationsRoute ||
+        isRecruitmentReportRoute
 
     if (isDocumentsRoute) {
         return (
@@ -105,6 +107,8 @@ export function OrgSidebarShell({
                         isFullWidthRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
                         isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isAssetMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute || isResumeParserRoute || isNotificationsRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
                         (isOfferRoute || isProcurementComposer) && "h-full min-h-0 overflow-hidden",
+                        isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isAssetMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute || isResumeParserRoute || isNotificationsRoute || isRecruitmentReportRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isOfferRoute && "h-full min-h-0 overflow-hidden",
                     )}
                 >
                     {children}

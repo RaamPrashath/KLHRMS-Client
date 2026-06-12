@@ -1,0 +1,1593 @@
+(node:41232) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1224664845',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '3429129052',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1224664845',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '3806802038',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3356667429',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3356667429',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1224664845',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationsAction (src\modules\notifications\api\notificationServerActions.ts:67:15)
+  65 |     offset: String(params.offset ?? 0),
+  66 |   });
+> 67 |   const res = await fetch(`${getApiUrl()}/notifications?${search.toString()}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '102029568',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationUnreadCountAction (src\modules\notifications\api\notificationServerActions.ts:80:15)
+  78 | }): Promise<NotificationUnreadCountResponse> {
+  79 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+> 80 |   const res = await fetch(`${getApiUrl()}/notifications/unread-count`, {
+     |               ^
+  81 |     method: 'GET',
+  82 |     headers: buildHeaders(params.orgSlug, member.id),
+  83 |     cache: 'no-store', {
+  digest: '520408383',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '176763338',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '469631899',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '178108733',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '2153404593',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3984351362',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '178108733',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchEmployeeRolesAction (src\modules\employees\api\employeeServerActions.ts:86:15)
+  84 |   memberId: string;
+  85 | }): Promise<EmployeeFilterOption[]> {
+> 86 |   const res = await fetch(`${getApiUrl()}/employees/roles`, {
+     |               ^
+  87 |     method: 'GET',
+  88 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  89 |     cache: 'no-store', {
+  digest: '588201603',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchDashboardOverviewAction (src\modules\dashboard\api\dashboardServerActions.ts:41:15)
+  39 | }): Promise<DashboardOverviewResponse> {
+  40 |   const query = new URLSearchParams({ today: params.today });
+> 41 |   const res = await fetch(`${getApiUrl()}/dashboard?${query}`, {
+     |               ^
+  42 |     method: 'GET',
+  43 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  44 |     cache: 'no-store', {
+  digest: '765687774',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchDashboardOverviewAction (src\modules\dashboard\api\dashboardServerActions.ts:41:15)
+  39 | }): Promise<DashboardOverviewResponse> {
+  40 |   const query = new URLSearchParams({ today: params.today });
+> 41 |   const res = await fetch(`${getApiUrl()}/dashboard?${query}`, {
+     |               ^
+  42 |     method: 'GET',
+  43 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  44 |     cache: 'no-store', {
+  digest: '765687774',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationsAction (src\modules\notifications\api\notificationServerActions.ts:67:15)
+  65 |     offset: String(params.offset ?? 0),
+  66 |   });
+> 67 |   const res = await fetch(`${getApiUrl()}/notifications?${search.toString()}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '102029568',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationUnreadCountAction (src\modules\notifications\api\notificationServerActions.ts:80:15)
+  78 | }): Promise<NotificationUnreadCountResponse> {
+  79 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+> 80 |   const res = await fetch(`${getApiUrl()}/notifications/unread-count`, {
+     |               ^
+  81 |     method: 'GET',
+  82 |     headers: buildHeaders(params.orgSlug, member.id),
+  83 |     cache: 'no-store', {
+  digest: '520408383',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '176763338',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1224664845',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '469631899',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1224664845',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '3429129052',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '178108733',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '3806802038',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '2153404593',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3984351362',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3356667429',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '178108733',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1224664845',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchEmployeeRolesAction (src\modules\employees\api\employeeServerActions.ts:86:15)
+  84 |   memberId: string;
+  85 | }): Promise<EmployeeFilterOption[]> {
+> 86 |   const res = await fetch(`${getApiUrl()}/employees/roles`, {
+     |               ^
+  87 |     method: 'GET',
+  88 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  89 |     cache: 'no-store', {
+  digest: '588201603',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3356667429',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchDashboardOverviewAction (src\modules\dashboard\api\dashboardServerActions.ts:41:15)
+  39 | }): Promise<DashboardOverviewResponse> {
+  40 |   const query = new URLSearchParams({ today: params.today });
+> 41 |   const res = await fetch(`${getApiUrl()}/dashboard?${query}`, {
+     |               ^
+  42 |     method: 'GET',
+  43 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  44 |     cache: 'no-store', {
+  digest: '765687774',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationsAction (src\modules\notifications\api\notificationServerActions.ts:67:15)
+  65 |     offset: String(params.offset ?? 0),
+  66 |   });
+> 67 |   const res = await fetch(`${getApiUrl()}/notifications?${search.toString()}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '102029568',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationUnreadCountAction (src\modules\notifications\api\notificationServerActions.ts:80:15)
+  78 | }): Promise<NotificationUnreadCountResponse> {
+  79 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+> 80 |   const res = await fetch(`${getApiUrl()}/notifications/unread-count`, {
+     |               ^
+  81 |     method: 'GET',
+  82 |     headers: buildHeaders(params.orgSlug, member.id),
+  83 |     cache: 'no-store', {
+  digest: '520408383',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '176763338',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '469631899',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '178108733',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '2153404593',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3984351362',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '178108733',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchEmployeeRolesAction (src\modules\employees\api\employeeServerActions.ts:86:15)
+  84 |   memberId: string;
+  85 | }): Promise<EmployeeFilterOption[]> {
+> 86 |   const res = await fetch(`${getApiUrl()}/employees/roles`, {
+     |               ^
+  87 |     method: 'GET',
+  88 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  89 |     cache: 'no-store', {
+  digest: '588201603',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchDashboardOverviewAction (src\modules\dashboard\api\dashboardServerActions.ts:41:15)
+  39 | }): Promise<DashboardOverviewResponse> {
+  40 |   const query = new URLSearchParams({ today: params.today });
+> 41 |   const res = await fetch(`${getApiUrl()}/dashboard?${query}`, {
+     |               ^
+  42 |     method: 'GET',
+  43 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  44 |     cache: 'no-store', {
+  digest: '765687774',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationsAction (src\modules\notifications\api\notificationServerActions.ts:67:15)
+  65 |     offset: String(params.offset ?? 0),
+  66 |   });
+> 67 |   const res = await fetch(`${getApiUrl()}/notifications?${search.toString()}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '102029568',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationUnreadCountAction (src\modules\notifications\api\notificationServerActions.ts:80:15)
+  78 | }): Promise<NotificationUnreadCountResponse> {
+  79 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+> 80 |   const res = await fetch(`${getApiUrl()}/notifications/unread-count`, {
+     |               ^
+  81 |     method: 'GET',
+  82 |     headers: buildHeaders(params.orgSlug, member.id),
+  83 |     cache: 'no-store', {
+  digest: '520408383',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '176763338',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '469631899',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '178108733',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '2153404593',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3984351362',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '178108733',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchEmployeeRolesAction (src\modules\employees\api\employeeServerActions.ts:86:15)
+  84 |   memberId: string;
+  85 | }): Promise<EmployeeFilterOption[]> {
+> 86 |   const res = await fetch(`${getApiUrl()}/employees/roles`, {
+     |               ^
+  87 |     method: 'GET',
+  88 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  89 |     cache: 'no-store', {
+  digest: '588201603',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationsAction (src\modules\notifications\api\notificationServerActions.ts:67:15)
+  65 |     offset: String(params.offset ?? 0),
+  66 |   });
+> 67 |   const res = await fetch(`${getApiUrl()}/notifications?${search.toString()}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '102029568',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationUnreadCountAction (src\modules\notifications\api\notificationServerActions.ts:80:15)
+  78 | }): Promise<NotificationUnreadCountResponse> {
+  79 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+> 80 |   const res = await fetch(`${getApiUrl()}/notifications/unread-count`, {
+     |               ^
+  81 |     method: 'GET',
+  82 |     headers: buildHeaders(params.orgSlug, member.id),
+  83 |     cache: 'no-store', {
+  digest: '520408383',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1392502428',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '1620195418',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '1651269632',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '3701384981',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '2883418828',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '1651269632',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchEmployeeRolesAction (src\modules\employees\api\employeeServerActions.ts:86:15)
+  84 |   memberId: string;
+  85 | }): Promise<EmployeeFilterOption[]> {
+> 86 |   const res = await fetch(`${getApiUrl()}/employees/roles`, {
+     |               ^
+  87 |     method: 'GET',
+  88 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  89 |     cache: 'no-store', {
+  digest: '418500755',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchDashboardOverviewAction (src\modules\dashboard\api\dashboardServerActions.ts:41:15)
+  39 | }): Promise<DashboardOverviewResponse> {
+  40 |   const query = new URLSearchParams({ today: params.today });
+> 41 |   const res = await fetch(`${getApiUrl()}/dashboard?${query}`, {
+     |               ^
+  42 |     method: 'GET',
+  43 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  44 |     cache: 'no-store', {
+  digest: '765687774',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationsAction (src\modules\notifications\api\notificationServerActions.ts:67:15)
+  65 |     offset: String(params.offset ?? 0),
+  66 |   });
+> 67 |   const res = await fetch(`${getApiUrl()}/notifications?${search.toString()}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '102029568',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationUnreadCountAction (src\modules\notifications\api\notificationServerActions.ts:80:15)
+  78 | }): Promise<NotificationUnreadCountResponse> {
+  79 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+> 80 |   const res = await fetch(`${getApiUrl()}/notifications/unread-count`, {
+     |               ^
+  81 |     method: 'GET',
+  82 |     headers: buildHeaders(params.orgSlug, member.id),
+  83 |     cache: 'no-store', {
+  digest: '520408383',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1392502428',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '1620195418',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '3576754650',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '3701384981',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '1651269632',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3356667429',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ETIMEDOUT',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchEmployeeRolesAction (src\modules\employees\api\employeeServerActions.ts:86:15)
+  84 |   memberId: string;
+  85 | }): Promise<EmployeeFilterOption[]> {
+> 86 |   const res = await fetch(`${getApiUrl()}/employees/roles`, {
+     |               ^
+  87 |     method: 'GET',
+  88 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  89 |     cache: 'no-store', {
+  digest: '418500755',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchDashboardOverviewAction (src\modules\dashboard\api\dashboardServerActions.ts:41:15)
+  39 | }): Promise<DashboardOverviewResponse> {
+  40 |   const query = new URLSearchParams({ today: params.today });
+> 41 |   const res = await fetch(`${getApiUrl()}/dashboard?${query}`, {
+     |               ^
+  42 |     method: 'GET',
+  43 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  44 |     cache: 'no-store', {
+  digest: '765687774',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationsAction (src\modules\notifications\api\notificationServerActions.ts:67:15)
+  65 |     offset: String(params.offset ?? 0),
+  66 |   });
+> 67 |   const res = await fetch(`${getApiUrl()}/notifications?${search.toString()}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '102029568',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1392502428',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '1620195418',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '1651269632',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '3701384981',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationUnreadCountAction (src\modules\notifications\api\notificationServerActions.ts:80:15)
+  78 | }): Promise<NotificationUnreadCountResponse> {
+  79 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+> 80 |   const res = await fetch(`${getApiUrl()}/notifications/unread-count`, {
+     |               ^
+  81 |     method: 'GET',
+  82 |     headers: buildHeaders(params.orgSlug, member.id),
+  83 |     cache: 'no-store', {
+  digest: '520408383',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '1651269632',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3356667429',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchEmployeeRolesAction (src\modules\employees\api\employeeServerActions.ts:86:15)
+  84 |   memberId: string;
+  85 | }): Promise<EmployeeFilterOption[]> {
+> 86 |   const res = await fetch(`${getApiUrl()}/employees/roles`, {
+     |               ^
+  87 |     method: 'GET',
+  88 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  89 |     cache: 'no-store', {
+  digest: '418500755',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchDashboardOverviewAction (src\modules\dashboard\api\dashboardServerActions.ts:41:15)
+  39 | }): Promise<DashboardOverviewResponse> {
+  40 |   const query = new URLSearchParams({ today: params.today });
+> 41 |   const res = await fetch(`${getApiUrl()}/dashboard?${query}`, {
+     |               ^
+  42 |     method: 'GET',
+  43 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  44 |     cache: 'no-store', {
+  digest: '765687774',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchMyAttendanceAction (src\modules\attendance\api\attendanceServerActions.ts:138:15)
+  136 |     page_size: filters.page_size,
+  137 |   });
+> 138 |   const res = await fetch(`${getApiUrl()}/attendance/me${query}`, {
+      |               ^
+  139 |     method: 'GET',
+  140 |     headers: buildHeaders(orgSlug, memberId),
+  141 |     cache: 'no-store', {
+  digest: '1224664845',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchProjectsForAttendanceAction (src\modules\projects\api\projectServerActions.ts:48:15)
+  46 |   if (!url) throw new Error('HRMS_API_URL is not set');
+  47 |
+> 48 |   const res = await fetch(`${url}/projects/for-attendance`, {
+     |               ^
+  49 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  50 |   });
+  51 | {
+  digest: '3429129052',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationsAction (src\modules\notifications\api\notificationServerActions.ts:67:15)
+  65 |     offset: String(params.offset ?? 0),
+  66 |   });
+> 67 |   const res = await fetch(`${getApiUrl()}/notifications?${search.toString()}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '102029568',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '3576754650',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchHolidaysAction (src\modules\leave\api\leaveServerActions.ts:198:15)
+  196 |     pageSize: params.pageSize,
+  197 |   });
+> 198 |   const res = await fetch(`${getApiUrl()}/leaves/holidays${query}`, {
+      |               ^
+  199 |     method: 'GET',
+  200 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  201 |     cache: 'no-store', {
+  digest: '3806802038',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchNotificationUnreadCountAction (src\modules\notifications\api\notificationServerActions.ts:80:15)
+  78 | }): Promise<NotificationUnreadCountResponse> {
+  79 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+> 80 |   const res = await fetch(`${getApiUrl()}/notifications/unread-count`, {
+     |               ^
+  81 |     method: 'GET',
+  82 |     headers: buildHeaders(params.orgSlug, member.id),
+  83 |     cache: 'no-store', {
+  digest: '520408383',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchBulkAttendanceRangeAction (src\modules\attendance\api\bulkAttendanceServerActions.ts:64:15)
+  62 |   const { orgSlug, memberId, from, to } = params;
+  63 |   const url = `${getApiUrl()}/attendance/bulk-work-logs?from=${encodeURIComponent(from)}&t...
+> 64 |   const res = await fetch(url, {
+     |               ^
+  65 |     method: 'GET',
+  66 |     headers: buildHeaders(orgSlug, memberId),
+  67 |     cache: 'no-store', {
+  digest: '3576754650',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchLeaveRequestsAction (src\modules\leave\api\leaveServerActions.ts:285:15)
+  283 |     page_size: params.filters?.pageSize,
+  284 |   });
+> 285 |   const res = await fetch(`${getApiUrl()}/leaves/requests${query}`, {
+      |               ^
+  286 |     method: 'GET',
+  287 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  288 |     cache: 'no-store', {
+  digest: '3356667429',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchEmployeeRolesAction (src\modules\employees\api\employeeServerActions.ts:86:15)
+  84 |   memberId: string;
+  85 | }): Promise<EmployeeFilterOption[]> {
+> 86 |   const res = await fetch(`${getApiUrl()}/employees/roles`, {
+     |               ^
+  87 |     method: 'GET',
+  88 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  89 |     cache: 'no-store', {
+  digest: '2995622596',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchDashboardOverviewAction (src\modules\dashboard\api\dashboardServerActions.ts:41:15)
+  39 | }): Promise<DashboardOverviewResponse> {
+  40 |   const query = new URLSearchParams({ today: params.today });
+> 41 |   const res = await fetch(`${getApiUrl()}/dashboard?${query}`, {
+     |               ^
+  42 |     method: 'GET',
+  43 |     headers: buildHeaders(params.orgSlug, params.memberId),
+  44 |     cache: 'no-store', {
+  digest: '765687774',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchJobRequisitionsAction (src\modules\jobs\api\jobRequisitionServerActions.ts:67:15)
+  65 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+  66 |   const queryParams = params.viewScope ? `?view_scope=${encodeURIComponent(params.viewScop...
+> 67 |   const res = await fetch(`${getApiUrl()}/jobs/requisitions${queryParams}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '2978895960',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchJobRequisitionsAction (src\modules\jobs\api\jobRequisitionServerActions.ts:67:15)
+  65 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+  66 |   const queryParams = params.viewScope ? `?view_scope=${encodeURIComponent(params.viewScop...
+> 67 |   const res = await fetch(`${getApiUrl()}/jobs/requisitions${queryParams}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '2978895960',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchJobRequisitionsAction (src\modules\jobs\api\jobRequisitionServerActions.ts:67:15)
+  65 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+  66 |   const queryParams = params.viewScope ? `?view_scope=${encodeURIComponent(params.viewScop...
+> 67 |   const res = await fetch(`${getApiUrl()}/jobs/requisitions${queryParams}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '2978895960',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchJobRequisitionsAction (src\modules\jobs\api\jobRequisitionServerActions.ts:67:15)
+  65 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+  66 |   const queryParams = params.viewScope ? `?view_scope=${encodeURIComponent(params.viewScop...
+> 67 |   const res = await fetch(`${getApiUrl()}/jobs/requisitions${queryParams}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '2978895960',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ TypeError: fetch failed
+    at async fetchJobRequisitionsAction (src\modules\jobs\api\jobRequisitionServerActions.ts:67:15)
+  65 |   const { member } = await getCurrentOrgMember(params.orgSlug);
+  66 |   const queryParams = params.viewScope ? `?view_scope=${encodeURIComponent(params.viewScop...
+> 67 |   const res = await fetch(`${getApiUrl()}/jobs/requisitions${queryParams}`, {
+     |               ^
+  68 |     method: 'GET',
+  69 |     headers: buildHeaders(params.orgSlug, member.id),
+  70 |     cache: 'no-store', {
+  digest: '2978895960',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}

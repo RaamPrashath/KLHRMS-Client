@@ -20,15 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+
 import { OfferSendConfirmDialog } from '@/modules/offers/components/OfferSendConfirmDialog';
 import { OfferTemplatePicker } from '@/modules/offers/components/OfferTemplatePicker';
 import { composeTemplateHtml } from '@/modules/offers/utils/offerTemplateRender';
@@ -37,16 +29,13 @@ import {
   useValidateOfferDispatch,
 } from '@/modules/offers/hooks/useOfferWorkspace';
 import {
-  useDeleteOfferTemplate,
   useOfferTemplate,
   useOfferTemplates,
 } from '@/modules/offers/hooks/useOfferTemplates';
 import type {
   OfferCandidateValidationResponse,
   OfferStageWorkspace,
-  OfferTemplate,
   OfferTemplateCategory,
-  OfferTemplateListItem,
   OfferWorkspaceCandidate,
 } from '@/modules/offers/types/offerTypes';
 import { cn } from '@/lib/utils';
@@ -91,11 +80,6 @@ interface SendOfferDialogProps {
   readonly onDispatched: () => void;
 }
 
-interface DeleteTemplateTarget {
-  id: string;
-  name: string;
-}
-
 function readActionError(error: unknown, fallback: string): string {
   if (!(error instanceof Error)) return fallback;
   try {
@@ -122,10 +106,6 @@ function formatExpiry(value: Date): string {
   }).format(value);
 }
 
-function templateAsDeleteTarget(template: OfferTemplate): DeleteTemplateTarget {
-  return { id: template.id, name: template.name };
-}
-
 export function SendOfferDialog({
   open,
   orgSlug,
@@ -146,11 +126,8 @@ export function SendOfferDialog({
   const [templateSearch, setTemplateSearch] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [validationResult, setValidationResult] = useState<OfferCandidateValidationResponse | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTemplateTarget | null>(null);
-
   const templatesQuery = useOfferTemplates(orgSlug, memberId, templateSearch);
   const selectedTemplateQuery = useOfferTemplate(orgSlug, memberId, selectedTemplateId);
-  const deleteTemplate = useDeleteOfferTemplate(orgSlug, memberId);
   const validateDispatch = useValidateOfferDispatch(orgSlug, memberId, jobSlug, stageSlug);
   const createDispatch = useCreateOfferDispatch(orgSlug, memberId, jobSlug, stageSlug);
 
@@ -237,21 +214,6 @@ export function SendOfferDialog({
     }
   }
 
-  async function confirmDeleteTemplate() {
-    if (!deleteTarget) return;
-    try {
-      await deleteTemplate.mutateAsync({ templateId: deleteTarget.id });
-      if (selectedTemplateId === deleteTarget.id) {
-        onSelectedTemplateChange(null);
-        onSelectedCategoryChange(null);
-      }
-      setDeleteTarget(null);
-      toast.success('Template deleted');
-    } catch (error) {
-      toast.error(readActionError(error, 'Failed to delete template'));
-    }
-  }
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -271,7 +233,6 @@ export function SendOfferDialog({
               loading={templatesQuery.isLoading}
               onSearchChange={setTemplateSearch}
               onSelectTemplate={onSelectedTemplateChange}
-              onDeleteTemplate={(template: OfferTemplateListItem) => setDeleteTarget(template)}
               onReloadTemplates={() => templatesQuery.refetch()}
             />
             <div className="flex min-h-0 flex-col">
@@ -385,29 +346,6 @@ export function SendOfferDialog({
         onConfirm={() => void confirmDispatch()}
       />
 
-      <AlertDialog open={deleteTarget !== null} onOpenChange={(nextOpen) => {
-        if (!nextOpen) setDeleteTarget(null);
-      }}>
-        <AlertDialogContent className="rounded-2xl bg-surface shadow-xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete template?</AlertDialogTitle>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteTemplate.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deleteTemplate.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                void confirmDeleteTemplate();
-              }}
-            >
-              {deleteTemplate.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   acceptInterviewAction,
   addHiringTeamMemberAction,
+  bookCandidateProposedSlotAction,
   assignStageInterviewsAction,
   completeInterviewMeetingAction,
   completeStageAction,
@@ -28,6 +29,7 @@ import {
   fetchPipelineBoardAction,
   fetchPipelineBoardByJobSlugAction,
   fetchPipelineJobPostingsAction,
+  fetchRecruitmentReportJobsAction,
   fetchStageWorkspaceAction,
   fetchStageWorkspaceByJobSlugAction,
   createHiringTeamAction,
@@ -40,6 +42,7 @@ import {
   searchInterviewersAction,
   updateCandidateApplicationDetailAction,
   updateCandidateApplicationNoteAction,
+  updatePipelineJobPostingStatusAction,
   updatePipelineStageAction,
 } from '@/modules/candidates/api/atsServerActions';
 import type {
@@ -50,11 +53,13 @@ import type {
   PipelineApplication,
   PipelineBoard,
   PipelineJobPosting,
+  RecruitmentReportListResponse,
   PipelineStage,
   InterviewMeeting,
   InterviewerSearchResponse,
   ReshuffleRequest,
   ReshuffleResponse,
+  RejectInterviewRequest,
   RejectInterviewResponse,
   StageInterviewAssignment,
   StageInterviewAssignmentResponse,
@@ -134,6 +139,35 @@ export function usePipelineJobPostings(orgSlug: string, memberId: string) {
     enabled: !!orgSlug && !!memberId,
     staleTime: 60_000,
     gcTime: 10 * 60_000,
+  });
+}
+
+export function useUpdatePipelineJobPostingStatus(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { jobPostingId: string; status: 'PUBLISHED' | 'CLOSED' }) =>
+      updatePipelineJobPostingStatusAction({
+        orgSlug,
+        memberId,
+        jobPostingId: params.jobPostingId,
+        status: params.status,
+      }),
+    onSuccess: (posting) => {
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-postings', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['recruitment-report-jobs', orgSlug] });
+      if (posting.id) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, posting.id) });
+    },
+  });
+}
+
+export function useRecruitmentReportJobs(orgSlug: string, memberId: string) {
+  return useQuery<RecruitmentReportListResponse, Error>({
+    queryKey: ['recruitment-report-jobs', orgSlug],
+    queryFn: () => fetchRecruitmentReportJobsAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
+    staleTime: 30_000,
   });
 }
 
@@ -617,7 +651,7 @@ export function useCreateHiringTeam(orgSlug: string, memberId: string, jobPostin
   return useMutation({
     mutationFn: (data: { jobPostingId: string; name: string; description: string | null; members: Array<{ memberId: string; role?: string | null }>; stageId?: string | null }) =>
       createHiringTeamAction({ orgSlug, memberId, jobPostingId: jobPostingId ?? '', data }),
-    onSuccess: (_data) => {
+    onSuccess: () => {
       if (jobPostingId) {
         queryClient.invalidateQueries({ queryKey: ['hiring-teams', orgSlug, jobPostingId] });
       }
@@ -679,7 +713,7 @@ export function useAcceptInterview(orgSlug: string, memberId: string) {
 
 export function useRejectInterview(orgSlug: string, memberId: string) {
   const queryClient = useQueryClient();
-  return useMutation<RejectInterviewResponse, Error, { eventId: string }>({
+  return useMutation<RejectInterviewResponse, Error, { eventId: string; data?: RejectInterviewRequest }>({
     mutationFn: (args) => rejectInterviewAction({ orgSlug, memberId, ...args }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
@@ -687,6 +721,20 @@ export function useRejectInterview(orgSlug: string, memberId: string) {
       queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['ats-pipeline'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'], refetchType: 'all' });
+    },
+  });
+}
+
+export function useBookCandidateProposedSlot(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<InterviewMeeting, Error, { eventId: string; slotId: string }>({
+    mutationFn: (args) => bookCandidateProposedSlotAction({ orgSlug, memberId, ...args }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-interviews', orgSlug, memberId] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-stage-workspace-job-slug'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
     },
   });
 }

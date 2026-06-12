@@ -46,6 +46,7 @@ import {
     Wrench,
     Headphones,
     FileStack,
+    BarChart3,
 } from "lucide-react";
 import {
     Sidebar,
@@ -114,6 +115,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
     "maintenance": Wrench,
     "helpdesk": Headphones,
     "documents": FileStack,
+    "recruitment-report": BarChart3,
 };
 
 function getInitials(name?: string | null, email?: string | null) {

@@ -1,33 +1,54 @@
 'use client';
 
-import { CheckCircle2, Circle, Clock, XCircle } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Send, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import type { JobRequisitionApproval } from '@/modules/jobs/types/jobRequisitionTypes';
 
 interface StickySummaryPanelProps {
   sectionCompletion: Record<string, boolean>;
   approvals?: JobRequisitionApproval[];
   showApprovals?: boolean;
+  formId?: string;
+  mode?: 'create' | 'edit' | 'review' | 'readonly';
+  isSubmitPending?: boolean;
+  isSaving?: boolean;
+  approveLoading?: boolean;
+  rejectLoading?: boolean;
+  onSubmitForApproval?: () => void;
+  onApprove?: () => void;
+  onReject?: () => void;
 }
 
 const SECTION_LABELS = [
   { key: 'basicInfo', label: 'Basic information', targetId: 'basic-information' },
   { key: 'hiringContext', label: 'Hiring context', targetId: 'hiring-context' },
-  { key: 'compensation', label: 'Compensation', targetId: 'compensation' },
-  { key: 'requirements', label: 'Requirements', targetId: 'candidate-requirements' },
-  { key: 'postingContent', label: 'Posting content', targetId: 'job-posting-content' },
+  { key: 'postingContent', label: 'Job description', targetId: 'job-posting-content' },
+  { key: 'knockoutRule', label: 'Knockout rule', targetId: 'knockout-rule' },
 ];
 
 export function StickySummaryPanel({
   sectionCompletion,
   approvals = [],
   showApprovals,
+  formId,
+  mode,
+  isSubmitPending,
+  isSaving,
+  approveLoading,
+  rejectLoading,
+  onSubmitForApproval,
+  onApprove,
+  onReject,
 }: Readonly<StickySummaryPanelProps>) {
   const completedCount = Object.values(sectionCompletion).filter(Boolean).length;
   const totalSections = SECTION_LABELS.length;
   const [activeSection, setActiveSection] = useState(SECTION_LABELS[0]?.targetId);
   const progress = Math.round((completedCount / totalSections) * 100);
+  const isReview = mode === 'review';
+  const isReadOnly = mode === 'readonly';
+  const showSubmit = !isReview && !isReadOnly;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -65,6 +86,44 @@ export function StickySummaryPanel({
   return (
     <aside className="hidden w-64 shrink-0 lg:block">
       <div className="sticky top-18 space-y-4">
+        {showSubmit || isReview ? (
+          <div className="space-y-2">
+            {isReview ? (
+              <>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={onApprove}
+                  disabled={approveLoading || rejectLoading}
+                >
+                  <CheckCircle2 className="size-4" />
+                  {approveLoading ? 'Approving...' : 'Approve'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="w-full"
+                  onClick={onReject}
+                  disabled={approveLoading || rejectLoading}
+                >
+                  <XCircle className="size-4" />
+                  Reject
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="submit"
+                form={formId}
+                className="w-full"
+                disabled={isSubmitPending || isSaving}
+              >
+                <Send className="size-4" />
+                {isSubmitPending ? 'Submitting...' : 'Submit for Approval'}
+              </Button>
+            )}
+          </div>
+        ) : null}
+
         <div className="rounded-xl bg-surface-subtle p-4">
           <h3 className="mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">
             Form contents
@@ -120,7 +179,7 @@ function ApprovalsCard({ approvals }: Readonly<{ approvals: JobRequisitionApprov
   const approved = approvals.filter((approval) => approval.decision === 'APPROVED').length;
 
   return (
-    <div className="rounded-xl border border-neutral-100 bg-surface p-4 shadow-[var(--shadow-1)]">
+    <div className="rounded-2xl bg-surface p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
           Approvers

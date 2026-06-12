@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import type { PipelineApplication, PipelineBoard, PipelineJobPosting, PipelineStage } from "@/modules/candidates/types/atsTypes";
 import type { PublicCareerApplicationResult } from "@/modules/jobs/types/publicCareerTypes";
-import type { OnboardingPublic, AcceptedOnboardingWorkspace } from "@/modules/onboarding/types/onboardingTypes";
+import type { OnboardingPublic, AcceptedOnboardingWorkspace, OnboardWorkspace } from "@/modules/onboarding/types/onboardingTypes";
 import type { OnboardingSendPayload, OnboardingSubmitDocumentsPayload } from "@/modules/onboarding/schema/onboardingSchemas";
 
 const nowIso = "2026-06-10T06:30:00.000Z";
@@ -254,6 +254,44 @@ export const acceptedOnboardingWorkspace: AcceptedOnboardingWorkspace = {
     },
 };
 
+export const onboardWorkspace: OnboardWorkspace = {
+    stage: {
+        id: "stage_onboarding",
+        name: "Onboarding",
+        slug: "onboarding",
+        stageType: "ONBOARDING",
+        order: 6,
+    },
+    jobPosting: {
+        id: mockJobPosting.id,
+        slug: mockJobPosting.slug,
+        title: mockJobPosting.title,
+    },
+    candidateCount: 1,
+    candidates: [
+        {
+            applicationId: "application_onboard_submitted",
+            candidate: {
+                id: "candidate_dev",
+                firstName: "Dev",
+                lastName: "Kapoor",
+                email: "dev.kapoor@example.com",
+                resumeUrl: null,
+            },
+            appliedAt: "2026-06-02T04:30:00.000Z",
+            source: "REFERRAL",
+            onboardingStatus: "DOCUMENTS_SUBMITTED",
+            onboardingRecordId: "onboarding_dev",
+            aadharUrl: "https://cdn.example.com/aadhar.pdf",
+            panUrl: "https://cdn.example.com/pan.pdf",
+            assignedRoleId: null,
+            assignedEmail: null,
+            credentialsSentAt: null,
+            credentialsEmailError: null,
+        },
+    ],
+};
+
 export const publicOnboarding: OnboardingPublic = {
     token: "onboarding_token_123",
     candidateName: "Meera Iyer",
@@ -340,6 +378,10 @@ export const recruitmentHandlers = [
 
     http.get("*/onboarding/pipeline/jobs/:jobSlug/stages/:stageSlug/workspace", () =>
         HttpResponse.json(acceptedOnboardingWorkspace, { status: 200 }),
+    ),
+
+    http.get("*/onboarding/pipeline/jobs/:jobSlug/stages/:stageSlug/onboard-workspace", () =>
+        HttpResponse.json(onboardWorkspace, { status: 200 }),
     ),
 
     http.post("*/onboarding/pipeline/jobs/:jobSlug/stages/:stageSlug/send-requests", async ({ request }) => {

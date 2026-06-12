@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Edit, FilePlus2, RotateCcw, Search, Trash2, MoreVertical } from 'lucide-react';
+import { Copy, Edit, FilePlus2, RotateCcw, Search, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,6 @@ interface OfferTemplatePickerProps {
   readonly loading: boolean;
   readonly onSearchChange: (search: string) => void;
   readonly onSelectTemplate: (templateId: string) => void;
-  readonly onDeleteTemplate: (template: OfferTemplateListItem) => void;
   readonly onReloadTemplates: () => void;
 }
 
@@ -46,7 +45,6 @@ function TemplateRow({
   selected,
   badge,
   onSelect,
-  onDeleteTemplate,
   onDuplicate,
   duplicating,
 }: {
@@ -55,7 +53,6 @@ function TemplateRow({
   readonly selected: boolean;
   readonly badge?: string;
   readonly onSelect: () => void;
-  readonly onDeleteTemplate: () => void;
   readonly onDuplicate: () => void;
   readonly duplicating: boolean;
 }) {
@@ -129,17 +126,6 @@ function TemplateRow({
               <Copy className="size-4" />
               <span>Duplicate</span>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDeleteTemplate();
-              }}
-              className="flex w-full items-center gap-2 cursor-pointer text-destructive-text focus:bg-destructive-bg focus:text-destructive-text"
-            >
-              <Trash2 className="size-4" />
-              <span>Delete</span>
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -157,7 +143,6 @@ export function OfferTemplatePicker({
   loading,
   onSearchChange,
   onSelectTemplate,
-  onDeleteTemplate,
   onReloadTemplates,
 }: OfferTemplatePickerProps) {
   const copyTemplate = useCopyOfferTemplate(orgSlug, memberId);
@@ -232,7 +217,6 @@ export function OfferTemplatePicker({
             template={template}
             selected={selectedTemplateId === template.id}
             onSelect={() => onSelectTemplate(template.id)}
-            onDeleteTemplate={() => onDeleteTemplate(template)}
             onDuplicate={() => void duplicateTemplateRow(template)}
             duplicating={copyTemplate.isPending}
           />

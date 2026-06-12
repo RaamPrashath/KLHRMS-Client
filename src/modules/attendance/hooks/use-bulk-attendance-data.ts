@@ -141,6 +141,7 @@ export interface UseBulkAttendanceDataReturn {
   saveState: SaveState;
   saveError: string | null;
   saveDayLogs: (date: string, logs: LocalWorkLog[]) => Promise<void>;
+  saveMultipleDayLogs: (dayLogs: Map<string, LocalWorkLog[]>) => Promise<void>;
   deleteDayEntry: (date: string) => Promise<void>;
   optimisticUpdateDay: (date: string, updater: (prev: BulkDayState | null) => BulkDayState) => void;
   rollbackDay: (date: string, snapshot: BulkDayState | null) => void;
@@ -238,34 +239,37 @@ export function useBulkAttendanceData(
   }, []);
 
   // ── Save day logs ────────────────────────────────────────────────────────────
-  const saveDayLogs = useCallback(
-    async (date: string, logs: LocalWorkLog[]) => {
+  const saveMultipleDayLogs = useCallback(
+    async (dayLogs: Map<string, LocalWorkLog[]>) => {
       markSaving();
-      const normalizedLogs = logs
-        .map((log) => normalizeLogForDay(date, log))
-        .filter((log): log is LocalWorkLog => log !== null);
+      const days: UpsertBulkAttendanceDayInput[] = Array.from(dayLogs.entries()).map(([date, logs]) => {
+        const normalizedLogs = logs
+          .map((log) => normalizeLogForDay(date, log))
+          .filter((log): log is LocalWorkLog => log !== null);
 
-      const dayInput: UpsertBulkAttendanceDayInput = {
-        date,
-        logs: normalizedLogs.map((l) => ({
-          startTime: toLocalISOString(l.startTime),
-          endTime: toLocalISOString(l.endTime),
-          projectId: l.projectId ?? undefined,
-          projectTaskId: l.projectTaskId ?? undefined,
-          title: l.title ?? undefined,
-          notes: l.notes ?? undefined,
-        })),
-      };
+        return {
+          date,
+          logs: normalizedLogs.map((l) => ({
+            startTime: toLocalISOString(l.startTime),
+            endTime: toLocalISOString(l.endTime),
+            projectId: l.projectId ?? undefined,
+            projectTaskId: l.projectTaskId ?? undefined,
+            title: l.title ?? undefined,
+            notes: l.notes ?? undefined,
+          })),
+        };
+      });
 
       try {
-        const result = await upsertMutation.mutateAsync({ days: [dayInput] });
+        const result = await upsertMutation.mutateAsync({ days });
 
         // Reconcile with server response
-        const savedDay = result.days[0];
-        if (savedDay) {
+        if (result.days.length > 0) {
           setOptimisticOverlay((prev) => {
             const next = new Map(prev);
-            next.set(date, normalizeDayFromApi(savedDay));
+            for (const savedDay of result.days) {
+              next.set(savedDay.date, normalizeDayFromApi(savedDay));
+            }
             return next;
           });
         }
@@ -278,6 +282,13 @@ export function useBulkAttendanceData(
       }
     },
     [upsertMutation],
+  );
+
+  const saveDayLogs = useCallback(
+    async (date: string, logs: LocalWorkLog[]) => {
+      await saveMultipleDayLogs(new Map([[date, logs]]));
+    },
+    [saveMultipleDayLogs],
   );
 
   // ── Delete day ───────────────────────────────────────────────────────────────
@@ -330,6 +341,7 @@ export function useBulkAttendanceData(
     saveState,
     saveError,
     saveDayLogs,
+    saveMultipleDayLogs,
     deleteDayEntry,
     optimisticUpdateDay,
     rollbackDay,

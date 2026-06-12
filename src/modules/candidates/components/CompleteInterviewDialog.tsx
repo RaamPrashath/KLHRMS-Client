@@ -58,9 +58,6 @@ export function CompleteInterviewDialog({
             >
               Completion note
             </label>
-            <span className="rounded-full bg-warning-bg px-2 py-0.5 text-[11px] font-medium text-warning-text">
-              Required
-            </span>
           </div>
           <Textarea
             id="completion-note"

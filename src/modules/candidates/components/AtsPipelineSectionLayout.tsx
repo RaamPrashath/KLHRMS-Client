@@ -18,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CandidatesJobPageClient } from '@/app/(authenticated)/[orgSlug]/candidates/[jobSlug]/CandidatesJobPageClient';
 import { CandidatesJobContext } from '@/modules/candidates/components/CandidatesJobContext';
-import { usePipelineJobPostings } from '@/modules/candidates/hooks/useAtsPipeline';
+import { usePipelineJobPostings, useUpdatePipelineJobPostingStatus } from '@/modules/candidates/hooks/useAtsPipeline';
 import type { RolePermissions } from '@/modules/roles/types/role';
 
 const TABS = [
@@ -45,8 +45,10 @@ export function AtsPipelineSectionLayout({
   const router = useRouter();
   const pathname = usePathname();
   const postingsQuery = usePipelineJobPostings(orgSlug, memberId);
+  const updatePostingStatus = useUpdatePipelineJobPostingStatus(orgSlug, memberId);
   const postings = postingsQuery.data ?? [];
   const currentPosting = postings.find((posting) => posting.slug === jobSlug) ?? null;
+  const isClosed = currentPosting?.status === 'CLOSED';
 
   const activeTabFromPath = useMemo<PipelineTabKey>(
     () =>
@@ -149,22 +151,43 @@ export function AtsPipelineSectionLayout({
                 </p>
               )}
             </div>
-            <Select
-              value={currentPosting?.slug}
-              onValueChange={(value) => router.push(`/${orgSlug}/candidates/${value}`)}
-              disabled={postingsQuery.isLoading || postings.length === 0}
-            >
-              <SelectTrigger className="w-full bg-surface lg:w-[320px]">
-                <SelectValue placeholder="Select job posting" />
-              </SelectTrigger>
-              <SelectContent>
-                {postings.map((posting) => (
-                  <SelectItem key={posting.id} value={posting.slug}>
-                    {posting.title}{posting.status !== 'PUBLISHED' ? ' [Closed]' : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
+              <Select
+                value={currentPosting?.status === 'CLOSED' ? 'CLOSED' : 'PUBLISHED'}
+                onValueChange={(value) => {
+                  if (!currentPosting) return;
+                  updatePostingStatus.mutate({
+                    jobPostingId: currentPosting.id,
+                    status: value as 'PUBLISHED' | 'CLOSED',
+                  });
+                }}
+                disabled={postingsQuery.isLoading || !currentPosting || updatePostingStatus.isPending}
+              >
+                <SelectTrigger className="w-full bg-surface sm:w-[132px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PUBLISHED">Active</SelectItem>
+                  <SelectItem value="CLOSED">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={currentPosting?.slug}
+                onValueChange={(value) => router.push(`/${orgSlug}/candidates/${value}`)}
+                disabled={postingsQuery.isLoading || postings.length === 0}
+              >
+                <SelectTrigger className="w-full bg-surface lg:w-[320px]">
+                  <SelectValue placeholder="Select job posting" />
+                </SelectTrigger>
+                <SelectContent>
+                  {postings.map((posting) => (
+                    <SelectItem key={posting.id} value={posting.slug}>
+                      {posting.title}{posting.status !== 'PUBLISHED' ? ' [Closed]' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center gap-3 px-6 pb-2">
             <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
@@ -213,7 +236,7 @@ export function AtsPipelineSectionLayout({
                     className="h-10 bg-white pl-9 text-[13px]"
                   />
                 </div>
-                <Button size="lg" onClick={triggerAddStage} className='text-[16px]'>
+                <Button size="lg" onClick={triggerAddStage} className='text-[16px]' disabled={isClosed}>
                   <Plus className="size-5" />
                   Stage
                 </Button>

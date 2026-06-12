@@ -6,7 +6,6 @@ import {
   ChevronRight,
   CircleCheck,
   CircleX,
-  ExternalLink,
   Loader2,
   Search,
   X,
@@ -233,12 +232,11 @@ function OfferPagination({
 
 const COLUMNS = [
   { id: 'checkbox', label: '', width: 'w-10' },
-  { id: 'candidate', label: 'Candidate', width: 'w-[32%]' },
-  { id: 'status', label: 'Offer status', width: 'w-[14%]' },
-  { id: 'lastSent', label: 'Last sent', width: 'w-[14%]' },
-  { id: 'expires', label: 'Expires', width: 'w-[14%]' },
-  { id: 'latestPdf', label: 'Latest PDF', width: 'w-[14%]' },
-  { id: 'actions', label: 'Actions', width: 'w-[12%]' },
+  { id: 'candidate', label: 'Candidate', width: 'w-[30%]' },
+  { id: 'status', label: 'Offer status', width: 'w-[15%]' },
+  { id: 'lastSent', label: 'Last sent', width: 'w-[15%]' },
+  { id: 'expires', label: 'Expires', width: 'w-[15%]' },
+  { id: 'actions', label: 'Actions', width: 'w-[15%]' },
 ] as const;
 
 // ─── Main component ────────────────────────────────────────────────────────────
@@ -332,7 +330,7 @@ export function OfferCandidateTable({
                 className={cn(
                   col.width,
                   'shrink-0 text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500',
-                  col.id === 'actions' ? 'text-right' : 'text-left',
+                  col.id === 'candidate' ? 'text-left' : 'text-center',
                 )}
               >
                 {col.id === 'checkbox' ? headerCheckbox : col.label}
@@ -370,7 +368,7 @@ export function OfferCandidateTable({
                     </div>
 
                     {/* Candidate — name is a link, email is plain text */}
-                    <div className="w-[32%] shrink-0 min-w-0">
+                    <div className="w-[30%] shrink-0 min-w-0 text-left">
                       <Link
                         href={profileHref}
                         className="block truncate text-sm font-medium text-neutral-900 hover:text-primary transition-colors"
@@ -385,54 +383,35 @@ export function OfferCandidateTable({
                     </div>
 
                     {/* Offer status */}
-                    <div className="w-[14%] shrink-0">
+                    <div className="w-[15%] shrink-0 text-center">
                       {renderStatusBadge(candidate.offerStatus, acceptedStage, rejectedStage)}
                       {candidate.latestOffer?.emailError ? (
-                        <p className="mt-1 line-clamp-2 text-xs text-destructive-text leading-tight">
+                        <p className="mt-1 line-clamp-2 text-xs text-destructive-text leading-tight text-center">
                           {candidate.latestOffer.emailError}
                         </p>
                       ) : null}
                     </div>
 
                     {/* Last sent */}
-                    <div className="w-[14%] shrink-0 font-mono text-xs text-neutral-500">
+                    <div className="w-[15%] shrink-0 text-center font-mono text-xs text-neutral-500">
                       {formatDate(candidate.latestOffer?.sentAt ?? candidate.latestOffer?.emailSentAt)}
                     </div>
 
                     {/* Expires */}
-                    <div className="w-[14%] shrink-0 font-mono text-xs text-neutral-500">
+                    <div className="w-[15%] shrink-0 text-center font-mono text-xs text-neutral-500">
                       {formatDate(candidate.latestOffer?.expiresAt)}
                     </div>
 
-                    {/* Latest PDF */}
-                    <div className="w-[14%] shrink-0">
-                      {candidate.latestOffer?.pdfUrl ? (
-                        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-neutral-600 hover:text-primary">
-                          <a
-                            href={candidate.latestOffer.pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label={`View latest offer PDF for ${name}`}
-                          >
-                            <ExternalLink className="size-3.5" />
-                            <span className="text-xs">View PDF</span>
-                          </a>
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-neutral-400">—</span>
-                      )}
-                    </div>
-
                     {/* Actions */}
-                    <div className="w-[12%] shrink-0 flex items-center justify-end gap-1.5">
+                    <div className="w-[15%] shrink-0 flex items-center justify-center gap-1.5">
                       {!alreadyResponded && acceptedStage && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="ghost"
                               size="icon-sm"
-                              className="size-7"
+                              className="size-7 border border-neutral-200 bg-transparent hover:bg-neutral-50"
                               disabled={moving}
                               onClick={() => onMoveToStage(candidate.applicationId, acceptedStage)}
                               aria-label={`Manually accept ${name}`}
@@ -452,9 +431,9 @@ export function OfferCandidateTable({
                           <TooltipTrigger asChild>
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="ghost"
                               size="icon-sm"
-                              className="size-7"
+                              className="size-7 border border-neutral-200 bg-transparent hover:bg-neutral-50"
                               disabled={moving}
                               onClick={() => onMoveToStage(candidate.applicationId, rejectedStage)}
                               aria-label={`Manually reject ${name}`}

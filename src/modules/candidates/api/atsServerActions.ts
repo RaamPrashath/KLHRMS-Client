@@ -28,7 +28,10 @@ import type {
   PipelineApplication,
   PipelineBoard,
   PipelineJobPosting,
+  RecruitmentReportFormat,
+  RecruitmentReportListResponse,
   PipelineStage,
+  RejectInterviewRequest,
   ReshuffleRequest,
   ReshuffleResponse,
   TeamDistributionRequest,
@@ -81,6 +84,64 @@ export async function fetchPipelineJobPostingsAction(params: {
     cache: 'no-store',
   });
   return handleResponse<PipelineJobPosting[]>(res);
+}
+
+export async function updatePipelineJobPostingStatusAction(params: {
+  orgSlug: string;
+  memberId: string;
+  jobPostingId: string;
+  status: 'PUBLISHED' | 'CLOSED';
+}): Promise<PipelineJobPosting> {
+  const res = await fetch(`${getApiUrl()}/candidates/pipeline/postings/${params.jobPostingId}/status`, {
+    method: 'PATCH',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({ status: params.status }),
+  });
+  return handleResponse<PipelineJobPosting>(res);
+}
+
+export async function fetchRecruitmentReportJobsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<RecruitmentReportListResponse> {
+  const res = await fetch(`${getApiUrl()}/candidates/recruitment-report/jobs`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<RecruitmentReportListResponse>(res);
+}
+
+export async function exportRecruitmentReportAction(params: {
+  orgSlug: string;
+  memberId: string;
+  format: RecruitmentReportFormat;
+  jobPostingIds: string[];
+  includeCandidateHistory: boolean;
+}): Promise<Blob> {
+  const res = await fetch(`${getApiUrl()}/candidates/recruitment-report/export`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify({
+      format: params.format,
+      jobPostingIds: params.jobPostingIds,
+      includeCandidateHistory: params.includeCandidateHistory,
+    }),
+  });
+
+  if (!res.ok) {
+    let message = `Export failed with status ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === 'string') message = body.detail;
+      else if (typeof body?.message === 'string') message = body.message;
+    } catch {
+      // Keep the status-based message.
+    }
+    throw new Error(message);
+  }
+
+  return res.blob();
 }
 
 export async function fetchPipelineBoardAction(params: {
@@ -607,12 +668,27 @@ export async function rejectInterviewAction(params: {
   orgSlug: string;
   memberId: string;
   eventId: string;
+  data?: RejectInterviewRequest;
 }): Promise<RejectInterviewResponse> {
   const res = await fetch(`${getApiUrl()}/candidates/interviews/${params.eventId}/reject`, {
     method: 'POST',
     headers: buildHeaders(params.orgSlug, params.memberId),
+    body: JSON.stringify(params.data ?? { mode: 'AUTO' }),
   });
   return handleResponse<RejectInterviewResponse>(res);
+}
+
+export async function bookCandidateProposedSlotAction(params: {
+  orgSlug: string;
+  memberId: string;
+  eventId: string;
+  slotId: string;
+}): Promise<InterviewMeeting> {
+  const res = await fetch(`${getApiUrl()}/candidates/interviews/${params.eventId}/slots/${params.slotId}/book`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<InterviewMeeting>(res);
 }
 
 export async function createReassignmentRequestAction(params: {

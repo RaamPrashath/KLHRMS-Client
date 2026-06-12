@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,11 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { ProjectTaskSelector } from '@/modules/attendance/components/ProjectTaskSelector';
 import {
+  addWorkdayMinutesToDate,
   addMinutesToDate,
   computeDurationMinutes,
   formatMinutesToDuration,
-  parseDurationToMinutes,
+  normalizeToWorkdayWindow,
+  parseDurationInput,
 } from '@/modules/attendance/hooks/use-duration-parser';
+import type { DurationUnit } from '@/modules/attendance/hooks/use-duration-parser';
 import type { LocalWorkLog } from '@/modules/attendance/types/bulkAttendanceTypes';
 import type { ProjectForAttendance } from '@/modules/projects/types/projectTypes';
 
@@ -43,6 +46,8 @@ function fromTimeInput(timeStr: string, dateStr: string): Date | null {
 export interface WorkLogFormValues {
   startTime: Date;
   endTime: Date;
+  durationMinutes: number;
+  durationUnit: DurationUnit;
   projectId: string | null;
   projectTaskId: string | null;
   notes: string | null;
@@ -56,6 +61,7 @@ interface WorkLogFormProps {
   projects?: ProjectForAttendance[];
   onSubmit: (values: WorkLogFormValues) => void;
   onCancel: () => void;
+  allowDayDuration?: boolean;
   isPending?: boolean;
   submitLabel?: string;
 }
@@ -68,6 +74,7 @@ export function WorkLogForm({
   projects = [],
   onSubmit,
   onCancel,
+  allowDayDuration = false,
   isPending = false,
   submitLabel = 'Save',
 }: Readonly<WorkLogFormProps>) {
@@ -91,6 +98,7 @@ export function WorkLogForm({
   const [notes, setNotes] = useState(initialLog?.notes ?? '');
   const [projectId, setProjectId] = useState<string | null>(initialLog?.projectId ?? null);
   const [projectTaskId, setProjectTaskId] = useState<string | null>(initialLog?.projectTaskId ?? null);
+  const [durationUnit, setDurationUnit] = useState<DurationUnit>('time');
   const [errors, setErrors] = useState<{
     project?: string;
     task?: string;
@@ -98,8 +106,6 @@ export function WorkLogForm({
     endTime?: string;
     duration?: string;
   }>({});
-
-  const lastEditedRef = useRef<'start' | 'end' | 'duration' | null>(null);
 
   const syncDurationFromEnd = useCallback((nextEndTimeStr: string) => {
     const start = fromTimeInput(startTimeStr, date);
@@ -117,40 +123,71 @@ export function WorkLogForm({
   }, [date, startTimeStr]);
 
   const syncEndFromDuration = useCallback((nextDurationStr: string) => {
-    const minutes = parseDurationToMinutes(nextDurationStr);
-    const start = fromTimeInput(startTimeStr, date);
+    const parsed = parseDurationInput(nextDurationStr);
+    const rawStart = fromTimeInput(startTimeStr, date);
 
-    if (minutes && start) {
-      setEndTimeStr(toTimeInput(addMinutesToDate(start, minutes)));
+    if (parsed?.unit === 'day' && !allowDayDuration) {
+      setDurationUnit(parsed.unit);
+      setErrors((current) => ({ ...current, duration: 'Day durations are not available here' }));
+      return;
+    }
+
+    if (parsed && rawStart) {
+      const start = parsed.unit === 'day'
+        ? normalizeToWorkdayWindow(rawStart)
+        : rawStart;
+      if (parsed.unit === 'day' && start.getTime() !== rawStart.getTime()) {
+        setStartTimeStr(toTimeInput(start));
+      }
+
+      const end = parsed.unit === 'day'
+        ? addWorkdayMinutesToDate(start, parsed.minutes)
+        : addMinutesToDate(start, parsed.minutes);
+      setEndTimeStr(toTimeInput(end));
+      setDurationUnit(parsed.unit);
       setErrors((current) => ({ ...current, duration: undefined, endTime: undefined }));
       return;
     }
 
-    if (nextDurationStr.trim() && !minutes) {
+    if (nextDurationStr.trim() && !parsed) {
       setErrors((current) => ({ ...current, duration: 'Invalid duration format' }));
     }
-  }, [date, startTimeStr]);
+  }, [allowDayDuration, date, startTimeStr]);
 
   const handleStartChange = useCallback((nextStartTimeStr: string) => {
-    lastEditedRef.current = 'start';
     setStartTimeStr(nextStartTimeStr);
     setErrors((current) => ({ ...current, startTime: undefined }));
 
-    const minutes = parseDurationToMinutes(durationStr);
-    const start = fromTimeInput(nextStartTimeStr, date);
-    if (minutes && start) {
-      setEndTimeStr(toTimeInput(addMinutesToDate(start, minutes)));
+    const parsed = parseDurationInput(durationStr);
+    const rawStart = fromTimeInput(nextStartTimeStr, date);
+    if (parsed?.unit === 'day' && !allowDayDuration) {
+      setDurationUnit(parsed.unit);
+      setErrors((current) => ({ ...current, duration: 'Day durations are not available here' }));
+      return;
     }
-  }, [date, durationStr]);
+
+    if (parsed && rawStart) {
+      const start = parsed.unit === 'day'
+        ? normalizeToWorkdayWindow(rawStart)
+        : rawStart;
+      if (parsed.unit === 'day' && start.getTime() !== rawStart.getTime()) {
+        setStartTimeStr(toTimeInput(start));
+      }
+
+      const end = parsed.unit === 'day'
+        ? addWorkdayMinutesToDate(start, parsed.minutes)
+        : addMinutesToDate(start, parsed.minutes);
+      setEndTimeStr(toTimeInput(end));
+      setDurationUnit(parsed.unit);
+    }
+  }, [allowDayDuration, date, durationStr]);
 
   const handleEndChange = useCallback((nextEndTimeStr: string) => {
-    lastEditedRef.current = 'end';
     setEndTimeStr(nextEndTimeStr);
     syncDurationFromEnd(nextEndTimeStr);
   }, [syncDurationFromEnd]);
 
   const handleDurationChange = useCallback((nextDurationStr: string) => {
-    lastEditedRef.current = 'duration';
     setDurationStr(nextDurationStr);
     syncEndFromDuration(nextDurationStr);
   }, [syncEndFromDuration]);
@@ -160,9 +197,10 @@ export function WorkLogForm({
   }, [endTimeStr, syncDurationFromEnd]);
 
   const handleDurationBlur = useCallback(() => {
-    const minutes = parseDurationToMinutes(durationStr);
-    if (minutes) {
-      setDurationStr(formatMinutesToDuration(minutes));
+    const parsed = parseDurationInput(durationStr);
+    if (parsed) {
+      setDurationStr(formatMinutesToDuration(parsed.minutes, { preferDays: parsed.unit === 'day' }));
+      setDurationUnit(parsed.unit);
     }
     syncEndFromDuration(durationStr);
   }, [durationStr, syncEndFromDuration]);
@@ -170,7 +208,11 @@ export function WorkLogForm({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const start = fromTimeInput(startTimeStr, date);
+    const rawStart = fromTimeInput(startTimeStr, date);
+    const parsedDuration = durationStr.trim() ? parseDurationInput(durationStr) : null;
+    const start = rawStart && parsedDuration?.unit === 'day'
+      ? normalizeToWorkdayWindow(rawStart)
+      : rawStart;
     const end = fromTimeInput(endTimeStr, date);
     const nextErrors: typeof errors = {};
 
@@ -178,16 +220,29 @@ export function WorkLogForm({
     if (!projectTaskId) nextErrors.task = 'Task is required';
     if (!start) nextErrors.startTime = startTimeStr ? 'Invalid start time' : 'Start time is required';
     if (!end) nextErrors.endTime = endTimeStr ? 'Invalid end time' : 'End time is required';
-    if (start && end && end <= start) nextErrors.endTime = 'End time must be after start time';
+    if (durationStr.trim() && !parsedDuration) nextErrors.duration = 'Invalid duration format';
+    if (parsedDuration?.unit === 'day' && !allowDayDuration) {
+      nextErrors.duration = 'Day durations are not available here';
+    }
+    if (start && end && end <= start && parsedDuration?.unit !== 'day') {
+      nextErrors.endTime = 'End time must be after start time';
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
     }
 
+    const durationMinutes = parsedDuration?.minutes ?? computeDurationMinutes(start!, end!);
+    const resolvedEnd = parsedDuration?.unit === 'day'
+      ? addWorkdayMinutesToDate(start!, durationMinutes)
+      : end!;
+
     onSubmit({
       startTime: start!,
-      endTime: end!,
+      endTime: resolvedEnd,
+      durationMinutes,
+      durationUnit: parsedDuration?.unit ?? durationUnit,
       projectId,
       projectTaskId,
       notes: notes.trim() || null,
@@ -234,7 +289,7 @@ export function WorkLogForm({
           value={durationStr}
           onChange={(event) => handleDurationChange(event.target.value)}
           onBlur={handleDurationBlur}
-          placeholder="e.g. 2 hrs 30 mins"
+          placeholder={allowDayDuration ? 'e.g. 2 hrs 30 mins or 1 day' : 'e.g. 2 hrs 30 mins'}
           aria-invalid={!!errors.duration}
         />
         {errors.duration ? (

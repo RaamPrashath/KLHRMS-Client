@@ -7,14 +7,14 @@ import { toast } from 'sonner';
 import { BulkAttendanceCalendar } from './BulkAttendanceCalendar';
 import { BulkAttendanceSkeleton } from './BulkAttendanceSkeleton';
 import { BulkAttendanceToolbar } from './BulkAttendanceToolbar';
-import { TimesheetSubnav } from './TimesheetSubnav';
 import { WorkLogDirectorySection } from './WorkLogDirectorySection';
 import { WorkLogDialog } from './WorkLogDialog';
 import type { WorkLogFormValues } from './WorkLogForm';
 
 import { useBulkAttendancePermissions } from '@/modules/attendance/hooks/queries/attendance';
 import { useBulkAttendanceData } from '@/modules/attendance/hooks/use-bulk-attendance-data';
-import type { LocalWorkLog, WorkLogDialogState } from '@/modules/attendance/types/bulkAttendanceTypes';
+import { splitWorkdayMinutes } from '@/modules/attendance/hooks/use-duration-parser';
+import type { BulkDayState, LocalWorkLog, WorkLogDialogState } from '@/modules/attendance/types/bulkAttendanceTypes';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
 import { useProjectsForAttendance } from '@/modules/projects/hooks/useProjectsForAttendance';
@@ -29,6 +29,27 @@ const CLOSED_DIALOG: WorkLogDialogState = {
 interface BulkAttendancePageClientProps {
   orgSlug: string;
   memberId: string;
+}
+
+function buildOptimisticDay(
+  date: string,
+  currentDay: BulkDayState | null,
+  logs: LocalWorkLog[],
+): BulkDayState {
+  return {
+    date,
+    attendanceRecordId: currentDay?.attendanceRecordId ?? null,
+    clockIn: currentDay?.clockIn ?? null,
+    clockOut: currentDay?.clockOut ?? null,
+    totalHours: currentDay?.totalHours ?? null,
+    overtimeHours: currentDay?.overtimeHours ?? null,
+    status: currentDay?.status ?? null,
+    logs,
+  };
+}
+
+function sortedLogs(logs: LocalWorkLog[]): LocalWorkLog[] {
+  return [...logs].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 }
 
 export function BulkAttendancePageClient({
@@ -51,6 +72,7 @@ export function BulkAttendancePageClient({
     isError,
     refetch,
     saveDayLogs,
+    saveMultipleDayLogs,
     deleteDayEntry,
     optimisticUpdateDay,
     rollbackDay,
@@ -133,51 +155,89 @@ export function BulkAttendancePageClient({
     async (date: string, values: WorkLogFormValues) => {
       setIsSavingDialog(true);
 
-      const currentDay = dayMap.get(date) ?? null;
-      const snapshot = currentDay ? { ...currentDay, logs: [...(currentDay.logs ?? [])] } : null;
-      const existingLogs = currentDay?.logs ?? [];
+      const nextLogsByDate = new Map<string, LocalWorkLog[]>();
+      const snapshots = new Map<string, BulkDayState | null>();
+      const getSnapshot = (targetDate: string) => {
+        if (!snapshots.has(targetDate)) {
+          const currentDay = dayMap.get(targetDate) ?? null;
+          snapshots.set(
+            targetDate,
+            currentDay ? { ...currentDay, logs: [...(currentDay.logs ?? [])] } : null,
+          );
+        }
+        return snapshots.get(targetDate) ?? null;
+      };
+      const getLogsForDate = (targetDate: string) => {
+        const existing = nextLogsByDate.get(targetDate);
+        if (existing) return existing;
 
-      const newLog: LocalWorkLog = {
-        id: dialogState.mode === 'edit' && dialogState.log ? dialogState.log.id : crypto.randomUUID(),
-        startTime: values.startTime,
-        endTime: values.endTime,
+        const currentLogs = [...(dayMap.get(targetDate)?.logs ?? [])];
+        nextLogsByDate.set(targetDate, currentLogs);
+        getSnapshot(targetDate);
+        return currentLogs;
+      };
+
+      if (dialogState.mode === 'edit' && dialogState.log) {
+        const logs = getLogsForDate(date).filter((log) => log.id !== dialogState.log!.id);
+        nextLogsByDate.set(date, logs);
+      }
+
+      const title = dialogState.log?.title ?? null;
+      const baseLog = {
         projectId: values.projectId,
         projectTaskId: values.projectTaskId,
-        title: dialogState.log?.title ?? null,
+        title,
         notes: values.notes,
         isOptimistic: true,
       };
 
-      const finalLogs =
-        dialogState.mode === 'edit' && dialogState.log
-          ? existingLogs.map((log) => (log.id === dialogState.log!.id ? newLog : log))
-          : [...existingLogs, newLog];
+      if (values.durationUnit === 'day') {
+        const segments = splitWorkdayMinutes(values.startTime, values.durationMinutes);
+        segments.forEach((segment, index) => {
+          const segmentLog: LocalWorkLog = {
+            ...baseLog,
+            id: dialogState.mode === 'edit' && index === 0 && dialogState.log
+              ? dialogState.log.id
+              : crypto.randomUUID(),
+            startTime: segment.startTime,
+            endTime: segment.endTime,
+          };
+          nextLogsByDate.set(segment.date, [...getLogsForDate(segment.date), segmentLog]);
+        });
+      } else {
+        const newLog: LocalWorkLog = {
+          ...baseLog,
+          id: dialogState.mode === 'edit' && dialogState.log ? dialogState.log.id : crypto.randomUUID(),
+          startTime: values.startTime,
+          endTime: values.endTime,
+        };
+        nextLogsByDate.set(date, [...getLogsForDate(date), newLog]);
+      }
 
-      finalLogs.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-
-      optimisticUpdateDay(date, () => ({
-        date,
-        attendanceRecordId: currentDay?.attendanceRecordId ?? null,
-        clockIn: currentDay?.clockIn ?? null,
-        clockOut: currentDay?.clockOut ?? null,
-        totalHours: currentDay?.totalHours ?? null,
-        overtimeHours: currentDay?.overtimeHours ?? null,
-        status: currentDay?.status ?? null,
-        logs: finalLogs,
-      }));
+      for (const [targetDate, logs] of nextLogsByDate) {
+        const finalLogs = sortedLogs(logs);
+        nextLogsByDate.set(targetDate, finalLogs);
+        optimisticUpdateDay(targetDate, () => buildOptimisticDay(
+          targetDate,
+          dayMap.get(targetDate) ?? null,
+          finalLogs,
+        ));
+      }
 
       try {
-        await saveDayLogs(date, finalLogs);
+        await saveMultipleDayLogs(nextLogsByDate);
         setDialogState(CLOSED_DIALOG);
       } catch (error: unknown) {
-        rollbackDay(date, snapshot);
+        for (const [targetDate, snapshot] of snapshots) {
+          rollbackDay(targetDate, snapshot);
+        }
         const message = (error as { message?: string }).message ?? 'Failed to save work log';
         toast.error(message);
       } finally {
         setIsSavingDialog(false);
       }
     },
-    [dayMap, dialogState, optimisticUpdateDay, rollbackDay, saveDayLogs],
+    [dayMap, dialogState, optimisticUpdateDay, rollbackDay, saveMultipleDayLogs],
   );
 
   const handleDeleteLog = useCallback(
@@ -378,6 +438,7 @@ export function BulkAttendancePageClient({
         projects={projects}
         onClose={handleCloseDialog}
         onSave={handleDialogSave}
+        allowDayDuration
         isPending={isSavingDialog}
       />
     </div>
