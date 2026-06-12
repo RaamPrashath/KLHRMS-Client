@@ -7,11 +7,13 @@ export const PROCUREMENT_STATUSES = [
   'CANCELLED',
 ] as const;
 export const PROCUREMENT_URGENCY = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+export const PROCUREMENT_PO_STATUSES = ['GENERATED', 'SENT', 'FAILED', 'CANCELLED'] as const;
 export const PROCUREMENT_PO_FORMATS = ['STANDARD'] as const;
 
 export type ProcurementRequestType = (typeof PROCUREMENT_REQUEST_TYPES)[number];
 export type ProcurementStatus = (typeof PROCUREMENT_STATUSES)[number];
 export type ProcurementUrgency = (typeof PROCUREMENT_URGENCY)[number];
+export type ProcurementPoStatus = (typeof PROCUREMENT_PO_STATUSES)[number];
 export type ProcurementPoFormat = (typeof PROCUREMENT_PO_FORMATS)[number];
 
 export interface ProcurementDepartmentOption {
@@ -78,7 +80,7 @@ export interface ProcurementPurchaseOrderRecord {
   id: string;
   poNumber: string;
   formatKey: ProcurementPoFormat;
-  status: 'GENERATED' | 'SENT' | 'FAILED' | 'CANCELLED';
+  status: ProcurementPoStatus;
   storageBucket: string;
   storagePath: string;
   fileName: string;
@@ -100,7 +102,7 @@ export interface ProcurementPurchaseOrderRecord {
 export interface ProcurementPurchaseOrderListItem {
   id: string;
   poNumber: string;
-  status: 'GENERATED' | 'SENT' | 'FAILED' | 'CANCELLED';
+  status: ProcurementPoStatus;
   fileName: string;
   generatedAt: string;
   generatedByName: string | null;
