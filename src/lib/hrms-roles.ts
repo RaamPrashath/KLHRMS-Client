@@ -35,6 +35,8 @@ export interface HrmsNavItem {
     permissionKey?: string;
     /** If set, the user needs this specific action at a non-"none" scope to see the item. */
     minAction?: string;
+    /** If set, the user's scope for minAction must exactly match this value. */
+    minScope?: PermissionScope;
 }
 
 export interface HrmsNavGroup {
@@ -74,18 +76,9 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
         items: [
             { title: "Jobs",               urlSuffix: "jobs",                permissionKey: "jobs"        },
             { title: "Candidates",         urlSuffix: "candidates",          permissionKey: "candidates"  },
+            { title: "Recruitment Report", urlSuffix: "recruitment-report",  permissionKey: "jobs", minAction: "view", minScope: "organization" },
             { title: "Resume Parser",      urlSuffix: "resume-parser",       permissionKey: "jobs", minAction: "view" },
             { title: "Interviews",         urlSuffix: "interviews",          permissionKey: "interviews"  },
-            { title: "Offers",             urlSuffix: "offers",              permissionKey: "offers"      },
-        ],
-    },
-    {
-        title: "Lifecycle",
-        items: [
-            { title: "Onboarding",         urlSuffix: "onboarding",          permissionKey: "onboarding"         },
-            { title: "Document Collection",urlSuffix: "document-collection", permissionKey: "documentCollection" },
-            { title: "Offboarding",        urlSuffix: "offboarding",         permissionKey: "offboarding"        },
-            { title: "Knowledge Transfer", urlSuffix: "knowledge-transfer",  permissionKey: "knowledgeTransfer"  },
         ],
     },
     {
@@ -151,9 +144,9 @@ export function filterNavByPermissions(
             if (!item.permissionKey) return true;
             if (!hasPermission(permissions, item.permissionKey)) return false;
             if (item.minAction && item.permissionKey) {
-                if (getScope(permissions, item.permissionKey, item.minAction) === "none") {
-                    return false;
-                }
+                const scope = getScope(permissions, item.permissionKey, item.minAction);
+                if (scope === "none") return false;
+                if (item.minScope && scope !== item.minScope) return false;
             }
             return true;
         });

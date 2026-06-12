@@ -609,6 +609,8 @@ export function StageWorkspacePageShell({
   }, [boardAssignments, teamMembers, workspace]);
 
   const isStageCompleted = Boolean(workspace?.stage.completedAt);
+  const isJobClosed = workspace?.jobPosting.status === 'CLOSED';
+  const isWorkspaceReadOnly = isStageCompleted || isJobClosed;
 
   function handleBackToPipeline() {
     if (!jobSlug) {
@@ -634,6 +636,7 @@ export function StageWorkspacePageShell({
   }, [teamMembers]);
 
   async function addCustomTeamMember(interviewer: StageWorkspaceInterviewer) {
+    if (isWorkspaceReadOnly) return;
     setTeamWarnings([]);
     setTeamWarningsReviewed(false);
     setAddDialogOpen(false);
@@ -677,6 +680,7 @@ export function StageWorkspacePageShell({
   }
 
   async function removeBoardInterviewer(memberId: string) {
+    if (isWorkspaceReadOnly) return;
     if (!memberId) return;
     setOptimisticTeamMembers((current) => current.filter((member) => member.memberId !== memberId));
     setOptimisticRemovedMemberIds((current) => {
@@ -713,10 +717,15 @@ export function StageWorkspacePageShell({
   }
 
   function handleBoardDragStart(event: DragStartEvent) {
+    if (isWorkspaceReadOnly) return;
     setActiveApplicationId(String(event.active.id));
   }
 
   function handleBoardDragEnd(event: DragEndEvent) {
+    if (isWorkspaceReadOnly) {
+      setActiveApplicationId(null);
+      return;
+    }
     const applicationId = String(event.active.id);
     const overId = event.over?.id ? String(event.over.id) : null;
     setActiveApplicationId(null);
@@ -730,6 +739,7 @@ export function StageWorkspacePageShell({
   }
 
   function handleAutoDistributeDraft() {
+    if (isWorkspaceReadOnly) return;
     if (!workspace || teamMembers.length === 0) {
       toast.error('Add at least one interviewer first');
       return;
@@ -751,6 +761,7 @@ export function StageWorkspacePageShell({
   }
 
   async function handleSaveBoardAssignments() {
+    if (isWorkspaceReadOnly) return;
     if (!workspace) {
       return;
     }
@@ -813,6 +824,7 @@ export function StageWorkspacePageShell({
   }
 
   async function handleDistributeTeam() {
+    if (isWorkspaceReadOnly) return;
     if (teamMembers.length === 0 || !teamScheduledLocal) {
       toast.error('Select a date first, then choose interviewers for the shuffle');
       return;
@@ -875,6 +887,7 @@ export function StageWorkspacePageShell({
   }
 
   function handleStartInterview(application: PipelineApplication) {
+    if (isWorkspaceReadOnly) return;
     const meeting = application.interviewMeeting;
     if (!meeting || meeting.status !== 'PENDING') return;
 
@@ -898,11 +911,13 @@ export function StageWorkspacePageShell({
   }
 
   function openCompleteInterviewDialog(application: PipelineApplication) {
+    if (isWorkspaceReadOnly) return;
     setCompletingApplication(application);
     setCompletionNote('');
   }
 
   function handleCompleteInterview() {
+    if (isWorkspaceReadOnly) return;
     const application = completingApplication;
     if (!application) return;
     const meeting = application.interviewMeeting;
@@ -970,7 +985,7 @@ export function StageWorkspacePageShell({
             </div>
 
             <div className="flex items-center gap-2">
-              {isStageCompleted ? (
+              {isWorkspaceReadOnly ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -985,7 +1000,7 @@ export function StageWorkspacePageShell({
                       toast.error(readActionError(error, 'Failed to reopen stage'));
                     }
                   }}
-                  disabled={reopenStage.isPending}
+                  disabled={reopenStage.isPending || isJobClosed}
                 >
                   {reopenStage.isPending ? (
                     <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -1025,7 +1040,7 @@ export function StageWorkspacePageShell({
           </div>
         </div>
 
-        {isStageCompleted ? (
+        {isWorkspaceReadOnly ? (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -1035,9 +1050,11 @@ export function StageWorkspacePageShell({
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="size-5 text-neutral-500" />
                 <div>
-                  <p className="font-semibold text-neutral-800">Stage Completed</p>
+                  <p className="font-semibold text-neutral-800">{isJobClosed ? 'Job Closed' : 'Stage Completed'}</p>
                   <p className="mt-0.5 text-neutral-500">
-                    This stage has been marked as complete. All operations are now read-only.
+                    {isJobClosed
+                      ? 'This job opening is closed. This stage is visible, but all operations are read-only.'
+                      : 'This stage has been marked as complete. All operations are now read-only.'}
                   </p>
                 </div>
               </div>
@@ -1073,7 +1090,7 @@ export function StageWorkspacePageShell({
               <Input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Filter candidates..."
+                placeholder="Filter Candidates"
                 className="h-9 bg-white pl-9 text-[13px]"
               />
             </div>
@@ -1122,7 +1139,7 @@ export function StageWorkspacePageShell({
                 variant="outline"
                 size="sm"
                 onClick={() => setAddDialogOpen(true)}
-                disabled={isStageCompleted}
+                disabled={isWorkspaceReadOnly}
               >
                 <Plus className="mr-1.5 size-3.5" />
                 Add Interviewer
@@ -1134,7 +1151,7 @@ export function StageWorkspacePageShell({
                 variant="outline"
                 size="sm"
                 onClick={handleAutoDistributeDraft}
-                disabled={teamMembers.length === 0 || isStageCompleted}
+                disabled={teamMembers.length === 0 || isWorkspaceReadOnly}
               >
                 <Shuffle className="mr-1.5 size-3.5" />
                 Auto-distribute
@@ -1144,7 +1161,7 @@ export function StageWorkspacePageShell({
                 size="sm"
                 className="bg-primary hover:bg-primary-hover"
                 onClick={handleSaveBoardAssignments}
-                disabled={assignInterviews.isPending || isStageCompleted}
+                disabled={assignInterviews.isPending || isWorkspaceReadOnly}
               >
                 {assignInterviews.isPending ? (
                   <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -1157,7 +1174,7 @@ export function StageWorkspacePageShell({
           </div>
 
           {/* Board */}
-          {!isStageCompleted ? (
+          {!isWorkspaceReadOnly ? (
             <DndContext
               sensors={sensors}
               collisionDetection={closestCorners}

@@ -1,14 +1,12 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
-import { Check, Clock, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Check, Clock, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { WaveBackground } from '@/components/auth/shared/WaveBackground';
-import { getHrmsApiUrl } from '@/lib/deployment-env';
+import { CandidateSlotProposalDialog } from './CandidateSlotProposalDialog';
 
 interface ProposedSlot {
   id: string;
@@ -23,22 +21,6 @@ interface SlotListResponse {
   candidateToken: string;
   stageDueDate: string | null;
   slots: ProposedSlot[];
-}
-
-interface ProposalSlot {
-  id: string;
-  date: string;
-  startTime: string;
-}
-
-const DEFAULT_DURATION_MINUTES = 30;
-const MIN_DURATION_MINUTES = 15;
-const MAX_DURATION_MINUTES = 240;
-
-let proposalSlotCounter = 0;
-function createProposalSlot(): ProposalSlot {
-  proposalSlotCounter += 1;
-  return { id: `proposal-slot-${proposalSlotCounter}`, date: '', startTime: '' };
 }
 
 function formatSlotTime(startTime: string, endTime: string): string {
@@ -61,32 +43,6 @@ function formatSlotTime(startTime: string, endTime: string): string {
     timeZone: 'Asia/Kolkata',
   });
   return `${formatter.format(start)} – ${timeFormatter.format(end)} IST`;
-}
-
-function toIsoFromDateTime(date: string, time: string): string {
-  return new Date(`${date}T${time}`).toISOString();
-}
-
-function addMinutes(date: string, time: string, minutes: number): string {
-  const startsAt = new Date(`${date}T${time}`);
-  return new Date(startsAt.getTime() + minutes * 60_000).toISOString();
-}
-
-function todayDateInput(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-function toDateInput(value: string | null): string | undefined {
-  if (!value) return undefined;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return undefined;
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return offsetDate.toISOString().slice(0, 10);
-}
-
-function getApiUrl(): string {
-  return getHrmsApiUrl();
 }
 
 async function readApiError(res: Response, fallback: string): Promise<string> {
@@ -113,16 +69,13 @@ export default function InterviewSlotPickerPage({
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [proposalMode, setProposalMode] = useState(false);
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
   const [proposalSubmitted, setProposalSubmitted] = useState(false);
-  const [proposalSlots, setProposalSlots] = useState<ProposalSlot[]>(() => [createProposalSlot()]);
-  const [proposalDuration, setProposalDuration] = useState(String(DEFAULT_DURATION_MINUTES));
-  const [proposalNote, setProposalNote] = useState('');
 
   useEffect(() => {
     let active = true;
 
-    fetch(`${getApiUrl()}/public/interviews/${token}/slots`)
+    fetch(`/public/interviews/${token}/slots`)
       .then(async (res) => {
         if (!res.ok) throw new Error(await readApiError(res, 'Interview not found or link expired'));
         return res.json();
@@ -148,7 +101,7 @@ export default function InterviewSlotPickerPage({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch(`${getApiUrl()}/public/interviews/${token}/slots/${selectedSlotId}/select`, {
+      const res = await fetch(`/public/interviews/${token}/slots/${selectedSlotId}/select`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -161,60 +114,29 @@ export default function InterviewSlotPickerPage({
     }
   }, [selectedSlotId, token]);
 
-  const handleProposalSlotChange = useCallback((id: string, field: keyof ProposalSlot, value: string) => {
-    setProposalSlots((current) => current.map((slot) => (slot.id === id ? { ...slot, [field]: value } : slot)));
-  }, []);
-
-  const handleRemoveProposalSlot = useCallback((id: string) => {
-    setProposalSlots((current) => (current.length > 1 ? current.filter((slot) => slot.id !== id) : current));
-  }, []);
-
-  const handleSubmitProposal = useCallback(async () => {
-    const durationMinutes = Number.parseInt(proposalDuration, 10);
-    if (!Number.isFinite(durationMinutes) || durationMinutes < MIN_DURATION_MINUTES || durationMinutes > MAX_DURATION_MINUTES) {
-      setSubmitError(`Duration must be between ${MIN_DURATION_MINUTES} and ${MAX_DURATION_MINUTES} minutes`);
-      return;
-    }
-
-    const completeSlots = proposalSlots.filter((slot) => slot.date && slot.startTime);
-    if (completeSlots.length === 0) {
-      setSubmitError('Please add at least one date and time');
-      return;
-    }
-
-    const proposedSlots = completeSlots.map((slot) => ({
-      startTime: toIsoFromDateTime(slot.date, slot.startTime),
-      endTime: addMinutes(slot.date, slot.startTime, durationMinutes),
-    }));
-
-    if (proposedSlots.some((slot) => new Date(slot.startTime).getTime() < Date.now())) {
-      setSubmitError('Selected time is in the past. Please choose a future time slot.');
-      return;
-    }
-
+  const handleSubmitProposal = useCallback(async (payload: {
+    proposedSlots: Array<{ startTime: string; endTime: string }>;
+    durationMinutes: number;
+    note: string | null;
+  }) => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch(`${getApiUrl()}/public/interviews/${token}/slots/propose`, {
+      const res = await fetch(`/public/interviews/${token}/slots/propose`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          proposedSlots,
-          durationMinutes,
-          note: proposalNote.trim() || null,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(await readApiError(res, 'Failed to propose slots'));
       setProposalSubmitted(true);
-      setProposalMode(false);
+      setProposalDialogOpen(false);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong');
+      throw err;
     } finally {
       setIsSubmitting(false);
     }
-  }, [proposalDuration, proposalNote, proposalSlots, token]);
-
-  const maxProposalDate = toDateInput(data?.stageDueDate ?? null);
+  }, [token]);
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-white font-sans text-neutral-900">
@@ -243,9 +165,7 @@ export default function InterviewSlotPickerPage({
                   ? 'Availability received'
                   : error
                     ? 'Interview link unavailable'
-                    : proposalMode
-                      ? 'Propose your slots'
-                      : 'Choose your slot'}
+                    : 'Choose your slot'}
             </h2>
             <p>
               {confirmed
@@ -254,9 +174,7 @@ export default function InterviewSlotPickerPage({
                   ? 'Your proposed slots have been sent to the interviewer.'
                 : error
                   ? 'We could not load this interview invitation.'
-                  : proposalMode
-                    ? 'Share a few times that work better for your schedule.'
-                    : 'Select a convenient time for your interview.'}
+                  : 'Select a convenient time for your interview.'}
             </p>
           </div>
 
@@ -310,171 +228,79 @@ export default function InterviewSlotPickerPage({
                 </div>
               </div>
 
-              {proposalMode ? (
-                <div className="grid gap-4">
-                  <div>
-                    <p className="mb-3 text-sm font-medium text-neutral-900">Your preferred slots</p>
-                    <div className="grid gap-2">
-                      {proposalSlots.map((slot, index) => (
-                        <div key={slot.id} className="rounded-xl border border-neutral-100 bg-white p-3">
-                          <div className="mb-2 flex items-center justify-between gap-3">
-                            <span className="text-xs font-medium text-neutral-500">Slot {index + 1}</span>
-                            {proposalSlots.length > 1 ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 text-neutral-400 hover:bg-destructive-bg hover:text-destructive-text"
-                                onClick={() => handleRemoveProposalSlot(slot.id)}
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            ) : null}
-                          </div>
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            <Input
-                              type="date"
-                              min={todayDateInput()}
-                              max={maxProposalDate}
-                              value={slot.date}
-                              onChange={(event) => handleProposalSlotChange(slot.id, 'date', event.target.value)}
-                            />
-                            <Input
-                              type="time"
-                              value={slot.startTime}
-                              onChange={(event) => handleProposalSlotChange(slot.id, 'startTime', event.target.value)}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-3 gap-2"
-                      onClick={() => setProposalSlots((current) => [...current, createProposalSlot()])}
-                    >
-                      <Plus className="size-4" />
-                      Add slot
-                    </Button>
-                  </div>
+              <p className="mb-3 text-sm font-medium text-neutral-900">Available slots</p>
 
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium text-neutral-900" htmlFor="proposal-duration">
-                      Duration
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="proposal-duration"
-                        type="number"
-                        min={MIN_DURATION_MINUTES}
-                        max={MAX_DURATION_MINUTES}
-                        value={proposalDuration}
-                        className="w-28 font-mono"
-                        onChange={(event) => setProposalDuration(event.target.value)}
-                      />
-                      <span className="text-sm text-neutral-500">minutes</span>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium text-neutral-900" htmlFor="proposal-note">
-                      Description
-                    </label>
-                    <Textarea
-                      id="proposal-note"
-                      value={proposalNote}
-                      maxLength={1000}
-                      rows={4}
-                      placeholder="Add anything the interviewer should know about your availability."
-                      onChange={(event) => setProposalNote(event.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <button
-                      type="button"
-                      className="btn-submit inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={isSubmitting}
-                      onClick={handleSubmitProposal}
-                    >
-                      {isSubmitting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-                      {isSubmitting ? 'Sending...' : 'Send proposed slots'}
-                    </button>
-                    <Button type="button" variant="ghost" onClick={() => setProposalMode(false)} disabled={isSubmitting}>
-                      Back to offered slots
-                    </Button>
-                  </div>
-                </div>
+              {data?.slots.length === 0 ? (
+                <p className="rounded-xl border border-neutral-100 bg-white px-4 py-3 text-sm text-neutral-400">
+                  No available slots at this time.
+                </p>
               ) : (
-                <>
-                  <p className="mb-3 text-sm font-medium text-neutral-900">Available slots</p>
+                <div className="grid gap-2">
+                  {data?.slots.map((slot) => {
+                    const isSelected = selectedSlotId === slot.id;
 
-                  {data?.slots.length === 0 ? (
-                    <p className="rounded-xl border border-neutral-100 bg-white px-4 py-3 text-sm text-neutral-400">
-                      No available slots at this time.
-                    </p>
-                  ) : (
-                    <div className="grid gap-2">
-                      {data?.slots.map((slot) => {
-                        const isSelected = selectedSlotId === slot.id;
-
-                        return (
-                          <button
-                            key={slot.id}
-                            type="button"
-                            onClick={() => setSelectedSlotId(slot.id)}
-                            className={`w-full rounded-lg border bg-white px-4 py-3 text-left transition-all focus:outline-none focus:ring-[3px] focus:ring-primary/10 ${
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        onClick={() => setSelectedSlotId(slot.id)}
+                        className={`w-full rounded-lg border bg-white px-4 py-3 text-left transition-all focus:outline-none focus:ring-[3px] focus:ring-primary/10 ${
+                          isSelected
+                            ? 'border-primary shadow-[0_0_0_1px_var(--primary)]'
+                            : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium leading-relaxed text-neutral-900">
+                            {formatSlotTime(slot.startTime, slot.endTime)}
+                          </span>
+                          <span
+                            className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${
                               isSelected
-                                ? 'border-primary shadow-[0_0_0_1px_var(--primary)]'
-                                : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                                ? 'border-primary bg-primary text-white'
+                                : 'border-neutral-200 bg-white'
                             }`}
-                            aria-pressed={isSelected}
+                            aria-hidden="true"
                           >
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-sm font-medium leading-relaxed text-neutral-900">
-                                {formatSlotTime(slot.startTime, slot.endTime)}
-                              </span>
-                              <span
-                                className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${
-                                  isSelected
-                                    ? 'border-primary bg-primary text-white'
-                                    : 'border-neutral-200 bg-white'
-                                }`}
-                                aria-hidden="true"
-                              >
-                                {isSelected ? <Check className="size-3" /> : null}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    className="btn-submit mt-4 inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
-                    id="btn-book-interview"
-                    disabled={!selectedSlotId || isSubmitting}
-                    onClick={handleSelect}
-                  >
-                    {isSubmitting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-                    {isSubmitting ? 'Booking...' : 'Book Interview'}
-                  </button>
-
-                  <div className="mt-4 rounded-xl border border-neutral-100 bg-white px-4 py-3">
-                    <p className="text-sm font-medium text-neutral-900">Not quite aligned with your plans?</p>
-                    <p className="mt-1 text-sm leading-relaxed text-neutral-500">
-                      Propose your own slots and add a note for the interviewer.
-                    </p>
-                    <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setProposalMode(true)}>
-                      Propose my own slots
-                    </Button>
-                  </div>
-                </>
+                            {isSelected ? <Check className="size-3" /> : null}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
+
+              <button
+                type="button"
+                className="btn-submit mt-4 inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                id="btn-book-interview"
+                disabled={!selectedSlotId || isSubmitting}
+                onClick={handleSelect}
+              >
+                {isSubmitting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                {isSubmitting ? 'Booking...' : 'Book Interview'}
+              </button>
+
+              <div className="mt-4 rounded-xl border border-neutral-100 bg-white px-4 py-3">
+                <p className="text-sm font-medium text-neutral-900">Not quite aligned with your plans?</p>
+                <p className="mt-1 text-sm leading-relaxed text-neutral-500">
+                  Propose your own slots and add a note for the interviewer.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    setSubmitError(null);
+                    setProposalDialogOpen(true);
+                  }}
+                >
+                  Propose my own slots
+                </Button>
+              </div>
 
               {submitError ? (
                 <p className="mt-3 text-sm text-destructive-text">{submitError}</p>
@@ -483,6 +309,17 @@ export default function InterviewSlotPickerPage({
           )}
         </div>
       </main>
+      <CandidateSlotProposalDialog
+        open={proposalDialogOpen}
+        isSubmitting={isSubmitting}
+        serverError={proposalDialogOpen ? submitError : null}
+        stageDueDate={data?.stageDueDate}
+        candidateName={data?.candidateName}
+        jobTitle={data?.jobTitle}
+        interviewerName={data?.interviewerName}
+        onOpenChange={setProposalDialogOpen}
+        onSubmit={handleSubmitProposal}
+      />
     </div>
   );
 }

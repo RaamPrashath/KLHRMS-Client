@@ -439,7 +439,7 @@ export function CandidateCard({
       ) : null}
 
       <AnimatePresence initial={false}>
-        {!compact && meetingEnabled && !isOverlay ? (
+        {!compact && meetingEnabled && !isOverlay && !dragLocked ? (
           <motion.div
             key="actions"
             layout

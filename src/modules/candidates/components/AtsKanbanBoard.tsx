@@ -400,6 +400,7 @@ export function AtsKanbanBoard({
     () => jobPostings.find((posting) => posting.id === jobPostingId) ?? null,
     [jobPostingId, jobPostings],
   );
+  const isReadOnly = currentPosting?.status === 'CLOSED';
   const allBoardApplications = useMemo(
     () => boardQuery.data?.stages.flatMap((stage) => stage.applications) ?? [],
     [boardQuery.data?.stages],
@@ -442,6 +443,10 @@ export function AtsKanbanBoard({
 
   const runStageAction = useCallback(
     async (action: PendingGoogleAction, options?: { skipGoogleCheck?: boolean }) => {
+      if (isReadOnly) {
+        toast.info('This job opening is closed. Pipeline changes are disabled.');
+        return;
+      }
       const permissionError = permissionErrorForAction(action, permissions);
       if (permissionError) {
         toast.error(permissionError);
@@ -486,7 +491,7 @@ export function AtsKanbanBoard({
         toast.error(readActionError(error, action.kind === 'create-stage' ? 'Failed to create stage' : 'Failed to update stage'));
       }
     },
-    [allBoardApplications, createStage, hasGoogleAccess, permissions, requestGoogleConnection, updateStage],
+    [allBoardApplications, createStage, hasGoogleAccess, isReadOnly, permissions, requestGoogleConnection, updateStage],
   );
 
   useEffect(() => {
@@ -568,6 +573,7 @@ export function AtsKanbanBoard({
   }, [activeApplication]);
 
   function handleDragStart(event: DragStartEvent) {
+    if (isReadOnly) return;
     const applicationId = String(event.active.id);
     const application =
       boardQuery.data?.stages
@@ -579,10 +585,16 @@ export function AtsKanbanBoard({
   }
 
   function handleDragOver(event: DragOverEvent) {
+    if (isReadOnly) return;
     setHoverStageId(event.over ? String(event.over.id) : null);
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    if (isReadOnly) {
+      setActiveApplication(null);
+      setHoverStageId(null);
+      return;
+    }
     if (!event.over) {
       setActiveApplication(null);
       setHoverStageId(null);
@@ -614,10 +626,12 @@ export function AtsKanbanBoard({
   }
 
   function handleCreateStage(data: CreatePipelineStageInput) {
+    if (isReadOnly) return;
     void runStageAction({ kind: 'create-stage', data });
   }
 
   function openSetupDialog(selection: 'new' | 'default' | 'import') {
+    if (isReadOnly) return;
     if (!setupRequisitionId) {
       toast.error('This posting is not linked to a requisition yet');
       return;
@@ -627,6 +641,7 @@ export function AtsKanbanBoard({
   }
 
   function handleSetupCreateStage(data: SetupCreatePipelineStageInput) {
+    if (isReadOnly) return;
     if (!jobPostingId) return;
     void runStageAction({
       kind: 'create-stage',
@@ -641,6 +656,7 @@ export function AtsKanbanBoard({
   }
 
   async function createSetupDefaultPipeline() {
+    if (isReadOnly) return;
     if (!setupRequisitionId) {
       toast.error('This posting is not linked to a requisition yet');
       return;
@@ -656,6 +672,7 @@ export function AtsKanbanBoard({
   }
 
   async function importSetupPipeline(sourceJobPostingId: string) {
+    if (isReadOnly) return;
     if (!setupRequisitionId) {
       toast.error('This posting is not linked to a requisition yet');
       return;
@@ -674,6 +691,7 @@ export function AtsKanbanBoard({
   }
 
   function handleRenameStage(data: CreatePipelineStageInput) {
+    if (isReadOnly) return;
     if (!renamingStage) return;
     void runStageAction({
       kind: 'update-stage',
@@ -683,6 +701,7 @@ export function AtsKanbanBoard({
   }
 
   function openScheduleInterview(application: PipelineApplication) {
+    if (isReadOnly) return;
     const eventId = application.currentAssignment?.eventId ?? application.interviewMeeting?.id;
     if (!eventId) {
       toast.error('Interview assignment could not be found. Refresh the pipeline and try again.');
@@ -735,17 +754,20 @@ export function AtsKanbanBoard({
   }
 
   function moveStage(stage: PipelineStage, direction: -1 | 1) {
+    if (isReadOnly) return;
     const nextOrder = getStageReorderOrder(stages, stage.id, direction);
     if (nextOrder === null) return;
     updateStage.mutate({ stageId: stage.id, data: { order: nextOrder } });
   }
 
   function openCompleteInterviewDialog(application: PipelineApplication) {
+    if (isReadOnly) return;
     setCompletingApplication(application);
     setCompletionNote('');
   }
 
   function markInterviewCompleted() {
+    if (isReadOnly) return;
     const application = completingApplication;
     if (!application) return;
     if (!application.interviewMeeting?.id) return;
@@ -768,6 +790,10 @@ export function AtsKanbanBoard({
   }
 
   async function moveSelectedApplications(applicationIds: string[], toStageId: string) {
+    if (isReadOnly) {
+      toast.info('This job opening is closed. Pipeline changes are disabled.');
+      return;
+    }
     const currentApplications = boardQuery.data?.stages.flatMap((stage) => stage.applications) ?? [];
     const applicationsToMove = applicationIds.filter((applicationId) => {
       const application = currentApplications.find((item) => item.id === applicationId);
@@ -814,6 +840,7 @@ export function AtsKanbanBoard({
   }
 
   function handleStartInterview(application: PipelineApplication) {
+    if (isReadOnly) return;
     const meeting = application.interviewMeeting;
     if (!meeting || meeting.status !== 'PENDING') return;
 
@@ -837,10 +864,12 @@ export function AtsKanbanBoard({
   }
 
   function handleAcceptInterview(applicationId: string, eventId: string) {
+    if (isReadOnly) return;
     void runStageAction({ kind: 'accept-interview', applicationId, eventId });
   }
 
   async function submitAcceptedInterviewSlots(payload: AcceptInterviewInput) {
+    if (isReadOnly) return;
     if (!schedulingRequest) return;
     try {
       await acceptInterview.mutateAsync({
@@ -856,6 +885,7 @@ export function AtsKanbanBoard({
   }
 
   function handleChooseCandidateSlot(application: PipelineApplication) {
+    if (isReadOnly) return;
     const assignment = application.currentAssignment;
     if (!assignment) return;
     const interview = schedulingInterviewFromApplication(application, assignment.eventId);
@@ -865,6 +895,7 @@ export function AtsKanbanBoard({
   }
 
   async function handleBookCandidateSlot() {
+    if (isReadOnly) return;
     if (!candidateSlotInterview || !selectedCandidateSlotId) return;
     try {
       await bookCandidateSlot.mutateAsync({
@@ -881,6 +912,7 @@ export function AtsKanbanBoard({
   }
 
   function handleRejectInterview(applicationId: string, eventId: string) {
+    if (isReadOnly) return;
     const application = allBoardApplications.find((item) => item.id === applicationId);
     if (!application) {
       toast.error('Candidate could not be found. Refresh the pipeline and try again.');
@@ -896,6 +928,7 @@ export function AtsKanbanBoard({
   }
 
   function submitRejectInterview(payload: RejectInterviewRequest) {
+    if (isReadOnly) return;
     if (!rejectRequest) return;
     rejectInterview.mutate(
       { eventId: rejectRequest.eventId, data: payload },
@@ -937,14 +970,14 @@ export function AtsKanbanBoard({
     aiFilteredStages[0]?.order === 1;
 
   useEffect(() => {
-    if (!boardQuery.isSuccess || !onlyAppliedSetup || autoOpenedSetupRef.current || !setupRequisitionId) return;
+    if (!boardQuery.isSuccess || !onlyAppliedSetup || autoOpenedSetupRef.current || !setupRequisitionId || isReadOnly) return;
     autoOpenedSetupRef.current = true;
     const timeout = window.setTimeout(() => {
       setSetupInitialSelection('new');
       setSetupDialogOpen(true);
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [boardQuery.isSuccess, onlyAppliedSetup, setupRequisitionId]);
+  }, [boardQuery.isSuccess, isReadOnly, onlyAppliedSetup, setupRequisitionId]);
 
   if (!jobPostingId) {
     return (
@@ -1084,11 +1117,17 @@ export function AtsKanbanBoard({
           </div>
         </div>
       )}
+      {isReadOnly ? (
+        <div className="rounded-lg border border-warning-border bg-warning-bg px-4 py-3 text-sm font-medium text-warning-text">
+          This job opening is closed. The pipeline, table, and stage workspaces are read-only.
+        </div>
+      ) : null}
       {resolvedViewMode === 'table' ? (
         <AtsPipelineTable
           stages={aiFilteredStages}
           globalSearch={deferredGlobalSearch}
           isMoving={moveApplication.isPending}
+          readOnly={isReadOnly}
           onOpenCandidate={handleOpenCandidate}
           onMoveSelected={moveSelectedApplications}
         />
@@ -1102,6 +1141,7 @@ export function AtsKanbanBoard({
               filteredApplications={setupApplications}
               previewApplication={null}
               isUpdating={false}
+              readOnly={isReadOnly}
               onOpenCandidate={handleOpenCandidate}
               onAddAfter={setAddAfterStageId}
               onRename={setRenamingStage}
@@ -1193,6 +1233,7 @@ export function AtsKanbanBoard({
                   filteredApplications={visibleApplications}
                   previewApplication={previewApplication}
                   isUpdating={updateStage.isPending && updateStage.variables?.stageId === stage.id}
+                  readOnly={isReadOnly}
                   onOpenCandidate={handleOpenCandidate}
                   onAddAfter={setAddAfterStageId}
                   onRename={setRenamingStage}
@@ -1218,7 +1259,7 @@ export function AtsKanbanBoard({
                 animate={{ width: 248, scale: 0.96, opacity: 1 }}
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
               >
-                <CandidateCard application={activeApplication} isOverlay compact draggable={false} />
+                <CandidateCard application={activeApplication} isOverlay compact draggable={false} dragLocked={isReadOnly} />
               </motion.div>
             ) : null}
           </DragOverlay>

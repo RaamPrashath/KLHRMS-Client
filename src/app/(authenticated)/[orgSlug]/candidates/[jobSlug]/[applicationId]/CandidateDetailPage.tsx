@@ -50,6 +50,7 @@ import {
 import type {
   ApplicationInterviewEvent,
   CandidateApplicationDetail,
+  CandidateApplicationFile,
   CandidateApplicationNote,
   CandidateResumeAnalysis,
   StageHistoryItem,
@@ -225,6 +226,120 @@ function ProfileTab({
       orgSlug={orgSlug}
       memberId={memberId}
     />
+  );
+}
+
+function fileExtension(url: string): string {
+  const path = url.split('?')[0] ?? url;
+  const extension = path.split('.').pop()?.trim().toUpperCase();
+  return extension && extension.length <= 6 ? extension : 'FILE';
+}
+
+function isBrowserFileUrl(value: string | null | undefined): value is string {
+  return Boolean(value && (value.startsWith('http://') || value.startsWith('https://')));
+}
+
+function filePreviewKind(url: string): 'image' | 'pdf' | 'document' {
+  const extension = fileExtension(url).toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension)) return 'image';
+  if (extension === 'pdf') return 'pdf';
+  return 'document';
+}
+
+function candidateFiles(detail: CandidateApplicationDetail): CandidateApplicationFile[] {
+  const files = (detail.files ?? []).filter((file) => isBrowserFileUrl(file.url));
+  if (isBrowserFileUrl(detail.resumeUrl) && !files.some((file) => file.url === detail.resumeUrl)) {
+    files.unshift({
+      id: `${detail.id}:resume`,
+      label: 'Resume',
+      category: 'Resume',
+      url: detail.resumeUrl,
+      source: 'Candidate application',
+      uploadedAt: detail.appliedAt,
+    });
+  }
+  return files;
+}
+
+function FilePreview({ file }: { readonly file: CandidateApplicationFile }) {
+  const kind = filePreviewKind(file.url);
+  const extension = fileExtension(file.url);
+
+  if (kind === 'image') {
+    return (
+      <div
+        aria-label={`${file.label} preview`}
+        className="h-40 rounded-lg border border-neutral-100 bg-neutral-50 bg-cover bg-center"
+        style={{ backgroundImage: `url("${file.url.replaceAll('"', '\\"')}")` }}
+      />
+    );
+  }
+
+  if (kind === 'pdf') {
+    return (
+      <div className="h-40 overflow-hidden rounded-lg border border-neutral-100 bg-neutral-50">
+        <iframe src={file.url} title={`${file.label} preview`} className="pointer-events-none size-full bg-surface" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-40 items-center justify-center rounded-lg border border-neutral-100 bg-neutral-50">
+      <div className="text-center">
+        <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-surface text-primary shadow-[var(--shadow-1)]">
+          <FileText className="size-6" />
+        </div>
+        <p className="mt-3 font-mono text-xs font-semibold text-neutral-500">{extension}</p>
+      </div>
+    </div>
+  );
+}
+
+function FilesTab({ detail }: { readonly detail: CandidateApplicationDetail }) {
+  const files = useMemo(() => candidateFiles(detail), [detail]);
+
+  if (files.length === 0) {
+    return (
+      <div className="flex min-h-64 items-center justify-center rounded-2xl bg-surface px-6 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div>
+          <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-surface text-neutral-300 shadow-[var(--shadow-1)]">
+            <FileText className="size-5" />
+          </div>
+          <p className="text-sm font-medium text-neutral-900">No files attached</p>
+          <p className="mt-1 text-xs text-neutral-500">Resume, Aadhar, PAN, and other candidate files will appear here.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {files.map((file) => (
+        <a
+          key={file.id}
+          href={file.url}
+          target="_blank"
+          rel="noreferrer"
+          className="group block overflow-hidden rounded-xl border border-neutral-100 bg-surface p-3 shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[var(--shadow-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          <FilePreview file={file} />
+          <div className="mt-3 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-neutral-900">{file.label}</p>
+              <p className="mt-0.5 truncate text-xs text-neutral-500">{file.category}</p>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary-ghost px-2 py-1 text-xs font-medium text-primary">
+              Open
+              <ExternalLink className="size-3" />
+            </span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+            <span className="rounded-full bg-neutral-50 px-2 py-0.5">{file.source}</span>
+            <span className="font-mono">{file.uploadedAt ? formatDateTime(file.uploadedAt) : 'Date unavailable'}</span>
+          </div>
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -908,7 +1023,7 @@ function NotesTab({
           <NotesEmptyState />
         ) : filteredNotes.length === 0 ? (
           <div className="flex h-full min-h-32 items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-canvas px-6 text-center text-sm text-neutral-500">
-            No notes found for "{searchQuery}"
+            No notes found for &quot;{searchQuery}&quot;
           </div>
         ) : (
           <div className="space-y-5">
@@ -958,7 +1073,7 @@ export function CandidateDetailPage({
     () => detail ? `${detail.candidate.firstName} ${detail.candidate.lastName}`.trim() : 'Candidate',
     [detail],
   );
-  const [activeSection, setActiveSection] = useState<'profile' | 'notes' | 'history'>('profile');
+  const [activeSection, setActiveSection] = useState<'profile' | 'files' | 'notes' | 'history'>('profile');
   const fallbackReturnPath = `/${orgSlug}/candidates/${jobSlug}/kanban`;
   const analysisStatus = resumeAnalysisQuery.data?.status;
   const analysisIsWorking = analysisStatus === 'PENDING' || analysisStatus === 'PROCESSING' || analysisStatus === 'TEXT_EXTRACTED';
@@ -1021,6 +1136,7 @@ export function CandidateDetailPage({
           <div className="flex items-center self-start rounded-xl border border-black/4 bg-neutral-50 p-1">
             {([
                 { key: 'profile' as const, label: 'Profile' },
+                { key: 'files' as const, label: 'Files' },
                 { key: 'notes' as const, label: 'Notes' },
                 { key: 'history' as const, label: 'History' },
               ]).map((tab) => {
@@ -1112,6 +1228,10 @@ export function CandidateDetailPage({
 
             {activeSection === 'history' ? (
               <HistoryTab detail={detail} />
+            ) : null}
+
+            {activeSection === 'files' ? (
+              <FilesTab detail={detail} />
             ) : null}
 
             {activeSection === 'notes' ? (

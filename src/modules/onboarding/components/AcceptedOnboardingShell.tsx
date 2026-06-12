@@ -128,7 +128,7 @@ export function AcceptedOnboardingShell({
     try {
       await sendRequests.mutateAsync({ applicationIds: ids });
       setSelectedApplicationIds(new Set());
-      toast.success(`Onboarding emails sent to ${ids.length} candidate(s)`);
+      toast.success(`File upload links sent to ${ids.length} candidate(s)`);
     } catch (error) {
       toast.error(readActionError(error, 'Failed to send onboarding requests'));
     }
@@ -206,7 +206,7 @@ export function AcceptedOnboardingShell({
             onClick={handleSend}
           >
             {sendRequests.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-            Send Onboarding Email
+            Send File Upload Link
           </Button>
         </div>
       </div>
@@ -251,16 +251,13 @@ export function AcceptedOnboardingShell({
                     />
                   </TableHead>
                   <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
-                    Candidate
+                    Name
                   </TableHead>
                   <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
-                    Onboarding Status
-                  </TableHead>
-                  <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
-                    Token Sent
+                    Email
                   </TableHead>
                   <TableHead className="pr-6 pl-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
-                    Submitted
+                    Status
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -288,32 +285,22 @@ export function AcceptedOnboardingShell({
                           />
                         </TableCell>
                         <TableCell className="px-3 py-3 whitespace-nowrap text-left">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-neutral-900">{candidateName(candidate)}</p>
-                            <p className="truncate text-xs text-neutral-500">{candidate.candidate.email || 'No email'}</p>
-                          </div>
+                          <span className="truncate text-sm font-medium text-neutral-900">{candidateName(candidate)}</span>
                         </TableCell>
                         <TableCell className="px-3 py-3 whitespace-nowrap text-left">
+                          <span className="truncate text-xs text-neutral-500">{candidate.candidate.email || 'No email'}</span>
+                        </TableCell>
+                        <TableCell className="pr-6 pl-3 py-3 whitespace-nowrap text-left">
                           <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', statusClasses(candidate.onboardingStatus))}>
                             {statusLabel(candidate.onboardingStatus)}
                           </span>
-                        </TableCell>
-                        <TableCell className="px-3 py-3 whitespace-nowrap text-left font-mono text-xs text-neutral-500">
-                          {candidate.latestOnboarding?.tokenSentAt
-                            ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date(candidate.latestOnboarding.tokenSentAt))
-                            : '-'}
-                        </TableCell>
-                        <TableCell className="pr-6 pl-3 py-3 whitespace-nowrap text-left font-mono text-xs text-neutral-500">
-                          {candidate.latestOnboarding?.submittedAt
-                            ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date(candidate.latestOnboarding.submittedAt))
-                            : '-'}
                         </TableCell>
                       </TableRow>
                     );
                   })
                 ) : (
                   <TableRow className="border-black/4 hover:bg-transparent">
-                    <TableCell colSpan={5} className="py-16 text-center text-sm text-neutral-400">
+                    <TableCell colSpan={4} className="py-16 text-center text-sm text-neutral-400">
                       No candidates in this stage.
                     </TableCell>
                   </TableRow>

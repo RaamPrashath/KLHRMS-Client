@@ -29,6 +29,7 @@ import {
   fetchPipelineBoardAction,
   fetchPipelineBoardByJobSlugAction,
   fetchPipelineJobPostingsAction,
+  fetchRecruitmentReportJobsAction,
   fetchStageWorkspaceAction,
   fetchStageWorkspaceByJobSlugAction,
   createHiringTeamAction,
@@ -41,6 +42,7 @@ import {
   searchInterviewersAction,
   updateCandidateApplicationDetailAction,
   updateCandidateApplicationNoteAction,
+  updatePipelineJobPostingStatusAction,
   updatePipelineStageAction,
 } from '@/modules/candidates/api/atsServerActions';
 import type {
@@ -51,6 +53,7 @@ import type {
   PipelineApplication,
   PipelineBoard,
   PipelineJobPosting,
+  RecruitmentReportListResponse,
   PipelineStage,
   InterviewMeeting,
   InterviewerSearchResponse,
@@ -136,6 +139,35 @@ export function usePipelineJobPostings(orgSlug: string, memberId: string) {
     enabled: !!orgSlug && !!memberId,
     staleTime: 60_000,
     gcTime: 10 * 60_000,
+  });
+}
+
+export function useUpdatePipelineJobPostingStatus(orgSlug: string, memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { jobPostingId: string; status: 'PUBLISHED' | 'CLOSED' }) =>
+      updatePipelineJobPostingStatusAction({
+        orgSlug,
+        memberId,
+        jobPostingId: params.jobPostingId,
+        status: params.status,
+      }),
+    onSuccess: (posting) => {
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-postings', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['recruitment-report-jobs', orgSlug] });
+      if (posting.id) queryClient.invalidateQueries({ queryKey: boardKey(orgSlug, posting.id) });
+    },
+  });
+}
+
+export function useRecruitmentReportJobs(orgSlug: string, memberId: string) {
+  return useQuery<RecruitmentReportListResponse, Error>({
+    queryKey: ['recruitment-report-jobs', orgSlug],
+    queryFn: () => fetchRecruitmentReportJobsAction({ orgSlug, memberId }),
+    enabled: !!orgSlug && !!memberId,
+    staleTime: 30_000,
   });
 }
 

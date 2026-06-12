@@ -229,6 +229,15 @@ export interface ApplicationInterviewEvent {
   createdAt: string;
 }
 
+export interface CandidateApplicationFile {
+  id: string;
+  label: string;
+  category: string;
+  url: string;
+  source: string;
+  uploadedAt: string | null;
+}
+
 export interface InterviewMeeting {
   id: string;
   applicationId: string;
@@ -266,6 +275,7 @@ export interface CandidateApplicationDetail {
   stageHistory: StageHistoryItem[];
   interviewEvents: ApplicationInterviewEvent[];
   notes: CandidateApplicationNote[];
+  files?: CandidateApplicationFile[];
 }
 
 export interface StageWorkspaceInterviewer {
@@ -285,6 +295,22 @@ export interface StageWorkspaceAssignment {
   status: 'UNASSIGNED' | 'PENDING_ACCEPTANCE' | 'REJECTED' | 'CANDIDATE_PENDING' | 'PENDING_INTERVIEWER' | 'SCHEDULED' | 'ONGOING' | 'COMPLETED' | 'CLOSED' | string;
   emailSentAt: string | null;
   proposedSlots: ProposedSlot[];
+}
+
+export type RecruitmentReportFormat = 'pdf' | 'xlsx' | 'csv';
+export type RecruitmentJobStatus = 'ACTIVE' | 'CLOSED';
+
+export interface RecruitmentReportJob {
+  id: string;
+  slug: string;
+  name: string;
+  totalCandidates: number;
+  priority: string;
+  status: RecruitmentJobStatus;
+}
+
+export interface RecruitmentReportListResponse {
+  items: RecruitmentReportJob[];
 }
 
 export interface StageWorkspaceCandidate {

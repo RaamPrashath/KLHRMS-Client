@@ -23,7 +23,6 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -48,6 +47,7 @@ interface AtsPipelineTableProps {
   readonly stages: PipelineStage[];
   readonly globalSearch: string;
   readonly isMoving: boolean;
+  readonly readOnly?: boolean;
   readonly onOpenCandidate: (applicationId: string) => void;
   readonly onMoveSelected: (applicationIds: string[], stageId: string) => Promise<void>;
 }
@@ -89,15 +89,6 @@ function buildPageNumbers(current: number, total: number): (number | '...')[] {
   if (current < total - 3) pages.push('...');
   pages.push(total);
   return pages;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
 }
 
 function formatDate(value: string): string {
@@ -164,7 +155,7 @@ function SortButton({
       type="button"
       variant="ghost"
       size="sm"
-      className="-ml-2 h-8 px-2 text-[12.5px] font-semibold tracking-wider text-neutral-500 hover:text-neutral-900"
+      className="-ml-2 h-8 px-2 text-[12.5px] font-semibold tracking-wider uppercase text-neutral-500 hover:text-neutral-900"
       onClick={onClick}
     >
       {label}
@@ -177,6 +168,7 @@ export function AtsPipelineTable({
   stages,
   globalSearch,
   isMoving,
+  readOnly = false,
   onOpenCandidate,
   onMoveSelected,
 }: AtsPipelineTableProps) {
@@ -204,7 +196,7 @@ export function AtsPipelineTable({
       .filter(([, selected]) => selected)
       .map(([id]) => id);
 
-    if (!targetStageId || targetStageId === 'all' || rawIds.length === 0) return;
+    if (readOnly || !targetStageId || targetStageId === 'all' || rawIds.length === 0) return;
 
     // Safety net: filter out any ongoing-interview rows that may have been selected
     const selectedIds = rawIds.filter((id) => {
@@ -253,7 +245,7 @@ export function AtsPipelineTable({
           <Checkbox
             aria-label={`Select ${row.original.name}`}
             checked={row.getIsSelected()}
-            disabled={row.original.isInterviewOngoing}
+            disabled={readOnly || row.original.isInterviewOngoing}
             onClick={(event) => event.stopPropagation()}
             onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
           />
@@ -266,11 +258,6 @@ export function AtsPipelineTable({
         ),
         cell: ({ row }) => (
           <div className="flex min-w-[240px] items-center gap-3">
-              <Avatar className="size-9 border border-neutral-100">
-                <AvatarFallback className="bg-primary-ghost text-xs font-semibold text-primary">
-                  {getInitials(row.original.name)}
-                </AvatarFallback>
-              </Avatar>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-neutral-900">{row.original.name}</p>
               <p className="truncate text-xs text-neutral-500">{row.original.email}</p>
@@ -376,7 +363,7 @@ export function AtsPipelineTable({
         },
       },
     ],
-    [],
+    [readOnly],
   );
 
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -395,7 +382,7 @@ export function AtsPipelineTable({
         pageSize: 25,
       },
     },
-    enableRowSelection: (row) => !row.original.isInterviewOngoing,
+    enableRowSelection: (row) => !readOnly && !row.original.isInterviewOngoing,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
@@ -458,7 +445,7 @@ export function AtsPipelineTable({
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <span className="text-sm font-medium text-neutral-700">{selectedCount} selected</span>
-          <Select value={targetStageId || 'all'} onValueChange={setTargetStageId}>
+          <Select value={targetStageId || 'all'} onValueChange={setTargetStageId} disabled={readOnly}>
             <SelectTrigger className="h-9 w-full border-0 bg-canvas text-sm focus:border focus:border-primary focus:bg-surface focus:ring-[3px] focus:ring-primary/10 sm:w-[190px]">
               <SelectValue placeholder="Select stage" />
             </SelectTrigger>
@@ -474,7 +461,7 @@ export function AtsPipelineTable({
           <Button
             type="button"
             size="sm"
-            disabled={selectedCount === 0 || !targetStageId || targetStageId === 'all' || isMoving}
+            disabled={readOnly || selectedCount === 0 || !targetStageId || targetStageId === 'all' || isMoving}
             onClick={moveSelected}
           >
             {isMoving ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -493,8 +480,8 @@ export function AtsPipelineTable({
                     <TableHead
                       key={header.id}
                       className={cn(
-                        'h-auto py-3 px-4 whitespace-nowrap text-[12.5px] font-semibold tracking-wider text-neutral-500',
-                        header.column.id !== 'select' && header.column.id !== 'name' && 'text-center',
+                        'h-auto py-3 px-4 whitespace-nowrap text-[12.5px] font-semibold tracking-wider uppercase text-neutral-500',
+                        header.column.id === 'name' ? 'w-[28%] text-left' : header.column.id === 'select' ? 'w-[5%]' : 'w-[11%] text-center',
                       )}
                     >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
