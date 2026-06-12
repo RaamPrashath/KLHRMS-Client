@@ -1,10 +1,9 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { Check, Loader2, MessageSquareText } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { getHrmsApiUrl } from '@/lib/deployment-env';
 import { RichTextEditor } from '@/modules/jobs/components/RichTextEditor';
 
 interface FeedbackInfo {
@@ -13,10 +12,6 @@ interface FeedbackInfo {
   interviewerName: string | null;
   stageName: string;
   interviewDate: string;
-}
-
-function getApiUrl(): string {
-  return getHrmsApiUrl();
 }
 
 function formatDate(iso: string): string {
@@ -43,27 +38,35 @@ export default function FeedbackPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  useState(() => {
-    fetch(`${getApiUrl()}/public/interviews/${token}/feedback`)
+  useEffect(() => {
+    let active = true;
+
+    fetch(`/public/interviews/${token}/feedback`)
       .then((res) => {
         if (!res.ok) throw new Error('Feedback link expired or invalid');
         return res.json();
       })
       .then((json: FeedbackInfo) => {
+        if (!active) return;
         setInfo(json);
         setLoading(false);
       })
       .catch((err: Error) => {
+        if (!active) return;
         setError(err.message);
         setLoading(false);
       });
-  });
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
 
   async function handleSubmit() {
     if (!feedback.trim()) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${getApiUrl()}/public/interviews/${token}/feedback`, {
+      const res = await fetch(`/public/interviews/${token}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: feedback }),

@@ -4,8 +4,9 @@ import { use, useCallback, useEffect, useState } from 'react';
 import { Check, Clock, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
+import { Button } from '@/components/ui/button';
 import { WaveBackground } from '@/components/auth/shared/WaveBackground';
-import { getHrmsApiUrl } from '@/lib/deployment-env';
+import { CandidateSlotProposalDialog } from './CandidateSlotProposalDialog';
 
 interface ProposedSlot {
   id: string;
@@ -18,6 +19,7 @@ interface SlotListResponse {
   jobTitle: string;
   interviewerName: string;
   candidateToken: string;
+  stageDueDate: string | null;
   slots: ProposedSlot[];
 }
 
@@ -41,10 +43,6 @@ function formatSlotTime(startTime: string, endTime: string): string {
     timeZone: 'Asia/Kolkata',
   });
   return `${formatter.format(start)} – ${timeFormatter.format(end)} IST`;
-}
-
-function getApiUrl(): string {
-  return getHrmsApiUrl();
 }
 
 async function readApiError(res: Response, fallback: string): Promise<string> {
@@ -71,11 +69,13 @@ export default function InterviewSlotPickerPage({
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
+  const [proposalSubmitted, setProposalSubmitted] = useState(false);
 
   useEffect(() => {
     let active = true;
 
-    fetch(`${getApiUrl()}/public/interviews/${token}/slots`)
+    fetch(`/public/interviews/${token}/slots`)
       .then(async (res) => {
         if (!res.ok) throw new Error(await readApiError(res, 'Interview not found or link expired'));
         return res.json();
@@ -101,7 +101,7 @@ export default function InterviewSlotPickerPage({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch(`${getApiUrl()}/public/interviews/${token}/slots/${selectedSlotId}/select`, {
+      const res = await fetch(`/public/interviews/${token}/slots/${selectedSlotId}/select`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -113,6 +113,30 @@ export default function InterviewSlotPickerPage({
       setIsSubmitting(false);
     }
   }, [selectedSlotId, token]);
+
+  const handleSubmitProposal = useCallback(async (payload: {
+    proposedSlots: Array<{ startTime: string; endTime: string }>;
+    durationMinutes: number;
+    note: string | null;
+  }) => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch(`/public/interviews/${token}/slots/propose`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await readApiError(res, 'Failed to propose slots'));
+      setProposalSubmitted(true);
+      setProposalDialogOpen(false);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Something went wrong');
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [token]);
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-white font-sans text-neutral-900">
@@ -134,10 +158,20 @@ export default function InterviewSlotPickerPage({
           </div>
 
           <div className="login-header">
-            <h2>{confirmed ? 'Interview booked' : error ? 'Interview link unavailable' : 'Choose your slot'}</h2>
+            <h2>
+              {confirmed
+                ? 'Interview booked'
+                : proposalSubmitted
+                  ? 'Availability received'
+                  : error
+                    ? 'Interview link unavailable'
+                    : 'Choose your slot'}
+            </h2>
             <p>
               {confirmed
                 ? 'Your interview time is confirmed.'
+                : proposalSubmitted
+                  ? 'Your proposed slots have been sent to the interviewer.'
                 : error
                   ? 'We could not load this interview invitation.'
                   : 'Select a convenient time for your interview.'}
@@ -165,6 +199,16 @@ export default function InterviewSlotPickerPage({
               </div>
               <p className="leading-relaxed">
                 Your interview time has been booked. Check your email for the confirmation details.
+              </p>
+            </div>
+          ) : proposalSubmitted ? (
+            <div className="rounded-xl border border-success-border bg-success-bg px-4 py-4 text-sm text-success-text">
+              <div className="mb-2 flex items-center gap-2 font-medium">
+                <Check className="size-4" aria-hidden="true" />
+                <span>Alternate slots sent</span>
+              </div>
+              <p className="leading-relaxed">
+                We have emailed you an acknowledgement and notified the interviewer. You will receive a confirmation once a slot is booked.
               </p>
             </div>
           ) : (
@@ -239,6 +283,25 @@ export default function InterviewSlotPickerPage({
                 {isSubmitting ? 'Booking...' : 'Book Interview'}
               </button>
 
+              <div className="mt-4 rounded-xl border border-neutral-100 bg-white px-4 py-3">
+                <p className="text-sm font-medium text-neutral-900">Not quite aligned with your plans?</p>
+                <p className="mt-1 text-sm leading-relaxed text-neutral-500">
+                  Propose your own slots and add a note for the interviewer.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    setSubmitError(null);
+                    setProposalDialogOpen(true);
+                  }}
+                >
+                  Propose my own slots
+                </Button>
+              </div>
+
               {submitError ? (
                 <p className="mt-3 text-sm text-destructive-text">{submitError}</p>
               ) : null}
@@ -246,6 +309,17 @@ export default function InterviewSlotPickerPage({
           )}
         </div>
       </main>
+      <CandidateSlotProposalDialog
+        open={proposalDialogOpen}
+        isSubmitting={isSubmitting}
+        serverError={proposalDialogOpen ? submitError : null}
+        stageDueDate={data?.stageDueDate}
+        candidateName={data?.candidateName}
+        jobTitle={data?.jobTitle}
+        interviewerName={data?.interviewerName}
+        onOpenChange={setProposalDialogOpen}
+        onSubmit={handleSubmitProposal}
+      />
     </div>
   );
 }

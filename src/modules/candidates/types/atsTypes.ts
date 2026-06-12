@@ -229,6 +229,15 @@ export interface ApplicationInterviewEvent {
   createdAt: string;
 }
 
+export interface CandidateApplicationFile {
+  id: string;
+  label: string;
+  category: string;
+  url: string;
+  source: string;
+  uploadedAt: string | null;
+}
+
 export interface InterviewMeeting {
   id: string;
   applicationId: string;
@@ -266,6 +275,7 @@ export interface CandidateApplicationDetail {
   stageHistory: StageHistoryItem[];
   interviewEvents: ApplicationInterviewEvent[];
   notes: CandidateApplicationNote[];
+  files?: CandidateApplicationFile[];
 }
 
 export interface StageWorkspaceInterviewer {
@@ -277,12 +287,30 @@ export interface StageWorkspaceInterviewer {
 
 export interface StageWorkspaceAssignment {
   eventId: string;
+  stageSlug: string | null;
   interviewer: StageWorkspaceInterviewer | null;
   scheduledStartAt: string | null;
   scheduledEndAt: string | null;
   meetLink: string | null;
-  status: 'PENDING' | 'PENDING_ACCEPTANCE' | 'ACCEPTED' | 'SCHEDULED' | 'ONGOING' | 'REJECTED' | 'COMPLETED' | 'UNASSIGNED' | string;
+  status: 'UNASSIGNED' | 'PENDING_ACCEPTANCE' | 'REJECTED' | 'CANDIDATE_PENDING' | 'PENDING_INTERVIEWER' | 'SCHEDULED' | 'ONGOING' | 'COMPLETED' | 'CLOSED' | string;
   emailSentAt: string | null;
+  proposedSlots: ProposedSlot[];
+}
+
+export type RecruitmentReportFormat = 'pdf' | 'xlsx' | 'csv';
+export type RecruitmentJobStatus = 'ACTIVE' | 'CLOSED';
+
+export interface RecruitmentReportJob {
+  id: string;
+  slug: string;
+  name: string;
+  totalCandidates: number;
+  priority: string;
+  status: RecruitmentJobStatus;
+}
+
+export interface RecruitmentReportListResponse {
+  items: RecruitmentReportJob[];
 }
 
 export interface StageWorkspaceCandidate {
@@ -378,6 +406,8 @@ export interface ProposedSlot {
   id: string;
   startTime: string;
   endTime: string;
+  proposedBy?: 'INTERVIEWER' | 'CANDIDATE';
+  note?: string | null;
 }
 
 export interface AcceptInterviewResponse {
@@ -394,11 +424,17 @@ export interface RejectInterviewResponse {
   warnings: StageInterviewWarning[];
 }
 
+export interface RejectInterviewRequest {
+  mode: 'AUTO' | 'REASSIGN' | 'UNASSIGN';
+  newInterviewerMemberId?: string | null;
+}
+
 export interface MyInterview {
   eventId: string;
   applicationId: string;
   stageId: string;
   stageName: string;
+  stageSlug: string | null;
   candidate: CandidateSummary;
   jobTitle: string;
   jobPostingId: string;

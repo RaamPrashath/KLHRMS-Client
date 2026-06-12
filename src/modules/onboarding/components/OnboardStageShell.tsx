@@ -94,6 +94,7 @@ export function OnboardStageShell({
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [sendingState, setSendingState] = useState<Record<string, boolean>>({});
+  const [sentState, setSentState] = useState<Record<string, boolean>>({});
   const [roleSelections, setRoleSelections] = useState<Record<string, string>>({});
   const [emailInputs, setEmailInputs] = useState<Record<string, string>>({});
 
@@ -113,7 +114,7 @@ export function OnboardStageShell({
     const recordId = candidate.onboardingRecordId;
     if (!recordId) return;
     const roleId = roleSelections[candidate.applicationId];
-    const email = emailInputs[candidate.applicationId];
+    const email = (emailInputs[candidate.applicationId] ?? candidate.candidate.email ?? '').trim();
     if (!roleId) {
       toast.error('Please select a role');
       return;
@@ -133,8 +134,9 @@ export function OnboardStageShell({
         organizationId,
       });
       toast.success(`Credentials sent to ${candidateName(candidate)}`);
+      setSentState((prev) => ({ ...prev, [candidate.applicationId]: true }));
       setRoleSelections((prev) => ({ ...prev, [candidate.applicationId]: '' }));
-      setEmailInputs((prev) => ({ ...prev, [candidate.applicationId]: '' }));
+      setEmailInputs((prev) => ({ ...prev, [candidate.applicationId]: email }));
       queryClient.invalidateQueries({ queryKey: ['onboard-workspace'] });
       queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
       queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
@@ -249,7 +251,7 @@ export function OnboardStageShell({
                 {filteredCandidates.length > 0 ? (
                   filteredCandidates.map((candidate) => {
                     const isSending = sendingState[candidate.applicationId] ?? false;
-                    const credsSent = candidate.onboardingStatus === 'CREDENTIALS_SENT';
+                    const credsSent = candidate.onboardingStatus === 'CREDENTIALS_SENT' || Boolean(sentState[candidate.applicationId]);
                     const canSend = !credsSent;
 
                     return (
@@ -302,7 +304,9 @@ export function OnboardStageShell({
                         </TableCell>
                         <TableCell className="px-3 py-3 whitespace-nowrap text-left">
                           {credsSent ? (
-                            <span className="text-xs text-neutral-500">{candidate.assignedEmail}</span>
+                            <span className="text-xs text-neutral-500">
+                              {candidate.assignedEmail ?? emailInputs[candidate.applicationId] ?? candidate.candidate.email}
+                            </span>
                           ) : (
                             <Input
                               value={emailInputs[candidate.applicationId] ?? candidate.candidate.email ?? ''}
@@ -324,16 +328,24 @@ export function OnboardStageShell({
                             <Button
                               type="button"
                               size="sm"
-                              className={cn('h-7 px-3 text-xs', canSend ? 'bg-primary hover:bg-primary-hover' : 'bg-neutral-200 text-neutral-400')}
+                              className={cn(
+                                'h-9 min-w-[104px] justify-center px-4 text-sm font-medium',
+                                canSend ? 'bg-primary hover:bg-primary-hover' : 'bg-neutral-200 text-neutral-400',
+                              )}
                               disabled={!canSend || isSending}
                               onClick={() => void handleSendCredentials(candidate)}
                             >
                               {isSending ? (
-                                <Loader2 className="size-3 animate-spin" />
+                                <>
+                                  <Loader2 className="size-4 animate-spin" />
+                                  Sending...
+                                </>
                               ) : (
-                                <Send className="size-3" />
+                                <>
+                                  <Send className="size-4" />
+                                  Send
+                                </>
                               )}
-                              Send
                             </Button>
                           )}
                           {candidate.credentialsEmailError ? (

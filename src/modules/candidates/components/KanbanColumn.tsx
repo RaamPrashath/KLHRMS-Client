@@ -121,9 +121,11 @@ export function KanbanColumn({
   onStartInterview,
   onAcceptInterview,
   onRejectInterview,
+  onChooseCandidateSlot,
   filteredApplications,
   previewApplication,
   isUpdating = false,
+  readOnly = false,
   currentMemberId = null,
 }: {
   readonly stage: PipelineStage;
@@ -146,9 +148,11 @@ export function KanbanColumn({
   ) => void;
   readonly onAcceptInterview?: (applicationId: string, eventId: string) => void;
   readonly onRejectInterview?: (applicationId: string, eventId: string) => void;
+  readonly onChooseCandidateSlot?: (application: PipelineApplication) => void;
   readonly filteredApplications: PipelineApplication[];
   readonly previewApplication?: PipelineApplication | null;
   readonly isUpdating?: boolean;
+  readonly readOnly?: boolean;
   readonly currentMemberId?: string | null;
 }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -187,7 +191,9 @@ export function KanbanColumn({
         onStartInterview={onStartInterview}
         onAcceptInterview={onAcceptInterview}
         onRejectInterview={onRejectInterview}
+        onChooseCandidateSlot={onChooseCandidateSlot}
         currentMemberId={currentMemberId}
+        dragLocked={readOnly}
       />
     );
   }
@@ -234,7 +240,7 @@ export function KanbanColumn({
                 variant="ghost"
                 aria-label={`${stage.name} actions`}
                 className="size-7 rounded-md text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700 mt-1.5"
-                disabled={isUpdating}
+                disabled={isUpdating || readOnly}
               >
                 {isUpdating ? (
                   <LoaderCircle className="size-4 animate-spin" />
@@ -322,6 +328,7 @@ export function KanbanColumn({
                   onStartInterview={onStartInterview}
                   compact
                   draggable={false}
+                  dragLocked={readOnly}
                 />
               ) : null}
               {filteredApplications.map(renderCard)}

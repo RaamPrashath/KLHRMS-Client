@@ -7,8 +7,10 @@ import { CareerApplicationDialog } from "@/modules/jobs/components/CareerApplica
 import { AtsPipelineTable } from "@/modules/candidates/components/AtsPipelineTable";
 import { moveApplicationStageAction } from "@/modules/candidates/api/atsServerActions";
 import { AcceptedOnboardingShell } from "@/modules/onboarding/components/AcceptedOnboardingShell";
+import { OnboardStageShell } from "@/modules/onboarding/components/OnboardStageShell";
 import {
     acceptedOnboardingWorkspace,
+    onboardWorkspace,
     recruitmentPipelineBoard,
     recruitmentRequests,
     resetRecruitmentRequests,
@@ -16,6 +18,7 @@ import {
 
 const supabaseUploadMock = vi.hoisted(() => vi.fn());
 const supabaseGetPublicUrlMock = vi.hoisted(() => vi.fn());
+const assignCredentialsAndCreateUserActionMock = vi.hoisted(() => vi.fn());
 
 const navigationMock = vi.hoisted(() => ({
     push: vi.fn<(href: string) => void>(),
@@ -41,6 +44,14 @@ vi.mock("@supabase/supabase-js", () => ({
         },
     }),
 }));
+
+vi.mock("@/modules/onboarding/api/onboardingServerActions", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("@/modules/onboarding/api/onboardingServerActions")>();
+    return {
+        ...actual,
+        assignCredentialsAndCreateUserAction: assignCredentialsAndCreateUserActionMock,
+    };
+});
 
 function createQueryClient() {
     return new QueryClient({
@@ -111,6 +122,7 @@ beforeEach(() => {
     resetRecruitmentRequests();
     navigationMock.push.mockReset();
     navigationMock.prefetch.mockReset();
+    assignCredentialsAndCreateUserActionMock.mockReset();
     supabaseUploadMock.mockReset();
     supabaseGetPublicUrlMock.mockReset();
     supabaseUploadMock.mockResolvedValue({ error: null });
@@ -251,13 +263,60 @@ describe("Onboarding email request workflow", () => {
 
         expect(screen.getByRole("heading", { name: /accepted/i })).toBeInTheDocument();
         await user.click(screen.getByRole("checkbox", { name: /select meera iyer/i }));
-        await user.click(screen.getByRole("button", { name: /send onboarding email/i }));
+        await user.click(screen.getByRole("button", { name: /send file upload link/i }));
 
         await waitFor(() => {
             expect(recruitmentRequests.onboardingSends).toHaveLength(1);
         });
         expect(recruitmentRequests.onboardingSends[0]).toEqual({
             applicationIds: ["application_onboard_unsent"],
+        });
+    });
+
+    it("sends credentials with the prefilled candidate email and shows sending then sent states", async () => {
+        const user = userEvent.setup();
+        let resolveSend: (value: { status: string }) => void = () => undefined;
+        assignCredentialsAndCreateUserActionMock.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveSend = resolve;
+            }),
+        );
+
+        renderWithQueryClient(
+            <OnboardStageShell
+                orgSlug="kovan"
+                memberId="member_hr"
+                organizationId="org_01"
+                jobSlug="senior-frontend-engineer"
+                stageSlug="onboarding"
+                initialWorkspace={onboardWorkspace}
+            />,
+        );
+
+        const row = (await screen.findByText("Dev Kapoor")).closest("tr");
+        expect(row).not.toBeNull();
+
+        await user.click(within(row as HTMLElement).getByRole("combobox"));
+        await user.click(await screen.findByRole("option", { name: /hr manager/i }));
+
+        await user.click(within(row as HTMLElement).getByRole("button", { name: /^send$/i }));
+
+        expect(await within(row as HTMLElement).findByRole("button", { name: /sending/i })).toBeDisabled();
+        expect(assignCredentialsAndCreateUserActionMock).toHaveBeenCalledWith({
+            orgSlug: "kovan",
+            memberId: "member_hr",
+            recordId: "onboarding_dev",
+            organizationId: "org_01",
+            data: {
+                roleId: "role_hr",
+                email: "dev.kapoor@example.com",
+            },
+        });
+
+        resolveSend({ status: "sent" });
+
+        await waitFor(() => {
+            expect(within(row as HTMLElement).getByText("Sent")).toBeInTheDocument();
         });
     });
 });

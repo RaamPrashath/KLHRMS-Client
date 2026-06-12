@@ -18,6 +18,7 @@ interface WorkLogDialogProps {
   projects?: ProjectForAttendance[];
   onClose: () => void;
   onSave: (date: string, values: WorkLogFormValues) => Promise<void>;
+  allowDayDuration?: boolean;
   isPending?: boolean;
 }
 
@@ -35,6 +36,7 @@ export function WorkLogDialog({
   projects = [],
   onClose,
   onSave,
+  allowDayDuration = false,
   isPending = false,
 }: Readonly<WorkLogDialogProps>) {
   const isCreate = state.mode === 'create';
@@ -69,6 +71,7 @@ export function WorkLogDialog({
             defaultEnd={isCreate && state.log ? state.log.endTime : undefined}
             onSubmit={handleSubmit}
             onCancel={onClose}
+            allowDayDuration={allowDayDuration}
             isPending={isPending}
             submitLabel={isCreate ? 'Add log' : 'Save changes'}
           />
