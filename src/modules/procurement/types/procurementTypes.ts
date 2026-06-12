@@ -1,7 +1,7 @@
 export const PROCUREMENT_REQUEST_TYPES = ['BULK', 'REPLACEMENT'] as const;
 export const PROCUREMENT_STATUSES = [
   'DRAFT',
-  'PENDING_FINANCE_APPROVAL',
+  'PENDING',
   'APPROVED',
   'REJECTED',
   'CANCELLED',
@@ -116,6 +116,7 @@ export interface ProcurementPurchaseOrderListItem {
 
 export interface ProcurementPurchaseOrderListResponse {
   items: ProcurementPurchaseOrderListItem[];
+  pagination: ProcurementPaginationMeta;
 }
 
 export interface ProcurementPurchaseOrderDownloadResponse {
@@ -314,6 +315,13 @@ export interface ProcurementRequisitionRecord {
   purchaseOrders: ProcurementPurchaseOrderRecord[];
 }
 
+export interface ProcurementPaginationMeta {
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface ProcurementListResponse {
   items: ProcurementRequisitionRecord[];
+  pagination: ProcurementPaginationMeta;
 }

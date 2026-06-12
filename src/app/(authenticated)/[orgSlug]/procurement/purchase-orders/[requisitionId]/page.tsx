@@ -28,7 +28,7 @@ export default async function ProcurementPurchaseOrderComposerPage({
   if (getScope(permissions, 'procurement', 'approve') === 'none') redirect(`/${orgSlug}/procurement`);
 
   return (
-    <div className="min-h-full bg-canvas px-5 pt-4 pb-8">
+    <div className="min-h-full bg-canvas">
       <ProcurementPurchaseOrderComposer
         orgSlug={orgSlug}
         memberId={memberId!}

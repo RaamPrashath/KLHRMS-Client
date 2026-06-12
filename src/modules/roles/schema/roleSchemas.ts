@@ -9,7 +9,6 @@ import { z } from 'zod';
 export const HRMS_MODULES = [
   // People
   'employees',
-  'organization',
   'departments',
   'permission',
   // Time & Attendance

@@ -143,11 +143,6 @@ export function createHRManagerPermissions(): RolePermissions {
   permissions.employees.edit = 'organization';
   permissions.employees.delete = 'organization';
   
-  permissions.organization.view = 'organization';
-  permissions.organization.create = 'organization';
-  permissions.organization.edit = 'organization';
-  permissions.organization.delete = 'organization';
-  
   permissions.departments.view = 'organization';
   permissions.departments.create = 'organization';
   permissions.departments.edit = 'organization';
@@ -278,7 +273,6 @@ export function createFinanceManagerPermissions(): RolePermissions {
   
   // People — view only
   permissions.employees.view = 'organization';
-  permissions.organization.view = 'organization';
   permissions.departments.view = 'organization';
   permissions.permission.view = 'self';
   

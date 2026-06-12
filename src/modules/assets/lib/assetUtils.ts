@@ -17,6 +17,7 @@ export function humanize(value: string) {
     PROVIDED_ASSETS: 'Issued Assets',
     IN_MAINTENANCE: 'In Maintenance',
     PENDING_RETURN: 'Pending Return',
+    PENDING_FINANCE_APPROVAL: 'Pending',
   };
   if (aliases[value]) return aliases[value];
 
