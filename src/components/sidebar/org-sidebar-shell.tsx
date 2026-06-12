@@ -57,6 +57,8 @@ export function OrgSidebarShell({
     const isNotificationsRoute = pathname.includes("/notifications");
     const isRecruitmentReportRoute = pathname.includes("/recruitment-report");
     
+    const isProcurementComposer = pathname.includes("/procurement/purchase-orders/");
+    
     const isFullWidthRoute = 
         isLeaveRoute || 
         isCandidatesRoute || 
@@ -98,11 +100,13 @@ export function OrgSidebarShell({
                 organizations={organizations}
                 user={user}
             />
-            <main className={cn("min-h-0 flex-1 overscroll-contain", isTimesheetRoute || isOfferRoute ? "overflow-hidden" : "overflow-y-auto")}>
+            <main className={cn("min-h-0 flex-1 overscroll-contain", isTimesheetRoute || isOfferRoute || isProcurementComposer ? "overflow-hidden" : "overflow-y-auto")}>
                 <div
                     className={cn(
                         "w-full",
                         isFullWidthRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isAssetMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute || isResumeParserRoute || isNotificationsRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        (isOfferRoute || isProcurementComposer) && "h-full min-h-0 overflow-hidden",
                         isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isAssetMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute || isResumeParserRoute || isNotificationsRoute || isRecruitmentReportRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
                         isOfferRoute && "h-full min-h-0 overflow-hidden",
                     )}

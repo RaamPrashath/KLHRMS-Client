@@ -344,3 +344,23 @@ export async function fetchProcurementPurchaseOrderDownloadAction(params: {
   });
   return handleResponse<ProcurementPurchaseOrderDownloadResponse>(res);
 }
+
+export async function sendProcurementPurchaseOrderEmailAction(params: {
+  orgSlug: string;
+  memberId: string;
+  purchaseOrderId: string;
+  recipientMemberId: string;
+  recipientEmail: string;
+}): Promise<{ status: string }> {
+  const { member } = await getCurrentOrgMember(params.orgSlug);
+  const res = await fetch(`${getApiUrl()}/procurement/purchase-orders/${params.purchaseOrderId}/send-email`, {
+    method: 'POST',
+    headers: { ...buildHeaders(params.orgSlug, member.id), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      recipientMemberId: params.recipientMemberId,
+      recipientEmail: params.recipientEmail,
+    }),
+    cache: 'no-store',
+  });
+  return handleResponse<{ status: string }>(res);
+}

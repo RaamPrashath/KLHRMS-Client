@@ -162,7 +162,7 @@ describe("ProcurementPageShell", () => {
         ).toBeInTheDocument();
     });
 
-    it("shows bulk, replacement, mine, pending, and history tabs when user can create", () => {
+    it("shows mine, pending, history tabs and bulk/replacement buttons when user can create", () => {
         renderWithQueryClient(
             <ProcurementPageShell
                 orgSlug="kovan"
@@ -189,7 +189,7 @@ describe("ProcurementPageShell", () => {
         ).toBeInTheDocument();
     });
 
-    it("shows purchase orders tab only when user can approve", () => {
+    it("hides bulk/replacement buttons when user cannot create", () => {
         renderWithQueryClient(
             <ProcurementPageShell
                 orgSlug="kovan"
@@ -203,11 +203,14 @@ describe("ProcurementPageShell", () => {
             screen.queryByRole("button", { name: /Bulk Asset Purchasing/i }),
         ).not.toBeInTheDocument();
         expect(
+            screen.queryByRole("button", { name: /Replacement Purchasing/i }),
+        ).not.toBeInTheDocument();
+        expect(
             screen.getByRole("button", { name: /Generated Purchase Orders/i }),
         ).toBeInTheDocument();
     });
 
-    it("defaults to bulk tab when user can create", () => {
+    it("defaults to My Requisitions tab when user can create", () => {
         renderWithQueryClient(
             <ProcurementPageShell
                 orgSlug="kovan"
@@ -218,11 +221,13 @@ describe("ProcurementPageShell", () => {
         );
 
         expect(
-            screen.getAllByText("Bulk Asset Purchasing").length,
-        ).toBeGreaterThanOrEqual(1);
+            screen.getByRole("button", { name: /My Requisitions/i }),
+        ).toBeInTheDocument();
     });
 
-    it("renders bulk procurement form fields", () => {
+    it("opens bulk procurement dialog on button click", async () => {
+        const user = userEvent.setup();
+
         renderWithQueryClient(
             <ProcurementPageShell
                 orgSlug="kovan"
@@ -230,18 +235,23 @@ describe("ProcurementPageShell", () => {
                 canCreateProcurement={true}
                 canApproveProcurement={false}
             />,
+        );
+
+        await user.click(
+            screen.getByRole("button", { name: /Bulk Asset Purchasing/i }),
         );
 
         expect(
             screen.getByPlaceholderText("Dell Latitude 5450"),
         ).toBeInTheDocument();
         expect(screen.getByText("Business Justification")).toBeInTheDocument();
-        expect(
-            screen.getAllByText("Quantity").length,
-        ).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText("Request Summary")).toBeInTheDocument();
+        expect(screen.getByText("Projected Spend")).toBeInTheDocument();
     });
 
-    it("renders Save Draft and Submit to Finance buttons on bulk form", () => {
+    it("renders Save Draft and Submit to Finance buttons in bulk dialog", async () => {
+        const user = userEvent.setup();
+
         renderWithQueryClient(
             <ProcurementPageShell
                 orgSlug="kovan"
@@ -249,6 +259,10 @@ describe("ProcurementPageShell", () => {
                 canCreateProcurement={true}
                 canApproveProcurement={false}
             />,
+        );
+
+        await user.click(
+            screen.getByRole("button", { name: /Bulk Asset Purchasing/i }),
         );
 
         expect(
@@ -259,7 +273,7 @@ describe("ProcurementPageShell", () => {
         ).toBeInTheDocument();
     });
 
-    it("renders replacement form with ticket selector when tab clicked", async () => {
+    it("opens replacement dialog with ticket selector on button click", async () => {
         const user = userEvent.setup();
 
         renderWithQueryClient(
@@ -275,9 +289,6 @@ describe("ProcurementPageShell", () => {
             screen.getByRole("button", { name: /Replacement Purchasing/i }),
         );
 
-        expect(
-            screen.getAllByText("Replacement Purchasing").length,
-        ).toBeGreaterThanOrEqual(1);
         expect(
             screen.getByText(/Link the purchasing request/i),
         ).toBeInTheDocument();
@@ -302,7 +313,7 @@ describe("ProcurementPageShell", () => {
         expect(screen.getByText("No requisitions found.")).toBeInTheDocument();
     });
 
-    it("shows Open PO Composer button when user can approve", () => {
+    it("shows Generate PO button when user can approve", () => {
         renderWithQueryClient(
             <ProcurementPageShell
                 orgSlug="kovan"
@@ -313,11 +324,11 @@ describe("ProcurementPageShell", () => {
         );
 
         expect(
-            screen.getByRole("button", { name: /Open PO Composer/i }),
+            screen.getByRole("button", { name: /Generate PO/i }),
         ).toBeInTheDocument();
     });
 
-    it("Open PO Composer button is disabled when no approved requisitions exist", () => {
+    it("Generate PO button is disabled when no approved requisitions exist", () => {
         renderWithQueryClient(
             <ProcurementPageShell
                 orgSlug="kovan"
@@ -328,23 +339,9 @@ describe("ProcurementPageShell", () => {
         );
 
         const composerBtn = screen.getByRole("button", {
-            name: /Open PO Composer/i,
+            name: /Generate PO/i,
         });
         expect(composerBtn).toBeDisabled();
-    });
-
-    it("renders request summary sidebar on bulk tab", () => {
-        renderWithQueryClient(
-            <ProcurementPageShell
-                orgSlug="kovan"
-                memberId="member_1"
-                canCreateProcurement={true}
-                canApproveProcurement={false}
-            />,
-        );
-
-        expect(screen.getByText("Request Summary")).toBeInTheDocument();
-        expect(screen.getByText("Projected Spend")).toBeInTheDocument();
     });
 
     it("shows loading state in requisition table when isLoading", async () => {
@@ -370,7 +367,6 @@ describe("ProcurementPageShell", () => {
             screen.getByRole("button", { name: /My Requisitions/i }),
         );
 
-        // When loading, the skeleton rows render with animate-pulse
         const skeletons = container.querySelectorAll(".animate-pulse");
         expect(skeletons.length).toBeGreaterThan(0);
     });

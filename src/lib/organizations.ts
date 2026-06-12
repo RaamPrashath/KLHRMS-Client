@@ -45,8 +45,7 @@ async function generateUniqueSlug(base: string) {
 function isOrganizationAdmin(permissions: RolePermissions | null | undefined) {
   return (
     getScope(permissions, "permission", "edit") === "organization" ||
-    getScope(permissions, "employees", "edit") === "organization" ||
-    getScope(permissions, "organization", "edit") === "organization"
+    getScope(permissions, "employees", "edit") === "organization"
   );
 }
 

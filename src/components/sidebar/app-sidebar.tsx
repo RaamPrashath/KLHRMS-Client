@@ -84,7 +84,6 @@ const ic = "h-4 w-4 shrink-0";
 const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
     "": LayoutDashboard,
     "employees": Users,
-    "organization": Building2,
     "departments": Network,
     "permissions": ShieldCheck,
     "attendance": CalendarClock,
@@ -302,8 +301,7 @@ function UserFooter({
 }) {
     const isAdmin = permissions
         ? getScope(permissions, "permission", "edit") === "organization" ||
-          getScope(permissions, "employees", "edit") === "organization" ||
-          getScope(permissions, "organization", "edit") === "organization"
+          getScope(permissions, "employees", "edit") === "organization"
         : false;
     const { open, setOpen } = useSidebar();
     const router = useRouter();
@@ -466,8 +464,7 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
 
     const isAdmin = permissions
         ? getScope(permissions, "permission", "edit") === "organization" ||
-          getScope(permissions, "employees", "edit") === "organization" ||
-          getScope(permissions, "organization", "edit") === "organization"
+          getScope(permissions, "employees", "edit") === "organization"
         : false;
 
     const allNavGroups = useMemo(

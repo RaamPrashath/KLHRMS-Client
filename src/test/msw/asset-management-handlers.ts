@@ -334,11 +334,11 @@ function procurementMetaResponse(): ProcurementMetaResponse {
 }
 
 function procurementListResponse(): ProcurementListResponse {
-    return { items: [procurementRecord] };
+    return { items: [procurementRecord], pagination: { total: 1, limit: 50, offset: 0 } };
 }
 
 function purchaseOrderListResponse(): ProcurementPurchaseOrderListResponse {
-    return { items: [] };
+    return { items: [], pagination: { total: 0, limit: 50, offset: 0 } };
 }
 
 export const assetManagementHandlers = [
@@ -430,7 +430,7 @@ export const assetManagementHandlers = [
         const requisitionId = String(params.requisitionId);
         assetManagementRequests.procurementSubmits.push(requisitionId);
         return HttpResponse.json(
-            { ...procurementRecord, id: requisitionId, status: "PENDING_FINANCE_APPROVAL", canSubmit: false },
+            { ...procurementRecord, id: requisitionId, status: "PENDING", canSubmit: false },
             { status: 200 },
         );
     }),

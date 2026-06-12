@@ -11,6 +11,7 @@ import {
   previewProcurementPurchaseOrderAction,
   rejectProcurementAction,
   saveProcurementPurchaseOrderTemplateAction,
+  sendProcurementPurchaseOrderEmailAction,
   submitProcurementAction,
 } from '@/modules/procurement/api/procurementServerActions';
 import type {
@@ -78,6 +79,11 @@ export function useProcurementMutations(orgSlug: string, memberId: string) {
     downloadPurchaseOrder: useMutation({
       mutationFn: (purchaseOrderId: string) =>
         fetchProcurementPurchaseOrderDownloadAction({ orgSlug, memberId, purchaseOrderId }),
+    }),
+    sendPurchaseOrderEmail: useMutation({
+      mutationFn: (params: { purchaseOrderId: string; recipientMemberId: string; recipientEmail: string }) =>
+        sendProcurementPurchaseOrderEmailAction({ orgSlug, memberId, ...params }),
+      onSuccess: () => invalidateProcurement(queryClient, orgSlug),
     }),
   };
 }
