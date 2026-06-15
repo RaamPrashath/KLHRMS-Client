@@ -101,6 +101,7 @@ export function CandidateCard({
   draggable = true,
   dragLocked = false,
   currentMemberId = null,
+  pending = false,
 }: {
   application: PipelineApplication;
   onOpen?: (applicationId: string) => void;
@@ -121,6 +122,7 @@ export function CandidateCard({
   draggable?: boolean;
   dragLocked?: boolean;
   currentMemberId?: string | null;
+  pending?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: application.id,
@@ -174,6 +176,7 @@ export function CandidateCard({
             ? 'cursor-grab hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] active:cursor-grabbing'
             : 'cursor-default',
         isDragging && !isOverlay && 'opacity-0',
+        pending && 'opacity-50 ring-2 ring-amber-400/50 ring-inset',
       )}
       transition={{ layout: { duration: 0.18, ease: [0.22, 1, 0.36, 1] } }}
       {...(!isOverlay && canDrag ? listeners : {})}

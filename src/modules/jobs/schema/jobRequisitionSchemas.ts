@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+const dynamicFormFieldSchema = z.object({
+  id: z.string(),
+  type: z.enum(['short_text', 'long_text', 'dropdown', 'checkbox', 'date']),
+  label: z.string(),
+  required: z.boolean().default(false),
+  options: z.array(z.string()).optional(),
+});
+
+const dynamicFormFields = z.array(dynamicFormFieldSchema).optional().nullable();
+
 import {
   EMPLOYMENT_TYPES,
   EXPERIENCE_LEVELS,
@@ -38,6 +48,7 @@ export const createJobRequisitionSchema = z.object({
   location: z.string().optional().nullable(),
   isRemote: z.boolean().default(false),
   targetDate: z.string().optional().nullable(),
+  formFields: dynamicFormFields,
 }).refine(
   (value) => {
     if (value.salaryMin == null || value.salaryMax == null) return true;
@@ -78,6 +89,7 @@ export const updateJobRequisitionSchema = z.object({
   location: z.string().optional().nullable(),
   isRemote: z.boolean().optional(),
   targetDate: z.string().optional().nullable(),
+  formFields: dynamicFormFields,
 }).refine(
   (value) => {
     if (value.salaryMin == null || value.salaryMax == null) return true;
@@ -117,6 +129,7 @@ export const jobRequisitionDecisionSchema = z.object({
   education: z.string().optional().nullable(),
   certifications: z.array(z.string()).optional(),
   knockoutRule: z.string().max(2000, 'Knockout rule is too long').optional().nullable(),
+  formFields: dynamicFormFields,
 }).refine(
   (value) => {
     if (value.salaryMin == null || value.salaryMax == null) return true;

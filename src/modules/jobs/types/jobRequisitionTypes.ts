@@ -76,6 +76,14 @@ export interface JobRequisitionApproval {
   createdAt: string;
 }
 
+export interface DynamicFormFieldConfig {
+  id: string;
+  type: 'short_text' | 'long_text' | 'dropdown' | 'checkbox' | 'date';
+  label: string;
+  required: boolean;
+  options?: string[];
+}
+
 export interface JobRequisitionRecord {
   id: string;
   title: string;
@@ -122,6 +130,7 @@ export interface JobRequisitionRecord {
   requisitionNumber: number | null;
   requisitionLabel: string | null;
   canEdit: boolean;
+  formFields?: DynamicFormFieldConfig[];
 }
 
 export interface JobDepartmentOption {

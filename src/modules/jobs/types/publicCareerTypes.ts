@@ -30,6 +30,15 @@ export interface PublicCareerPosting {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  formFields?: DynamicFormFieldConfig[];
+}
+
+export interface DynamicFormFieldConfig {
+  id: string;
+  type: 'short_text' | 'long_text' | 'dropdown' | 'checkbox' | 'date';
+  label: string;
+  required: boolean;
+  options?: string[];
 }
 
 export interface PublicCareerApplicationResult {

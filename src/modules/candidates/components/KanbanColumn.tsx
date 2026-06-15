@@ -127,6 +127,7 @@ export function KanbanColumn({
   isUpdating = false,
   readOnly = false,
   currentMemberId = null,
+  pendingApplicationIds,
 }: {
   readonly stage: PipelineStage;
   readonly isFirst: boolean;
@@ -154,6 +155,7 @@ export function KanbanColumn({
   readonly isUpdating?: boolean;
   readonly readOnly?: boolean;
   readonly currentMemberId?: string | null;
+  readonly pendingApplicationIds?: ReadonlySet<string>;
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: stage.id,
@@ -194,6 +196,7 @@ export function KanbanColumn({
         onChooseCandidateSlot={onChooseCandidateSlot}
         currentMemberId={currentMemberId}
         dragLocked={readOnly}
+        pending={pendingApplicationIds?.has(application.id) ?? false}
       />
     );
   }
@@ -329,6 +332,7 @@ export function KanbanColumn({
                   compact
                   draggable={false}
                   dragLocked={readOnly}
+                  pending={pendingApplicationIds?.has(previewApplication.id) ?? false}
                 />
               ) : null}
               {filteredApplications.map(renderCard)}

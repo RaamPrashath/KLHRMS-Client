@@ -559,12 +559,27 @@ export function useMoveApplicationStage(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (params: { applicationId: string; toStageId: string }) =>
+    mutationFn: (params: {
+      applicationId: string;
+      toStageId: string;
+      note?: string | null;
+      score?: number | null;
+      recommendation?: 'STRONG_HIRE' | 'HIRE' | 'HOLD' | 'NO_HIRE' | null;
+      strengths?: string | null;
+      areasOfImprovement?: string | null;
+    }) =>
       moveApplicationStageAction({
         orgSlug,
         memberId,
         applicationId: params.applicationId,
-        data: { toStageId: params.toStageId },
+        data: {
+          toStageId: params.toStageId,
+          note: params.note,
+          score: params.score,
+          recommendation: params.recommendation,
+          strengths: params.strengths,
+          areasOfImprovement: params.areasOfImprovement,
+        },
       }),
     onMutate: (params) => {
       if (!jobPostingId) return { previous: undefined };

@@ -26,8 +26,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { getScope } from '@/lib/hrms-roles';
 import { useCandidatesJobContext } from '@/modules/candidates/components/CandidatesJobContext';
 import { SchedulingModal } from '@/modules/candidates/components/SchedulingModal';
+import { StageTransitionFeedbackDialog } from '@/modules/candidates/components/StageTransitionFeedbackDialog';
 import {
   Select,
   SelectContent,
@@ -391,6 +393,15 @@ export function AtsKanbanBoard({
   } | null>(null);
   const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
   const [completionNote, setCompletionNote] = useState('');
+  const [feedbackDialog, setFeedbackDialog] = useState<{
+    applicationId: string;
+    fromStageId: string;
+    toStageId: string;
+    candidateName: string;
+    fromStageName: string;
+    toStageName: string;
+  } | null>(null);
+  const [pendingApplicationIds, setPendingApplicationIds] = useState<Set<string>>(new Set());
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const dragPointerXRef = useRef<number | null>(null);
   const dragEdgeDirectionRef = useRef<-1 | 0 | 1>(0);
@@ -618,11 +629,77 @@ export function AtsKanbanBoard({
       setHoverStageId(null);
       return;
     }
-    moveApplication.mutate({ applicationId, toStageId });
+
+    const isOrgScoped = permissions ? getScope(permissions as never, 'candidates', 'edit') === 'organization' : false;
+
+    if (!isOrgScoped) {
+      moveApplication.mutate({ applicationId, toStageId });
+      window.requestAnimationFrame(() => {
+        setActiveApplication(null);
+        setHoverStageId(null);
+      });
+      return;
+    }
+
+    const fromStageName = boardQuery.data?.stages.find((s) => s.id === currentStageId)?.name ?? 'Unknown';
+    const toStageName = boardQuery.data?.stages.find((s) => s.id === toStageId)?.name ?? 'Unknown';
+    const candidateName = currentApplication
+      ? `${currentApplication.candidate.firstName} ${currentApplication.candidate.lastName}`
+      : 'Candidate';
+
+    setPendingApplicationIds((prev) => new Set(prev).add(applicationId));
+    setFeedbackDialog({
+      applicationId,
+      fromStageId: currentStageId ?? '',
+      toStageId,
+      candidateName,
+      fromStageName,
+      toStageName,
+    });
     window.requestAnimationFrame(() => {
       setActiveApplication(null);
       setHoverStageId(null);
     });
+  }
+
+  function handleFeedbackSubmit(data: {
+    note: string;
+    recommendation: 'STRONG_HIRE' | 'HIRE' | 'HOLD' | 'NO_HIRE' | null;
+  }) {
+    if (!feedbackDialog) return;
+    const { applicationId, toStageId } = feedbackDialog;
+    moveApplication.mutate(
+      {
+        applicationId,
+        toStageId,
+        note: data.note,
+        score: null,
+        recommendation: data.recommendation,
+        strengths: null,
+        areasOfImprovement: null,
+      },
+      {
+        onSettled: () => {
+          setPendingApplicationIds((prev) => {
+            const next = new Set(prev);
+            next.delete(applicationId);
+            return next;
+          });
+          setFeedbackDialog(null);
+        },
+      },
+    );
+  }
+
+  function handleFeedbackCancel() {
+    if (feedbackDialog) {
+      setPendingApplicationIds((prev) => {
+        const next = new Set(prev);
+        next.delete(feedbackDialog.applicationId);
+        return next;
+      });
+    }
+    setFeedbackDialog(null);
   }
 
   function handleCreateStage(data: CreatePipelineStageInput) {
@@ -1156,6 +1233,7 @@ export function AtsKanbanBoard({
               onRejectInterview={handleRejectInterview}
               onChooseCandidateSlot={handleChooseCandidateSlot}
               currentMemberId={memberId}
+              pendingApplicationIds={pendingApplicationIds}
             />
             <div className="flex min-h-0 items-center justify-center">
               <PipelineSetupCard
@@ -1248,6 +1326,7 @@ export function AtsKanbanBoard({
                   onRejectInterview={handleRejectInterview}
                   onChooseCandidateSlot={handleChooseCandidateSlot}
                   currentMemberId={memberId}
+                  pendingApplicationIds={pendingApplicationIds}
                 />
               );
             })}
@@ -1378,6 +1457,16 @@ export function AtsKanbanBoard({
           }
         }}
         onSubmit={markInterviewCompleted}
+      />
+      <StageTransitionFeedbackDialog
+        open={feedbackDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) handleFeedbackCancel();
+        }}
+        candidateName={feedbackDialog?.candidateName ?? ''}
+        fromStageName={feedbackDialog?.fromStageName ?? ''}
+        toStageName={feedbackDialog?.toStageName ?? ''}
+        onSubmit={handleFeedbackSubmit}
       />
     </>
   );

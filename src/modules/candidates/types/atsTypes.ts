@@ -170,6 +170,8 @@ export interface PipelineBoard {
   stages: PipelineStage[];
 }
 
+export type Recommendation = 'STRONG_HIRE' | 'HIRE' | 'HOLD' | 'NO_HIRE';
+
 export interface StageHistoryItem {
   id: string;
   fromStageId: string | null;
@@ -179,6 +181,10 @@ export interface StageHistoryItem {
   movedByMemberId: string | null;
   movedByName: string | null;
   note: string | null;
+  score: number | null;
+  recommendation: Recommendation | null;
+  strengths: string | null;
+  areasOfImprovement: string | null;
   createdAt: string;
 }
 
