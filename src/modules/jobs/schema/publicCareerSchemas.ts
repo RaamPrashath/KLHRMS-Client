@@ -36,4 +36,36 @@ export interface PublicCareerApplicationInput {
   linkedinUrl?: string;
   resumeUrl: string;
   coverLetter?: string;
+  customFields?: Record<string, unknown>;
+}
+
+export interface DynamicFormFieldConfig {
+  id: string;
+  type: 'short_text' | 'long_text' | 'dropdown' | 'checkbox' | 'date';
+  label: string;
+  required: boolean;
+  options?: string[];
+}
+
+export function buildDynamicFormSchema(fields: DynamicFormFieldConfig[]) {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  for (const field of fields) {
+    if (field.type === 'checkbox') {
+      shape[field.id] = z.boolean().optional();
+    } else if (field.type === 'dropdown') {
+      const validOptions = field.options ?? [];
+      let s = z.string();
+      if (field.required) {
+        s = s.min(1, `${field.label} is required`);
+      }
+      shape[field.id] = s.optional();
+    } else {
+      let s = z.string();
+      if (field.required) {
+        s = s.min(1, `${field.label} is required`);
+      }
+      shape[field.id] = s.optional();
+    }
+  }
+  return z.object(shape);
 }

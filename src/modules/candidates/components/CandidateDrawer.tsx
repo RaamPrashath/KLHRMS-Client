@@ -41,6 +41,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { getScope } from '@/lib/hrms-roles';
 import { CandidateMergedProfile } from '@/modules/candidates/components/CandidateMergedProfile';
 import {
   useCandidateApplicationDetail,
@@ -132,6 +133,10 @@ function buildTimeline(detail: CandidateApplicationDetail): TimelineEntry[] {
         movedByMemberId: null,
         movedByName: event.createdByName,
         note: null,
+        score: null,
+        recommendation: null,
+        strengths: null,
+        areasOfImprovement: null,
         createdAt: event.createdAt,
       },
       interviews: [event],
@@ -636,8 +641,29 @@ function InterviewBlock({ event, index }: { readonly event: ApplicationInterview
   );
 }
 
-function HistoryTab({ detail }: { readonly detail: CandidateApplicationDetail }) {
+function RecommendationBadge({ recommendation }: { recommendation: string }) {
+  const colors: Record<string, string> = {
+    STRONG_HIRE: 'bg-green-100 text-green-800',
+    HIRE: 'bg-blue-100 text-blue-800',
+    HOLD: 'bg-amber-100 text-amber-800',
+    NO_HIRE: 'bg-red-100 text-red-800',
+  };
+  return (
+    <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', colors[recommendation] ?? 'bg-neutral-100 text-neutral-700')}>
+      {recommendation.replace(/_/g, ' ')}
+    </span>
+  );
+}
+
+function HistoryTab({
+  detail,
+  permissions,
+}: {
+  readonly detail: CandidateApplicationDetail;
+  readonly permissions?: never | null;
+}) {
   const timeline = useMemo(() => buildTimeline(detail), [detail]);
+  const canViewFeedback = permissions ? getScope(permissions as never, 'candidates', 'edit') === 'organization' : false;
 
   return (
     <div className="relative pl-6">
@@ -665,6 +691,12 @@ function HistoryTab({ detail }: { readonly detail: CandidateApplicationDetail })
                   <p className="mt-0.5 text-xs text-neutral-500">{formatDateTime(entry.at)}</p>
                 </div>
               </div>
+
+              {entry.type === 'stage' && canViewFeedback && entry.history.recommendation ? (
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <RecommendationBadge recommendation={entry.history.recommendation} />
+                </div>
+              ) : null}
 
               {entry.type === 'stage' && entry.history.note ? (
                 <p className="mt-3 rounded-md border border-neutral-100 bg-surface px-3 py-2 text-sm text-neutral-700">{entry.history.note}</p>
@@ -886,12 +918,14 @@ export function CandidateDrawer({
   applicationId,
   open,
   onOpenChange,
+  permissions,
 }: {
   readonly orgSlug: string;
   readonly memberId: string;
   readonly applicationId: string | null;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
+  readonly permissions?: never | null;
 }) {
   const detailQuery = useCandidateApplicationDetail(orgSlug, memberId, applicationId);
   const resumeAnalysisQuery = useCandidateResumeAnalysis(orgSlug, memberId, applicationId);
@@ -1013,7 +1047,7 @@ export function CandidateDrawer({
 
             {activeSection === 'history' ? (
               <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-                <HistoryTab detail={detail} />
+                <HistoryTab detail={detail} permissions={permissions} />
               </div>
             ) : null}
 

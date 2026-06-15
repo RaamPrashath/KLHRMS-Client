@@ -4,12 +4,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, ArrowLeft, Brain } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { getScope, type RolePermissions } from '@/lib/hrms-roles';
+import {
+  FormBuilderSection,
+  type FormFieldValue,
+} from '@/modules/jobs/components/FormBuilderSection';
 import { BasicInfoSection } from '@/modules/jobs/components/sections/BasicInfoSection';
 import { HiringContextSection } from '@/modules/jobs/components/sections/HiringContextSection';
 import { KnockoutRuleSection } from '@/modules/jobs/components/sections/KnockoutRuleSection';
@@ -87,6 +91,7 @@ function buildDefaultValues(initialData?: JobRequisitionRecord | null): CreateJo
     location: initialData?.location ?? '',
     isRemote: initialData?.isRemote ?? false,
     targetDate: dateInputValue(initialData?.targetDate ?? null),
+    formFields: initialData?.formFields ?? null,
   };
 }
 
@@ -112,6 +117,14 @@ export function CreateJobRequisitionPage({
   const isReview = pageMode === 'review';
   const isReadOnly = pageMode === 'readonly';
   const canUsePage = canCreate || isReview || isReadOnly;
+
+  const [customFormFields, setCustomFormFields] = useState<FormFieldValue[]>(
+    () => (initialData?.formFields as FormFieldValue[] | undefined) ?? [],
+  );
+
+  const canEditFormFields =
+    getScope(permissions, 'jobs', 'edit') !== 'none' && !isReadOnly;
+
   const canViewAiScreening =
     !!initialData &&
     ['APPROVED', 'PUBLISHED', 'ACTIVE_HIRING', 'FILLED', 'CLOSED'].includes(initialData.status);
@@ -253,6 +266,19 @@ export function CreateJobRequisitionPage({
             <PostingContentSection form={form} readOnly={isReadOnly} />
             <KnockoutRuleSection form={form} />
           </fieldset>
+
+          {canEditFormFields || customFormFields.length > 0 ? (
+            <div className="space-y-3">
+              <FormBuilderSection
+                fields={customFormFields}
+                onChange={(fields) => {
+                  setCustomFormFields(fields);
+                  form.setValue('formFields', fields as any, { shouldDirty: true });
+                }}
+                readOnly={!canEditFormFields}
+              />
+            </div>
+          ) : null}
         </form>
 
         <StickySummaryPanel

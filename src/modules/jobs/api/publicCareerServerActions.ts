@@ -49,20 +49,24 @@ export async function createPublicCareerApplicationAction(params: {
   jobId: string;
   data: PublicCareerApplicationInput;
 }): Promise<PublicCareerApplicationResult> {
+  const body: Record<string, unknown> = {
+    firstName: params.data.firstName,
+    lastName: params.data.lastName,
+    email: params.data.email,
+    phone: params.data.phone || null,
+    linkedinUrl: params.data.linkedinUrl || null,
+    resumeUrl: params.data.resumeUrl,
+    coverLetter: params.data.coverLetter || null,
+  };
+  if (params.data.customFields && Object.keys(params.data.customFields).length > 0) {
+    body.customFields = params.data.customFields;
+  }
   const res = await fetch(`${getApiUrl()}/jobs/public/postings/${params.jobId}/apply`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      firstName: params.data.firstName,
-      lastName: params.data.lastName,
-      email: params.data.email,
-      phone: params.data.phone || null,
-      linkedinUrl: params.data.linkedinUrl || null,
-      resumeUrl: params.data.resumeUrl,
-      coverLetter: params.data.coverLetter || null,
-    }),
+    body: JSON.stringify(body),
   });
   return handleResponse<PublicCareerApplicationResult>(res);
 }

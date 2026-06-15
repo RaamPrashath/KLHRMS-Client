@@ -3,6 +3,10 @@ import { z } from 'zod';
 export const moveApplicationStageSchema = z.object({
   toStageId: z.string().min(1),
   note: z.string().trim().optional().nullable(),
+  score: z.number().min(0).max(100).optional().nullable(),
+  recommendation: z.enum(['STRONG_HIRE', 'HIRE', 'HOLD', 'NO_HIRE']).optional().nullable(),
+  strengths: z.string().optional().nullable(),
+  areasOfImprovement: z.string().optional().nullable(),
 });
 
 export const createPipelineStageSchema = z.object({
@@ -72,6 +76,10 @@ export const acceptInterviewSchema = z.object({
 export interface MoveApplicationStageInput {
   toStageId: string;
   note?: string | null;
+  score?: number | null;
+  recommendation?: 'STRONG_HIRE' | 'HIRE' | 'HOLD' | 'NO_HIRE' | null;
+  strengths?: string | null;
+  areasOfImprovement?: string | null;
 }
 
 export interface CreatePipelineStageInput {

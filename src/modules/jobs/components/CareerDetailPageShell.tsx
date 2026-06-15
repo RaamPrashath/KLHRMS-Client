@@ -444,6 +444,7 @@ export function CareerDetailPageShell({
               jobId={data.id}
               organizationId={data.organizationId}
               jobTitle={data.title}
+              formFields={data.formFields}
             />
           </div>
         ) : null}
