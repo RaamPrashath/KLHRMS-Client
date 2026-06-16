@@ -42,7 +42,7 @@ export function createEmployeePermissions(): RolePermissions {
   permissions.timesheet.create = 'self';
   permissions.timesheet.edit = 'self';
   
-  permissions.projects.view = 'organization'; // Can see all projects
+  permissions.projects.view = 'self'; // Can only see assigned projects
   
   permissions.weeklyPlan.view = 'self';
   permissions.weeklyPlan.create = 'self';

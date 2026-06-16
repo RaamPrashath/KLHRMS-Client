@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useTransition } from 'react';
+import { useState, useCallback, useMemo, useTransition } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ import { useProjectMutations } from '@/modules/projects/hooks/useProjectMutation
 import {
   useProjectDetailQuery,
   useProjectMetaQuery,
-  useProjectsQuery,
+  useProjectsAllQuery,
 } from '@/modules/projects/hooks/useProjectsQuery';
 import type { ProjectInput } from '@/modules/projects/schema/projectSchemas';
 import type {
@@ -88,18 +88,43 @@ export function ProjectPageShell({
   const [projectForm, setProjectForm] = useState<ProjectInput>(defaultProjectForm);
 
   // ── Data queries ────────────────────────────────────────────────────────────
-  const { data, isLoading, isError, error } = useProjectsQuery(orgSlug, memberId, {
-    search: search || undefined,
-    status: statusFilter === 'ALL' ? undefined : statusFilter,
-    page,
-    pageSize,
-  });
+  const { data: allData, isLoading, isError, error } = useProjectsAllQuery(orgSlug, memberId);
 
   const metaQuery = useProjectMetaQuery(orgSlug, memberId);
   const detailQuery = useProjectDetailQuery(orgSlug, memberId, selectedProjectId);
   const mutations = useProjectMutations(orgSlug, memberId);
 
   const selectedProject = detailQuery.data ?? selectedProjectSnapshot ?? undefined;
+
+  // ── Client-side filtering ───────────────────────────────────────────────────
+  const allItems = allData?.items ?? [];
+
+  const filteredItems = useMemo(() => {
+    let result = allItems;
+
+    if (search.trim()) {
+      const term = search.trim().toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(term) ||
+          (p.clientName ?? '').toLowerCase().includes(term)
+      );
+    }
+
+    if (statusFilter !== 'ALL') {
+      result = result.filter((p) => p.status === statusFilter);
+    }
+
+    return result;
+  }, [allItems, search, statusFilter]);
+
+  const total = filteredItems.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const items = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, page, pageSize]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleSearchChange = useCallback((value: string) => {
@@ -188,10 +213,6 @@ export function ProjectPageShell({
     );
   }
 
-  const totalPages = data?.page ? Math.max(1, Math.ceil((data?.total ?? 0) / pageSize)) : 1;
-  const total = data?.total ?? 0;
-  const items = data?.items ?? [];
-
   return (
     <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">
       <div className="flex items-center justify-between ml-7 mt-7 mr-7">
@@ -223,6 +244,8 @@ export function ProjectPageShell({
         onStatusChange={handleStatusChange}
         onClearAll={handleClearAll}
         onRowClick={handleRowClick}
+        orgSlug={orgSlug}
+        memberId={memberId}
       />
 
       {/* ── Create / Edit dialog ───────────────────────────────────────────── */}

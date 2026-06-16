@@ -6,69 +6,27 @@ import { useRolesQuery } from '@/modules/roles/hooks/useRolesQuery';
 import { useEmployeesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { type RoleResponse } from '@/modules/roles/types/role';
 import { DeleteRoleDialog } from '@/modules/roles/components/DeleteRoleDialog';
-import { RolesSlideOver } from '@/modules/roles/components/RolesSlideOver';
 import { RolesTable } from '@/modules/roles/components/RolesTable';
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableHead,
-} from '@/components/ui/table';
+  ExpandableScreen,
+  ExpandableScreenTrigger,
+  ExpandableScreenContent,
+  useExpandableScreen,
+} from '@/components/ui/expandable-screen';
+import { RoleForm } from '@/modules/roles/components/RoleForm';
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
-const SKELETON_IDS = Array.from({ length: 5 }, (_, i) => `skeleton-role-${i}`);
+const SKELETON_IDS = Array.from({ length: 8 }, (_, i) => `skeleton-role-${i}`);
 
 function RolesTableSkeleton() {
   return (
-    <div className="bg-surface rounded-xl border border-black/3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
-      {/* Top bar skeleton */}
-      <div className="p-4 border-b border-neutral-100 flex items-center gap-2">
-        <div className="flex-1 h-9 rounded-md bg-neutral-100 animate-pulse" />
-        <div className="h-9 w-28 rounded-md bg-neutral-100 animate-pulse shrink-0" />
-      </div>
-      
-      {/* Table skeleton using shadcn table */}
-      <Table className="table-fixed min-w-[500px]">
-        <colgroup>
-          <col style={{ width: '35%' }} />
-          <col style={{ width: '45%' }} />
-          <col style={{ width: '20%' }} />
-        </colgroup>
-        <TableHeader className="bg-canvas border-b border-black/4">
-          <TableRow className="border-b-0 hover:bg-transparent">
-            <TableHead className="h-12 px-6 text-left">
-              <div className="h-3.5 w-20 rounded bg-neutral-200 animate-pulse" />
-            </TableHead>
-            <TableHead className="h-12 px-6 text-left">
-              <div className="h-3.5 w-16 rounded bg-neutral-200 animate-pulse" />
-            </TableHead>
-            <TableHead className="h-12 px-6 text-right">
-              {/* empty spacer */}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody className="bg-white">
-          {SKELETON_IDS.map((id) => (
-            <TableRow key={id} className="border-b border-black/4">
-              <TableCell className="px-6 py-4.5">
-                <div className="h-4.5 w-32 rounded-md bg-neutral-100 animate-pulse" />
-              </TableCell>
-              <TableCell className="px-6 py-4.5">
-                <div className="flex items-center gap-2">
-                  <div className="size-7 rounded-full bg-neutral-100 animate-pulse" />
-                  <div className="h-4 w-24 rounded-md bg-neutral-100 animate-pulse" />
-                </div>
-              </TableCell>
-              <TableCell className="px-6 py-4.5 text-right">
-                <div className="inline-block h-8 w-24 rounded-full bg-neutral-100 animate-pulse" />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+      {SKELETON_IDS.map((id) => (
+        <div key={id} className="p-6 bg-white rounded-lg border border-black/5 h-24 flex items-center justify-between animate-pulse">
+          <div className="h-5 w-2/3 bg-neutral-200 rounded" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -83,6 +41,8 @@ interface TableContentProps {
   onEdit: (role: RoleResponse) => void;
   onClearSearch: () => void;
   onCreateFirst: () => void;
+  orgSlug: string;
+  memberId: string;
 }
 
 function TableContent({
@@ -93,10 +53,12 @@ function TableContent({
   onEdit,
   onClearSearch,
   onCreateFirst,
+  orgSlug,
+  memberId,
 }: Readonly<TableContentProps>) {
   if (roleCount === 0 && !search.trim()) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-5 text-center bg-white">
+      <div className="flex flex-col items-center justify-center py-20 gap-5 text-center bg-white border border-black/5 rounded-lg shadow-sm mt-6">
         <div className="size-16 rounded-2xl bg-primary-ghost border border-primary-subtle flex items-center justify-center">
           <svg
             width="28" height="28" viewBox="0 0 24 24" fill="none"
@@ -126,7 +88,7 @@ function TableContent({
 
   if (filteredRoles.length === 0 && search.trim()) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3 text-center bg-white">
+      <div className="flex flex-col items-center justify-center py-16 gap-3 text-center bg-white border border-black/5 rounded-lg shadow-sm mt-6">
         <div className="size-12 rounded-xl bg-neutral-50 border border-neutral-200 flex items-center justify-center">
           <SearchX className="size-5 text-neutral-400" aria-hidden="true" />
         </div>
@@ -152,7 +114,37 @@ function TableContent({
       roles={filteredRoles}
       peopleByRoleId={peopleByRoleId}
       onEdit={onEdit}
+      orgSlug={orgSlug}
+      memberId={memberId}
     />
+  );
+}
+
+// ─── Inline Expandable Content Component ─────────────────────────────────────
+
+function ExpandedNewRoleContent({
+  orgSlug,
+  memberId,
+}: Readonly<{
+  orgSlug: string;
+  memberId: string;
+}>) {
+  const { collapse } = useExpandableScreen();
+
+  return (
+    <div className="flex-1 overflow-y-auto p-8 select-text">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight text-neutral-900">Create Role</h2>
+        <p className="text-sm text-neutral-500 mt-1">Define a name and configure permissions.</p>
+      </div>
+      <RoleForm
+        mode="create"
+        orgSlug={orgSlug}
+        memberId={memberId}
+        onSuccess={collapse}
+        onCancel={collapse}
+      />
+    </div>
   );
 }
 
@@ -166,11 +158,6 @@ export interface RolesPageShellProps {
 export function RolesPageShell({ orgSlug, memberId }: Readonly<RolesPageShellProps>) {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<RoleResponse | null>(null);
-  const [slideOver, setSlideOver] = useState<{
-    open: boolean;
-    mode: 'create' | 'edit';
-    role?: RoleResponse | null;
-  }>({ open: false, mode: 'create', role: null });
 
   const { data: allRoles, filteredRoles, isLoading, isError, refetch } = useRolesQuery(
     orgSlug,
@@ -197,18 +184,6 @@ export function RolesPageShell({ orgSlug, memberId }: Readonly<RolesPageShellPro
       {},
     );
   }, [employeesResponse?.items]);
-
-  function openCreate() {
-    setSlideOver({ open: true, mode: 'create', role: null });
-  }
-
-  function openEdit(role: RoleResponse) {
-    setSlideOver({ open: true, mode: 'edit', role });
-  }
-
-  function closeSlideOver() {
-    setSlideOver((prev) => ({ ...prev, open: false }));
-  }
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (isLoading) {
@@ -243,12 +218,12 @@ export function RolesPageShell({ orgSlug, memberId }: Readonly<RolesPageShellPro
 
   return (
     <>
-      <div className="bg-surface rounded-xl border border-black/3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
+      <div className="flex flex-col gap-6">
 
         {/* ── Layer 1: Top actions ─────────────────────────────────────────── */}
-        <div className="p-4 border-b border-neutral-100 bg-surface flex items-center gap-2">
-          {/* Search — stretches */}
-          <div className="relative flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Search — half width */}
+          <div className="relative w-full md:w-1/2">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-400 pointer-events-none"
               aria-hidden="true"
@@ -259,7 +234,7 @@ export function RolesPageShell({ orgSlug, memberId }: Readonly<RolesPageShellPro
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search roles…"
               aria-label="Search roles"
-              className="w-full bg-neutral-50 border border-transparent rounded-md pl-9 pr-8 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:bg-surface focus:border-primary focus:outline-none focus:ring-[3px] focus:ring-primary/10 transition-all duration-150"
+              className="w-full bg-white border border-black/10 rounded-lg pl-9 pr-8 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary focus:outline-none shadow-[0_2px_8px_rgba(0,0,0,0.02)] h-10"
             />
             {search && (
               <button
@@ -273,26 +248,35 @@ export function RolesPageShell({ orgSlug, memberId }: Readonly<RolesPageShellPro
             )}
           </div>
 
-          {/* New Role button — right */}
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover active:bg-primary-press text-white text-sm font-medium px-4 py-2 rounded-md shrink-0 transition-colors duration-100 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
-          >
-            + New Role
-          </button>
+          {/* New Role button wrapped in ExpandableScreen */}
+          <ExpandableScreen layoutId="new-role" contentRadius="8px">
+            <ExpandableScreenTrigger>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 cursor-pointer shrink-0"
+              >
+                + New Role
+              </button>
+            </ExpandableScreenTrigger>
+            <ExpandableScreenContent
+              className="bg-white border border-[#e5e5ea] shadow-2xl rounded-lg max-w-4xl mx-auto my-auto h-[85vh] flex flex-col overflow-hidden"
+              closeButtonClassName="text-neutral-500 hover:text-neutral-800 bg-transparent hover:bg-transparent shadow-none cursor-pointer"
+            >
+              <ExpandedNewRoleContent orgSlug={orgSlug} memberId={memberId} />
+            </ExpandableScreenContent>
+          </ExpandableScreen>
         </div>
 
-        {/* ── Layer 2: Table header ────────────────────────────────────────── */}
-        {/* ── Layer 3: Table body ──────────────────────────────────────────── */}
         <TableContent
           roleCount={roleCount}
           search={search}
           filteredRoles={filteredRoles}
           peopleByRoleId={peopleByRoleId}
-          onEdit={openEdit}
+          onEdit={() => {}} // inline cards handle edits, so onEdit action is handled inside RolesTable
           onClearSearch={() => setSearch('')}
-          onCreateFirst={openCreate}
+          onCreateFirst={() => {}} // create button trigger is handled inline in the header
+          orgSlug={orgSlug}
+          memberId={memberId}
         />
       </div>
 
@@ -303,16 +287,6 @@ export function RolesPageShell({ orgSlug, memberId }: Readonly<RolesPageShellPro
         onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
         orgSlug={orgSlug}
         memberId={memberId}
-      />
-
-      {/* Create / Edit slide-over */}
-      <RolesSlideOver
-        open={slideOver.open}
-        mode={slideOver.mode}
-        orgSlug={orgSlug}
-        memberId={memberId}
-        role={slideOver.role}
-        onClose={closeSlideOver}
       />
     </>
   );
