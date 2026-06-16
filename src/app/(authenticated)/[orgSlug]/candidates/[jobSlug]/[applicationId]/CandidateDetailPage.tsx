@@ -111,10 +111,14 @@ function buildTimeline(detail: CandidateApplicationDetail): TimelineEntry[] {
     at: history.createdAt,
     stageName: history.toStageName ?? detail.currentStage,
     history,
-    interviews: interviewsByStage.get(history.toStageId) ?? [],
+    interviews: history.toStageId ? (interviewsByStage.get(history.toStageId) ?? []) : [],
   }));
 
-  const historyStageIds = new Set((detail.stageHistory ?? []).map((history) => history.toStageId));
+  const historyStageIds = new Set(
+    (detail.stageHistory ?? [])
+      .map((history) => history.toStageId)
+      .filter((stageId): stageId is string => Boolean(stageId)),
+  );
   for (const event of detail.interviewEvents ?? []) {
     if (historyStageIds.has(event.stageId)) continue;
     stageEntries.push({

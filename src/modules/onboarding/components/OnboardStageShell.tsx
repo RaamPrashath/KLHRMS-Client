@@ -41,20 +41,20 @@ function candidateName(candidate: OnboardWorkspaceCandidate): string {
   return `${candidate.candidate.firstName ?? ''} ${candidate.candidate.lastName ?? ''}`.trim() || 'Unnamed candidate';
 }
 
-function statusClasses(status: string): string {
-  if (status === 'CREDENTIALS_SENT') return 'bg-success-bg text-success-text';
-  if (status === 'DOCUMENTS_SUBMITTED') return 'bg-info-bg text-info-text';
-  if (status === 'PENDING') return 'bg-warning-bg text-warning-text';
-  if (status === 'FAILED') return 'bg-destructive-bg text-destructive-text';
-  return 'bg-neutral-50 text-neutral-500';
+function credentialStatusClasses(isSent: boolean): string {
+  return isSent ? 'bg-success-bg text-success-text' : 'bg-warning-bg text-warning-text';
 }
 
-function statusLabel(status: string): string {
-  if (status === 'DOCUMENTS_SUBMITTED') return 'Docs Submitted';
-  if (status === 'CREDENTIALS_SENT') return 'Credentials Sent';
-  if (status === 'PENDING') return 'Pending';
-  if (status === 'FAILED') return 'Failed';
-  return status;
+function credentialStatusLabel(isSent: boolean): string {
+  return isSent ? 'Credentials Sent' : 'Unsent';
+}
+
+function hasCredentialsSent(candidate: OnboardWorkspaceCandidate, sentState: Record<string, boolean>): boolean {
+  return (
+    candidate.onboardingStatus === 'CREDENTIALS_SENT' ||
+    Boolean(candidate.credentialsSentAt) ||
+    Boolean(sentState[candidate.applicationId])
+  );
 }
 
 function readActionError(error: unknown, fallback: string): string {
@@ -251,7 +251,7 @@ export function OnboardStageShell({
                 {filteredCandidates.length > 0 ? (
                   filteredCandidates.map((candidate) => {
                     const isSending = sendingState[candidate.applicationId] ?? false;
-                    const credsSent = candidate.onboardingStatus === 'CREDENTIALS_SENT' || Boolean(sentState[candidate.applicationId]);
+                    const credsSent = hasCredentialsSent(candidate, sentState);
                     const canSend = !credsSent;
 
                     return (
@@ -266,8 +266,8 @@ export function OnboardStageShell({
                           </div>
                         </TableCell>
                         <TableCell className="px-3 py-3 whitespace-nowrap text-left">
-                          <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', statusClasses(candidate.onboardingStatus))}>
-                            {statusLabel(candidate.onboardingStatus)}
+                          <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', credentialStatusClasses(credsSent))}>
+                            {credentialStatusLabel(credsSent)}
                           </span>
                         </TableCell>
                         <TableCell className="px-3 py-3 whitespace-nowrap text-left">

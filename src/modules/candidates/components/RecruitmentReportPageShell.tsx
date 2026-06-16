@@ -422,7 +422,7 @@ export function RecruitmentReportPageShell({
           <div className="w-full">
             <div>
               <Table className="table-fixed">
-                <TableHeader className="bg-[#eef6ff]">
+                <TableHeader className="bg-neutral-50">
                   {table.getHeaderGroups().map((hg) => (
                     <TableRow key={hg.id} className="border-black/[0.04] hover:bg-transparent">
                       {hg.headers.map((header) => (

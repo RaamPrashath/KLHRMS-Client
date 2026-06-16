@@ -176,7 +176,7 @@ export interface StageHistoryItem {
   id: string;
   fromStageId: string | null;
   fromStageName: string | null;
-  toStageId: string;
+  toStageId: string | null;
   toStageName: string | null;
   movedByMemberId: string | null;
   movedByName: string | null;

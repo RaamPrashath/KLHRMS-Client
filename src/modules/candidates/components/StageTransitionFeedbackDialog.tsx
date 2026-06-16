@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -128,7 +129,7 @@ export function StageTransitionFeedbackDialog({
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Submitting...' : 'Submit'}
+            {isSubmitting ? <><Spinner className="mr-2 size-4" /> Submitting...</> : 'Submit'}
           </Button>
         </DialogFooter>
       </DialogContent>
