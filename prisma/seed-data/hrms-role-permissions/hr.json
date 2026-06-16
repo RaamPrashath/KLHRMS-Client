@@ -1,0 +1,15 @@
+{
+  "employees":          { "view": "organization", "create": "organization", "edit": "organization" },
+  "departments":        { "view": "organization", "create": "organization", "edit": "organization" },
+  "permission":         { "view": "self" },
+  "attendance":         { "view": "organization", "create": "organization", "edit": "organization" },
+  "attendanceReport":   { "view": "organization" },
+  "leaves":             { "view": "organization", "approve": "organization", "create": "organization" },
+  "timesheet":          { "view": "organization", "create": "organization", "edit": "organization" },
+  "weeklyPlan":         { "view": "organization", "create": "organization", "edit": "organization" },
+  "jobs":               { "view": "organization" },
+  "candidates":         { "view": "organization" },
+  "interviews":         { "view": "organization" },
+  "assets":             { "view": "self" },
+  "helpdesk":           { "view": "self", "create": "self" }
+}

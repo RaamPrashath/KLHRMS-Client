@@ -1,5 +1,13 @@
 'use client';
 
+import type { RoleResponse } from '@/modules/roles/types/role';
+import {
+  ExpandableScreen,
+  ExpandableScreenTrigger,
+  ExpandableScreenContent,
+  useExpandableScreen,
+} from '@/components/ui/expandable-screen';
+import { RoleForm } from '@/modules/roles/components/RoleForm';
 import {
   Avatar,
   AvatarFallback,
@@ -7,17 +15,6 @@ import {
   AvatarGroup,
   AvatarGroupCount,
 } from '@/components/ui/avatar';
-import { type RoleResponse } from '@/modules/roles/types/role';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableHead,
-} from '@/components/ui/table';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface RoleAssignee {
   memberId: string;
@@ -29,6 +26,8 @@ interface RolesTableProps {
   roles: RoleResponse[];
   peopleByRoleId: Record<string, RoleAssignee[]>;
   onEdit: (role: RoleResponse) => void;
+  orgSlug: string;
+  memberId: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -42,117 +41,101 @@ function getInitials(name: string): string {
     .join('');
 }
 
-// ─── Members cell ─────────────────────────────────────────────────────────────
-
 const MAX_VISIBLE = 4;
 
 function MembersCell({ assignees }: Readonly<{ assignees: RoleAssignee[] }>) {
   if (assignees.length === 0) {
-    return <span className="text-sm text-neutral-400">No members</span>;
+    return <span className="text-xs text-neutral-400 font-medium">No members</span>;
   }
 
   const visible = assignees.slice(0, MAX_VISIBLE);
   const overflow = assignees.length - visible.length;
 
-  if (assignees.length === 1) {
-    return (
-      <div className="flex items-center gap-2.5">
-        <Avatar className="size-7 ring-1 ring-black/4">
-          <AvatarImage src={assignees[0].image ?? undefined} alt={assignees[0].name} />
-          <AvatarFallback className="bg-primary-subtle text-[11px] font-medium text-primary">
-            {getInitials(assignees[0].name)}
-          </AvatarFallback>
-        </Avatar>
-        <span className="text-sm text-neutral-600">{assignees[0].name}</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center gap-2">
       <AvatarGroup>
         {visible.map((a) => (
-          <Avatar key={a.memberId} className="size-7 ring-1 ring-white dark:ring-neutral-900">
+          <Avatar key={a.memberId} className="size-6 ring-1 ring-white dark:ring-neutral-900">
             <AvatarImage src={a.image ?? undefined} alt={a.name} />
-            <AvatarFallback className="bg-primary-subtle text-[11px] font-medium text-primary">
+            <AvatarFallback className="bg-primary-subtle text-[9px] font-semibold text-primary">
               {getInitials(a.name)}
             </AvatarFallback>
           </Avatar>
         ))}
         {overflow > 0 && (
-          <AvatarGroupCount className="size-7 bg-neutral-50 text-[11px] font-medium text-neutral-500">
+          <AvatarGroupCount className="size-6 bg-neutral-50 text-[9px] font-semibold text-neutral-500">
             +{overflow}
           </AvatarGroupCount>
         )}
       </AvatarGroup>
-      <span className="text-sm text-neutral-500">
+      <span className="text-[11px] text-neutral-500 font-semibold leading-none">
         {assignees.length} {assignees.length === 1 ? 'member' : 'members'}
       </span>
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Inline Expandable Content Component ─────────────────────────────────────
 
-export function RolesTable({ roles, peopleByRoleId, onEdit }: Readonly<RolesTableProps>) {
+function ExpandedRoleContent({
+  role,
+  orgSlug,
+  memberId,
+}: Readonly<{
+  role: RoleResponse;
+  orgSlug: string;
+  memberId: string;
+}>) {
+  const { collapse } = useExpandableScreen();
+
   return (
-    <Table className="table-fixed min-w-[500px]">
-      <colgroup>
-        <col style={{ width: '35%' }} />
-        <col style={{ width: '45%' }} />
-        <col style={{ width: '20%' }} />
-      </colgroup>
+    <div className="flex-1 overflow-y-auto p-8 select-text">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight text-neutral-900">Edit Role Permissions</h2>
+        <p className="text-sm text-neutral-500 mt-1">Configure name and active permissions for {role.name}.</p>
+      </div>
+      <RoleForm
+        mode="edit"
+        orgSlug={orgSlug}
+        memberId={memberId}
+        initialRole={role}
+        onSuccess={collapse}
+        onCancel={collapse}
+      />
+    </div>
+  );
+}
 
-      {/* Layer 2: Table header */}
-      <TableHeader className="bg-canvas border-b border-black/4">
-        <TableRow className="border-b-0 hover:bg-transparent">
-          <TableHead className="h-12 px-6 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">
-            Role Name
-          </TableHead>
-          <TableHead className="h-12 px-6 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-left">
-            Members
-          </TableHead>
-          <TableHead className="h-12 px-6 text-[12.5px] font-semibold text-neutral-500 uppercase tracking-wider text-right">
-            {/* actions column — no label, right-aligned */}
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-
-      {/* Layer 3: Table body */}
-      <TableBody className="bg-white">
-        {roles.map((role) => {
-          const assignees = peopleByRoleId[role.id] ?? [];
-          return (
-            <TableRow
-              key={role.id}
-              className="border-b border-black/4 transition-colors hover:bg-canvas/60"
-            >
-              {/* Role name */}
-              <TableCell className="px-6 py-4 whitespace-normal">
-                <span className="text-[15px] font-medium text-neutral-900">
+export function RolesTable({ roles, peopleByRoleId, orgSlug, memberId }: Readonly<RolesTableProps>) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+      {roles.map((role) => {
+        const assignees = peopleByRoleId[role.id] ?? [];
+        return (
+          <ExpandableScreen key={role.id} layoutId={`role-${role.id}`} contentRadius="8px">
+            <ExpandableScreenTrigger className="w-full">
+              <div className="p-6 bg-white rounded-lg border border-black/5 hover:border-indigo-500 hover:shadow-md transition-all duration-200 cursor-pointer h-28 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.01)] text-left">
+                <span className="text-[16px] font-bold text-neutral-900 truncate" title={role.name}>
                   {role.name}
                 </span>
-              </TableCell>
-
-              {/* Members */}
-              <TableCell className="px-6 py-4 whitespace-normal">
-                <MembersCell assignees={assignees} />
-              </TableCell>
-
-              {/* Edit action — aligned right to match header */}
-              <TableCell className="px-6 py-4 text-right">
-                <button
-                  type="button"
-                  onClick={() => onEdit(role)}
-                  className="inline-flex items-center rounded-full bg-white px-4 py-1.5 text-sm font-medium text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] border border-neutral-100 transition-all hover:bg-primary/5 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 active:scale-[0.98] duration-100 shrink-0"
-                >
-                  Edit Role
-                </button>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                <div className="flex items-center pt-2 border-t border-black/5 w-full">
+                  <MembersCell assignees={assignees} />
+                </div>
+              </div>
+            </ExpandableScreenTrigger>
+            <ExpandableScreenContent
+              className="bg-white border border-[#e5e5ea] shadow-2xl rounded-lg max-w-4xl mx-auto my-auto h-[85vh] flex flex-col overflow-hidden"
+              closeButtonClassName="text-neutral-500 hover:text-neutral-800 bg-transparent hover:bg-transparent shadow-none cursor-pointer"
+            >
+              <ExpandedRoleContent
+                role={role}
+                orgSlug={orgSlug}
+                memberId={memberId}
+              />
+            </ExpandableScreenContent>
+          </ExpandableScreen>
+        );
+      })}
+    </div>
   );
 }

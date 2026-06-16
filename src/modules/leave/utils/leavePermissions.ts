@@ -20,15 +20,15 @@ export function resolveLeavePermissions(
 }
 
 export function canViewLeaves(scope: LeavePermissionScope): boolean {
-  return scope === 'self' || scope === 'organization';
+  return scope === 'self' || scope === 'organization' || scope === 'department';
 }
 
 export function canCreateLeaves(scope: LeavePermissionScope): boolean {
-  return scope === 'self' || scope === 'organization';
+  return scope === 'self' || scope === 'organization' || scope === 'department';
 }
 
 export function canApproveLeaves(scope: LeavePermissionScope): boolean {
-  return scope === 'organization';
+  return scope === 'organization' || scope === 'department';
 }
 
 export function canSyncHolidays(scope: LeavePermissionScope): boolean {

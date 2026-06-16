@@ -61,6 +61,9 @@ type RequestMode = 'GENERAL' | 'ASSET';
 const statusFilterOptions: Array<'ALL' | HelpdeskTicketStatus> = ['ALL', 'OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 const kindFilterOptions: Array<'ALL' | HelpdeskTicketKind> = ['ALL', 'GENERAL_HELP', 'ASSET_ISSUE'];
 
+const helpdeskCategoryOptionsFiltered = (scope: string) =>
+  scope === 'organization' ? [...helpdeskCategoryOptions] : [...SELF_SCOPE_CATEGORIES];
+
 const statusTone: Record<string, string> = {
   OPEN: 'bg-blue-50 text-blue-700',
   IN_PROGRESS: 'bg-amber-50 text-amber-700',
@@ -124,12 +127,16 @@ function filterTickets(tickets: HelpdeskTicket[], search: string, statusFilter: 
   return result;
 }
 
+const SELF_SCOPE_CATEGORIES = ['GENERAL', 'HR_QUERIES'] as const;
+
 export function HelpdeskPageShell({
   orgSlug,
   memberId,
+  helpdeskScope = 'self',
 }: {
   orgSlug: string;
   memberId: string;
+  helpdeskScope?: string;
 }) {
   const ticketsQuery = useHelpdeskTicketsQuery(orgSlug, memberId);
   const employeeAssetsQuery = useEmployeeAssetViewQuery(orgSlug, memberId);
@@ -176,6 +183,11 @@ export function HelpdeskPageShell({
       maintenanceType: 'REPAIR',
     },
   });
+
+  const categoryOptions = useMemo(
+    () => helpdeskCategoryOptionsFiltered(helpdeskScope),
+    [helpdeskScope],
+  );
 
   const tickets = useMemo(() => ticketsQuery.data ?? [], [ticketsQuery.data]);
   const currentAssets = useMemo(() => employeeAssetsQuery.data?.current ?? [], [employeeAssetsQuery.data]);
@@ -384,7 +396,7 @@ export function HelpdeskPageShell({
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
                           <SelectContent>
-                            {helpdeskCategoryOptions.map((option) => (
+                            {categoryOptions.map((option) => (
                               <SelectItem key={option} value={option}>
                                 {humanize(option)}
                               </SelectItem>

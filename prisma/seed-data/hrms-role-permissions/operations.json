@@ -1,0 +1,11 @@
+{
+  "departments":        { "view": "organization", "create": "organization", "edit": "organization" },
+  "attendance":         { "view": "self", "create": "self" },
+  "leaves":             { "view": "self", "create": "self" },
+  "timesheet":          { "view": "self", "create": "self", "edit": "self" },
+  "procurement":        { "view": "organization", "create": "organization", "edit": "organization", "approve": "organization" },
+  "assets":             { "view": "organization", "create": "organization", "edit": "organization" },
+  "maintenance":        { "view": "organization", "create": "organization", "edit": "organization" },
+  "helpdesk":           { "view": "organization", "create": "organization", "edit": "organization" },
+  "documents":          { "view": "organization", "create": "organization", "edit": "organization" }
+}

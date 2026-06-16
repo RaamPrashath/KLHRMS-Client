@@ -39,7 +39,7 @@ export function DashboardTopBar({
       }).format(new Date()),
     [],
   );
-  const notificationsQuery = useNotificationsQuery(orgSlug, memberId, { status: "all", limit: 5 });
+  const notificationsQuery = useNotificationsQuery(orgSlug, memberId, { status: "all", limit: 4 });
   const unreadCountQuery = useNotificationUnreadCountQuery(orgSlug, memberId);
   const markReadMutation = useMarkNotificationRead(orgSlug, memberId);
   const visibleNotifications = notificationsQuery.data?.items ?? [];

@@ -22,7 +22,7 @@ export default async function RolesPage({
 
   return (
     <div className="min-h-full">
-      <div className="px-6 py-6 flex flex-col gap-6 max-w-6xl">
+      <div className="px-6 py-6 flex flex-col gap-6 w-full">
         <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">
           Roles &amp; Permissions
         </h1>

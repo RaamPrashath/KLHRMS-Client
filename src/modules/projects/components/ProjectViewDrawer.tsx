@@ -601,7 +601,7 @@ export function ProjectViewDrawer({
                 </div>
 
                 {/* Tasks tab */}
-                <TabsContent value="tasks" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
+                <TabsContent value="tasks" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4 data-[state=active]:flex">
                   {canManage && (
                     <div className="mb-3 shrink-0">
                       <div className="flex gap-2">
@@ -665,7 +665,7 @@ export function ProjectViewDrawer({
                 </TabsContent>
 
                 {/* Members tab */}
-                <TabsContent value="members" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
+                <TabsContent value="members" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4 data-[state=active]:flex">
                   <Tabs value={memberTab} onValueChange={(v) => setMemberTab(v as 'assigned' | 'unassigned')} className="flex min-h-0 flex-1 flex-col">
                     <div className="mb-3 shrink-0">
                       <TabBar
@@ -683,7 +683,7 @@ export function ProjectViewDrawer({
                     </div>
 
                     {/* Assigned sub-tab */}
-                    <TabsContent value="assigned" className="mt-0 flex min-h-0 flex-1 flex-col">
+                    <TabsContent value="assigned" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=active]:flex">
                       <div className="relative mb-3 shrink-0">
                         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
                         <Input
@@ -724,7 +724,7 @@ export function ProjectViewDrawer({
                     </TabsContent>
 
                     {/* Unassigned sub-tab */}
-                    <TabsContent value="unassigned" className="mt-0 flex min-h-0 flex-1 flex-col">
+                    <TabsContent value="unassigned" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=active]:flex">
                       <div className="relative mb-3 shrink-0">
                         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
                         <Input
