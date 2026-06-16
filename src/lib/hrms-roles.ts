@@ -37,6 +37,11 @@ export interface HrmsNavItem {
     minAction?: string;
     /** If set, the user's scope for minAction must exactly match this value. */
     minScope?: PermissionScope;
+    /** Secondary group titles where this item should also appear if visible.
+     *  Items only inject into groups that already have at least one visible item. */
+    alsoShowInGroup?: string[];
+    /** Position overrides for alsoShowInGroup targets. Key is group title, value is the index to insert at. */
+    alsoShowInGroupPositions?: Record<string, number>;
 }
 
 export interface HrmsNavGroup {
@@ -73,11 +78,11 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
     {
         title: "Recruitment",
         items: [
-            { title: "Jobs",               urlSuffix: "jobs",                permissionKey: "jobs"        },
+            { title: "Jobs",               urlSuffix: "jobs",                permissionKey: "jobs", minAction: "view", minScope: "organization" },
             { title: "Candidates",         urlSuffix: "candidates",          permissionKey: "candidates"  },
             { title: "Recruitment Report", urlSuffix: "recruitment-report",  permissionKey: "jobs", minAction: "view", minScope: "organization" },
-            { title: "Resume Parser",      urlSuffix: "resume-parser",       permissionKey: "jobs", minAction: "view" },
-            { title: "Interviews",         urlSuffix: "interviews",          permissionKey: "interviews"  },
+            { title: "Resume Parser",      urlSuffix: "resume-parser",       permissionKey: "jobs", minAction: "view", minScope: "organization" },
+            { title: "Interviews",         urlSuffix: "interviews",          permissionKey: "interviews" },
         ],
     },
     {
@@ -87,7 +92,6 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
             { title: "Payroll",            urlSuffix: "payroll",             permissionKey: "payroll"          },
             { title: "Payslips",           urlSuffix: "payslips",            permissionKey: "payslips"         },
             { title: "Tax",                urlSuffix: "tax",                 permissionKey: "tax"              },
-            { title: "Procurement",        urlSuffix: "procurement",         permissionKey: "procurement"      },
         ],
     },
     {
@@ -95,6 +99,7 @@ export const HRMS_NAV_CONFIG: HrmsNavGroup[] = [
         items: [
             { title: "Assets",             urlSuffix: "assets",              permissionKey: "assets"    },
             { title: "Asset Maintenance",  urlSuffix: "asset-maintenance",   permissionKey: "maintenance" },
+            { title: "Procurement",        urlSuffix: "procurement",         permissionKey: "procurement" },
             { title: "Helpdesk",           urlSuffix: "helpdesk",            permissionKey: "helpdesk"  },
             { title: "Documents",          urlSuffix: "documents",           permissionKey: "documents" },
         ],
@@ -129,29 +134,85 @@ export function getScope(
     return (permissions[key]?.[action] as PermissionScope) ?? "none";
 }
 
+function isItemVisible(
+    item: HrmsNavItem,
+    permissions: RolePermissions,
+): boolean {
+    if (!item.permissionKey) return true;
+    if (!hasPermission(permissions, item.permissionKey)) return false;
+    if (item.minAction && item.permissionKey) {
+        const scope = getScope(permissions, item.permissionKey, item.minAction);
+        if (scope === "none") return false;
+        if (item.minScope && scope !== item.minScope) return false;
+    }
+    return true;
+}
+
 /**
  * Filters the nav config to items the user has access to based on their
- * permissions JSON. Groups with no visible items are dropped.
+ * permissions JSON.
+ *
+ * - Items remain under their original group headings — no scope-based
+ *   extraction to a separate group.
+ * - Items with `alsoShowInGroup` are injected into matching secondary groups
+ *   (only if the target group already has at least one visible item).
+ * - Groups with no visible items are dropped.
  */
 export function filterNavByPermissions(
     permissions: RolePermissions | null | undefined,
 ): HrmsNavGroup[] {
     if (!permissions) return [];
 
-    return HRMS_NAV_CONFIG.reduce<HrmsNavGroup[]>((acc, group) => {
-        const visibleItems = group.items.filter((item) => {
-            if (!item.permissionKey) return true;
-            if (!hasPermission(permissions, item.permissionKey)) return false;
-            if (item.minAction && item.permissionKey) {
-                const scope = getScope(permissions, item.permissionKey, item.minAction);
-                if (scope === "none") return false;
-                if (item.minScope && scope !== item.minScope) return false;
+    // ── First pass: determine visibility for every item across all groups ──
+    const allVisibleItems: { item: HrmsNavItem; groupTitle: string }[] = [];
+
+    for (const group of HRMS_NAV_CONFIG) {
+        for (const item of group.items) {
+            if (isItemVisible(item, permissions)) {
+                allVisibleItems.push({ item, groupTitle: group.title });
             }
-            return true;
-        });
-        if (visibleItems.length > 0) {
-            acc.push({ ...group, items: visibleItems });
         }
-        return acc;
-    }, []);
+    }
+
+    // ── Build groups from all visible items by their original group ──
+    const groupMap = new Map<string, HrmsNavItem[]>();
+
+    for (const entry of allVisibleItems) {
+        const list = groupMap.get(entry.groupTitle);
+        if (list) {
+            list.push(entry.item);
+        } else {
+            groupMap.set(entry.groupTitle, [entry.item]);
+        }
+    }
+
+    // ── Inject alsoShowInGroup items into secondary groups ──
+    for (const entry of allVisibleItems) {
+        const secondaryGroups = entry.item.alsoShowInGroup ?? [];
+        for (const targetGroup of secondaryGroups) {
+            if (groupMap.has(targetGroup) && groupMap.get(targetGroup)!.length > 0) {
+                const existing = groupMap.get(targetGroup)!;
+                if (!existing.some((i) => i.urlSuffix === entry.item.urlSuffix)) {
+                    const pos = entry.item.alsoShowInGroupPositions?.[targetGroup];
+                    if (pos !== undefined) {
+                        existing.splice(pos, 0, entry.item);
+                    } else {
+                        existing.push(entry.item);
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Build final result, preserving HRMS_NAV_CONFIG group order ──
+    const result: HrmsNavGroup[] = [];
+
+    for (const group of HRMS_NAV_CONFIG) {
+        const items = groupMap.get(group.title);
+        if (items && items.length > 0) {
+            result.push({ title: group.title, items });
+        }
+    }
+
+    return result;
 }

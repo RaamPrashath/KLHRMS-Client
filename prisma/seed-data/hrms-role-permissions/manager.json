@@ -1,0 +1,9 @@
+{
+  "departments":        { "view": "department", "create": "department", "edit": "department" },
+  "attendance":         { "view": "department", "create": "department" },
+  "attendanceReport":   { "view": "department" },
+  "leaves":             { "view": "department", "approve": "department" },
+  "timesheet":          { "view": "self", "create": "self" },
+  "assets":             { "view": "self" },
+  "helpdesk":           { "view": "self", "create": "self" }
+}

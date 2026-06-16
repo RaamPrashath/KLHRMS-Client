@@ -306,6 +306,8 @@ export function createFinanceManagerPermissions(): RolePermissions {
   permissions.procurement.approve = 'organization';
   
   // Operations
+  permissions.assets.view = 'self';
+  permissions.helpdesk.view = 'self';
   permissions.documents.view = 'organization';
   
   return permissions;

@@ -1,0 +1,12 @@
+{
+  "attendance":         { "view": "self", "create": "self" },
+  "leaves":             { "view": "self", "create": "self" },
+  "timesheet":          { "view": "self", "create": "self", "edit": "self" },
+  "salaryStructures":   { "view": "organization", "create": "organization", "edit": "organization" },
+  "payroll":            { "view": "organization", "create": "organization", "edit": "organization" },
+  "payslips":           { "view": "organization", "create": "organization" },
+  "tax":                { "view": "organization", "create": "organization", "edit": "organization" },
+  "procurement":        { "view": "organization", "create": "organization", "edit": "organization", "approve": "organization" },
+  "assets":             { "view": "self" },
+  "helpdesk":           { "view": "self", "create": "self" }
+}

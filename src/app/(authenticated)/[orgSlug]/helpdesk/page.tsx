@@ -36,7 +36,7 @@ export default async function HelpdeskPage({
       {isAdminHelpdesk ? (
         <HelpdeskAdminPageShell orgSlug={orgSlug} memberId={memberId!} />
       ) : (
-        <HelpdeskPageShell orgSlug={orgSlug} memberId={memberId!} />
+        <HelpdeskPageShell orgSlug={orgSlug} memberId={memberId!} helpdeskScope={helpdeskViewScope} />
       )}
     </div>
   );

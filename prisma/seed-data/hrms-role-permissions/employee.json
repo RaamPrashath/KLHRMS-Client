@@ -1,0 +1,8 @@
+{
+  "attendance":         { "view": "self", "create": "self" },
+  "leaves":             { "view": "self", "create": "self" },
+  "timesheet":          { "view": "self", "create": "self", "edit": "self" },
+  "interviews":         { "view": "self" },
+  "assets":             { "view": "self" },
+  "helpdesk":           { "view": "self", "create": "self" }
+}

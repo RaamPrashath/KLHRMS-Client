@@ -554,7 +554,8 @@ function AdminDashboardContent({
   const attendancePermissions = resolveAttendancePermissions(permissions ?? {});
   const leavePermissions = resolveLeavePermissions(permissions ?? {});
   const canViewOrgAttendance =
-    attendancePermissions.view === "organization" && leavePermissions.view === "organization";
+    (attendancePermissions.view === "organization" || attendancePermissions.view === "department") &&
+    (leavePermissions.view === "organization" || leavePermissions.view === "department");
   const canApproveLeave = canApproveLeaves(leavePermissions.approve);
   const canInviteEmployees = getScope(permissions, "employees", "create") !== "none";
   const canManageDepartments = hasPermission(permissions, "departments");
@@ -680,8 +681,11 @@ export function DashboardShell({
   const dashboardOverviewQuery = useDashboardOverviewQuery(orgSlug, memberId, today);
   const attendancePermissions = resolveAttendancePermissions(permissions ?? {});
   const leavePermissions = resolveLeavePermissions(permissions ?? {});
+  const hasOrgOrDeptScope =
+    (attendancePermissions.view === "organization" || attendancePermissions.view === "department") &&
+    (leavePermissions.view === "organization" || leavePermissions.view === "department");
   const showAdminDashboard =
-    (attendancePermissions.view === "organization" && leavePermissions.view === "organization") ||
+    hasOrgOrDeptScope ||
     canApproveLeaves(leavePermissions.approve) ||
     hasPermission(permissions, "weeklyPlan") ||
     hasPermission(permissions, "projects") ||

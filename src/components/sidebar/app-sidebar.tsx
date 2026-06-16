@@ -462,10 +462,7 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
 
     void orgName;
 
-    const isAdmin = permissions
-        ? getScope(permissions, "permission", "edit") === "organization" ||
-          getScope(permissions, "employees", "edit") === "organization"
-        : false;
+    const showSettingsGear = roleName === "Admin" || roleName === "Operations";
 
     const allNavGroups = useMemo(
         () => filterNavByPermissions(permissions),
@@ -484,7 +481,7 @@ export function AppSidebar({ orgSlug, orgName, roleName, permissions, organizati
                 <div className="flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     <div className="flex items-center pr-14 md:pr-0">
                         <OrganizationSwitcher currentOrgSlug={orgSlug} organizations={organizations} />
-                        {open && isAdmin && (
+                        {open && showSettingsGear && (
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Link
