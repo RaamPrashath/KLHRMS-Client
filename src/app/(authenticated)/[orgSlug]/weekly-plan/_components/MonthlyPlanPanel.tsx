@@ -5,6 +5,7 @@ import { format, isToday, parseISO } from "date-fns";
 import { Eraser, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useSession } from "@/hooks/useSession";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -215,6 +216,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
   const [drafts, setDrafts] = useState<Record<string, PlanLocationValue | "">>({});
   const [isDirty, setIsDirty] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<PlanLocationValue>("OFFICE");
+  const { isLoading: isSessionLoading } = useSession();
 
   const { data: locations = [], isLoading: isLocationsLoading } = usePlanLocationsQuery(orgSlug, orgId, memberId);
   const { data: monthEntries = [], isLoading: isMonthLoading } = useMyMonthlyPlanQuery(
@@ -228,7 +230,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
   const { data: holidays = [] } = useHolidays(orgSlug, memberId, {
     year: monthState.year,
     month: monthState.month,
-  });
+  }, { staleTime: 1000 * 60 * 10 });
 
   const monthStart = new Date(monthState.year, monthState.month - 1, 1);
   const monthEnd = new Date(monthState.year, monthState.month, 0);
@@ -238,7 +240,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
     toDate: monthEnd.toISOString().split("T")[0],
     page: 1,
     pageSize: 100,
-  });
+  }, { staleTime: 1000 * 60 * 5 });
 
   const saveMutation = useSaveMonthlyPlanMutation(
     orgSlug,
@@ -484,7 +486,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
         </div>
 
         <div className="flex flex-col gap-3">
-          {isMonthLoading || isLocationsLoading
+          {isSessionLoading || isMonthLoading || isLocationsLoading
             ? Array.from({ length: 5 }, (_, rowIndex) => (
                 <div key={rowIndex} className="grid grid-cols-7 gap-3">
                   {Array.from({ length: 7 }, (_, columnIndex) => (

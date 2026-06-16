@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchHolidaysAction } from '@/modules/leave/api/leaveServerActions';
+import { fetchHolidays } from '@/hooks/functions/leave';
 import type { HolidayRecord } from '@/modules/leave/types/leaveTypes';
 
 /**
@@ -12,19 +12,18 @@ export function useHolidays(
   orgSlug: string,
   memberId: string,
   filters?: { year?: number; month?: number },
+  options?: { enabled?: boolean; staleTime?: number },
 ) {
   return useQuery<HolidayRecord[], Error>({
     queryKey: ['leave-holidays', orgSlug, filters?.year, filters?.month],
     queryFn: async () => {
-      const res = await fetchHolidaysAction({
-        orgSlug,
-        memberId,
-        year: filters?.year,
-        month: filters?.month,
-        pageSize: 200, // calendar only needs current month — 200 is a safe ceiling
-      });
+      const res = await fetchHolidays(
+        { orgSlug, memberId },
+        { year: filters?.year, month: filters?.month, pageSize: 200 },
+      );
       return res.items;
     },
-    enabled: !!orgSlug && !!memberId,
+    enabled: (options?.enabled ?? true) && !!orgSlug && !!memberId,
+    staleTime: options?.staleTime,
   });
 }

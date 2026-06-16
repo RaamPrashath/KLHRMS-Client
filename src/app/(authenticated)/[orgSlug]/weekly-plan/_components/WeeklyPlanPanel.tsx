@@ -13,6 +13,7 @@ import {
 } from "@/hooks/queries/weekly_plan";
 import { useSaveWeeklyPlanMutation } from "@/hooks/mutations/weekly_plan";
 import { useApiClient } from "@/hooks/useApiClient";
+import { useSession } from "@/hooks/useSession";
 import { useMyAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
 import { useHolidays } from "@/modules/leave/hooks/useHolidays";
 import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
@@ -65,6 +66,7 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
   const [isDirty, setIsDirty] = useState(false);
   const queryClient = useQueryClient();
   const auth = useApiClient(orgId);
+  const { isLoading: isSessionLoading } = useSession();
 
   const { data: locations = [], isLoading: isLocationsLoading } = usePlanLocationsQuery(
     orgSlug,
@@ -84,12 +86,12 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     dateTo: weekDays[weekDays.length - 1]?.iso,
     page: 1,
     pageSize: 10,
-  });
+  }, { staleTime: 1000 * 60 * 5 });
 
   // Fetch holidays for the current week
   const { data: holidays = [] } = useHolidays(orgSlug, memberId, {
     year: weekState.year,
-  });
+  }, { staleTime: 1000 * 60 * 10 });
 
   // Fetch approved leaves for the current week
   const { data: leaveRequestsData } = useLeaveRequests(orgSlug, memberId, {
@@ -98,7 +100,7 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     toDate: weekDays[weekDays.length - 1]?.iso,
     page: 1,
     pageSize: 50,
-  });
+  }, { staleTime: 1000 * 60 * 5 });
 
   const saveMutation = useSaveWeeklyPlanMutation(
     orgSlug,
@@ -330,7 +332,7 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
           entries={myEntries}
           drafts={drafts}
           locations={resolvedLocations}
-          isLoading={isWeekLoading || isLocationsLoading || attendanceQuery.isLoading}
+          isLoading={isSessionLoading || isWeekLoading || isLocationsLoading}
           isDirty={isDirty}
           isSaving={saveMutation.isPending}
           actualByDate={actualByDate}
