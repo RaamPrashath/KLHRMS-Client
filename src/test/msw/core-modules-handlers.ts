@@ -21,6 +21,8 @@ export const coreModuleRequests: {
     onboardingDocumentSubmissions: unknown[];
     offerTemplateCreates: unknown[];
     offerDispatchValidations: unknown[];
+    offerDownloadValidations: unknown[];
+    offerDownloads: unknown[];
     offerDispatches: unknown[];
     resumeParserUploads: Array<{ fileNames: string[]; template: FormDataEntryValue | null }>;
     resumeParserHistoryQueries: URLSearchParams[];
@@ -43,6 +45,8 @@ export const coreModuleRequests: {
     onboardingDocumentSubmissions: [],
     offerTemplateCreates: [],
     offerDispatchValidations: [],
+    offerDownloadValidations: [],
+    offerDownloads: [],
     offerDispatches: [],
     resumeParserUploads: [],
     resumeParserHistoryQueries: [],
@@ -67,6 +71,8 @@ export function resetCoreModuleRequests() {
     coreModuleRequests.onboardingDocumentSubmissions = [];
     coreModuleRequests.offerTemplateCreates = [];
     coreModuleRequests.offerDispatchValidations = [];
+    coreModuleRequests.offerDownloadValidations = [];
+    coreModuleRequests.offerDownloads = [];
     coreModuleRequests.offerDispatches = [];
     coreModuleRequests.resumeParserUploads = [];
     coreModuleRequests.resumeParserHistoryQueries = [];
@@ -187,6 +193,24 @@ const offerTemplate = {
             sections: [],
         },
     ],
+};
+
+const offerCandidateValidationResponse = {
+    validCandidates: [
+        {
+            applicationId: "app_1",
+            candidate: {
+                id: "candidate_1",
+                firstName: "Asha",
+                lastName: "Rao",
+                email: "asha.rao@kovanlabs.com",
+                resumeUrl: null,
+            },
+            eligibility: { canSend: true, errors: [], warnings: [] },
+        },
+    ],
+    blockedCandidates: [],
+    warnings: [],
 };
 
 export const coreModuleHandlers = [
@@ -366,16 +390,47 @@ export const coreModuleHandlers = [
     http.post("*/offers/pipeline/jobs/:jobSlug/stages/:stageSlug/validate", async ({ request }) => {
         const body = await request.json();
         coreModuleRequests.offerDispatchValidations.push(body);
-        return HttpResponse.json({
-            valid: true,
-            candidates: [{ applicationId: "app_1", status: "READY", messages: [] }],
-            errors: [],
+        return HttpResponse.json(offerCandidateValidationResponse);
+    }),
+    http.post("*/offers/pipeline/jobs/:jobSlug/stages/:stageSlug/download/validate", async ({ request }) => {
+        const body = await request.json();
+        coreModuleRequests.offerDownloadValidations.push(body);
+        return HttpResponse.json(offerCandidateValidationResponse);
+    }),
+    http.post("*/offers/pipeline/jobs/:jobSlug/stages/:stageSlug/download", async ({ request }) => {
+        const body = await request.json() as { format?: string };
+        coreModuleRequests.offerDownloads.push(body);
+        const format = body.format === "docx" ? "docx" : "pdf";
+        return new HttpResponse(new Uint8Array([80, 75, 3, 4]), {
+            headers: {
+                "Content-Type": "application/zip",
+                "Content-Disposition": `attachment; filename="offer-letters-${format}.zip"`,
+            },
         });
     }),
     http.post("*/offers/pipeline/jobs/:jobSlug/stages/:stageSlug/dispatch", async ({ request }) => {
         const body = await request.json();
         coreModuleRequests.offerDispatches.push(body);
-        return HttpResponse.json({ batchId: "offer_batch_1", queuedCount: 1 });
+        return HttpResponse.json({
+            batch: {
+                id: "offer_batch_1",
+                organizationId: "org_01",
+                jobPostingId: "job_1",
+                stageId: "stage_offer",
+                templateId: "template_standard",
+                templateCategoryId: "category_full_time",
+                status: "QUEUED",
+                candidateCount: 1,
+                successCount: 0,
+                failureCount: 0,
+                createdByMemberId: "member_1",
+                createdAt: nowIso,
+                completedAt: null,
+                errorSummary: null,
+            },
+            queuedOfferLetters: [],
+            blockedCandidates: [],
+        });
     }),
 
     http.post("*/resume-parser/process", () => {

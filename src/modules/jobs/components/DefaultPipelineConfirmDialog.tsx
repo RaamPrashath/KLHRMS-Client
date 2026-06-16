@@ -32,11 +32,11 @@ export function DefaultPipelineConfirmDialog({
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary-ghost text-primary">
             <Layers className="size-5" />
           </div>
-          <DialogTitle>Use default pipeline?</DialogTitle>
-          <DialogDescription>
-            This will create 5 stages: Screening, Interview, Offer, Accepted, and Rejected.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogTitle>Use default pipeline?</DialogTitle>
+        <DialogDescription>
+            This will create 5 stages: Screening, Interview, Offer, Document collection, and Rejected.
+        </DialogDescription>
+      </DialogHeader>
         <DialogFooter>
           <Button type="button" variant="outline" disabled={loading} onClick={() => onOpenChange(false)}>
             Cancel

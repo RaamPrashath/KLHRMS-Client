@@ -79,7 +79,7 @@ const STAGE_TYPE_LABELS: Record<(typeof PIPELINE_STAGE_TYPES)[number], string> =
   DEFAULT: 'Default',
   INTERVIEW: 'Interview',
   OFFER: 'Offer',
-  HIRED: 'Accepted',
+  HIRED: 'Document collection',
   ONBOARDING: 'Onboarding',
   REJECTED: 'Rejected',
 };
@@ -120,7 +120,7 @@ const DEFAULT_STAGE_PREVIEWS: StagePreview[] = [
   },
   {
     id: 'default-hired',
-    name: 'Accepted',
+    name: 'Document collection',
     stageType: 'HIRED',
     meetingEnabled: false,
     offerLetterEnabled: false,

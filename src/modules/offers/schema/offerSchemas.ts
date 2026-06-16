@@ -7,6 +7,10 @@ export const offerDispatchPayloadSchema = z.object({
   expiresAt: z.string().datetime().nullable().optional(),
 });
 
+export const offerDownloadPayloadSchema = offerDispatchPayloadSchema.extend({
+  format: z.enum(['pdf', 'docx']),
+});
+
 export const offerTemplateCopyPayloadSchema = z.object({
   name: z.string().min(1).max(120).optional(),
 });
@@ -53,6 +57,12 @@ export interface OfferDispatchPayload {
   categoryId: string;
   applicationIds: string[];
   expiresAt?: string | null;
+}
+
+export type OfferDownloadFormat = 'pdf' | 'docx';
+
+export interface OfferDownloadPayload extends OfferDispatchPayload {
+  format: OfferDownloadFormat;
 }
 
 export interface OfferTemplateCopyPayload {
