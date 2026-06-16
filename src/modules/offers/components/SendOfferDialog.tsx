@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Loader2 } from 'lucide-react';
+import { CalendarClock, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -22,11 +22,15 @@ import {
 } from '@/components/ui/select';
 
 import { OfferSendConfirmDialog } from '@/modules/offers/components/OfferSendConfirmDialog';
+import { OfferDownloadConfirmDialog } from '@/modules/offers/components/OfferDownloadConfirmDialog';
 import { OfferTemplatePicker } from '@/modules/offers/components/OfferTemplatePicker';
+import type { OfferDownloadFormat } from '@/modules/offers/schema/offerSchemas';
 import { composeTemplateHtml } from '@/modules/offers/utils/offerTemplateRender';
 import {
   useCreateOfferDispatch,
+  useDownloadOfferLetters,
   useValidateOfferDispatch,
+  useValidateOfferDownload,
 } from '@/modules/offers/hooks/useOfferWorkspace';
 import {
   useOfferTemplate,
@@ -56,10 +60,11 @@ const PREVIEW_CONTENT_CLASSES = cn(
   '[&_.offer-letter-logo]:max-h-14 [&_.offer-letter-logo]:max-w-44 [&_.offer-letter-logo]:object-contain',
   '[&_.offer-letter-header-meta]:absolute [&_.offer-letter-header-meta]:right-0 [&_.offer-letter-header-meta]:top-12 [&_.offer-letter-header-meta]:text-right [&_.offer-letter-header-meta]:text-[13px] [&_.offer-letter-header-meta]:leading-6',
   '[&_.offer-letter-header_h1]:absolute [&_.offer-letter-header_h1]:bottom-0 [&_.offer-letter-header_h1]:left-0 [&_.offer-letter-header_h1]:right-0 [&_.offer-letter-header_h1]:text-center [&_.offer-letter-header_h1]:whitespace-nowrap [&_.offer-letter-header_h1]:text-base [&_.offer-letter-header_h1]:font-semibold',
-  '[&_footer]:mt-6 [&_footer]:pt-0 [&_footer]:text-[13px] [&_footer]:text-neutral-900',
-  '[&_.offer-signature-slot]:mb-6 [&_.offer-signature-slot_img]:mb-2 [&_.offer-signature-slot_img]:max-h-20 [&_.offer-signature-slot_img]:max-w-32 [&_.offer-signature-slot_img]:object-contain',
-  '[&_.offer-signature-name]:font-semibold [&_.offer-footer-address]:mt-7 [&_.offer-footer-address_p]:mb-0 [&_.offer-footer-address_p]:leading-5',
-  '[&_.offer-footer-website]:float-right [&_.offer-footer-website]:-mt-[34px] [&_.offer-footer-website]:text-[17px] [&_.offer-footer-website]:font-bold [&_.offer-footer-website]:text-neutral-900 [&_.offer-footer-website]:no-underline',
+  '[&_footer]:mt-[22px] [&_footer]:break-inside-avoid [&_footer]:pt-0 [&_footer]:text-[13px] [&_footer]:leading-[19px] [&_footer]:text-neutral-900 [&_footer_p]:mb-0 [&_footer_p]:leading-[19px]',
+  '[&_.offer-letter-footer]:grid [&_.offer-letter-footer]:grid-cols-[minmax(0,1fr)_auto] [&_.offer-letter-footer]:items-end [&_.offer-letter-footer]:gap-x-14',
+  '[&_.offer-signature-slot]:col-start-1 [&_.offer-signature-slot]:row-start-1 [&_.offer-signature-slot]:mb-3 [&_.offer-signature-slot]:break-inside-avoid [&_.offer-signature-slot_p]:mb-0 [&_.offer-signature-slot_p]:leading-[18px] [&_.offer-signature-slot_img]:mb-0 [&_.offer-signature-slot_img]:max-h-20 [&_.offer-signature-slot_img]:max-w-32 [&_.offer-signature-slot_img]:object-contain',
+  '[&_.offer-signature-name]:mb-0 [&_.offer-signature-name]:font-semibold [&_.offer-footer-address]:col-start-1 [&_.offer-footer-address]:row-start-2 [&_.offer-footer-address]:mt-0 [&_.offer-footer-address_p]:mb-0 [&_.offer-footer-address_p]:leading-[19px]',
+  '[&_.offer-footer-website]:col-start-2 [&_.offer-footer-website]:row-start-2 [&_.offer-footer-website]:self-center [&_.offer-footer-website]:whitespace-nowrap [&_.offer-footer-website]:text-[16px] [&_.offer-footer-website]:font-bold [&_.offer-footer-website]:leading-5 [&_.offer-footer-website]:!text-neutral-900 [&_.offer-footer-website]:!no-underline',
 );
 
 interface SendOfferDialogProps {
@@ -125,11 +130,16 @@ export function SendOfferDialog({
 }: SendOfferDialogProps) {
   const [templateSearch, setTemplateSearch] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [downloadConfirmOpen, setDownloadConfirmOpen] = useState(false);
   const [validationResult, setValidationResult] = useState<OfferCandidateValidationResponse | null>(null);
+  const [downloadValidationResult, setDownloadValidationResult] = useState<OfferCandidateValidationResponse | null>(null);
+  const [downloadFormat, setDownloadFormat] = useState<OfferDownloadFormat | null>(null);
   const templatesQuery = useOfferTemplates(orgSlug, memberId, templateSearch);
   const selectedTemplateQuery = useOfferTemplate(orgSlug, memberId, selectedTemplateId);
   const validateDispatch = useValidateOfferDispatch(orgSlug, memberId, jobSlug, stageSlug);
+  const validateDownload = useValidateOfferDownload(orgSlug, memberId, jobSlug, stageSlug);
   const createDispatch = useCreateOfferDispatch(orgSlug, memberId, jobSlug, stageSlug);
+  const downloadOffers = useDownloadOfferLetters(orgSlug, memberId, jobSlug, stageSlug);
 
   const templates = templatesQuery.data ?? workspace.templates;
   const recentTemplate = workspace.recentTemplate;
@@ -160,6 +170,7 @@ export function SendOfferDialog({
   }, [onSelectedCategoryChange, selectedCategoryId, selectedTemplate]);
 
   const canSend = selectedCandidates.length > 0 && Boolean(selectedTemplateId && selectedCategoryId);
+  const isBusy = validateDispatch.isPending || createDispatch.isPending || validateDownload.isPending || downloadFormat !== null;
 
   async function openValidationConfirm() {
     if (!selectedTemplateId || !selectedCategoryId) {
@@ -211,6 +222,59 @@ export function SendOfferDialog({
       }
     } catch (error) {
       toast.error(readActionError(error, 'Failed to create offer dispatch'));
+    }
+  }
+
+  async function openDownloadConfirm() {
+    if (!selectedTemplateId || !selectedCategoryId) {
+      toast.error('Select a template and category first');
+      return;
+    }
+    if (selectedCandidates.length === 0) {
+      toast.error('Select at least one candidate');
+      return;
+    }
+
+    try {
+      const validation = await validateDownload.mutateAsync({
+        templateId: selectedTemplateId,
+        categoryId: selectedCategoryId,
+        applicationIds: selectedCandidates.map((candidate) => candidate.applicationId),
+        expiresAt: expiryDate.toISOString(),
+      });
+      setDownloadValidationResult(validation);
+      if (validation.validCandidates.length === 0) {
+        toast.error('No selected candidates can be downloaded');
+        return;
+      }
+      setDownloadConfirmOpen(true);
+      if (validation.blockedCandidates.length > 0) {
+        toast.warning(`${validation.blockedCandidates.length} blocked candidate${validation.blockedCandidates.length === 1 ? '' : 's'} will be skipped`);
+      }
+    } catch (error) {
+      toast.error(readActionError(error, 'Failed to validate selected candidates for download'));
+    }
+  }
+
+  async function confirmDownload(format: OfferDownloadFormat) {
+    if (!selectedTemplateId || !selectedCategoryId) return;
+    setDownloadFormat(format);
+    try {
+      const result = await downloadOffers.mutateAsync({
+        templateId: selectedTemplateId,
+        categoryId: selectedCategoryId,
+        applicationIds: selectedCandidates.map((candidate) => candidate.applicationId),
+        expiresAt: expiryDate.toISOString(),
+        format,
+      });
+      downloadBase64File(result.base64, result.contentType, result.fileName);
+      setDownloadConfirmOpen(false);
+      onOpenChange(false);
+      toast.success(`${format === 'pdf' ? 'PDF' : 'Word'} offer letters downloaded`);
+    } catch (error) {
+      toast.error(readActionError(error, 'Failed to download offer letters'));
+    } finally {
+      setDownloadFormat(null);
     }
   }
 
@@ -320,14 +384,23 @@ export function SendOfferDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={validateDispatch.isPending || createDispatch.isPending}
+                disabled={isBusy}
               >
                 Cancel
               </Button>
               <Button
                 type="button"
+                variant="outline"
+                disabled={!canSend || isBusy}
+                onClick={() => void openDownloadConfirm()}
+              >
+                {validateDownload.isPending || downloadFormat !== null ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                Download
+              </Button>
+              <Button
+                type="button"
                 className="bg-primary hover:bg-primary-hover"
-                disabled={!canSend || validateDispatch.isPending}
+                disabled={!canSend || isBusy}
                 onClick={() => void openValidationConfirm()}
               >
                 {validateDispatch.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -346,6 +419,32 @@ export function SendOfferDialog({
         onConfirm={() => void confirmDispatch()}
       />
 
+      <OfferDownloadConfirmDialog
+        open={downloadConfirmOpen}
+        validation={downloadValidationResult}
+        downloadingFormat={downloadFormat}
+        onOpenChange={setDownloadConfirmOpen}
+        onConfirm={(format) => void confirmDownload(format)}
+      />
+
     </>
   );
+}
+
+function downloadBase64File(base64: string, contentType: string, fileName: string) {
+  const byteCharacters = window.atob(base64);
+  const byteArrays: ArrayBuffer[] = [];
+  for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+    const slice = byteCharacters.slice(offset, offset + 1024);
+    byteArrays.push(Uint8Array.from(slice, (char) => char.charCodeAt(0)).buffer as ArrayBuffer);
+  }
+  const blob = new Blob(byteArrays, { type: contentType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

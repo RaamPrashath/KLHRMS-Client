@@ -1,11 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronLeft, Loader2, RotateCcw, Search, Send, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -17,7 +23,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { useAcceptedOnboardingWorkspace, useSendOnboardingRequests } from '@/modules/onboarding/hooks/useOnboarding';
+import { SendDocumentCollectionDialog } from '@/modules/document-collection/components/SendDocumentCollectionDialog';
+import { useDocumentCollectionRequestDetail } from '@/modules/document-collection/hooks/useDocumentCollection';
+import { useAcceptedOnboardingWorkspace } from '@/modules/onboarding/hooks/useOnboarding';
 import type { AcceptedOnboardingCandidate, AcceptedOnboardingWorkspace } from '@/modules/onboarding/types/onboardingTypes';
 
 interface AcceptedOnboardingShellProps {
@@ -32,31 +40,18 @@ function candidateName(candidate: AcceptedOnboardingCandidate): string {
   return `${candidate.candidate.firstName ?? ''} ${candidate.candidate.lastName ?? ''}`.trim() || 'Unnamed candidate';
 }
 
-function statusClasses(status: string): string {
-  if (status === 'CREDENTIALS_SENT') return 'bg-success-bg text-success-text';
-  if (status === 'DOCUMENTS_SUBMITTED') return 'bg-info-bg text-info-text';
+function documentStatusClasses(status: string | null | undefined): string {
+  if (status === 'SUBMITTED') return 'bg-success-bg text-success-text';
   if (status === 'PENDING') return 'bg-warning-bg text-warning-text';
   if (status === 'FAILED') return 'bg-destructive-bg text-destructive-text';
   return 'bg-neutral-50 text-neutral-500';
 }
 
-function statusLabel(status: string): string {
-  if (status === 'UNSENT') return 'Unsent';
+function documentStatusLabel(status: string | null | undefined): string {
+  if (status === 'SUBMITTED') return 'Submitted';
   if (status === 'PENDING') return 'Pending';
-  if (status === 'DOCUMENTS_SUBMITTED') return 'Docs Submitted';
-  if (status === 'CREDENTIALS_SENT') return 'Credentials Sent';
   if (status === 'FAILED') return 'Failed';
-  return status;
-}
-
-function readActionError(error: unknown, fallback: string): string {
-  if (!(error instanceof Error)) return fallback;
-  try {
-    const parsed = JSON.parse(error.message) as { message?: unknown };
-    return typeof parsed.message === 'string' ? parsed.message : fallback;
-  } catch {
-    return error.message || fallback;
-  }
+  return 'Not sent';
 }
 
 function matchesSearch(candidate: AcceptedOnboardingCandidate, query: string): boolean {
@@ -79,10 +74,13 @@ export function AcceptedOnboardingShell({
   const router = useRouter();
   const workspaceQuery = useAcceptedOnboardingWorkspace(orgSlug, memberId, jobSlug, stageSlug, initialWorkspace);
   const workspace = workspaceQuery.data;
-  const sendRequests = useSendOnboardingRequests(orgSlug, memberId, jobSlug, stageSlug);
 
   const [search, setSearch] = useState('');
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<Set<string>>(new Set());
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [viewRequestId, setViewRequestId] = useState<string | null>(null);
+  const requestDetailQuery = useDocumentCollectionRequestDetail(orgSlug, memberId, viewRequestId);
 
   const filteredCandidates = useMemo(
     () =>
@@ -93,9 +91,14 @@ export function AcceptedOnboardingShell({
   const visibleSelectableIds = useMemo(
     () =>
       filteredCandidates
-        .filter((c) => c.onboardingStatus === 'UNSENT' || c.onboardingStatus === 'PENDING')
+        .filter((c) => c.candidate.email && c.latestDocumentCollection?.status !== 'PENDING')
         .map((c) => c.applicationId),
     [filteredCandidates],
+  );
+
+  const selectedCandidates = useMemo(
+    () => (workspace?.candidates ?? []).filter((candidate) => selectedApplicationIds.has(candidate.applicationId)),
+    [selectedApplicationIds, workspace?.candidates],
   );
 
   const allVisibleSelected = visibleSelectableIds.length > 0 && visibleSelectableIds.every((id) => selectedApplicationIds.has(id));
@@ -122,16 +125,9 @@ export function AcceptedOnboardingShell({
     });
   }
 
-  async function handleSend() {
-    const ids = Array.from(selectedApplicationIds);
-    if (ids.length === 0) return;
-    try {
-      await sendRequests.mutateAsync({ applicationIds: ids });
-      setSelectedApplicationIds(new Set());
-      toast.success(`File upload links sent to ${ids.length} candidate(s)`);
-    } catch (error) {
-      toast.error(readActionError(error, 'Failed to send onboarding requests'));
-    }
+  function handleOpenSendDialog() {
+    if (selectedApplicationIds.size === 0) return;
+    setSendDialogOpen(true);
   }
 
   function handleBackToPipeline() {
@@ -202,11 +198,11 @@ export function AcceptedOnboardingShell({
             type="button"
             size="sm"
             className="bg-primary hover:bg-primary-hover"
-            disabled={selectedApplicationIds.size === 0 || sendRequests.isPending}
-            onClick={handleSend}
+            disabled={selectedApplicationIds.size === 0}
+            onClick={handleOpenSendDialog}
           >
-            {sendRequests.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-            Send File Upload Link
+            <Send className="size-3.5" />
+            Send document request
           </Button>
         </div>
       </div>
@@ -256,15 +252,22 @@ export function AcceptedOnboardingShell({
                   <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
                     Email
                   </TableHead>
+                  <TableHead className="px-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
+                    Document collection
+                  </TableHead>
                   <TableHead className="pr-6 pl-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
-                    Status
+                    Submitted
+                  </TableHead>
+                  <TableHead className="pr-6 pl-3 py-3 h-auto whitespace-nowrap text-[12.5px] font-semibold text-neutral-500 text-left">
+                    Action
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="bg-surface">
                 {filteredCandidates.length > 0 ? (
                   filteredCandidates.map((candidate) => {
-                    const selectable = candidate.onboardingStatus === 'UNSENT' || candidate.onboardingStatus === 'PENDING';
+                    const latestDocumentCollection = candidate.latestDocumentCollection;
+                    const selectable = Boolean(candidate.candidate.email) && latestDocumentCollection?.status !== 'PENDING';
                     const checked = selectedApplicationIds.has(candidate.applicationId);
 
                     return (
@@ -290,17 +293,40 @@ export function AcceptedOnboardingShell({
                         <TableCell className="px-3 py-3 whitespace-nowrap text-left">
                           <span className="truncate text-xs text-neutral-500">{candidate.candidate.email || 'No email'}</span>
                         </TableCell>
+                        <TableCell className="px-3 py-3 whitespace-nowrap text-left">
+                          <div className="flex min-w-0 flex-col gap-1">
+                            <span className={cn('w-fit rounded-full px-2 py-0.5 text-xs font-medium', documentStatusClasses(latestDocumentCollection?.status))}>
+                              {documentStatusLabel(latestDocumentCollection?.status)}
+                            </span>
+                            {latestDocumentCollection?.templateName ? (
+                              <span className="truncate text-xs text-neutral-400">{latestDocumentCollection.templateName}</span>
+                            ) : null}
+                          </div>
+                        </TableCell>
                         <TableCell className="pr-6 pl-3 py-3 whitespace-nowrap text-left">
-                          <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', statusClasses(candidate.onboardingStatus))}>
-                            {statusLabel(candidate.onboardingStatus)}
-                          </span>
+                          {latestDocumentCollection?.submittedAt ? (
+                            <span className="font-mono text-xs text-neutral-500">
+                              {new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(latestDocumentCollection.submittedAt))}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-neutral-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="pr-6 pl-3 py-3 whitespace-nowrap text-left">
+                          {latestDocumentCollection?.status === 'SUBMITTED' ? (
+                            <Button type="button" variant="outline" size="sm" onClick={() => setViewRequestId(latestDocumentCollection.id)}>
+                              View
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-neutral-400">-</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
                   })
                 ) : (
                   <TableRow className="border-black/4 hover:bg-transparent">
-                    <TableCell colSpan={4} className="py-16 text-center text-sm text-neutral-400">
+                    <TableCell colSpan={6} className="py-16 text-center text-sm text-neutral-400">
                       No candidates in this stage.
                     </TableCell>
                   </TableRow>
@@ -310,6 +336,65 @@ export function AcceptedOnboardingShell({
           </div>
         </div>
       </div>
+
+      <SendDocumentCollectionDialog
+        open={sendDialogOpen}
+        orgSlug={orgSlug}
+        memberId={memberId}
+        jobSlug={jobSlug}
+        stageSlug={stageSlug}
+        selectedCandidates={selectedCandidates}
+        selectedTemplateId={selectedTemplateId}
+        onOpenChange={setSendDialogOpen}
+        onSelectedTemplateChange={setSelectedTemplateId}
+        onSent={() => {
+          setSelectedApplicationIds(new Set());
+          void workspaceQuery.refetch();
+        }}
+      />
+
+      <Dialog open={viewRequestId !== null} onOpenChange={(open) => { if (!open) setViewRequestId(null); }}>
+        <DialogContent className="max-h-[80dvh] overflow-y-auto rounded-2xl bg-surface sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Document collection submission</DialogTitle>
+            <DialogDescription className="sr-only">
+              Review submitted answers and uploaded files for this document collection request.
+            </DialogDescription>
+          </DialogHeader>
+          {requestDetailQuery.isLoading ? (
+            <div className="flex items-center gap-2 py-8 text-sm text-neutral-500">
+              <Loader2 className="size-4 animate-spin text-primary" />
+              Loading submission
+            </div>
+          ) : requestDetailQuery.data ? (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-neutral-100 bg-neutral-50/60 p-4">
+                <p className="text-sm font-semibold text-neutral-900">{requestDetailQuery.data.templateName}</p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Submitted {requestDetailQuery.data.submittedAt ? new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(requestDetailQuery.data.submittedAt)) : '-'}
+                </p>
+              </div>
+              {(requestDetailQuery.data.answersJson?.answers ?? []).map((answer) => (
+                <div key={answer.fieldId} className="rounded-xl border border-neutral-100 p-4">
+                  <p className="text-sm font-medium text-neutral-900">{answer.name}</p>
+                  {answer.url ? (
+                    <a href={answer.url} target="_blank" rel="noopener noreferrer" className="mt-1 block text-sm text-primary underline">
+                      {answer.fileName ?? 'Open file'}
+                    </a>
+                  ) : (
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-600">{answer.value || '-'}</p>
+                  )}
+                </div>
+              ))}
+              {(requestDetailQuery.data.answersJson?.answers ?? []).length === 0 ? (
+                <p className="py-6 text-center text-sm text-neutral-500">No answers were submitted.</p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="py-6 text-sm text-neutral-500">Submission could not be loaded.</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

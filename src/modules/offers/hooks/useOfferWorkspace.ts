@@ -4,10 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   createOfferDispatchAction,
+  downloadOfferLettersAction,
   fetchOfferWorkspaceAction,
   validateOfferDispatchAction,
+  validateOfferDownloadAction,
 } from '@/modules/offers/api/offerServerActions';
-import type { OfferDispatchPayload } from '@/modules/offers/schema/offerSchemas';
+import type { OfferDispatchPayload, OfferDownloadPayload } from '@/modules/offers/schema/offerSchemas';
 import type {
   OfferCandidateValidationResponse,
   OfferDispatchCreateResponse,
@@ -54,6 +56,17 @@ export function useValidateOfferDispatch(
 ) {
   return useMutation<OfferCandidateValidationResponse, Error, OfferDispatchPayload>({
     mutationFn: (data) => validateOfferDispatchAction({ orgSlug, memberId, jobSlug, stageSlug, data }),
+  });
+}
+
+export function useValidateOfferDownload(
+  orgSlug: string,
+  memberId: string,
+  jobSlug: string,
+  stageSlug: string,
+) {
+  return useMutation<OfferCandidateValidationResponse, Error, OfferDispatchPayload>({
+    mutationFn: (data) => validateOfferDownloadAction({ orgSlug, memberId, jobSlug, stageSlug, data }),
   });
 }
 
@@ -131,5 +144,16 @@ export function useCreateOfferDispatch(
       queryClient.invalidateQueries({ queryKey: ['ats-pipeline'] });
       queryClient.invalidateQueries({ queryKey: ['ats-pipeline-job-slug'] });
     },
+  });
+}
+
+export function useDownloadOfferLetters(
+  orgSlug: string,
+  memberId: string,
+  jobSlug: string,
+  stageSlug: string,
+) {
+  return useMutation<{ fileName: string; contentType: string; base64: string }, Error, OfferDownloadPayload>({
+    mutationFn: (data) => downloadOfferLettersAction({ orgSlug, memberId, jobSlug, stageSlug, data }),
   });
 }

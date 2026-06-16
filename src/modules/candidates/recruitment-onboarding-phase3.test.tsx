@@ -247,8 +247,8 @@ describe("Recruitment pipeline status updates", () => {
     });
 });
 
-describe("Onboarding email request workflow", () => {
-    it("sends onboarding emails only for selected candidates and tracks the payload", async () => {
+describe("Document collection request workflow", () => {
+    it("opens a template picker and sends document collection requests for selected candidates", async () => {
         const user = userEvent.setup();
 
         renderWithQueryClient(
@@ -263,12 +263,15 @@ describe("Onboarding email request workflow", () => {
 
         expect(screen.getByRole("heading", { name: /accepted/i })).toBeInTheDocument();
         await user.click(screen.getByRole("checkbox", { name: /select meera iyer/i }));
-        await user.click(screen.getByRole("button", { name: /send file upload link/i }));
+        await user.click(screen.getByRole("button", { name: /send document request/i }));
+        expect(await screen.findByRole("dialog", { name: /send document request/i })).toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: /^send$/i }));
 
         await waitFor(() => {
-            expect(recruitmentRequests.onboardingSends).toHaveLength(1);
+            expect(recruitmentRequests.documentCollectionSends).toHaveLength(1);
         });
-        expect(recruitmentRequests.onboardingSends[0]).toEqual({
+        expect(recruitmentRequests.documentCollectionSends[0]).toEqual({
+            templateId: "doc_template_standard",
             applicationIds: ["application_onboard_unsent"],
         });
     });

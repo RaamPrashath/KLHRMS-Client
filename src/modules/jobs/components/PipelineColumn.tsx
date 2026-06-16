@@ -23,7 +23,7 @@ function stageTone(stageType: PipelineStageRecord['stageType']) {
 }
 
 function stageTypeLabel(stageType: PipelineStageRecord['stageType']) {
-  if (stageType === 'HIRED') return 'Accepted';
+  if (stageType === 'HIRED') return 'Document collection';
   return stageType.replace('_', ' ');
 }
 

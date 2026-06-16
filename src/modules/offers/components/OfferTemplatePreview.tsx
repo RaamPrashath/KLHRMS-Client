@@ -43,10 +43,11 @@ const CONTENT_CLASS_NAME = cn(
   '[&_.offer-letter-logo]:max-h-14 [&_.offer-letter-logo]:max-w-44 [&_.offer-letter-logo]:object-contain',
   '[&_.offer-letter-header-meta]:absolute [&_.offer-letter-header-meta]:right-0 [&_.offer-letter-header-meta]:top-12 [&_.offer-letter-header-meta]:text-right [&_.offer-letter-header-meta]:text-[13px] [&_.offer-letter-header-meta]:leading-6',
   '[&_.offer-letter-header_h1]:absolute [&_.offer-letter-header_h1]:bottom-0 [&_.offer-letter-header_h1]:left-0 [&_.offer-letter-header_h1]:right-0 [&_.offer-letter-header_h1]:text-center [&_.offer-letter-header_h1]:whitespace-nowrap [&_.offer-letter-header_h1]:text-base [&_.offer-letter-header_h1]:font-semibold',
-  '[&_footer]:mt-6 [&_footer]:pt-0 [&_footer]:text-[13px] [&_footer]:text-neutral-900',
-  '[&_.offer-signature-slot]:mb-6 [&_.offer-signature-slot_img]:mb-2 [&_.offer-signature-slot_img]:max-h-20 [&_.offer-signature-slot_img]:max-w-32 [&_.offer-signature-slot_img]:object-contain',
-  '[&_.offer-signature-name]:font-semibold [&_.offer-footer-address]:mt-7 [&_.offer-footer-address_p]:mb-0 [&_.offer-footer-address_p]:leading-5',
-  '[&_.offer-footer-website]:float-right [&_.offer-footer-website]:-mt-[34px] [&_.offer-footer-website]:text-[17px] [&_.offer-footer-website]:font-bold [&_.offer-footer-website]:text-neutral-900 [&_.offer-footer-website]:no-underline',
+  '[&_footer]:mt-[22px] [&_footer]:break-inside-avoid [&_footer]:pt-0 [&_footer]:text-[13px] [&_footer]:leading-[19px] [&_footer]:text-neutral-900 [&_footer_p]:mb-0 [&_footer_p]:leading-[19px]',
+  '[&_.offer-letter-footer]:grid [&_.offer-letter-footer]:grid-cols-[minmax(0,1fr)_auto] [&_.offer-letter-footer]:items-end [&_.offer-letter-footer]:gap-x-14',
+  '[&_.offer-signature-slot]:col-start-1 [&_.offer-signature-slot]:row-start-1 [&_.offer-signature-slot]:mb-3 [&_.offer-signature-slot]:break-inside-avoid [&_.offer-signature-slot_p]:mb-0 [&_.offer-signature-slot_p]:leading-[18px] [&_.offer-signature-slot_img]:mb-0 [&_.offer-signature-slot_img]:max-h-20 [&_.offer-signature-slot_img]:max-w-32 [&_.offer-signature-slot_img]:object-contain',
+  '[&_.offer-signature-name]:mb-0 [&_.offer-signature-name]:font-semibold [&_.offer-footer-address]:col-start-1 [&_.offer-footer-address]:row-start-2 [&_.offer-footer-address]:mt-0 [&_.offer-footer-address_p]:mb-0 [&_.offer-footer-address_p]:leading-[19px]',
+  '[&_.offer-footer-website]:col-start-2 [&_.offer-footer-website]:row-start-2 [&_.offer-footer-website]:self-center [&_.offer-footer-website]:whitespace-nowrap [&_.offer-footer-website]:text-[16px] [&_.offer-footer-website]:font-bold [&_.offer-footer-website]:leading-5 [&_.offer-footer-website]:!text-neutral-900 [&_.offer-footer-website]:!no-underline',
 );
 
 function clamp(value: number, min: number, max: number): number {
