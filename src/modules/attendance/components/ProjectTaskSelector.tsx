@@ -28,6 +28,7 @@ interface ProjectTaskSelectorProps {
   projectError?: string;
   taskError?: string;
   disabled?: boolean;
+  onProjectOpen?: () => void;
 }
 
 export function ProjectTaskSelector({
@@ -39,6 +40,7 @@ export function ProjectTaskSelector({
   projectError,
   taskError,
   disabled = false,
+  onProjectOpen,
 }: Readonly<ProjectTaskSelectorProps>) {
   const [projectOpen, setProjectOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
@@ -84,7 +86,13 @@ export function ProjectTaskSelector({
         <label htmlFor="project-select" className="text-[13px] font-medium text-neutral-700">
           Project <span className="font-bold text-destructive">*</span>
         </label>
-        <Popover open={projectOpen} onOpenChange={setProjectOpen}>
+        <Popover
+          open={projectOpen}
+          onOpenChange={(open) => {
+            setProjectOpen(open);
+            if (open) onProjectOpen?.();
+          }}
+        >
           <PopoverTrigger asChild>
             <Button
               id="project-select"

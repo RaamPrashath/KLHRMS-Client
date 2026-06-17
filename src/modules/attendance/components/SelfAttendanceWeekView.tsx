@@ -9,6 +9,7 @@ import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
 import { formatTime } from '@/modules/attendance/utils/attendanceFormatters';
 import type {
+  AttendanceListResponse,
   AttendanceRecord,
   AttendanceStatus,
   AttendanceFiltersState,
@@ -98,6 +99,8 @@ interface SelfAttendanceWeekViewProps {
   orgSlug: string;
   memberId: string;
   filters: AttendanceFiltersState;
+  data?: AttendanceListResponse;
+  isLoading?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -106,23 +109,29 @@ export function SelfAttendanceWeekView({
   orgSlug,
   memberId,
   filters,
+  data: dataOverride,
+  isLoading: isLoadingOverride,
 }: Readonly<SelfAttendanceWeekViewProps>) {
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const todayStr = format(today, 'yyyy-MM-dd');
   const range = useMemo(() => resolveDateRange(filters.timePreset, today), [filters.timePreset, today]);
   const fromStr = toYmdLocal(range.from);
   const toStr = toYmdLocal(range.to);
 
   // ── Data fetching ──────────────────────────────────────────────────
-  const { data, isLoading } = useMyAttendanceQuery(orgSlug, memberId, {
+  const { data: fetchedData, isLoading: fetchedLoading } = useMyAttendanceQuery(orgSlug, memberId, {
     dateFrom: fromStr,
     dateTo: toStr,
     page: 1,
     pageSize: 200,
+  }, {
+    enabled: dataOverride == null,
   });
+  const data = dataOverride ?? fetchedData;
+  const isLoading = isLoadingOverride ?? fetchedLoading;
 
   const currentYear = today.getFullYear();
-  const { data: holidays = [] } = useHolidays(orgSlug, memberId, { year: currentYear });
+  const { data: holidays = [] } = useHolidays(orgSlug, memberId, { year: currentYear }, { enabled: false });
 
   const { data: leaveData } = useLeaveRequests(orgSlug, memberId, {
     status: 'APPROVED',
@@ -131,6 +140,8 @@ export function SelfAttendanceWeekView({
     toDate: toStr,
     page: 1,
     pageSize: 50,
+  }, {
+    enabled: false,
   });
 
   // ── Build lookup maps ──────────────────────────────────────────────

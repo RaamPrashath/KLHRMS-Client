@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useQueries } from '@tanstack/react-query';
+import Link from 'next/link';
 import { List, CalendarDays, CalendarRange } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,9 +12,6 @@ import { EmployeePagination } from '@/modules/employees/components/EmployeePagin
 import { AttendancePivotView, type PivotMode } from '@/modules/attendance/components/AttendancePivotView';
 import { SelfAttendanceWeekView } from '@/modules/attendance/components/SelfAttendanceWeekView';
 
-import { getTodayIST } from '@/modules/attendance/utils/attendanceFormatters';
-import { fetchHolidaysAction } from '@/modules/leave/api/leaveServerActions';
-import { useEmployeesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
 import { dateOnlyToLocalDate } from '@/modules/leave/utils/dateOnly';
@@ -27,7 +24,8 @@ import type { AttendanceExportRow } from '@/modules/attendance/api/attendanceSer
 
 // ─── View mode ────────────────────────────────────────────────────────────────
 
-type ViewMode = 'list' | 'weekly' | 'monthly';
+export type AttendanceRouteMode = 'list' | 'weekly' | 'monthly';
+type ViewMode = AttendanceRouteMode;
 const DEFAULT_PAGE_SIZE = 10;
 
 // ─── Date helpers for pivot period navigation ─────────────────────────────────
@@ -81,12 +79,16 @@ function getPivotRange(mode: PivotMode, anchor: Date): [string, string] {
 interface AttendanceTableProps {
   orgSlug: string;
   memberId: string;
+  mode: AttendanceRouteMode;
   data: AttendanceListResponse | undefined;
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
   filters: AttendanceFiltersState;
   onFiltersChange: (f: AttendanceFiltersState) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  onPageOutOfRange: (totalPages: number) => void;
   canEdit: boolean;
   canDelete: boolean;
   showEmployeeColumn: boolean;
@@ -105,51 +107,16 @@ const VIEW_MODES: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
   { mode: 'monthly', icon: <CalendarRange className="size-3.5" />, label: 'Month' },
 ];
 
-interface AttendanceListRow {
-  key: string;
-  date: string;
-  employeeId: string;
-  employeeName: string;
-  record: AttendanceRecord | null;
-}
-
-function parseYmd(date: string): Date {
-  const [year, month, day] = date.split('-').map(Number);
-  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1);
-}
-
-function toYear(date: string): number {
-  return Number(date.slice(0, 4));
-}
-
-function enumerateDatesDesc(from: string, to: string): string[] {
-  const dates: string[] = [];
-  const cursor = parseYmd(to);
-  const end = parseYmd(from);
-  while (cursor >= end) {
-    dates.push(toYMD(cursor));
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return dates;
-}
-
-function getYearsInRange(from: string, to: string): number[] {
-  const start = toYear(from);
-  const end = toYear(to);
-  if (!Number.isFinite(start) || !Number.isFinite(end)) return [];
-  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
-}
-
-const LIST_HOLIDAY_FETCH_SIZE = 200;
-
 // ─── Tab slider ───────────────────────────────────────────────────────────────
 
 function TabSlider({
   activeMode,
-  onChange,
+  orgSlug,
+  pageSize,
 }: {
   readonly activeMode: ViewMode;
-  readonly onChange: (mode: ViewMode) => void;
+  readonly orgSlug: string;
+  readonly pageSize: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -176,13 +143,12 @@ function TabSlider({
         style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
       />
       {VIEW_MODES.map(({ mode, icon, label }, idx) => (
-        <button
+        <Link
           key={mode}
+          href={`/${orgSlug}/attendance/${mode === 'weekly' ? 'week' : mode === 'monthly' ? 'month' : 'list'}?page=0&pageSize=${pageSize}`}
           data-tab-index={idx}
-          type="button"
-          onClick={() => onChange(mode)}
           aria-label={`${label} view`}
-          aria-pressed={activeMode === mode}
+          aria-current={activeMode === mode ? 'page' : undefined}
           className={cn(
             'inline-flex items-center gap-1.5 h-8 px-4 text-[13px] font-medium rounded-lg relative z-10 transition-colors duration-200',
             activeMode === mode
@@ -192,7 +158,7 @@ function TabSlider({
         >
           {icon}
           {label}
-        </button>
+        </Link>
       ))}
     </div>
   );
@@ -204,16 +170,20 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
   const {
     orgSlug,
     memberId,
+    mode,
     data,
     isLoading,
     isError,
     onRetry,
     filters,
     onFiltersChange,
+    onPageChange,
+    onPageSizeChange,
+    onPageOutOfRange,
     showEmployeeColumn,
   } = props;
 
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const viewMode = mode;
   const [pivotAnchor, setPivotAnchor] = useState<Date>(() => new Date());
   const [force8, setForce8] = useState(true);
 
@@ -230,30 +200,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, pivotAnchor]);
-
-  function handleViewModeChange(mode: ViewMode) {
-    setViewMode(mode);
-    if (mode === 'list') {
-      onFiltersChange({
-        ...filters,
-        timePreset: 'all_time',
-        dateFrom: undefined,
-        dateTo: undefined,
-        page: 1,
-        pageSize: DEFAULT_PAGE_SIZE,
-      });
-      return;
-    }
-    const [from, to] = getPivotRange(mode as PivotMode, pivotAnchor);
-    onFiltersChange({
-      ...filters,
-      timePreset: 'custom',
-      dateFrom: from,
-      dateTo: to,
-      page: 1,
-      pageSize: filters.pageSize || DEFAULT_PAGE_SIZE,
-    });
-  }
 
   function handlePrev() {
     setPivotAnchor((prev) =>
@@ -273,7 +219,6 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE;
-  const today = getTodayIST();
   const currentPage = filters.page ?? 1;
 
   const exportRows: AttendanceExportRow[] = items.map((r) => ({
@@ -332,120 +277,34 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
   );
 
 
-  // Fetch all employees for org-scope pivot view
-  const { data: employeeData } = useEmployeesQuery(orgSlug, memberId, {
-    enabled: showEmployeeColumn,
-  });
-  const allEmployees = showEmployeeColumn
-    ? (employeeData?.items ?? []).map((e) => ({
-        member_id: e.member_id,
-        name: e.name,
-      }))
-    : undefined;
-
-  const dateEmployeeMap = useMemo(() => {
-    const map = new Map<string, Map<string, AttendanceRecord>>();
-    for (const r of items) {
-      if (!map.has(r.date)) map.set(r.date, new Map());
-      map.get(r.date)!.set(r.employeeId, r);
-    }
-    return map;
-  }, [items]);
-
-  const sortedDates = useMemo(() => {
-    const recordDates = Array.from(dateEmployeeMap.keys()).filter((d) => d <= today);
-    const oldestRecordDate = recordDates.sort((a, b) => a.localeCompare(b))[0];
-    const rangeEnd = filters.dateTo && filters.dateTo <= today ? filters.dateTo : today;
-    const rangeStart = filters.dateFrom ?? oldestRecordDate ?? rangeEnd;
-    if (rangeStart > rangeEnd) return [];
-    return enumerateDatesDesc(rangeStart, rangeEnd);
-  }, [dateEmployeeMap, filters.dateFrom, filters.dateTo, today]);
-
-  const sortedEmployeeList = useMemo(() => {
-    if (!allEmployees || allEmployees.length === 0) return [];
-    let list = [...allEmployees];
-    if (filters.employeeNameSearch) {
-      const q = filters.employeeNameSearch.toLowerCase();
-      list = list.filter((e) => e.name.toLowerCase().includes(q));
-    }
-    return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [allEmployees, filters.employeeNameSearch]);
-
-  const listHolidayYears = useMemo(() => {
-    const firstDate = sortedDates.at(-1);
-    const lastDate = sortedDates[0];
-    if (!firstDate || !lastDate) return [];
-    return getYearsInRange(firstDate, lastDate);
-  }, [sortedDates]);
-
-  const listHolidayQueries = useQueries({
-    queries: listHolidayYears.map((year) => ({
-      queryKey: ['leave-holidays', orgSlug, year, 'attendance-list'],
-      queryFn: async () => {
-        const res = await fetchHolidaysAction({
-          orgSlug,
-          memberId,
-          year,
-          pageSize: LIST_HOLIDAY_FETCH_SIZE,
-        });
-        return res.items;
-      },
-      enabled: !!orgSlug && !!memberId && viewMode === 'list' && showEmployeeColumn,
-      staleTime: 60_000,
-    })),
-  });
-
-  const listHolidayNames = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const query of listHolidayQueries) {
-      for (const holiday of query.data ?? []) {
-        if (holiday.isHoliday) {
-          map.set(holiday.holidayDate, holiday.name);
-        }
-      }
-    }
-    return map;
-  }, [listHolidayQueries]);
-
-  const listRows = useMemo<AttendanceListRow[]>(() => {
-    if (!allEmployees || allEmployees.length === 0) return [];
-
-    return sortedDates.flatMap((date) =>
-      sortedEmployeeList
-        .filter((emp) => {
-          if (!filters.status) return true;
-          const record = dateEmployeeMap.get(date)?.get(emp.member_id);
-          return record && record.status === filters.status;
-        })
-        .map((emp) => {
-          const record = dateEmployeeMap.get(date)?.get(emp.member_id) ?? null;
-          return {
-            key: `${date}:${emp.member_id}`,
-            date,
-            employeeId: emp.member_id,
-            employeeName: emp.name,
-            record,
-          };
-        }),
-    );
-  }, [allEmployees, dateEmployeeMap, filters.status, sortedDates, sortedEmployeeList]);
-
-  const totalListRows = listRows.length;
+  const allEmployees = undefined;
+  const totalListRows = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalListRows / pageSize));
-  const pagedListRows = useMemo(() => {
-    const safePage = Math.min(Math.max(currentPage, 1), totalPages);
-    const start = (safePage - 1) * pageSize;
-    return listRows.slice(start, start + pageSize);
-  }, [currentPage, listRows, pageSize, totalPages]);
+  const pagedListRows = items;
 
   useEffect(() => {
-    if (viewMode !== 'list' || currentPage <= totalPages) return;
-    onFiltersChange({ ...filters, page: totalPages });
-  }, [currentPage, filters, onFiltersChange, totalPages, viewMode]);
+    console.info('[attendance-pagination] table-data', {
+      currentRouteMode: viewMode,
+      queryPage: currentPage,
+      queryPageSize: pageSize,
+      totalPages,
+      totalRows: totalListRows,
+    });
+  }, [currentPage, pageSize, totalListRows, totalPages, viewMode]);
 
-  // Fetch holidays and leaves for pivot views
+  useEffect(() => {
+    if (isLoading || data == null || currentPage <= totalPages) return;
+    onPageOutOfRange(totalPages);
+  }, [currentPage, data, isLoading, onPageOutOfRange, totalPages]);
+
+  // Fetch holidays and leaves only for the month route, where off-day labels are visible.
   const pivotYear = pivotAnchor.getFullYear();
-  const { data: pivotHolidays = [] } = useHolidays(orgSlug, memberId, { year: pivotYear });
+  const { data: pivotHolidays = [] } = useHolidays(
+    orgSlug,
+    memberId,
+    { year: pivotYear },
+    { enabled: viewMode === 'monthly', staleTime: 60_000 },
+  );
 
   const pivotFrom = pivotDateColumns[0] ?? '';
   const pivotTo = pivotDateColumns[pivotDateColumns.length - 1] ?? '';
@@ -455,6 +314,9 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     toDate: pivotTo,
     page: 1,
     pageSize: 200,
+  }, {
+    enabled: viewMode === 'monthly',
+    staleTime: 60_000,
   });
 
   const pivotHolidayNames = useMemo(
@@ -489,7 +351,8 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
               <TabSlider
                 activeMode={viewMode}
-                onChange={handleViewModeChange}
+                orgSlug={orgSlug}
+                pageSize={pageSize}
               />
             </div>
 
@@ -530,7 +393,8 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
 
             <TabSlider
               activeMode={viewMode}
-              onChange={handleViewModeChange}
+              orgSlug={orgSlug}
+              pageSize={pageSize}
             />
           </div>
 
@@ -632,7 +496,15 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
             if (viewMode === 'list') {
               // Self-scope: show week-based view instead of paginated list
               if (!showEmployeeColumn) {
-                return <SelfAttendanceWeekView orgSlug={orgSlug} memberId={memberId} filters={filters} />;
+                return (
+                  <SelfAttendanceWeekView
+                    orgSlug={orgSlug}
+                    memberId={memberId}
+                    filters={filters}
+                    data={data}
+                    isLoading={isLoading}
+                  />
+                );
               }
 
               return (
@@ -682,28 +554,21 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                           </td>
                         </tr>
                       ))
-                    ) : items.length === 0 && (!allEmployees || allEmployees.length === 0) ? (
+                    ) : items.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-16 text-center text-sm text-neutral-400">
                           No attendance records found.
                         </td>
                       </tr>
-                    ) : allEmployees && allEmployees.length > 0 ? (
-                      pagedListRows.map((row) => (
+                    ) : (
+                      pagedListRows.map((record) => (
                         <AttendanceRow
-                          key={row.key}
-                          record={row.record}
-                          employeeName={row.employeeName}
-                          date={row.date}
-                          holidayName={listHolidayNames.get(row.date)}
+                          key={record.id}
+                          record={record}
+                          employeeName={record.employeeName ?? 'Me'}
+                          date={record.date}
                         />
                       ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="py-16 text-center text-sm text-neutral-400">
-                          Loading employees…
-                        </td>
-                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -713,8 +578,8 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                       totalPages={totalPages}
                       total={totalListRows}
                       pageSize={pageSize}
-                      onPageChange={(p) => onFiltersChange({ ...filters, page: p })}
-                      onPageSizeChange={(s) => onFiltersChange({ ...filters, page: 1, pageSize: s })}
+                      onPageChange={onPageChange}
+                      onPageSizeChange={onPageSizeChange}
                     />
                   </div>
                 </div>
@@ -737,10 +602,8 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
                 leaveNames={pivotLeaveNames}
                 page={currentPage}
                 pageSize={pageSize}
-                onPageChange={(page) => onFiltersChange({ ...filters, page })}
-                onPageSizeChange={(nextPageSize) =>
-                  onFiltersChange({ ...filters, page: 1, pageSize: nextPageSize })
-                }
+                onPageChange={onPageChange}
+                onPageSizeChange={onPageSizeChange}
               />
             );
           })()}

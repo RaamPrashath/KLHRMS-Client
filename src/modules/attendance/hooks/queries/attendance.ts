@@ -6,12 +6,18 @@ import {
   fetchAttendance,
   fetchMyAttendance,
 } from '@/hooks/functions/attendance';
-import { fetchAttendanceClockContextAction, fetchMemberPermissionsAction, fetchMemberProfileAction } from '@/modules/attendance/api/attendanceServerActions';
+import {
+  fetchAttendanceClockContextAction,
+  fetchAttendanceClockWidgetAction,
+  fetchMemberPermissionsAction,
+  fetchMemberProfileAction,
+} from '@/modules/attendance/api/attendanceServerActions';
 import { fetchBulkAttendanceRangeAction } from '@/modules/attendance/api/bulkAttendanceServerActions';
 import { resolveAttendancePermissions } from '@/modules/attendance/utils/attendancePermissions';
 import { getTodayIST } from '@/modules/attendance/utils/attendanceFormatters';
 import type {
   AttendanceClockContext,
+  AttendanceClockWidgetData,
   AttendanceFiltersState,
   AttendanceListResponse,
   AttendancePermissions,
@@ -21,10 +27,31 @@ import type {
 import type { GetBulkAttendanceRangeResponse } from '@/modules/attendance/types/bulkAttendanceTypes';
 
 export const attendanceQueryKeys = {
-  attendance: (orgSlug: string, memberId: string, filters?: Partial<AttendanceFiltersState>) =>
-    ['attendance', orgSlug, memberId, filters] as const,
-  attendanceMe: (orgSlug: string, memberId: string, filters?: Partial<AttendanceFiltersState>) =>
-    ['attendance-me', orgSlug, memberId, filters] as const,
+  attendance: (
+    mode: string,
+    scope: 'organization' | 'self',
+    pageIndex: number | undefined,
+    orgSlug: string,
+    memberId: string,
+    filters?: Partial<AttendanceFiltersState>,
+  ) =>
+    [
+      'attendance',
+      mode,
+      pageIndex,
+      filters?.pageSize,
+      scope,
+      orgSlug,
+      memberId,
+      {
+        targetMemberId: filters?.targetMemberId,
+        employeeNameSearch: filters?.employeeNameSearch,
+        dateFrom: filters?.dateFrom,
+        dateTo: filters?.dateTo,
+        status: filters?.status,
+        timePreset: filters?.timePreset,
+      },
+    ] as const,
   attendanceToday: (orgSlug: string, memberId: string) =>
     ['attendance-today', orgSlug, memberId] as const,
   memberPermissions: (orgSlug: string, memberId: string) =>
@@ -32,6 +59,8 @@ export const attendanceQueryKeys = {
   memberProfile: (memberId: string) => ['member-profile', memberId] as const,
   attendanceClockContext: (orgSlug: string, memberId: string, date: string) =>
     ['attendance-clock-context', orgSlug, memberId, date] as const,
+  attendanceClockWidget: (orgSlug: string, memberId: string, date: string) =>
+    ['attendance-clock-widget', orgSlug, memberId, date] as const,
   bulkAttendance: (orgSlug: string, from: string, to: string) =>
     ['bulk-attendance', orgSlug, from, to] as const,
 };
@@ -40,7 +69,7 @@ export function useAttendanceQuery(
   orgSlug: string,
   memberId: string,
   filters?: Partial<AttendanceFiltersState>,
-  options?: { enabled?: boolean; staleTime?: number },
+  options?: { enabled?: boolean; staleTime?: number; mode?: string; pageIndex?: number },
 ): {
   data: AttendanceListResponse | undefined;
   isLoading: boolean;
@@ -50,9 +79,22 @@ export function useAttendanceQuery(
   refetch: (options?: RefetchOptions) => void;
 } {
   const query = useQuery<AttendanceListResponse, Error>({
-    queryKey: attendanceQueryKeys.attendance(orgSlug, memberId, filters),
-    queryFn: () =>
-      fetchAttendance(
+    queryKey: attendanceQueryKeys.attendance(
+      options?.mode ?? 'list',
+      'organization',
+      options?.pageIndex,
+      orgSlug,
+      memberId,
+      filters,
+    ),
+    queryFn: () => {
+      console.info('[attendance-pagination] api-request', {
+        mode: options?.mode ?? 'list',
+        scope: 'organization',
+        apiRequestPage: filters?.page,
+        apiRequestPageSize: filters?.pageSize,
+      });
+      return fetchAttendance(
         { orgSlug, memberId },
         {
           target_member_id: filters?.targetMemberId,
@@ -63,7 +105,8 @@ export function useAttendanceQuery(
           page: filters?.page,
           page_size: filters?.pageSize,
         },
-      ),
+      );
+    },
     enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
     staleTime: options?.staleTime,
   });
@@ -82,7 +125,7 @@ export function useMyAttendanceQuery(
   orgSlug: string,
   memberId: string,
   filters?: Partial<AttendanceFiltersState>,
-  options?: { enabled?: boolean; staleTime?: number },
+  options?: { enabled?: boolean; staleTime?: number; mode?: string; pageIndex?: number },
 ): {
   data: AttendanceListResponse | undefined;
   isLoading: boolean;
@@ -92,9 +135,22 @@ export function useMyAttendanceQuery(
   refetch: (options?: RefetchOptions) => void;
 } {
   const query = useQuery<AttendanceListResponse, Error>({
-    queryKey: attendanceQueryKeys.attendanceMe(orgSlug, memberId, filters),
-    queryFn: () =>
-      fetchMyAttendance(
+    queryKey: attendanceQueryKeys.attendance(
+      options?.mode ?? 'list',
+      'self',
+      options?.pageIndex,
+      orgSlug,
+      memberId,
+      filters,
+    ),
+    queryFn: () => {
+      console.info('[attendance-pagination] api-request', {
+        mode: options?.mode ?? 'list',
+        scope: 'self',
+        apiRequestPage: filters?.page,
+        apiRequestPageSize: filters?.pageSize,
+      });
+      return fetchMyAttendance(
         { orgSlug, memberId },
         {
           date_from: filters?.dateFrom,
@@ -103,7 +159,8 @@ export function useMyAttendanceQuery(
           page: filters?.page,
           page_size: filters?.pageSize,
         },
-      ),
+      );
+    },
     enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
     staleTime: options?.staleTime,
   });
@@ -166,6 +223,24 @@ export function useAttendanceClockContextQuery(
         date: todayIso,
       }),
     enabled: !!orgSlug && !!memberId,
+  });
+}
+
+export function useAttendanceClockWidgetQuery(
+  orgSlug: string,
+  memberId: string,
+  todayIso: string,
+) {
+  return useQuery<AttendanceClockWidgetData, Error>({
+    queryKey: attendanceQueryKeys.attendanceClockWidget(orgSlug, memberId, todayIso),
+    queryFn: () =>
+      fetchAttendanceClockWidgetAction({
+        orgSlug,
+        memberId,
+        date: todayIso,
+      }),
+    enabled: !!orgSlug && !!memberId,
+    staleTime: 30_000,
   });
 }
 

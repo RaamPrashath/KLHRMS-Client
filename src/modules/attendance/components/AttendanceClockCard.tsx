@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -27,10 +26,7 @@ import { ClockOutConfirmDialog } from "@/modules/attendance/components/ClockOutC
 import { ClockOutButton } from "@/modules/attendance/components/ClockOutButton";
 import { ProjectTaskSelector } from "@/modules/attendance/components/ProjectTaskSelector";
 import {
-  findTodayRecord,
-  useAttendanceClockContextQuery,
-  useAttendanceTodayQuery,
-  useMemberProfileQuery,
+  useAttendanceClockWidgetQuery,
 } from "@/modules/attendance/hooks/queries/attendance";
 import {
   useClockInMutation,
@@ -345,7 +341,6 @@ export function AttendanceClockCard({
   orgSlug,
   memberId,
   variant = "attendance",
-  roleName = null,
 }: Readonly<AttendanceClockCardProps>) {
   const todayIso = getTodayIST();
   const isDashboard = variant === "dashboard";
@@ -359,6 +354,7 @@ export function AttendanceClockCard({
   const [selectedLocation, setSelectedLocation] = useState<ClockChoice>("OFFICE");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [shouldFetchProjects, setShouldFetchProjects] = useState(false);
   const [clockInDescription, setClockInDescription] = useState("");
   const [clockOutWorkLogText, setClockOutWorkLogText] = useState("");
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -376,21 +372,23 @@ export function AttendanceClockCard({
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const {
-    data: todayData,
+    data: clockWidgetData,
     isLoading,
-    refetch: refetchTodayAttendance,
-  } = useAttendanceTodayQuery(orgSlug, memberId, todayIso);
-  const { data: profile } = useMemberProfileQuery(memberId);
-  const { data: clockContext, isLoading: isClockContextLoading } =
-    useAttendanceClockContextQuery(orgSlug, memberId, todayIso);
-  const { data: projects = [] } = useProjectsForAttendance(orgSlug, memberId);
+    refetch: refetchClockWidget,
+  } = useAttendanceClockWidgetQuery(orgSlug, memberId, todayIso);
+  const { data: projects = [] } = useProjectsForAttendance(orgSlug, memberId, {
+    enabled: shouldFetchProjects,
+  });
 
   const clockInMutation = useClockInMutation(orgSlug, memberId);
   const clockOutMutation = useClockOutMutation(orgSlug, memberId);
 
+  const profile = clockWidgetData?.profile;
+  const clockContext = clockWidgetData?.clockContext;
+  const isClockContextLoading = isLoading;
   const firstName = profile?.name?.split(" ")[0] ?? "there";
   const greeting = useMemo(() => getGreeting(firstName), [firstName]);
-  const todayRecord = todayData ? findTodayRecord(todayData.items) : undefined;
+  const todayRecord = clockWidgetData?.todayRecord ?? undefined;
   const planChoice = mapPlanLocationToChoice(clockContext?.plannedLocation ?? null);
   const detectedLocation = getDetectedLocation(geoState, clockContext);
   const planBlocksClockIn =
@@ -567,7 +565,7 @@ export function AttendanceClockCard({
       .then((record) => {
         if (!record?.clockIn) {
           setInlineError("Clock-in was saved, but the active session could not be loaded. Refreshing attendance...");
-          void refetchTodayAttendance();
+          void refetchClockWidget();
           return;
         }
         setWidgetState("CLOCKED_IN");
@@ -575,7 +573,7 @@ export function AttendanceClockCard({
         setCompletedRecord(null);
         setElapsedDisplay("00:00:00");
         setIsDialogOpen(false);
-        void refetchTodayAttendance();
+        void refetchClockWidget();
       })
       .catch((error: unknown) => {
         setInlineError(parseErrorMessage(error, "Clock-in failed."));
@@ -606,7 +604,7 @@ export function AttendanceClockCard({
         setCompletedRecord(record);
         setClockOutWorkLogText("");
         setIsClockOutDialogOpen(false);
-        void refetchTodayAttendance();
+        void refetchClockWidget();
       })
       .catch((error: unknown) => {
         const message = parseErrorMessage(error, "Clock-out failed.");
@@ -615,7 +613,7 @@ export function AttendanceClockCard({
           setWidgetState("NOT_CLOCKED_IN");
           setActiveClockIn(null);
           setCompletedRecord(null);
-          void refetchTodayAttendance();
+          void refetchClockWidget();
         }
       });
   }
@@ -1014,6 +1012,7 @@ export function AttendanceClockCard({
 
             <ProjectTaskSelector
               projects={projects}
+              onProjectOpen={() => setShouldFetchProjects(true)}
               selectedProjectId={selectedProjectId}
               selectedTaskId={selectedTaskId}
               onProjectChange={(value) => {

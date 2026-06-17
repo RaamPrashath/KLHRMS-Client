@@ -5,7 +5,6 @@
 
 import { getHrmsApiUrl } from "@/lib/deployment-env";
 import type {
-  AttendanceClockContext,
   AttendanceListResponse,
 } from "@/modules/attendance/types/attendanceTypes";
 
@@ -65,6 +64,11 @@ export async function fetchMyAttendance(
     page: filters?.page,
     page_size: filters?.page_size,
   });
+  console.info("[attendance-pagination] http-request", {
+    endpoint: "/attendance/me",
+    apiRequestPage: filters?.page,
+    apiRequestPageSize: filters?.page_size,
+  });
   const response = await fetch(`${baseUrl}/attendance/me${query}`, {
     method: "GET",
     headers: buildHeaders(auth),
@@ -93,6 +97,11 @@ export async function fetchAttendance(
     status: filters?.status,
     page: filters?.page,
     page_size: filters?.page_size,
+  });
+  console.info("[attendance-pagination] http-request", {
+    endpoint: "/attendance",
+    apiRequestPage: filters?.page,
+    apiRequestPageSize: filters?.page_size,
   });
   const response = await fetch(`${baseUrl}/attendance${query}`, {
     method: "GET",
