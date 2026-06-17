@@ -27,7 +27,7 @@ export default async function PlanPage({
   }
 
   const weeklyPlanScope = getScope(permissions, "weeklyPlan", "view");
-  const canViewTeam = ["org", "organization"].includes(weeklyPlanScope);
+  const canViewTeam = ["org", "organization", "department"].includes(weeklyPlanScope);
 
   return (
     <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">

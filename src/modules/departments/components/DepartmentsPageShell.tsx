@@ -262,7 +262,7 @@ export function DepartmentsPageShell({
 
       {/* ── Detail drawer ────────────────────────────────────────────────────── */}
       <DepartmentViewDrawer
-        key={selectedDepartmentId ?? 'department-drawer'}
+        key="department-drawer"
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         department={selectedDepartment}

@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  archiveTicketAction,
   bulkCreateAssetsAction,
   createAssetAction,
   createAssetCategoryAction,
@@ -14,6 +15,7 @@ import {
   issueAssetsAction,
   requestAssetReturnAction,
   returnAssetAction,
+  unarchiveTicketAction,
   updateAssetAction,
   updateAssetCategoryAction,
   updateAssetCategoryFieldAction,
@@ -37,6 +39,7 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     await queryClient.invalidateQueries({ queryKey: ['my-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['helpdesk-admin-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['maintenance-tickets', orgSlug] });
+    await queryClient.invalidateQueries({ queryKey: ['archived-tickets', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-dashboard', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-brand-model-analytics', orgSlug] });
     await queryClient.invalidateQueries({ queryKey: ['assets-os-distribution', orgSlug] });
@@ -181,6 +184,14 @@ export function useAssetMutations(orgSlug: string, memberId: string) {
     }),
     deleteCategoryField: useMutation({
       mutationFn: (fieldId: string) => deleteAssetCategoryFieldAction({ orgSlug, memberId, fieldId }),
+      onSuccess: async () => invalidateAll(),
+    }),
+    archiveTicket: useMutation({
+      mutationFn: (ticketId: string) => archiveTicketAction({ orgSlug, memberId, ticketId }),
+      onSuccess: async () => invalidateAll(),
+    }),
+    unarchiveTicket: useMutation({
+      mutationFn: (ticketId: string) => unarchiveTicketAction({ orgSlug, memberId, ticketId }),
       onSuccess: async () => invalidateAll(),
     }),
   };

@@ -246,6 +246,7 @@ export function ProjectPageShell({
         onRowClick={handleRowClick}
         orgSlug={orgSlug}
         memberId={memberId}
+        canManage={canManageProjects}
       />
 
       {/* ── Create / Edit dialog ───────────────────────────────────────────── */}
@@ -359,7 +360,7 @@ export function ProjectPageShell({
 
       {/* ── Right-side view drawer ────────────────────────────────────────── */}
       <ProjectViewDrawer
-        key={selectedProjectId ?? 'project-drawer'}
+        key="project-drawer"
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         project={selectedProject}

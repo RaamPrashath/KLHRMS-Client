@@ -24,6 +24,7 @@ export default async function OrganizationLayout({
     }
 
     const permissions = (member.role?.permissions as RolePermissions) ?? null;
+
     const canSwitchOrganizations =
         getScope(permissions, "permission", "edit") === "organization" ||
         getScope(permissions, "employees", "edit") === "organization";

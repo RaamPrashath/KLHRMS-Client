@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import Link from "next/link";
-import { CalendarDays } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import {
     resolveAttendancePermissions,
@@ -101,7 +101,7 @@ export function AttendancePageShell({
         useMemberPermissionsQuery(orgSlug, memberId);
 
     const permissions = resolveAttendancePermissions(rawPermissions ?? {});
-    const isOrgScope = permissions.view === "organization";
+    const isOrgScope = permissions.view === "organization" || permissions.view === "department";
     const isOperative = isOperativeScope(permissions.view) && !isOrgScope;
 
     // ── Filter state ───────────────────────────────────────────────────────────
@@ -252,9 +252,9 @@ export function AttendancePageShell({
                         {isOperativeScope(permissions.create) && (
                             <Link
                                 href={`/${orgSlug}/timesheet`}
-                                className="inline-flex items-center gap-2 h-9 px-4 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary-ghost transition-colors duration-100 shrink-0"
+                                className="btn-clockout-border h-10 rounded-lg px-5 text-[13px] font-medium inline-flex items-center"
                             >
-                                <CalendarDays className="size-4" strokeWidth={1.5} />
+                                <Plus className="mr-2 h-3.5 w-3.5" />
                                 Bulk attendance
                             </Link>
                         )}

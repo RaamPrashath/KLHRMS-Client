@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
+  Archive,
   Columns,
   LayoutPanelTop,
   Search,
@@ -43,6 +45,7 @@ export function AssetMaintenancePageShell({
   orgSlug: string;
   memberId: string;
 }) {
+  const router = useRouter();
   const ticketsQuery = useMaintenanceTicketsQuery(orgSlug, memberId);
   const mutations = useAssetMutations(orgSlug, memberId);
 
@@ -146,6 +149,14 @@ export function AssetMaintenancePageShell({
               Table
             </button>
           </div>
+          <Button
+            size="sm"
+            onClick={() => router.push(`/${orgSlug}/archived-tickets?ticketMode=ASSET_ISSUE`)}
+            className="inline-flex h-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[12px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 gap-1.5"
+          >
+            <Archive className="size-3.5" />
+            Archived
+          </Button>
         </div>
       </div>
 
@@ -154,7 +165,7 @@ export function AssetMaintenancePageShell({
         <div className="mb-5 shrink-0 flex flex-col gap-3">
           <div className="flex items-center justify-between rounded-xl border border-[#e6e9ef] bg-[#fbfbfc] px-5 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-[180px] items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-within:border-[#0066cc] focus-within:ring-1 focus-within:ring-[#0066cc]/20 transition-all">
+              <div className="flex h-8 w-[360px] items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-within:border-[#0066cc] focus-within:ring-1 focus-within:ring-[#0066cc]/20 transition-all">
                 <Search className="size-3.5 shrink-0 text-[#5f6673]" />
                 <Input
                   value={search}
@@ -163,20 +174,10 @@ export function AssetMaintenancePageShell({
                   className="h-auto border-0 bg-transparent px-0 py-0 text-[12px] shadow-none focus-visible:ring-0 placeholder:text-[#86868b]"
                 />
               </div>
+            </div>
 
+            <div className="flex items-center gap-3 ml-auto">
               <span className="text-[14px] font-semibold text-[#4b5563]">Filters</span>
-
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-8 w-[140px] rounded-lg border-[#e2e8f0] bg-white text-[12px] shadow-none">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Status</SelectItem>
-                  {statusFilterOptions.map((opt) => (
-                    <SelectItem key={opt} value={opt}>{humanize(opt)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
 
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="h-8 w-[150px] rounded-lg border-[#e2e8f0] bg-white text-[12px] shadow-none">
@@ -189,42 +190,20 @@ export function AssetMaintenancePageShell({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-x-4 gap-y-2 text-[14px] text-[#4b5563]">
-                {MAINTENANCE_KANBAN_COLUMNS.map((column) => (
-                  <button
-                    key={column.id}
-                    type="button"
-                    onClick={() => toggleCollapse(column.id)}
-                    aria-pressed={Boolean(collapsed[column.id])}
-                    className={cn(
-                      'flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1 text-[13px] font-medium transition-all hover:bg-[#f1f3f7]',
-                      collapsed[column.id] ? 'text-muted-foreground line-through opacity-60' : 'text-foreground',
-                    )}
-                  >
-                    <span className={cn('size-2 rounded-full', column.dot)} />
-                    <span className="font-semibold text-foreground">{columnCounts[column.id]}</span>
-                    <span>{column.title}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-px bg-[#e2e8f0]" />
-                <span className="text-[13px] font-medium text-muted-foreground">{totalCount} total</span>
-                {hasActiveFilters && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="h-7 rounded-lg px-2 text-[12px] text-[#6e6e73] hover:text-[#1d1d1f]"
-                  >
-                    <X className="mr-1 size-3" />
-                    Clear
-                  </Button>
-                )}
-              </div>
+              <div className="h-4 w-px bg-[#e2e8f0] mx-1" />
+              <span className="text-[13px] font-medium text-muted-foreground whitespace-nowrap">{totalCount} total</span>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-7 rounded-lg px-2 text-[12px] text-[#6e6e73] hover:text-[#1d1d1f]"
+                >
+                  <X className="mr-1 size-3" />
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </div>

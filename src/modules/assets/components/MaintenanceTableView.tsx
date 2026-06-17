@@ -100,81 +100,6 @@ function StatusDot({ status }: { status: string }) {
   );
 }
 
-const COLUMNS = [
-  {
-    id: 'ticketId',
-    header: 'Ticket No.',
-    accessorFn: (row: MaintenanceTicket) => row.ticketId,
-    cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="text-[13px] font-mono text-muted-foreground font-medium">
-        {getValue()}
-      </span>
-    ),
-    enableSorting: true,
-  },
-  {
-    id: 'asset',
-    header: 'Asset',
-    cell: ({ row }: { row: { original: MaintenanceTicket } }) => {
-      const ticket = row.original;
-      return (
-        <span className="text-[14px] font-semibold text-slate-900 dark:text-white">
-          {ticket.assetName || '—'}
-        </span>
-      );
-    },
-  },
-  {
-    id: 'maintenanceType',
-    header: 'Category',
-    accessorFn: (row: MaintenanceTicket) => row.maintenanceType,
-    cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="text-[13px] text-muted-foreground font-medium">{humanize(getValue())}</span>
-    ),
-  },
-  {
-    id: 'loggedByName',
-    header: 'Holder',
-    accessorFn: (row: MaintenanceTicket) => row.loggedByName ?? '—',
-    cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="text-[13px] text-slate-707 dark:text-slate-350 font-medium">{getValue()}</span>
-    ),
-  },
-  {
-    id: 'assetCondition',
-    header: 'Condition',
-    accessorFn: (row: MaintenanceTicket) => row.assetCondition ?? 'GOOD',
-    cell: ({ getValue }: { getValue: () => string }) => {
-      const condition = getValue();
-      return (
-        <Badge
-          className={cn(
-            'rounded-md border-0 px-2 py-0.5 text-[11px] font-semibold tracking-wide',
-            conditionBadge(condition as AssetCondition),
-          )}
-        >
-          {humanize(condition)}
-        </Badge>
-      );
-    },
-  },
-  {
-    id: 'status',
-    header: 'Status',
-    accessorFn: (row: MaintenanceTicket) => row.status,
-    cell: ({ getValue }: { getValue: () => string }) => <StatusDot status={getValue()} />,
-  },
-  {
-    id: 'createdAt',
-    header: 'Date',
-    accessorFn: (row: MaintenanceTicket) => row.createdAt,
-    cell: ({ getValue }: { getValue: () => string }) => (
-      <span className="text-[13px] font-medium text-muted-foreground">{formatDate(getValue())}</span>
-    ),
-    enableSorting: true,
-  },
-];
-
 function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div className="grid grid-cols-[7rem_1fr] gap-3 border-b border-[#f0f0f2] py-2.5 last:border-b-0">
@@ -252,6 +177,7 @@ interface TableInnerProps {
   hasActiveFilters: boolean;
   onClearFilters: () => void;
   className?: string;
+  hideCondition?: boolean;
 }
 
 function TableInner({
@@ -267,6 +193,7 @@ function TableInner({
   hasActiveFilters,
   onClearFilters,
   className,
+  hideCondition = false,
 }: TableInnerProps) {
   const { openFloatingPanel, setTitle } = useFloatingPanel();
   const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
@@ -275,9 +202,87 @@ function TableInner({
 
   const data = useMemo(() => tickets, [tickets]);
 
+  const columns = useMemo(() => {
+    const cols = [
+      {
+        id: 'ticketId',
+        header: 'Ticket No.',
+        accessorFn: (row: MaintenanceTicket) => row.ticketId,
+        cell: ({ getValue }: { getValue: () => string }) => (
+          <span className="text-[13px] font-mono text-muted-foreground font-medium">
+            {getValue()}
+          </span>
+        ),
+        enableSorting: true,
+      },
+      {
+        id: 'asset',
+        header: 'Asset',
+        cell: ({ row }: { row: { original: MaintenanceTicket } }) => {
+          const ticket = row.original;
+          return (
+            <span className="text-[14px] font-semibold text-slate-900 dark:text-white">
+              {ticket.assetName || '—'}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'maintenanceType',
+        header: 'Category',
+        accessorFn: (row: MaintenanceTicket) => row.maintenanceType,
+        cell: ({ getValue }: { getValue: () => string }) => (
+          <span className="text-[13px] text-muted-foreground font-medium">{humanize(getValue())}</span>
+        ),
+      },
+      {
+        id: 'loggedByName',
+        header: 'Holder',
+        accessorFn: (row: MaintenanceTicket) => row.loggedByName ?? '—',
+        cell: ({ getValue }: { getValue: () => string }) => (
+          <span className="text-[13px] text-slate-707 dark:text-slate-350 font-medium">{getValue()}</span>
+        ),
+      },
+      ...(hideCondition ? [] : [{
+        id: 'assetCondition',
+        header: 'Condition',
+        accessorFn: (row: MaintenanceTicket) => row.assetCondition ?? 'GOOD',
+        cell: ({ getValue }: { getValue: () => string }) => {
+          const condition = getValue();
+          return (
+            <Badge
+              className={cn(
+                'rounded-md border-0 px-2 py-0.5 text-[11px] font-semibold tracking-wide',
+                conditionBadge(condition as AssetCondition),
+              )}
+            >
+              {humanize(condition)}
+            </Badge>
+          );
+        },
+      }]),
+      {
+        id: 'status',
+        header: 'Status',
+        accessorFn: (row: MaintenanceTicket) => row.status,
+        cell: ({ getValue }: { getValue: () => string }) => <StatusDot status={getValue()} />,
+      },
+      {
+        id: 'createdAt',
+        header: 'Date',
+        accessorFn: (row: MaintenanceTicket) => row.createdAt,
+        cell: ({ getValue }: { getValue: () => string }) => (
+          <span className="text-[13px] font-medium text-muted-foreground">{formatDate(getValue())}</span>
+        ),
+        enableSorting: true,
+      },
+    ];
+    return cols;
+  }, [hideCondition]);
+
   const table = useReactTable({
     data,
-    columns: COLUMNS,
+    columns,
     state: { sorting, pagination },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
@@ -313,79 +318,6 @@ function TableInner({
 
   return (
     <div className={cn('bg-card rounded-2xl border border-border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col', className)}>
-      {/* Search and Filter Section inside Card Container */}
-      <div className="px-8 py-6 border-b border-border">
-        <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search tickets by ID, asset, issue..."
-              value={search}
-              onChange={(e) => {
-                onSearchChange(e.target.value);
-                setPagination({ pageIndex: 0, pageSize: PAGE_SIZE });
-              }}
-              className="pl-9 bg-muted/30 border border-border focus:bg-background text-sm h-9 rounded-xl focus:ring-1 focus:ring-primary focus-visible:ring-1"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Select
-              value={typeFilter}
-              onValueChange={(value) => {
-                onTypeChange(value);
-                setPagination({ pageIndex: 0, pageSize: PAGE_SIZE });
-              }}
-            >
-              <SelectTrigger className="h-9 w-[130px] text-xs border border-border bg-card rounded-xl">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL" className="text-xs">Category</SelectItem>
-                {typeFilterOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt} className="text-xs">
-                    {humanize(opt)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                onStatusChange(value);
-                setPagination({ pageIndex: 0, pageSize: PAGE_SIZE });
-              }}
-            >
-              <SelectTrigger className="h-9 w-[130px] text-xs border border-border bg-card rounded-xl">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL" className="text-xs">Status</SelectItem>
-                {statusFilterOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt} className="text-xs">
-                    {humanize(opt)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {hasActiveFilters && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onClearFilters();
-                  setPagination({ pageIndex: 0, pageSize: PAGE_SIZE });
-                }}
-                className="h-9 rounded-xl border-border hover:bg-muted text-xs font-semibold px-3"
-              >
-                <X className="size-3.5 mr-1" />
-                Clear
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
 
       <div className="overflow-x-auto">
         <Table>
@@ -420,7 +352,7 @@ function TableInner({
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={COLUMNS.length} className="py-12 text-center text-[13px] text-[#6e6e73]">
+                <TableCell colSpan={columns.length} className="py-12 text-center text-[13px] text-[#6e6e73]">
                   No matching tickets
                 </TableCell>
               </TableRow>
@@ -513,6 +445,7 @@ export interface MaintenanceTableViewProps {
   hasActiveFilters: boolean;
   onClearFilters: () => void;
   className?: string;
+  hideCondition?: boolean;
 }
 
 export function MaintenanceTableView({
@@ -528,6 +461,7 @@ export function MaintenanceTableView({
   hasActiveFilters,
   onClearFilters,
   className,
+  hideCondition = false,
 }: MaintenanceTableViewProps) {
   const data = useMemo(() => tickets, [tickets]);
 
@@ -558,6 +492,7 @@ export function MaintenanceTableView({
         hasActiveFilters={hasActiveFilters}
         onClearFilters={onClearFilters}
         className={className}
+        hideCondition={hideCondition}
       />
     </FloatingPanelRoot>
   );
