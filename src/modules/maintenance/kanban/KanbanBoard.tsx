@@ -321,21 +321,19 @@ export function KanbanBoard({
   }
 
   return (
-    <div className="h-full min-h-0 overflow-hidden bg-transparent">
+    <div className="h-[calc(100dvh-220px)] min-h-0 overflow-hidden bg-transparent">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex h-full min-h-0 items-stretch overflow-hidden">
+        <div className="flex h-full min-h-0 items-stretch overflow-x-auto overflow-y-hidden no-scrollbar pb-4 gap-4 px-2">
           {MAINTENANCE_KANBAN_COLUMNS.map((column) => (
             <KanbanColumn
               key={column.id}
               column={column}
               issues={filteredGrouped[column.id]}
-              isCollapsed={collapsed[column.id]}
-              onToggleCollapse={() => onToggleColumn(column.id)}
               onOpenIssue={setSelectedIssue}
             />
           ))}
