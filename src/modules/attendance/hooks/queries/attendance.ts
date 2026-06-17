@@ -69,7 +69,7 @@ export function useAttendanceQuery(
   orgSlug: string,
   memberId: string,
   filters?: Partial<AttendanceFiltersState>,
-  options?: { enabled?: boolean; staleTime?: number; mode?: string; pageIndex?: number },
+  options?: { enabled?: boolean; staleTime?: number; mode?: string; pageIndex?: number; keepPreviousData?: boolean },
 ): {
   data: AttendanceListResponse | undefined;
   isLoading: boolean;
@@ -109,6 +109,7 @@ export function useAttendanceQuery(
     },
     enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
     staleTime: options?.staleTime,
+    placeholderData: options?.keepPreviousData ? (previousData) => previousData : undefined,
   });
 
   return {
@@ -125,7 +126,7 @@ export function useMyAttendanceQuery(
   orgSlug: string,
   memberId: string,
   filters?: Partial<AttendanceFiltersState>,
-  options?: { enabled?: boolean; staleTime?: number; mode?: string; pageIndex?: number },
+  options?: { enabled?: boolean; staleTime?: number; mode?: string; pageIndex?: number; keepPreviousData?: boolean },
 ): {
   data: AttendanceListResponse | undefined;
   isLoading: boolean;
@@ -163,6 +164,7 @@ export function useMyAttendanceQuery(
     },
     enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
     staleTime: options?.staleTime,
+    placeholderData: options?.keepPreviousData ? (previousData) => previousData : undefined,
   });
 
   return {

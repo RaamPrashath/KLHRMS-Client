@@ -47,8 +47,7 @@ export function useClockInMutation(orgSlug: string, memberId: string) {
       return unwrapAttendanceActionResult(result);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
-      queryClient.invalidateQueries({ queryKey: ['attendance-me', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['bulk-attendance', orgSlug] });
       queryClient.invalidateQueries({
         queryKey: attendanceQueryKeys.attendanceToday(orgSlug, memberId),
@@ -74,8 +73,7 @@ export function useClockOutMutation(orgSlug: string, memberId: string) {
       return unwrapAttendanceActionResult(result);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
-      queryClient.invalidateQueries({ queryKey: ['attendance-me', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['bulk-attendance', orgSlug] });
       queryClient.invalidateQueries({
         queryKey: attendanceQueryKeys.attendanceToday(orgSlug, memberId),
@@ -98,8 +96,7 @@ export function useManualAttendanceMutation(orgSlug: string, memberId: string) {
   const mutation = useMutation<AttendanceRecord, Error, ManualEntryInput>({
     mutationFn: (data) => manualAttendanceAction({ orgSlug, memberId, data }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
-      queryClient.invalidateQueries({ queryKey: ['attendance-me', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
     },
   });
 
@@ -123,8 +120,7 @@ export function useDeleteAttendanceMutation(orgSlug: string) {
         data: { target_member_id: targetMemberId, date } satisfies DeleteDayEntryInput,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance', orgSlug] });
-      queryClient.invalidateQueries({ queryKey: ['attendance-me', orgSlug] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
     },
   });
 

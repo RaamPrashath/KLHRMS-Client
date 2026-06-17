@@ -74,7 +74,8 @@ export async function fetchMyAttendance(
     headers: buildHeaders(auth),
   });
   await throwIfNotOk(response);
-  return response.json() as Promise<AttendanceListResponse>;
+  const data = await response.json() as AttendanceListResponse;
+  return data;
 }
 
 export async function fetchAttendance(
@@ -103,10 +104,17 @@ export async function fetchAttendance(
     apiRequestPage: filters?.page,
     apiRequestPageSize: filters?.page_size,
   });
+  const _t0 = performance.now();
   const response = await fetch(`${baseUrl}/attendance${query}`, {
     method: "GET",
     headers: buildHeaders(auth),
   });
   await throwIfNotOk(response);
-  return response.json() as Promise<AttendanceListResponse>;
+  const data = await response.json() as AttendanceListResponse;
+  const _t1 = performance.now();
+  console.warn(
+    `[timing] 1-attendance-query | date_from=${filters?.date_from} date_to=${filters?.date_to} page=${filters?.page} page_size=${filters?.page_size} | ` +
+    `duration=${(_t1 - _t0).toFixed(1)}ms | total=${data.total} items=${data.items.length}`,
+  );
+  return data;
 }

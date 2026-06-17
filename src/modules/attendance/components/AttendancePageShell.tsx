@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -137,7 +136,6 @@ export function AttendancePageShell({
   pageIndex,
   pageSize,
 }: Readonly<AttendancePageShellProps>) {
-  const shouldReduceMotion = useReducedMotion();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -192,11 +190,13 @@ export function AttendancePageShell({
     enabled: isOrgScope,
     mode,
     pageIndex,
+    keepPreviousData: true,
   });
   const myQuery = useMyAttendanceQuery(orgSlug, memberId, effectiveFilters, {
     enabled: isOperativeScope(permissions.view) && !isOrgScope,
     mode,
     pageIndex,
+    keepPreviousData: true,
   });
   const activeQuery = isOrgScope ? orgQuery : myQuery;
   const deleteMutation = useDeleteAttendanceMutation(orgSlug);
@@ -250,12 +250,6 @@ export function AttendancePageShell({
     }
   }
 
-  const motionProps = {
-    initial: { opacity: 0, y: shouldReduceMotion ? 0 : 8 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.2 },
-  };
-
   return (
     <>
       <AttendancePermissionGate scope={permissions.edit}>
@@ -267,7 +261,7 @@ export function AttendancePageShell({
         />
       </AttendancePermissionGate>
 
-      <motion.div {...motionProps}>
+      <div>
         <AttendanceTable
           orgSlug={orgSlug}
           memberId={memberId}
@@ -287,7 +281,7 @@ export function AttendancePageShell({
           onEdit={() => setManualFormOpen(true)}
           onDelete={(record) => setDeleteTarget(record)}
         />
-      </motion.div>
+      </div>
 
       <AlertDialog
         open={deleteTarget !== null}

@@ -242,15 +242,21 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
   const MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   function getPivotDateColumns(): string[] {
+    const _t0 = performance.now();
+    let result: string[];
     if (viewMode === 'weekly') {
       const monday = getMondayOfWeek(pivotAnchor);
-      return Array.from({ length: 7 }, (_, i) => toYMD(addDays(monday, i)));
+      result = Array.from({ length: 7 }, (_, i) => toYMD(addDays(monday, i)));
+    } else {
+      const daysInMonth = new Date(pivotAnchor.getFullYear(), pivotAnchor.getMonth() + 1, 0).getDate();
+      result = Array.from({ length: daysInMonth }, (_, i) => {
+        const d = new Date(pivotAnchor.getFullYear(), pivotAnchor.getMonth(), i + 1);
+        return toYMD(d);
+      });
     }
-    const daysInMonth = new Date(pivotAnchor.getFullYear(), pivotAnchor.getMonth() + 1, 0).getDate();
-    return Array.from({ length: daysInMonth }, (_, i) => {
-      const d = new Date(pivotAnchor.getFullYear(), pivotAnchor.getMonth(), i + 1);
-      return toYMD(d);
-    });
+    const _t1 = performance.now();
+    console.warn(`[timing] 5-date-columns | mode=${viewMode} | duration=${(_t1 - _t0).toFixed(1)}ms | columns=${result.length}`);
+    return result;
   }
 
   function getPivotPeriodLabel(): string {
@@ -320,21 +326,32 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
   });
 
   const pivotHolidayNames = useMemo(
-    () => new Map(pivotHolidays.filter((h) => h.isHoliday).map((h) => [h.holidayDate, h.name])),
+    () => {
+      const _t0 = performance.now();
+      const map = new Map(pivotHolidays.filter((h) => h.isHoliday).map((h) => [h.holidayDate, h.name]));
+      const _t1 = performance.now();
+      console.warn(`[timing] 6-holiday-map-build | duration=${(_t1 - _t0).toFixed(1)}ms | holidays=${pivotHolidays.length} mapped=${map.size}`);
+      return map;
+    },
     [pivotHolidays],
   );
 
   const pivotLeaveNames = useMemo(() => {
+    const _t0 = performance.now();
     const map = new Map<string, string>();
+    let expandedDays = 0;
     if (pivotLeaveData?.items) {
       for (const leave of pivotLeaveData.items) {
         const start = dateOnlyToLocalDate(leave.startDate);
         const end = dateOnlyToLocalDate(leave.endDate);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           map.set(leaveKey(leave.memberId, toYMD(d)), leave.leaveType.name);
+          expandedDays++;
         }
       }
     }
+    const _t1 = performance.now();
+    console.warn(`[timing] 7-leave-map-build | duration=${(_t1 - _t0).toFixed(1)}ms | leaves=${pivotLeaveData?.items?.length ?? 0} expandedDays=${expandedDays}`);
     return map;
   }, [pivotLeaveData]);
 

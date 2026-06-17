@@ -65,12 +65,19 @@ export async function fetchHolidays(
     page: filters?.page,
     pageSize: filters?.pageSize,
   });
+  const _t0 = performance.now();
   const response = await fetch(`${baseUrl}/leaves/holidays${query}`, {
     method: "GET",
     headers: buildHeaders(auth),
   });
   await throwIfNotOk(response);
-  return response.json() as Promise<HolidayListResponse>;
+  const data = await response.json() as HolidayListResponse;
+  const _t1 = performance.now();
+  console.warn(
+    `[timing] 2-holiday-query | year=${filters?.year} month=${filters?.month} | ` +
+    `duration=${(_t1 - _t0).toFixed(1)}ms | items=${data.items?.length ?? 0}`,
+  );
+  return data;
 }
 
 export async function fetchLeaveRequests(
@@ -96,10 +103,17 @@ export async function fetchLeaveRequests(
     page: filters?.page,
     page_size: filters?.pageSize,
   });
+  const _t0 = performance.now();
   const response = await fetch(`${baseUrl}/leaves/requests${query}`, {
     method: "GET",
     headers: buildHeaders(auth),
   });
   await throwIfNotOk(response);
-  return response.json() as Promise<LeaveRequestListResponse>;
+  const data = await response.json() as LeaveRequestListResponse;
+  const _t1 = performance.now();
+  console.warn(
+    `[timing] 3-leave-query | fromDate=${filters?.fromDate} toDate=${filters?.toDate} status=${filters?.status} | ` +
+    `duration=${(_t1 - _t0).toFixed(1)}ms | items=${data.items?.length ?? 0}`,
+  );
+  return data;
 }
