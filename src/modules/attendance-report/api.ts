@@ -25,6 +25,7 @@ function buildQuery(filters: AttendanceReportFilters): string {
   query.set('date_from', filters.date_from);
   query.set('date_to', filters.date_to);
   if (filters.project_id) query.set('project_id', filters.project_id);
+  if (filters.department_id) query.set('department_id', filters.department_id);
   for (const employeeId of filters.employee_ids ?? []) {
     query.append('employee_id', employeeId);
   }

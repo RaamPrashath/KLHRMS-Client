@@ -19,9 +19,8 @@ export function BulkAttendanceEvent({
   onEdit,
   onDelete,
 }: Readonly<BulkAttendanceEventProps>) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const isFutureDate = event.start > today;
+  const today = format(new Date(), "yyyy-MM-dd");
+  const isFutureDate = format(event.start, "yyyy-MM-dd") > today;
   const startStr = format(event.start, 'HH:mm');
   const endStr = format(event.end, 'HH:mm');
   const durationMs = event.end.getTime() - event.start.getTime();

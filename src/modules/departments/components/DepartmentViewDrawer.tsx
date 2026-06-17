@@ -3,7 +3,7 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { Crown, Edit2, Search, Trash2, UserCheck, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Crown, Edit2, Search, Trash2, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -112,20 +112,16 @@ export function DepartmentViewDrawer({
 }: DepartmentViewDrawerProps) {
   const mutations = useDepartmentMutations(orgSlug, memberId);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'members' | 'unassigned' | 'heads'>('members');
+  const [activeTab, setActiveTab] = useState<'heads' | 'members' | 'unassigned'>('heads');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // Member state
   const [unassignedMemberSearch, setUnassignedMemberSearch] = useState('');
   const [assignedMemberSearch, setAssignedMemberSearch] = useState('');
-  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
-
-  // Head state
-  const [unassignedHeadSearch, setUnassignedHeadSearch] = useState('');
+  const [selectedUnassignedIds, setSelectedUnassignedIds] = useState<Set<string>>(new Set());
 
   const deferredUnassignedMemberSearch = useDeferredValue(unassignedMemberSearch);
   const deferredAssignedMemberSearch = useDeferredValue(assignedMemberSearch);
-  const deferredUnassignedHeadSearch = useDeferredValue(unassignedHeadSearch);
 
   const form = useForm<DepartmentInput>({
     resolver: zodResolver(departmentSchema),
@@ -158,18 +154,18 @@ export function DepartmentViewDrawer({
     [department?.heads],
   );
 
-  // Members
+  // Unassigned = not a member AND not a head
   const unassignedMembers = useMemo(() => {
     const term = deferredUnassignedMemberSearch.toLowerCase().trim();
     return allOrgMembers.filter((m) => {
-      if (assignedMemberIds.has(m.id)) return false;
+      if (assignedMemberIds.has(m.id) || headMemberIds.has(m.id)) return false;
       if (!term) return true;
       return (
         m.label.toLowerCase().includes(term) ||
         (m.email ?? '').toLowerCase().includes(term)
       );
     });
-  }, [allOrgMembers, assignedMemberIds, deferredUnassignedMemberSearch]);
+  }, [allOrgMembers, assignedMemberIds, headMemberIds, deferredUnassignedMemberSearch]);
 
   const assignedMembers = useMemo(() => {
     const term = deferredAssignedMemberSearch.toLowerCase().trim();
@@ -181,40 +177,13 @@ export function DepartmentViewDrawer({
     });
   }, [department?.members, deferredAssignedMemberSearch]);
 
-  // Heads
-  const unassignedHeads = useMemo(() => {
-    const term = deferredUnassignedHeadSearch.toLowerCase().trim();
-    return allOrgMembers.filter((m) => {
-      if (headMemberIds.has(m.id)) return false;
-      if (!term) return true;
-      return (
-        m.label.toLowerCase().includes(term) ||
-        (m.email ?? '').toLowerCase().includes(term)
-      );
-    });
-  }, [allOrgMembers, headMemberIds, deferredUnassignedHeadSearch]);
-
-  function toggleMemberSelect(id: string) {
-    setSelectedMemberIds((prev) => {
+  function handleUnassignedToggle(id: string) {
+    setSelectedUnassignedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }
-
-  async function handleBulkAssignMembers() {
-    if (!department || selectedMemberIds.size === 0) return;
-    try {
-      await mutations.bulkAssignMembers.mutateAsync({
-        departmentId: department.id,
-        memberIds: Array.from(selectedMemberIds),
-      });
-      setSelectedMemberIds(new Set());
-      toast.success(`${selectedMemberIds.size} Employee${selectedMemberIds.size > 1 ? 's' : ''} Assigned`);
-    } catch (error) {
-      toast.error(readError(error, 'Failed to assign employees'));
-    }
   }
 
   async function handleRemoveMember(targetMemberId: string) {
@@ -240,6 +209,19 @@ export function DepartmentViewDrawer({
       toast.success('Department Head Assigned');
     } catch (error) {
       toast.error(readError(error, 'Failed to assign department head'));
+    }
+  }
+
+  async function handleBulkAssignMembers(memberIds: string[]) {
+    if (!department || memberIds.length === 0) return;
+    try {
+      await mutations.bulkAssignMembers.mutateAsync({
+        departmentId: department.id,
+        memberIds,
+      });
+      toast.success(`${memberIds.length} Employee${memberIds.length > 1 ? 's' : ''} Assigned`);
+    } catch (error) {
+      toast.error(readError(error, 'Failed to assign employees'));
     }
   }
 
@@ -434,21 +416,21 @@ export function DepartmentViewDrawer({
 
             {/* Tabs with Edit/Delete buttons */}
             <div className="flex min-h-0 flex-1 flex-col">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'members' | 'unassigned' | 'heads')} className="flex min-h-0 flex-1 flex-col">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'heads' | 'members' | 'unassigned')} className="flex min-h-0 flex-1 flex-col">
                 <div className="mx-6 mt-4 mb-0 flex shrink-0 items-center gap-2">
                   <div className="flex-1">
                     <TabBar
                       tabs={[
+                        { value: 'heads', label: 'Heads', count: department.heads.length },
                         { value: 'members', label: 'Members', count: department.members.length },
                         {
                           value: 'unassigned',
                           label: 'Unassigned',
-                          count: allOrgMembers.filter((m) => !assignedMemberIds.has(m.id)).length,
+                          count: allOrgMembers.filter((m) => !assignedMemberIds.has(m.id) && !headMemberIds.has(m.id)).length,
                         },
-                        { value: 'heads', label: 'Heads', count: department.heads.length },
                       ]}
                       value={activeTab}
-                      onValueChange={(v) => setActiveTab(v as 'members' | 'unassigned' | 'heads')}
+                      onValueChange={(v) => setActiveTab(v as 'heads' | 'members' | 'unassigned')}
                     />
                   </div>
 
@@ -472,6 +454,36 @@ export function DepartmentViewDrawer({
                     </div>
                   )}
                 </div>
+
+                {/* Heads tab — only shows current heads, no assign UI */}
+                <TabsContent value="heads" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6e6e73] mb-2">
+                        Current Heads
+                      </p>
+                      {department.heads.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-[#e5e5ea] rounded-xl bg-neutral-50/30">
+                          <Crown className="size-6 text-[#86868b]" />
+                          <p className="mt-2 text-[13px] font-medium text-[#1d1d1f]">
+                            No Department Heads Assigned
+                          </p>
+                        </div>
+                      ) : (
+                        <ul className="space-y-1">
+                          {department.heads.map((head) => (
+                            <AssignedHeadRow
+                              key={head.id}
+                              head={head}
+                              canManage={canManage}
+                              onRemove={handleRemoveHead}
+                            />
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
 
                 {/* Members tab */}
                 <TabsContent value="members" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
@@ -513,7 +525,7 @@ export function DepartmentViewDrawer({
                   </div>
                 </TabsContent>
 
-                {/* Unassigned members */}
+                {/* Unassigned members — checkbox select with docked bulk actions */}
                 <TabsContent value="unassigned" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
                   <div className="relative mb-3 shrink-0">
                     <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
@@ -545,12 +557,12 @@ export function DepartmentViewDrawer({
                             <label
                               className={cn(
                                 'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f7]',
-                                selectedMemberIds.has(member.id) && 'bg-primary/5',
+                                selectedUnassignedIds.has(member.id) && 'bg-primary/5',
                               )}
                             >
                               <Checkbox
-                                checked={selectedMemberIds.has(member.id)}
-                                onCheckedChange={() => toggleMemberSelect(member.id)}
+                                checked={selectedUnassignedIds.has(member.id)}
+                                onCheckedChange={() => handleUnassignedToggle(member.id)}
                                 className="shrink-0 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
                                 aria-label={`Select ${member.label}`}
                               />
@@ -569,91 +581,38 @@ export function DepartmentViewDrawer({
                     )}
                   </div>
 
-                  {canManage && selectedMemberIds.size > 0 && (
-                    <div className="shrink-0 border-t border-[#e5e5ea] py-3">
+                  {canManage && selectedUnassignedIds.size > 0 && (
+                    <div className="shrink-0 border-t border-[#e5e5ea] py-3 flex gap-2">
                       <Button
-                        onClick={() => void handleBulkAssignMembers()}
-                        disabled={mutations.bulkAssignMembers.isPending}
-                        className="h-10 w-full rounded-lg text-[14px] font-medium text-white"
+                        onClick={() => {
+                          for (const id of selectedUnassignedIds) void handleAssignHead(id);
+                          setSelectedUnassignedIds(new Set());
+                        }}
+                        disabled={mutations.assignHead.isPending}
+                        className="flex-1 h-10 rounded-lg text-[14px] font-medium text-white"
                         style={{ backgroundColor: ACTION_GREEN }}
                       >
-                        <UserCheck className="mr-2 size-4" />
+                        <Crown className="mr-2 size-4" />
+                        {mutations.assignHead.isPending
+                          ? 'Assigning'
+                          : `Assign as Head${selectedUnassignedIds.size > 1 ? ` (${selectedUnassignedIds.size})` : ''}`}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          void handleBulkAssignMembers(Array.from(selectedUnassignedIds));
+                          setSelectedUnassignedIds(new Set());
+                        }}
+                        disabled={mutations.bulkAssignMembers.isPending}
+                        variant="outline"
+                        className="flex-1 h-10 rounded-lg text-[14px] font-medium"
+                      >
+                        <UserPlus className="mr-2 size-4" />
                         {mutations.bulkAssignMembers.isPending
                           ? 'Assigning'
-                          : `Assign ${selectedMemberIds.size} Employee${selectedMemberIds.size > 1 ? 's' : ''}`}
+                          : `Assign as Member${selectedUnassignedIds.size > 1 ? ` (${selectedUnassignedIds.size})` : ''}`}
                       </Button>
                     </div>
                   )}
-                </TabsContent>
-
-                {/* Heads tab */}
-                <TabsContent value="heads" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
-                  <div className="min-h-0 flex-1 overflow-y-auto">
-                    {/* Current Heads Section */}
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6e6e73] mb-2">
-                        Current Heads
-                      </p>
-                      {department.heads.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-[#e5e5ea] rounded-xl bg-neutral-50/30">
-                          <Crown className="size-6 text-[#86868b]" />
-                          <p className="mt-2 text-[13px] font-medium text-[#1d1d1f]">
-                            No Department Heads Assigned
-                          </p>
-                        </div>
-                      ) : (
-                        <ul className="space-y-1">
-                          {department.heads.map((head) => (
-                            <AssignedHeadRow
-                              key={head.id}
-                              head={head}
-                              canManage={canManage}
-                              onRemove={handleRemoveHead}
-                            />
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-
-                    {/* Assign New Head Section (Only if canManage is true) */}
-                    {canManage && (
-                      <div className="mt-6 border-t border-[#e5e5ea] pt-6">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6e6e73] mb-3">
-                          Assign Department Head
-                        </p>
-                        <div className="relative mb-3 shrink-0">
-                          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
-                          <Input
-                            value={unassignedHeadSearch}
-                            onChange={(e) => setUnassignedHeadSearch(e.target.value)}
-                            placeholder="Search Employees"
-                            className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
-                          />
-                        </div>
-
-                        {unassignedHeads.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-8 text-center bg-neutral-50/20 border border-[#e5e5ea] rounded-xl">
-                            <Crown className="size-6 text-[#86868b]" />
-                            <p className="mt-2 text-[13px] font-medium text-[#1d1d1f]">
-                              {deferredUnassignedHeadSearch ? 'No Results' : 'All Employees Are Heads'}
-                            </p>
-                          </div>
-                        ) : (
-                          <ul className="space-y-1 pb-4">
-                            {unassignedHeads.map((member) => (
-                              <UnassignedHeadRow
-                                key={member.id}
-                                member={member}
-                                canManage={canManage}
-                                isAssigning={mutations.assignHead.isPending}
-                                onAssign={handleAssignHead}
-                              />
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    )}
-                  </div>
                 </TabsContent>
               </Tabs>
             </div>
@@ -756,40 +715,4 @@ function AssignedHeadRow({
   );
 }
 
-function UnassignedHeadRow({
-  member,
-  canManage,
-  isAssigning,
-  onAssign,
-}: {
-  member: LookupOption;
-  canManage: boolean;
-  isAssigning: boolean;
-  onAssign: (memberId: string) => Promise<void>;
-}) {
-  return (
-    <li className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f7]">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#f5f5f7] text-[12px] font-semibold text-[#6e6e73]">
-        {member.label.charAt(0).toUpperCase()}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[14px] font-medium text-[#1d1d1f]">
-          {member.label}
-        </p>
-        {member.email && (
-          <p className="truncate text-[12px] text-[#6e6e73]">{member.email}</p>
-        )}
-      </div>
-      {canManage && (
-        <button
-          onClick={() => void onAssign(member.id)}
-          disabled={isAssigning}
-          className="shrink-0 rounded-xl p-1.5 text-[#86868b] transition-colors hover:bg-[#eef9f1] hover:text-[#156f3d] disabled:opacity-50"
-          aria-label={`Assign ${member.label} As Head`}
-        >
-          <UserPlus className="size-3.5" />
-        </button>
-      )}
-    </li>
-  );
-}
+

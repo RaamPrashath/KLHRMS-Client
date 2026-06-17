@@ -914,6 +914,7 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
   const [projectId, setProjectId] = useState(ALL_PROJECTS);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [employeeSearch, setEmployeeSearch] = useState('');
+  const [departmentId, setDepartmentId] = useState<string | null>(searchParams.get('department_id'));
   const [force8, setForce8] = useState(false);
   const [pendingExport, setPendingExport] = useState<AttendanceReportExportFormat | null>(null);
   const timesheetPage = useMemo(() => {
@@ -1036,9 +1037,10 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
     date_to: dateRange.dateTo,
     project_id: projectId === ALL_PROJECTS ? undefined : projectId,
     employee_ids: [],
+    department_id: departmentId ?? undefined,
     page: 1,
     page_size: 5000,
-  }), [dateRange.dateFrom, dateRange.dateTo, projectId]);
+  }), [dateRange.dateFrom, dateRange.dateTo, projectId, departmentId]);
 
   const reportQuery = useAttendanceReportQuery(orgSlug, memberId, filters, canView);
 
@@ -1056,7 +1058,7 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
       .map((employee) => employee.id);
   }, [eligibleEmployees, employeeSearch]);
 
-  const hasActiveFilters = employeeSearch.trim() !== '' || projectId !== ALL_PROJECTS || selectedEmployeeIds.length > 0;
+  const hasActiveFilters = employeeSearch.trim() !== '' || projectId !== ALL_PROJECTS || selectedEmployeeIds.length > 0 || departmentId !== null;
 
   function handleProjectChange(value: string) {
     setProjectId(value);
@@ -1064,11 +1066,17 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
     updateSearchParams({ page: null });
   }
 
+  function handleDepartmentChange(value: string) {
+    setDepartmentId(value === ALL_PROJECTS ? null : value);
+    updateSearchParams({ department_id: value === ALL_PROJECTS ? null : value, page: null });
+  }
+
   function handleClearFilters() {
     setEmployeeSearch('');
     setProjectId(ALL_PROJECTS);
     setSelectedEmployeeIds([]);
-    updateSearchParams({ page: null });
+    setDepartmentId(null);
+    updateSearchParams({ page: null, department_id: null });
   }
 
   const rows = useMemo(() => reportQuery.data?.items ?? [], [reportQuery.data?.items]);
@@ -1158,6 +1166,7 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
           projectId: projectId === ALL_PROJECTS ? undefined : projectId,
           dateFrom: dateRange.dateFrom,
           dateTo: dateRange.dateTo,
+          departmentId: departmentId ?? undefined,
         },
       });
       triggerDownload(blob, exportFileName(viewMode, periodMode, dateRange.dateFrom, format));
@@ -1353,6 +1362,61 @@ export function AttendanceReportPageShell({ orgSlug, memberId }: Readonly<Attend
                           {projectId === project.id && <Check className="h-3 w-3 text-white" />}
                         </div>
                         {project.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-9 w-[180px] justify-between border border-neutral-200 bg-surface text-sm font-normal text-neutral-700"
+              >
+                {departmentId
+                  ? (optionsQuery.data?.departments.find((d) => d.id === departmentId)?.name ?? 'Department')
+                  : 'All Departments'}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search departments..." />
+                <CommandList>
+                  <CommandEmpty>No departments found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value={ALL_PROJECTS}
+                      onSelect={() => {
+                        handleDepartmentChange(ALL_PROJECTS);
+                      }}
+                    >
+                      <div className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                        !departmentId ? "bg-primary border-primary" : "border-neutral-300",
+                      )}>
+                        {!departmentId && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      All Departments
+                    </CommandItem>
+                    {(optionsQuery.data?.departments ?? []).map((dept) => (
+                      <CommandItem
+                        key={dept.id}
+                        value={dept.id}
+                        onSelect={() => {
+                          handleDepartmentChange(dept.id);
+                        }}
+                      >
+                        <div className={cn(
+                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                          departmentId === dept.id ? "bg-primary border-primary" : "border-neutral-300",
+                        )}>
+                          {departmentId === dept.id && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        {dept.name}
                       </CommandItem>
                     ))}
                   </CommandGroup>

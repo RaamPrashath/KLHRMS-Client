@@ -4,7 +4,7 @@ import type {
 } from '@/modules/attendance/types/attendanceTypes';
 
 export function isOperativeScope(scope: PermissionScope | null | undefined): boolean {
-  return scope === 'self' || scope === 'organization';
+  return scope === 'self' || scope === 'department' || scope === 'organization';
 }
 
 export function resolveAttendancePermissions(

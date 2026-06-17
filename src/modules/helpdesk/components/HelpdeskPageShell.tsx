@@ -324,38 +324,39 @@ export function HelpdeskPageShell({
         </div>
 
         <TabsContent value="raise" className="min-h-0">
-          <div className="max-w-3xl">
-            <main className="bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-hidden">
-              {/* Custom Styled Segmented Tabs */}
-              <div className="p-4 bg-slate-50/70 border-b border-slate-100 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRequestMode('GENERAL')}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm rounded-xl transition-all border',
-                    requestMode === 'GENERAL'
-                      ? 'bg-white text-slate-900 shadow-sm border-slate-200/50 font-semibold'
-                      : 'bg-transparent text-slate-500 hover:text-slate-800 hover:bg-white/50 border-transparent font-medium',
-                  )}
-                >
-                  <MessageSquarePlus className={cn('size-4', requestMode === 'GENERAL' ? 'text-blue-600' : 'text-slate-400')} />
-                  General request
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRequestMode('ASSET')}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm rounded-xl transition-all border',
-                    requestMode === 'ASSET'
-                      ? 'bg-white text-slate-900 shadow-sm border-slate-200/50 font-semibold'
-                      : 'bg-transparent text-slate-500 hover:text-slate-800 hover:bg-white/50 border-transparent font-medium',
-                  )}
-                >
-                  <Wrench className={cn('size-4', requestMode === 'ASSET' ? 'text-blue-600' : 'text-slate-400')} />
-                  Asset request
-                </button>
-              </div>
+          <div className="max-w-5xl flex flex-col md:flex-row gap-6 items-start">
+            {/* Sidebar Navigation */}
+            <aside className="w-full md:w-60 shrink-0 bg-white rounded-2xl border border-slate-200/70 p-3.5 space-y-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setRequestMode('GENERAL')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all border text-left',
+                  requestMode === 'GENERAL'
+                    ? 'bg-slate-50 border-slate-200/60 text-slate-900 shadow-sm font-semibold'
+                    : 'bg-transparent border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 border-transparent font-medium',
+                )}
+              >
+                <MessageSquarePlus className={cn('size-4 shrink-0', requestMode === 'GENERAL' ? 'text-blue-600' : 'text-slate-400')} />
+                <span>General request</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRequestMode('ASSET')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all border text-left',
+                  requestMode === 'ASSET'
+                    ? 'bg-slate-50 border-slate-200/60 text-slate-900 shadow-sm font-semibold'
+                    : 'bg-transparent border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 border-transparent font-medium',
+                )}
+              >
+                <Wrench className={cn('size-4 shrink-0', requestMode === 'ASSET' ? 'text-blue-600' : 'text-slate-400')} />
+                <span>Asset request</span>
+              </button>
+            </aside>
 
+            {/* Form Container */}
+            <main className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-hidden">
               {requestMode === 'GENERAL' ? (
                 <form className="p-6 md:p-8 space-y-6" onSubmit={generalForm.handleSubmit(submitGeneral)} noValidate>
                   {/* Subject Input */}
@@ -475,7 +476,7 @@ export function HelpdeskPageShell({
                     <Button
                       type="submit"
                       disabled={generalForm.formState.isSubmitting || mutations.createGeneralHelp.isPending}
-                      className="bg-blue-600 text-white text-sm font-semibold px-6 py-3 h-11 rounded-xl shadow-md shadow-blue-500/10 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+                      className="bg-gradient-to-br from-[#3862f6] to-[#6366f1] text-white text-sm font-semibold px-6 py-3 h-11 rounded-xl shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 whitespace-nowrap"
                     >
                       {generalForm.formState.isSubmitting || mutations.createGeneralHelp.isPending ? (
                         <>
@@ -614,7 +615,7 @@ export function HelpdeskPageShell({
                     <Button
                       type="submit"
                       disabled={assetRequestDisabled || assetForm.formState.isSubmitting || mutations.createAssetRequest.isPending}
-                      className="bg-blue-600 text-white text-sm font-semibold px-6 py-3 h-11 rounded-xl shadow-md shadow-blue-500/10 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+                      className="bg-gradient-to-br from-[#3862f6] to-[#6366f1] text-white text-sm font-semibold px-6 py-3 h-11 rounded-xl shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 whitespace-nowrap"
                     >
                       {assetForm.formState.isSubmitting || mutations.createAssetRequest.isPending ? (
                         <>

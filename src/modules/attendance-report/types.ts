@@ -13,6 +13,7 @@ export interface AttendanceReportProjectOption {
 export interface AttendanceReportOptionsResponse {
   employees: AttendanceReportEmployeeOption[];
   projects: AttendanceReportProjectOption[];
+  departments: AttendanceReportDepartmentOption[];
 }
 
 export interface AttendanceReportRow {
@@ -47,11 +48,17 @@ export interface AttendanceReportListResponse {
   summary: AttendanceReportSummary;
 }
 
+export interface AttendanceReportDepartmentOption {
+  id: string;
+  name: string;
+}
+
 export interface AttendanceReportFilters {
   date_from: string;
   date_to: string;
   project_id?: string;
   employee_ids?: string[];
+  department_id?: string;
   page?: number;
   page_size?: number;
 }
@@ -71,10 +78,11 @@ export interface AttendanceReportExportPayload {
   title: string;
   periodLabel: string;
   dateColumns: string[];
-  employees: AttendanceReportExportEmployee[];
+  employees: AttendanceReportEmployeeOption[];
   rows: AttendanceReportRow[];
   force8: boolean;
   projectId?: string;
   dateFrom?: string;
   dateTo?: string;
+  departmentId?: string;
 }

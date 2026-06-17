@@ -206,9 +206,14 @@ export function KanbanBoard({
     const targetStatus = COLUMN_TO_TICKET_STATUS[toColId];
     if (!targetStatus) return;
 
+    const today = new Date().toISOString().split('T')[0];
     const updateData: AssetMaintenanceUpdateInput = {
       maintenanceId: issue.id,
       status: targetStatus,
+      ...(targetStatus === 'COMPLETED' ? {
+        completedDate: today,
+        nextAssetStatus: 'AVAILABLE',
+      } : {}),
     };
 
     if (!options?.skipLocalMove) {

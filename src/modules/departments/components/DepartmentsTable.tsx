@@ -116,7 +116,7 @@ export function DepartmentsTable({
       </div>
 
       {/* Pagination pushed to the bottom of the page */}
-      {!isLoading && total > 0 && (
+      {!isLoading && total > 12 && (
         <div className="mt-auto pt-6 flex justify-center">
           <DepartmentsPagination
             page={page}
