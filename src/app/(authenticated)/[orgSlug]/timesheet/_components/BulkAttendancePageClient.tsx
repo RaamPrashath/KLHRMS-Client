@@ -109,6 +109,9 @@ export function BulkAttendancePageClient({
   }, [dayMap]);
 
   const handleOpenCreate = useCallback((date: string, slotStart?: Date, slotEnd?: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (new Date(date + "T00:00:00") > today) return;
     let start: Date;
     let end: Date;
 
@@ -139,6 +142,9 @@ export function BulkAttendancePageClient({
   }, []);
 
   const handleOpenEdit = useCallback((date: string, log: LocalWorkLog) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (new Date(date + "T00:00:00") > today) return;
     setDialogState({
       open: true,
       mode: 'edit',

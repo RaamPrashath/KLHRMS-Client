@@ -14,8 +14,8 @@ import {
   subMonths,
 } from "date-fns";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBulkAttendanceRangeQuery } from "@/modules/attendance/hooks/queries/attendance";
 import { useBulkAttendanceData } from "@/modules/attendance/hooks/use-bulk-attendance-data";
 import { useHolidays } from "@/modules/leave/hooks/useHolidays";
@@ -202,6 +202,9 @@ export function WorkLogHeatmapCard({
 
   function handleDayClick(day: Date) {
     if (!isSameMonth(day, month)) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (day > today) return;
     const dateStr = format(day, "yyyy-MM-dd");
     const currentDay = dayMap.get(dateStr) ?? null;
     const rangeDay = rangeDaysByDate.get(dateStr);
@@ -289,7 +292,11 @@ export function WorkLogHeatmapCard({
     [dayMap, dialogState.log, dialogState.mode, optimisticUpdateDay, rangeDaysByDate, rollbackDay, saveDayLogs],
   );
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   return (
+    <TooltipProvider>
     <section
       className="flex h-full w-full flex-col bg-transparent border-none p-0"
     >
@@ -399,11 +406,13 @@ export function WorkLogHeatmapCard({
                 const isCurrentDay = isToday(day);
                 const totalHours = dayTotals.get(dateStr) ?? 0;
                 const tone = getDayTone(totalHours, offDayDates.has(dateStr));
+                const isFutureDate = day > todayStart;
 
-                return (
+                const dayButton = (
                   <button
                     key={dateStr}
                     type="button"
+                    disabled={isFutureDate}
                     onClick={() => handleDayClick(day)}
                     aria-label={`${format(day, "PPP")}, ${tone.legendLabel}`}
                     className={cn(
@@ -415,11 +424,25 @@ export function WorkLogHeatmapCard({
                       !isEmployeeVariant && isCurrentDay && !isSelected ? "border-[#5b57ff] bg-white text-[#0f172a] shadow-[inset_0_0_0_2px_#5b57ff]" : "",
                       isCurrentDay && isEmployeeVariant && !isSelected ? "shadow-[inset_0_0_0_1.5px_rgba(76,132,255,0.65)]" : "",
                       isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-[#fbfcfe]" : "",
+                      isFutureDate ? "cursor-not-allowed opacity-50" : "",
                     )}
                   >
                     {day.getDate()}
                   </button>
                 );
+
+                if (isFutureDate) {
+                  return (
+                    <Tooltip key={dateStr}>
+                      <TooltipTrigger asChild>{dayButton}</TooltipTrigger>
+                      <TooltipContent side="top">
+                        Can't add log for future dates
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+
+                return dayButton;
               })}
             </div>
           ))}
@@ -468,5 +491,6 @@ export function WorkLogHeatmapCard({
         isPending={isSavingDialog}
       />
     </section>
+    </TooltipProvider>
   );
 }

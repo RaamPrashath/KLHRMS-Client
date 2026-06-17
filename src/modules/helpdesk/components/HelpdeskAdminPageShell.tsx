@@ -247,6 +247,7 @@ export function HelpdeskAdminPageShell({
             typeFilterOptions={typeFilterOptions}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearFilters}
+            hideCondition={true}
           />
         )}
       </div>

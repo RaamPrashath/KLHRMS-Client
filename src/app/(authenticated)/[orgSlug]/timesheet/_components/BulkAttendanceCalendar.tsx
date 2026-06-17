@@ -123,6 +123,9 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
   const holiday = holidayMap.get(dateStr);
   const leave = leaveMap.get(dateStr);
   const isOff = isWeekend || !!holiday || !!leave;
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const isFutureDate = date > todayStart;
 
   const totalMins = day?.logs.reduce((sum, l) => {
     const diff = l.endTime.getTime() - l.startTime.getTime();
@@ -171,25 +174,41 @@ function DayColumnHeader({ date, dayMap, holidayMap, leaveMap, onAddLog }: Reado
 
       {/* Add log button card row (placed right below the header card) */}
       <div className="mt-2.5">
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onAddLog(dateStr);
-          }}
-          onKeyDown={(e) => {
-            if (e.key !== 'Enter' && e.key !== ' ') return;
-            e.preventDefault();
-            e.stopPropagation();
-            onAddLog(dateStr);
-          }}
-          className="w-full h-8 flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 hover:bg-muted/50 hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer"
-          aria-label={`Add worklog for ${format(date, 'EEEE, MMMM d')}`}
-        >
-          <Plus className="size-4" strokeWidth={2.5} />
-        </div>
+        {isFutureDate ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="w-full h-8 flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-muted-foreground/40 cursor-not-allowed"
+                aria-label={`Add worklog for ${format(date, 'EEEE, MMMM d')}`}
+              >
+                <Plus className="size-4" strokeWidth={2.5} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              Can't add log for future dates
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onAddLog(dateStr);
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              e.stopPropagation();
+              onAddLog(dateStr);
+            }}
+            className="w-full h-8 flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 hover:bg-muted/50 hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer"
+            aria-label={`Add worklog for ${format(date, 'EEEE, MMMM d')}`}
+          >
+            <Plus className="size-4" strokeWidth={2.5} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { format } from 'date-fns';
 import { Pencil, Trash2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { CalendarWorkLogEvent } from '@/modules/attendance/types/bulkAttendanceTypes';
 import type { ProjectForAttendance } from '@/modules/projects/types/projectTypes';
 
@@ -18,6 +19,9 @@ export function BulkAttendanceEvent({
   onEdit,
   onDelete,
 }: Readonly<BulkAttendanceEventProps>) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const isFutureDate = event.start > today;
   const startStr = format(event.start, 'HH:mm');
   const endStr = format(event.end, 'HH:mm');
   const durationMs = event.end.getTime() - event.start.getTime();
@@ -40,27 +44,27 @@ export function BulkAttendanceEvent({
   const ticketMatch = textToSearch.match(/[A-Z0-9]{2,6}-\d{1,6}/i);
   const ticketId = ticketMatch ? ticketMatch[0].toUpperCase() : null;
 
-  return (
+  const eventBody = (
     <div
       className={[
-        'group relative h-full w-full overflow-hidden cursor-pointer select-none',
+        'group relative h-full w-full overflow-hidden select-none',
+        isFutureDate ? 'cursor-default' : 'cursor-pointer',
         'transition-all duration-150',
         'border border-border/80 rounded-xl',
         'bg-card hover:bg-muted/10',
-        'hover:border-primary/45 hover:shadow-sm',
+        isFutureDate ? '' : 'hover:border-primary/45 hover:shadow-sm',
         isOptimistic ? 'opacity-60' : '',
       ]
         .filter(Boolean)
         .join(' ')}
-      role="button"
-      tabIndex={0}
+      role={isFutureDate ? undefined : 'button'}
+      tabIndex={isFutureDate ? undefined : 0}
       aria-label={`${title ?? 'Work log'} ${startStr}–${endStr}`}
-      onClick={() => onEdit(event)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onEdit(event); }}
+      onClick={isFutureDate ? undefined : () => onEdit(event)}
+      onKeyDown={isFutureDate ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') onEdit(event); }}
     >
       <div className="px-3 py-2.5 h-full flex flex-col justify-between gap-1 text-left">
         <div className="flex flex-col gap-1 overflow-hidden">
-          {/* Title */}
           {title ? (
             <p className="text-xs font-semibold leading-snug text-foreground line-clamp-2">
               {title}
@@ -71,7 +75,6 @@ export function BulkAttendanceEvent({
             </p>
           )}
 
-          {/* Notes */}
           {notes && (
             <p className="text-[10px] leading-relaxed text-muted-foreground break-words line-clamp-3">
               {notes}
@@ -79,7 +82,6 @@ export function BulkAttendanceEvent({
           )}
         </div>
 
-        {/* Bottom row: Ticket Badge (left) & Duration Label (right) */}
         <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/30 gap-1.5 shrink-0">
           {ticketId ? (
             <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-[9px] font-bold tracking-tight">
@@ -98,19 +100,29 @@ export function BulkAttendanceEvent({
         </div>
       </div>
 
-      {/* Hover action strip */}
       <div
         className="absolute top-1.5 right-1.5 hidden group-hover:flex items-center gap-1"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          aria-label="Edit work log"
-          onClick={(e) => { e.stopPropagation(); onEdit(event); }}
-          className="size-5.5 flex items-center justify-center rounded-md bg-background border border-border text-muted-foreground hover:text-primary transition-colors duration-100 shadow-sm"
-        >
-          <Pencil className="size-3" strokeWidth={2.5} />
-        </button>
+        {isFutureDate ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="size-5.5 flex items-center justify-center rounded-md bg-background border border-border text-muted-foreground/40 cursor-not-allowed">
+                <Pencil className="size-3" strokeWidth={2.5} />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">Can't edit log for future dates</TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            type="button"
+            aria-label="Edit work log"
+            onClick={(e) => { e.stopPropagation(); onEdit(event); }}
+            className="size-5.5 flex items-center justify-center rounded-md bg-background border border-border text-muted-foreground hover:text-primary transition-colors duration-100 shadow-sm"
+          >
+            <Pencil className="size-3" strokeWidth={2.5} />
+          </button>
+        )}
         <button
           type="button"
           aria-label="Delete work log"
@@ -121,7 +133,6 @@ export function BulkAttendanceEvent({
         </button>
       </div>
 
-      {/* Saving pulse dot */}
       {isOptimistic && (
         <div className="absolute bottom-1.5 right-1.5">
           <div className="size-1.5 rounded-full bg-warning animate-pulse" />
@@ -129,4 +140,15 @@ export function BulkAttendanceEvent({
       )}
     </div>
   );
+
+  if (isFutureDate) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{eventBody}</TooltipTrigger>
+        <TooltipContent side="top">Can't edit log for future dates</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return eventBody;
 }
