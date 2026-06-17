@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchLeaveRequestsAction } from '@/modules/leave/api/leaveServerActions';
+import { fetchLeaveRequests } from '@/hooks/functions/leave';
 import type { LeaveRequestFiltersState, LeaveRequestListResponse } from '@/modules/leave/types/leaveTypes';
 
 export function useLeaveRequests(
@@ -13,10 +13,9 @@ export function useLeaveRequests(
   return useQuery<LeaveRequestListResponse, Error>({
     queryKey: ['leave-requests', orgSlug, filters],
     queryFn: () =>
-      fetchLeaveRequestsAction({
-        orgSlug,
-        memberId,
-        filters: {
+      fetchLeaveRequests(
+        { orgSlug, memberId },
+        {
           status: filters.status,
           memberId: filters.memberId,
           leaveTypeId: filters.leaveTypeId,
@@ -26,7 +25,7 @@ export function useLeaveRequests(
           page: filters.page,
           pageSize: filters.pageSize,
         },
-      }),
+      ),
     enabled: (options?.enabled ?? true) && !!orgSlug && !!memberId,
     placeholderData: options?.keepPreviousData ? (previousData) => previousData : undefined,
     staleTime: options?.staleTime,

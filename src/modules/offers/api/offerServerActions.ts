@@ -2,6 +2,7 @@
 
 import { getHrmsApiUrl } from '@/lib/deployment-env';
 import {
+  offerDownloadPayloadSchema,
   offerDispatchPayloadSchema,
   offerTemplateCategoryCreatePayloadSchema,
   offerTemplateCopyPayloadSchema,
@@ -9,6 +10,7 @@ import {
   offerTemplateSectionUpsertPayloadSchema,
   offerTemplateUpdatePayloadSchema,
   type OfferDispatchPayload,
+  type OfferDownloadPayload,
   type OfferTemplateCategoryInput,
   type OfferTemplateCopyPayload,
   type OfferTemplateCreatePayload,
@@ -268,6 +270,28 @@ export async function validateOfferDispatchAction(params: {
   return handleResponse<OfferCandidateValidationResponse>(res);
 }
 
+export async function validateOfferDownloadAction(params: {
+  orgSlug: string;
+  memberId: string;
+  jobSlug: string;
+  stageSlug: string;
+  data: OfferDispatchPayload;
+}): Promise<OfferCandidateValidationResponse> {
+  const parsed = offerDispatchPayloadSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+  const res = await fetch(
+    `${getApiUrl()}/offers/pipeline/jobs/${encodeURIComponent(params.jobSlug)}/stages/${encodeURIComponent(params.stageSlug)}/download/validate`,
+    {
+      method: 'POST',
+      headers: buildHeaders(params.orgSlug, params.memberId),
+      body: JSON.stringify(parsed.data),
+    },
+  );
+  return handleResponse<OfferCandidateValidationResponse>(res);
+}
+
 export async function createOfferDispatchAction(params: {
   orgSlug: string;
   memberId: string;
@@ -288,6 +312,48 @@ export async function createOfferDispatchAction(params: {
     },
   );
   return handleResponse<OfferDispatchCreateResponse>(res);
+}
+
+export async function downloadOfferLettersAction(params: {
+  orgSlug: string;
+  memberId: string;
+  jobSlug: string;
+  stageSlug: string;
+  data: OfferDownloadPayload;
+}): Promise<{ fileName: string; contentType: string; base64: string }> {
+  const parsed = offerDownloadPayloadSchema.safeParse(params.data);
+  if (!parsed.success) {
+    throw new Error(JSON.stringify({ status: 400, message: parsed.error.issues[0]?.message ?? 'Validation failed' }));
+  }
+  const res = await fetch(
+    `${getApiUrl()}/offers/pipeline/jobs/${encodeURIComponent(params.jobSlug)}/stages/${encodeURIComponent(params.stageSlug)}/download`,
+    {
+      method: 'POST',
+      headers: buildHeaders(params.orgSlug, params.memberId),
+      body: JSON.stringify(parsed.data),
+    },
+  );
+
+  if (!res.ok) {
+    await handleResponse<never>(res);
+  }
+
+  const disposition = res.headers.get('content-disposition') ?? '';
+  const fileName = readAttachmentFileName(disposition) ?? 'offer-letters.zip';
+  const contentType = res.headers.get('content-type') ?? 'application/zip';
+  const arrayBuffer = await res.arrayBuffer();
+  return {
+    fileName,
+    contentType,
+    base64: Buffer.from(arrayBuffer).toString('base64'),
+  };
+}
+
+function readAttachmentFileName(disposition: string): string | null {
+  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  if (encoded) return decodeURIComponent(encoded.replace(/"/g, ''));
+  const plain = disposition.match(/filename="([^"]+)"/i)?.[1];
+  return plain ?? null;
 }
 
 export async function fetchOfferDispatchBatchAction(params: {

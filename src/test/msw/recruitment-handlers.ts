@@ -3,6 +3,7 @@ import type { PipelineApplication, PipelineBoard, PipelineJobPosting, PipelineSt
 import type { PublicCareerApplicationResult } from "@/modules/jobs/types/publicCareerTypes";
 import type { OnboardingPublic, AcceptedOnboardingWorkspace, OnboardWorkspace } from "@/modules/onboarding/types/onboardingTypes";
 import type { OnboardingSendPayload, OnboardingSubmitDocumentsPayload } from "@/modules/onboarding/schema/onboardingSchemas";
+import type { DocumentCollectionSendPayload, DocumentCollectionSubmitPayload } from "@/modules/document-collection/schema/documentCollectionSchemas";
 
 const nowIso = "2026-06-10T06:30:00.000Z";
 
@@ -31,12 +32,16 @@ export const recruitmentRequests: {
     statusUpdates: CandidateStageUpdateRequest[];
     onboardingSends: OnboardingSendPayload[];
     onboardingDocumentSubmissions: OnboardingSubmitDocumentsPayload[];
+    documentCollectionSends: DocumentCollectionSendPayload[];
+    documentCollectionSubmissions: DocumentCollectionSubmitPayload[];
 } = {
     publicApplications: [],
     pipelineQueries: [],
     statusUpdates: [],
     onboardingSends: [],
     onboardingDocumentSubmissions: [],
+    documentCollectionSends: [],
+    documentCollectionSubmissions: [],
 };
 
 export function resetRecruitmentRequests() {
@@ -45,6 +50,8 @@ export function resetRecruitmentRequests() {
     recruitmentRequests.statusUpdates = [];
     recruitmentRequests.onboardingSends = [];
     recruitmentRequests.onboardingDocumentSubmissions = [];
+    recruitmentRequests.documentCollectionSends = [];
+    recruitmentRequests.documentCollectionSubmissions = [];
 }
 
 const mockJobPosting: PipelineJobPosting = {
@@ -215,6 +222,7 @@ export const acceptedOnboardingWorkspace: AcceptedOnboardingWorkspace = {
             source: "CAREERS",
             onboardingStatus: "UNSENT",
             latestOnboarding: null,
+            latestDocumentCollection: null,
         },
         {
             applicationId: "application_onboard_submitted",
@@ -228,6 +236,16 @@ export const acceptedOnboardingWorkspace: AcceptedOnboardingWorkspace = {
             appliedAt: "2026-06-02T04:30:00.000Z",
             source: "REFERRAL",
             onboardingStatus: "DOCUMENTS_SUBMITTED",
+            latestDocumentCollection: {
+                id: "doc_request_dev",
+                templateId: "doc_template_standard",
+                templateName: "Joining documents",
+                status: "SUBMITTED",
+                tokenSentAt: "2026-06-08T04:30:00.000Z",
+                submittedAt: "2026-06-09T04:30:00.000Z",
+                emailError: null,
+                createdAt: nowIso,
+            },
             latestOnboarding: {
                 id: "onboarding_dev",
                 applicationId: "application_onboard_submitted",
@@ -300,6 +318,88 @@ export const publicOnboarding: OnboardingPublic = {
     status: "PENDING",
     submittedAt: null,
 };
+
+export const documentCollectionTemplate = {
+    id: "doc_template_standard",
+    organizationId: "org_01",
+    name: "Joining documents",
+    description: "Collect joining details and files.",
+    status: "ACTIVE",
+    lastUsedAt: null,
+    createdByMemberId: "member_hr",
+    updatedByMemberId: "member_hr",
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    fieldCount: 3,
+    fields: [
+        {
+            id: "field_resume",
+            organizationId: "org_01",
+            templateId: "doc_template_standard",
+            fieldType: "FILE_UPLOAD",
+            name: "Signed declaration",
+            description: null,
+            required: true,
+            order: 1,
+            allowedFormatGroup: "FILE",
+            maxSizeBytes: 10 * 1024 * 1024,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        },
+        {
+            id: "field_address",
+            organizationId: "org_01",
+            templateId: "doc_template_standard",
+            fieldType: "LONG_TEXT",
+            name: "Current address",
+            description: null,
+            required: true,
+            order: 2,
+            allowedFormatGroup: "ALL",
+            maxSizeBytes: null,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        },
+        {
+            id: "field_joining",
+            organizationId: "org_01",
+            templateId: "doc_template_standard",
+            fieldType: "DATE",
+            name: "Preferred joining date",
+            description: null,
+            required: false,
+            order: 3,
+            allowedFormatGroup: "ALL",
+            maxSizeBytes: null,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        },
+    ],
+} as const;
+
+export const publicDocumentCollection = {
+    token: "document_collection_token_123",
+    candidateName: "Meera Iyer",
+    jobTitle: mockJobPosting.title,
+    organizationName: "Kovan Labs",
+    status: "PENDING",
+    submittedAt: null,
+    template: {
+        id: documentCollectionTemplate.id,
+        name: documentCollectionTemplate.name,
+        description: documentCollectionTemplate.description,
+        fields: documentCollectionTemplate.fields.map((field) => ({
+            id: field.id,
+            fieldType: field.fieldType,
+            name: field.name,
+            description: field.description,
+            required: field.required,
+            order: field.order,
+            allowedFormatGroup: field.allowedFormatGroup,
+            maxSizeBytes: field.maxSizeBytes,
+        })),
+    },
+} as const;
 
 function isPublicApplicationRequest(body: unknown): body is PublicCandidateApplicationRequest {
     if (typeof body !== "object" || body === null) return false;
@@ -394,6 +494,74 @@ export const recruitmentHandlers = [
         return HttpResponse.json({ requestedCount: body.applicationIds.length }, { status: 200 });
     }),
 
+    http.get("*/document-collection/templates", () =>
+        HttpResponse.json([
+            {
+                id: documentCollectionTemplate.id,
+                organizationId: documentCollectionTemplate.organizationId,
+                name: documentCollectionTemplate.name,
+                description: documentCollectionTemplate.description,
+                status: documentCollectionTemplate.status,
+                lastUsedAt: documentCollectionTemplate.lastUsedAt,
+                createdAt: documentCollectionTemplate.createdAt,
+                updatedAt: documentCollectionTemplate.updatedAt,
+                fieldCount: documentCollectionTemplate.fieldCount,
+            },
+        ], { status: 200 }),
+    ),
+
+    http.post("*/document-collection/templates", async ({ request }) => {
+        const body = await request.json() as { name?: string };
+        return HttpResponse.json({ ...documentCollectionTemplate, id: "doc_template_new", name: body.name || "Untitled document collection", status: "DRAFT" }, { status: 200 });
+    }),
+
+    http.get("*/document-collection/templates/:templateId", () =>
+        HttpResponse.json(documentCollectionTemplate, { status: 200 }),
+    ),
+
+    http.patch("*/document-collection/templates/:templateId", async ({ request }) => {
+        const body = await request.json() as Record<string, unknown>;
+        return HttpResponse.json({ ...documentCollectionTemplate, ...body }, { status: 200 });
+    }),
+
+    http.post("*/document-collection/templates/:templateId/copy", () =>
+        HttpResponse.json({ ...documentCollectionTemplate, id: "doc_template_copy", name: "Joining documents - Copy", status: "DRAFT" }, { status: 200 }),
+    ),
+
+    http.delete("*/document-collection/templates/:templateId", () =>
+        new HttpResponse(null, { status: 204 }),
+    ),
+
+    http.post("*/document-collection/pipeline/jobs/:jobSlug/stages/:stageSlug/send-requests", async ({ request }) => {
+        const body = (await request.json()) as DocumentCollectionSendPayload;
+        if (!body.templateId || !Array.isArray(body.applicationIds) || body.applicationIds.length === 0) {
+            return HttpResponse.json({ detail: "Select a document collection template and candidates" }, { status: 422 });
+        }
+
+        recruitmentRequests.documentCollectionSends.push(body);
+        return HttpResponse.json({ requestedCount: body.applicationIds.length }, { status: 200 });
+    }),
+
+    http.get("*/document-collection/requests/:requestId", () =>
+        HttpResponse.json({
+            id: "doc_request_dev",
+            templateId: documentCollectionTemplate.id,
+            templateName: documentCollectionTemplate.name,
+            status: "SUBMITTED",
+            tokenSentAt: "2026-06-08T04:30:00.000Z",
+            submittedAt: "2026-06-09T04:30:00.000Z",
+            emailError: null,
+            createdAt: nowIso,
+            templateSnapshotJson: publicDocumentCollection.template,
+            answersJson: {
+                answers: [
+                    { fieldId: "field_address", fieldType: "LONG_TEXT", name: "Current address", value: "Coimbatore" },
+                    { fieldId: "field_resume", fieldType: "FILE_UPLOAD", name: "Signed declaration", fileName: "declaration.pdf", url: "https://cdn.example.com/declaration.pdf" },
+                ],
+            },
+        }, { status: 200 }),
+    ),
+
     http.get("*/public/onboarding/:token", () =>
         HttpResponse.json(publicOnboarding, { status: 200 }),
     ),
@@ -407,6 +575,19 @@ export const recruitmentHandlers = [
         recruitmentRequests.onboardingDocumentSubmissions.push(body);
         return HttpResponse.json(
             { status: "DOCUMENTS_SUBMITTED", message: "Documents submitted successfully" },
+            { status: 200 },
+        );
+    }),
+
+    http.get("*/public/document-collection/:token", () =>
+        HttpResponse.json(publicDocumentCollection, { status: 200 }),
+    ),
+
+    http.post("*/public/document-collection/:token/submit", async ({ request }) => {
+        const body = (await request.json()) as DocumentCollectionSubmitPayload;
+        recruitmentRequests.documentCollectionSubmissions.push(body);
+        return HttpResponse.json(
+            { status: "SUBMITTED", message: "Document collection submitted successfully" },
             { status: 200 },
         );
     }),

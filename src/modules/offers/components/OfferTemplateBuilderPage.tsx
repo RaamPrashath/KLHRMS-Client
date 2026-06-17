@@ -749,7 +749,7 @@ export function OfferTemplateBuilderPage({
   if (mode === 'new' && !templateId) {
     return (
       <div className="flex min-h-full items-center justify-center bg-canvas p-6 text-sm text-neutral-500">
-        <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-xl bg-surface px-4 py-3 shadow-sm">
           <Loader2 className="size-4 animate-spin text-primary" />
           Creating template
         </div>
@@ -760,7 +760,7 @@ export function OfferTemplateBuilderPage({
   if (templateQuery.isLoading && !template) {
     return (
       <div className="flex min-h-full items-center justify-center bg-canvas p-6 text-sm text-neutral-500">
-        <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-xl bg-surface px-4 py-3 shadow-sm">
           <Loader2 className="size-4 animate-spin text-primary" />
           Loading template
         </div>
@@ -771,7 +771,7 @@ export function OfferTemplateBuilderPage({
   if (!template) {
     return (
       <div className="min-h-full bg-canvas p-6">
-        <div className="rounded-xl border border-neutral-100 bg-surface p-6 shadow-sm">
+        <div className="rounded-xl bg-surface p-6 shadow-sm">
           <p className="text-sm font-medium text-neutral-900">Offer template was not found.</p>
           <Button className="mt-4" variant="outline" onClick={() => router.push(`/${orgSlug}/candidates`)}>
             Back to candidates
@@ -845,12 +845,12 @@ export function OfferTemplateBuilderPage({
       <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2">
         <section className={cn('min-h-0 overflow-y-auto border-r border-neutral-100 bg-canvas p-4 lg:block lg:p-6', mobileView === 'preview' && 'hidden')}>
           <div className="space-y-4">
-            <label className="grid gap-1.5 rounded-xl border border-neutral-100 bg-surface p-4 text-[13px] font-medium text-neutral-700 shadow-sm">
+            <label className="grid gap-1.5 rounded-xl bg-surface p-4 text-[13px] font-medium text-neutral-700 shadow-sm">
               Template name
               <Input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
             </label>
 
-            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'header' | 'body' | 'footer')} className="flex flex-col rounded-xl border border-neutral-100 bg-surface p-4 shadow-sm">
+            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'header' | 'body' | 'footer')} className="flex flex-col rounded-xl bg-surface p-4 shadow-sm">
               <TabSlider
                 modes={[
                   { mode: 'header', label: 'Header' },
@@ -938,7 +938,7 @@ export function OfferTemplateBuilderPage({
                   </div>
                   <div className="grid gap-3 xl:grid-cols-2">
                   {draft.signatures.map((signature, index) => (
-                    <div key={signature.id} className="min-w-0 rounded-lg border border-neutral-100 bg-canvas p-3">
+                    <div key={signature.id} className="min-w-0 rounded-lg bg-canvas p-3 shadow-sm">
                       <div className="mb-3 flex items-center justify-between">
                         <p className="text-xs font-medium text-neutral-500">Signature {index + 1}</p>
                         <Button variant="ghost" size="icon-sm" onClick={() => removeSignature(signature.id)} disabled={draft.signatures.length <= 1} aria-label="Remove signature">

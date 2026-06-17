@@ -293,7 +293,7 @@ function ReportTable({
 
   const headerRow = (
     <TableRow className="border-black/[0.04] hover:bg-transparent">
-      <TableHead className="w-[20%] h-auto py-3 px-4 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500 sticky left-0 z-10 bg-canvas/50">Employee</TableHead>
+      <TableHead className="w-[20%] h-auto py-3 px-4 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Employee</TableHead>
       <TableHead className="w-[15%] h-auto py-3 px-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Date</TableHead>
       <TableHead className="w-[45%] h-auto py-3 px-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500">Description</TableHead>
       <TableHead className="w-[10%] h-auto py-3 px-3 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-wider text-neutral-500 text-right">Hours</TableHead>
@@ -345,10 +345,10 @@ function ReportTable({
           {groups.map((group) => {
             const rowCount = group.rows.length;
             return group.rows.map((row, rowIdx) => (
-              <TableRow key={row.attendanceRecordId} className="border-black/4 transition-colors hover:bg-black/[0.02]">
+              <TableRow key={`${group.employee.employeeId}-${row.date}-${row.attendanceRecordId ?? 'norow'}-${rowIdx}`} className="border-black/4 transition-colors hover:bg-black/[0.02]">
                 {rowIdx === 0 && (
                   <TableCell
-                    className="px-4 py-3 align-top whitespace-nowrap sticky left-0 z-10 bg-surface border-r border-neutral-100"
+                    className="px-4 py-3 align-top whitespace-nowrap bg-surface border-r border-neutral-100"
                     rowSpan={rowCount}
                   >
                     <EmployeeCell name={group.employee.employeeName} detail={group.employee.departmentName} />
