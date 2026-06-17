@@ -9,25 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { AttendanceTodayStatus, EmployeeFilterOption } from '@/modules/employees/types/employeeTypes';
-
-const ATTENDANCE_OPTIONS: { value: AttendanceTodayStatus; label: string }[] = [
-  { value: 'PRESENT', label: 'Present' },
-  { value: 'ABSENT', label: 'Absent' },
-  { value: 'WORK_FROM_HOME', label: 'WFH' },
-  { value: 'HALF_DAY', label: 'Half Day' },
-  { value: 'NO_RECORD', label: 'No Record' },
-];
+import type { EmployeeFilterOption } from '@/modules/employees/types/employeeTypes';
 
 interface EmployeeFiltersProps {
   search: string;
   roleId: string | undefined;
-  attendanceStatus: AttendanceTodayStatus | undefined;
   roles: EmployeeFilterOption[];
   onSearchChange: (value: string) => void;
   onClearSearch: () => void;
   onRoleChange: (value: string | undefined) => void;
-  onAttendanceStatusChange: (value: AttendanceTodayStatus | undefined) => void;
   onClearAll: () => void;
 }
 
@@ -36,15 +26,13 @@ const ALL_VALUE = '__all__';
 export function EmployeeFilters({
   search,
   roleId,
-  attendanceStatus,
   roles,
   onSearchChange,
   onClearSearch,
   onRoleChange,
-  onAttendanceStatusChange,
   onClearAll,
 }: EmployeeFiltersProps) {
-  const hasActiveFilters = !!roleId || !!attendanceStatus;
+  const hasActiveFilters = !!roleId;
 
   return (
     <div className="flex items-center gap-2 w-full">
@@ -61,26 +49,6 @@ export function EmployeeFilters({
 
       {/* Right-aligned controls */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Attendance status filter */}
-        <Select
-          value={attendanceStatus ?? ALL_VALUE}
-          onValueChange={(v) => onAttendanceStatusChange(v === ALL_VALUE ? undefined : v as AttendanceTodayStatus)}
-        >
-          <SelectTrigger className="h-9 w-36 text-sm border-0 bg-canvas">
-            <SelectValue placeholder="All Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE} className="text-sm">
-              All Status
-            </SelectItem>
-            {ATTENDANCE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         {/* Role filter */}
         <Select
           value={roleId ?? ALL_VALUE}

@@ -17,6 +17,7 @@ import { fetchHolidaysAction } from '@/modules/leave/api/leaveServerActions';
 import { useEmployeesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
+import { dateOnlyToLocalDate } from '@/modules/leave/utils/dateOnly';
 import type {
   AttendanceRecord,
   AttendanceListResponse,
@@ -465,8 +466,8 @@ export function AttendanceTable(props: Readonly<AttendanceTableProps>) {
     const map = new Map<string, string>();
     if (pivotLeaveData?.items) {
       for (const leave of pivotLeaveData.items) {
-        const start = new Date(leave.startDate);
-        const end = new Date(leave.endDate);
+        const start = dateOnlyToLocalDate(leave.startDate);
+        const end = dateOnlyToLocalDate(leave.endDate);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           map.set(leaveKey(leave.memberId, toYMD(d)), leave.leaveType.name);
         }

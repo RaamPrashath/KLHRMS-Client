@@ -22,6 +22,7 @@ import { useLeaveBalances } from '@/modules/leave/hooks/useLeaveBalances';
 import { useLeaveCalendar } from '@/modules/leave/hooks/useLeaveCalendar';
 import { useLeaveRequests } from '@/modules/leave/hooks/useLeaveRequests';
 import { useLeaveTypes } from '@/modules/leave/hooks/useLeaveTypes';
+import { dateOnlyToLocalDate, localDateKey } from '@/modules/leave/utils/dateOnly';
 import { getLeaveErrorMessage } from '@/modules/leave/utils/errorMessage';
 import { canApproveLeaves, canCreateLeaves, canViewLeaves, resolveLeavePermissions } from '@/modules/leave/utils/leavePermissions';
 import type {
@@ -46,7 +47,7 @@ function statusTone(status: string) {
 }
 
 function startOfToday() {
-  return new Date().toISOString().slice(0, 10);
+  return localDateKey(new Date());
 }
 
 function buildDefaultRequestFilters(): LeaveRequestFiltersState {
@@ -73,7 +74,7 @@ function buildCalendarDays(year: number, month: number) {
   const cells: Array<{ date: string | null }> = [];
   for (let index = 0; index < leading; index += 1) cells.push({ date: null });
   for (let day = 1; day <= total; day += 1) {
-    const date = new Date(year, month - 1, day).toISOString().slice(0, 10);
+    const date = localDateKey(new Date(year, month - 1, day));
     cells.push({ date });
   }
   return cells;
@@ -138,10 +139,10 @@ export function LeavePageShell({ orgSlug, memberId }: Readonly<LeavePageShellPro
   const requestMap = useMemo(() => {
     const map = new Map<string, LeaveRequestRecord[]>();
     for (const request of calendarQuery.data?.leaveRequests ?? []) {
-      const current = new Date(`${request.startDate}T00:00:00`);
-      const end = new Date(`${request.endDate}T00:00:00`);
+      const current = dateOnlyToLocalDate(request.startDate);
+      const end = dateOnlyToLocalDate(request.endDate);
       while (current <= end) {
-        const key = current.toISOString().slice(0, 10);
+        const key = localDateKey(current);
         const bucket = map.get(key) ?? [];
         bucket.push(request);
         map.set(key, bucket);

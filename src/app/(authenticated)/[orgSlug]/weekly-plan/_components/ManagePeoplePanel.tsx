@@ -992,18 +992,18 @@ export function ManagePeoplePanel({ orgSlug, orgId, memberId }: ManagePeoplePane
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="range"
-                selected={{
-                  from: customDateFrom ? parseISO(customDateFrom) : undefined,
-                  to: customDateTo ? parseISO(customDateTo) : undefined,
-                }}
-                onSelect={(range: DateRange | undefined) => {
-                  if (range?.from) setCustomDateFrom(range.from.toISOString().slice(0, 10));
-                  if (range?.to) setCustomDateTo(range.to.toISOString().slice(0, 10));
-                }}
-                numberOfMonths={1}
-              />
+                <Calendar
+                  mode="range"
+                  selected={{
+                    from: customDateFrom ? parseISO(customDateFrom) : undefined,
+                    to: customDateTo ? parseISO(customDateTo) : undefined,
+                  }}
+                  onSelect={(range: DateRange | undefined) => {
+                    if (range?.from) setCustomDateFrom(dateFnsFormat(range.from, "yyyy-MM-dd"));
+                    if (range?.to) setCustomDateTo(dateFnsFormat(range.to, "yyyy-MM-dd"));
+                  }}
+                  numberOfMonths={1}
+                />
             </PopoverContent>
           </Popover>
 

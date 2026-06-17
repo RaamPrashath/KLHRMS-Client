@@ -1,5 +1,4 @@
 const LOCAL_API_URL = "http://localhost:8000";
-const DEPLOYED_API_URL = "https://klhrms-server.onrender.com";
 
 function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
@@ -13,13 +12,24 @@ function withProtocol(value: string | undefined): string | undefined {
 }
 
 export function getHrmsApiUrl(): string {
+  const isBrowser = typeof window !== "undefined";
   const configured =
-    process.env.HRMS_API_URL ||
+    (isBrowser ? undefined : process.env.HRMS_API_URL) ||
     process.env.NEXT_PUBLIC_HRMS_API_URL ||
     process.env.NEXT_PUBLIC_API_URL;
 
-  return stripTrailingSlash(
-    configured || (process.env.NODE_ENV === "production" ? DEPLOYED_API_URL : LOCAL_API_URL),
+  if (configured?.trim()) {
+    return stripTrailingSlash(configured.trim());
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return LOCAL_API_URL;
+  }
+
+  throw new Error(
+    isBrowser
+      ? "NEXT_PUBLIC_HRMS_API_URL must be configured for browser API requests."
+      : "HRMS_API_URL must be configured for server API requests.",
   );
 }
 
