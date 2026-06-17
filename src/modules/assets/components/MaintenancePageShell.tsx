@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
+  Archive,
   Columns,
   LayoutPanelTop,
   Search,
@@ -43,6 +45,7 @@ export function AssetMaintenancePageShell({
   orgSlug: string;
   memberId: string;
 }) {
+  const router = useRouter();
   const ticketsQuery = useMaintenanceTicketsQuery(orgSlug, memberId);
   const mutations = useAssetMutations(orgSlug, memberId);
 
@@ -146,6 +149,14 @@ export function AssetMaintenancePageShell({
               Table
             </button>
           </div>
+          <Button
+            size="sm"
+            onClick={() => router.push(`/${orgSlug}/archived-tickets?ticketMode=ASSET_ISSUE`)}
+            className="inline-flex h-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#3862f6] to-[#6366f1] px-4 text-[12px] font-bold text-white shadow-[0_4px_12px_rgba(56,98,246,0.15)] hover:opacity-95 transition-all duration-200 gap-1.5"
+          >
+            <Archive className="size-3.5" />
+            Archived
+          </Button>
         </div>
       </div>
 

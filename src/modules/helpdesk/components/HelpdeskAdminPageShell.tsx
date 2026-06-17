@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Columns, LayoutPanelTop, Search, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Archive, Columns, LayoutPanelTop, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import {
@@ -35,6 +36,7 @@ export function HelpdeskAdminPageShell({
   orgSlug: string;
   memberId: string;
 }) {
+  const router = useRouter();
   const ticketsQuery = useHelpdeskAdminTicketsQuery(orgSlug, memberId);
   const mutations = useAssetMutations(orgSlug, memberId);
 
@@ -140,6 +142,15 @@ export function HelpdeskAdminPageShell({
               Table
             </button>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/${orgSlug}/archived-tickets?ticketMode=GENERAL_HELP_REQUEST`)}
+            className="h-8 rounded-lg text-[12px] gap-1.5"
+          >
+            <Archive className="size-3.5" />
+            Archived
+          </Button>
         </div>
       </div>
 

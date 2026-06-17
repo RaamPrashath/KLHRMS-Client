@@ -3,15 +3,18 @@ import { hasPermission } from '@/lib/hrms-roles';
 import type { RolePermissions } from '@/lib/hrms-roles';
 import { requireOrgMembership } from '@/lib/organizations';
 import { requireServerSession } from '@/lib/server-session';
-import { AssetMaintenancePageShell } from '@/modules/assets/components/MaintenancePageShell';
+import { ArchivedTicketsPageShell } from '@/modules/assets/components/ArchivedTicketsPageShell';
 
-export default async function AssetMaintenancePage({
+export default async function ArchivedTicketsPage({
   params,
+  searchParams,
 }: Readonly<{
   params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<{ ticketMode?: string }>;
 }>) {
   const session = await requireServerSession();
   const { orgSlug } = await params;
+  const { ticketMode } = await searchParams;
 
   let memberId: string;
   let permissions: RolePermissions | null;
@@ -24,9 +27,15 @@ export default async function AssetMaintenancePage({
     redirect('/organizations');
   }
 
-  if (!permissions || !hasPermission(permissions, 'maintenance')) redirect(`/${orgSlug}`);
+  const hasMaintenance = hasPermission(permissions, 'maintenance');
+  const hasHelpdesk = hasPermission(permissions, 'helpdesk');
+  if (!hasMaintenance && !hasHelpdesk) redirect(`/${orgSlug}`);
 
   return (
-    <AssetMaintenancePageShell orgSlug={orgSlug} memberId={memberId!} />
+    <ArchivedTicketsPageShell
+      orgSlug={orgSlug}
+      memberId={memberId!}
+      initialTicketMode={ticketMode}
+    />
   );
 }

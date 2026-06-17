@@ -56,6 +56,7 @@ export function OrgSidebarShell({
     const isResumeParserRoute = pathname.includes("/resume-parser")
     const isNotificationsRoute = pathname.includes("/notifications");
     const isRecruitmentReportRoute = pathname.includes("/recruitment-report");
+    const isArchivedTicketsRoute = pathname.includes("/archived-tickets");
     
     const isProcurementComposer = pathname.includes("/procurement/purchase-orders/");
     
@@ -80,7 +81,8 @@ export function OrgSidebarShell({
         isProcurementRoute ||
         isResumeParserRoute ||
         isNotificationsRoute ||
-        isRecruitmentReportRoute
+        isRecruitmentReportRoute ||
+        isArchivedTicketsRoute
 
     if (isDocumentsRoute) {
         return (
@@ -105,9 +107,9 @@ export function OrgSidebarShell({
                     className={cn(
                         "w-full",
                         isFullWidthRoute ? "min-h-full" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
-                        isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isAssetMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute || isResumeParserRoute || isNotificationsRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isAssetMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute || isResumeParserRoute || isNotificationsRoute || isArchivedTicketsRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
                         (isOfferRoute || isProcurementComposer) && "h-full min-h-0 overflow-hidden",
-                        isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isAssetMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute || isResumeParserRoute || isNotificationsRoute || isRecruitmentReportRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
+                        isLeaveRoute || isProcurementRoute || isPermissionsRoute || isAssetRoute || isAssetMaintenanceRoute || isCandidatesRoute || isTimesheetRoute || isEmployeesRoute || isDepartmentsRoute || isAttendanceRoute || isProjectsRoute || isJobsRoute || isInterviewsRoute || isWeeklyPlanRoute || isDashboardRoute || isStageRoute || isHelpdeskRoute || isOfferRoute || isResumeParserRoute || isNotificationsRoute || isRecruitmentReportRoute || isArchivedTicketsRoute ? "min-h-full flex flex-col" : "mx-auto max-w-6xl px-6 py-8 lg:px-8",
                         isOfferRoute && "h-full min-h-0 overflow-hidden",
                     )}
                 >
