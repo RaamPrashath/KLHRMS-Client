@@ -32,12 +32,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
 import { EmployeeFilters } from './EmployeeFilters';
 import { EmployeePagination } from './EmployeePagination';
 import type {
   EmployeeListItem,
   EmployeeFilterOption,
-  AttendanceTodayStatus,
 } from '@/modules/employees/types/employeeTypes';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -56,12 +56,12 @@ interface EmployeeTableProps {
   // filters
   search: string;
   roleId: string | undefined;
-  attendanceStatus: AttendanceTodayStatus | undefined;
+  source: string | undefined;
   roles: EmployeeFilterOption[];
   onSearchChange: (value: string) => void;
   onClearSearch: () => void;
   onRoleChange: (value: string | undefined) => void;
-  onAttendanceStatusChange: (value: AttendanceTodayStatus | undefined) => void;
+  onSourceChange: (value: string | undefined) => void;
   onClearAll: () => void;
   // role editing (inline)
   canEditRole?: boolean;
@@ -330,12 +330,12 @@ export function EmployeeTable({
   onPageSizeChange,
   search,
   roleId,
-  attendanceStatus,
+  source,
   roles,
   onSearchChange,
   onClearSearch,
   onRoleChange,
-  onAttendanceStatusChange,
+  onSourceChange,
   onClearAll,
   canEditRole = false,
   onUpdateRole,
@@ -364,17 +364,19 @@ export function EmployeeTable({
         <div className="bg-surface rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
           {/* ── Layer 1: Top actions (filters) ──────────────────────────── */}
           <div className="px-8 py-6 flex flex-col gap-4 border-b border-black/[0.04]">
-            <EmployeeFilters
-              search={search}
-              roleId={roleId}
-              attendanceStatus={attendanceStatus}
-              roles={roles}
-              onSearchChange={onSearchChange}
-              onClearSearch={onClearSearch}
-              onRoleChange={onRoleChange}
-              onAttendanceStatusChange={onAttendanceStatusChange}
-              onClearAll={onClearAll}
-            />
+            <div className="flex items-start justify-between gap-4">
+              <EmployeeFilters
+                search={search}
+                roleId={roleId}
+                source={source}
+                roles={roles}
+                onSearchChange={onSearchChange}
+                onClearSearch={onClearSearch}
+                onRoleChange={onRoleChange}
+                onSourceChange={onSourceChange}
+                onClearAll={onClearAll}
+              />
+            </div>
           </div>
 
           {/* ── Layer 2 & 3: Table (Flex) ─────────────────────────────────────────── */}

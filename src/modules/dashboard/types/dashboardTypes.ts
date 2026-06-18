@@ -9,6 +9,14 @@ export interface DashboardCapabilities {
   jobs: boolean;
 }
 
+export interface DashboardDepartmentSummary {
+  id: string;
+  name: string;
+  role: 'MEMBER' | 'HEAD' | string;
+  headMemberName: string | null;
+  memberCount: number;
+}
+
 export interface DashboardOverviewResponse {
   today: string;
   capabilities: DashboardCapabilities;
@@ -18,4 +26,5 @@ export interface DashboardOverviewResponse {
   pendingLeaveRequests: LeaveRequestListResponse | null;
   jobRequisitions: JobRequisitionRecord[];
   teamWeeklyPlanToday: WeeklyPlanEntry[];
+  myDepartments: DashboardDepartmentSummary[];
 }

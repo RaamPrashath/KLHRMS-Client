@@ -114,6 +114,7 @@ model Member {
     createdAt      DateTime @default(now())
     roleId         String?
     status         String   @default("ACTIVE")
+    deactivatedAt  DateTime?
     organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
     role           Role?        @relation(fields: [organizationId, roleId], references: [organizationId, id])

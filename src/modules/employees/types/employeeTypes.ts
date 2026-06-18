@@ -50,7 +50,7 @@ export interface EmployeeFilterOption {
 export interface EmployeeFilters {
   search: string;
   roleId: string | undefined;
-  attendanceStatus: AttendanceTodayStatus | undefined;
+  source: string | undefined;
   page: number;
   pageSize: number;
 }

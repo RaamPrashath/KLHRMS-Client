@@ -37,7 +37,7 @@ import {
   useEmployeeDetailQuery,
   useRefreshEmployeeFromGraphMutation,
 } from '@/modules/employees/hooks/useEmployeeDetailQuery';
-import { useDeactivateEmployeeMutation } from '@/modules/employees/hooks/useEmployeesQuery';
+import { useDeactivationImpactQuery, useDeactivateEmployeeMutation } from '@/modules/employees/hooks/useEmployeesQuery';
 import { DeactivateEmployeeDialog } from '@/modules/employees/components/DeactivateEmployeeDialog';
 import { EditEmployeeDialog } from '@/modules/employees/components/EditEmployeeDialog';
 import { EmployeeOrgChart } from '@/modules/employees/components/EmployeeOrgChart';
@@ -144,7 +144,7 @@ export function EmployeeDetailPageShell({
   );
 
   const canEdit = permissions
-    ? getScope(permissions, 'employees', 'edit') !== 'none'
+    ? getScope(permissions, 'employees', 'edit') !== 'none' && getScope(permissions, 'permission', 'edit') !== 'none'
     : false;
 
   const refreshMutation = useRefreshEmployeeFromGraphMutation(
@@ -153,6 +153,11 @@ export function EmployeeDetailPageShell({
     targetMemberId,
   );
   const deactivateMutation = useDeactivateEmployeeMutation(orgSlug, memberId);
+  const { data: deactivationImpact, isLoading: isLoadingImpact } = useDeactivationImpactQuery(
+    orgSlug,
+    memberId,
+    targetMemberId,
+  );
 
   const [editOpen, setEditOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
@@ -522,6 +527,8 @@ export function EmployeeDetailPageShell({
             employeeName={detail.name}
             employeeMemberId={detail.member_id}
             deactivateMutation={deactivateMutation}
+            deactivationImpact={deactivationImpact}
+            isLoadingImpact={isLoadingImpact}
           />
         </>
       ) : null}
