@@ -13,6 +13,12 @@ export interface OfferJobPostingSummary {
   requisitionId: string | null;
 }
 
+export interface OfferJobCompensationPreview {
+  salaryMin: string;
+  salaryMax: string;
+  currency: string;
+}
+
 export interface OfferCandidateSummary {
   id: string;
   firstName: string;
@@ -128,6 +134,7 @@ export interface OfferStageWorkspace {
   acceptedStage: OfferStageSummary | null;
   rejectedStage: OfferStageSummary | null;
   jobHasSalaryData?: boolean;
+  jobCompensationPreview?: OfferJobCompensationPreview | null;
 }
 
 export interface OfferCandidateValidationResult {

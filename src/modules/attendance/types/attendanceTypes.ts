@@ -53,6 +53,12 @@ export interface AttendanceClockContext {
   } | null;
 }
 
+export interface AttendanceClockWidgetData {
+  todayRecord: AttendanceRecord | null;
+  profile: { name: string | null };
+  clockContext: AttendanceClockContext;
+}
+
 export type AttendanceTimePreset =
   | 'today'
   | 'yesterday'

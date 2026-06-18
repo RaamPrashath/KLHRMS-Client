@@ -5,6 +5,12 @@ export const offerDispatchPayloadSchema = z.object({
   categoryId: z.string().min(1, 'Select a template category'),
   applicationIds: z.array(z.string().min(1)).min(1, 'Select at least one candidate'),
   expiresAt: z.string().datetime().nullable().optional(),
+  candidateNameOverrides: z
+    .array(z.object({
+      applicationId: z.string().min(1),
+      displayName: z.string().min(1).max(160),
+    }))
+    .optional(),
 });
 
 export const offerDownloadPayloadSchema = offerDispatchPayloadSchema.extend({
@@ -57,6 +63,10 @@ export interface OfferDispatchPayload {
   categoryId: string;
   applicationIds: string[];
   expiresAt?: string | null;
+  candidateNameOverrides?: Array<{
+    applicationId: string;
+    displayName: string;
+  }>;
 }
 
 export type OfferDownloadFormat = 'pdf' | 'docx';

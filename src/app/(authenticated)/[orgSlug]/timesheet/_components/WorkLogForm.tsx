@@ -351,7 +351,7 @@ export function WorkLogForm({
             el.style.height = 'auto';
             el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
           }}
-          placeholder="Additional details..."
+          placeholder="Additional details"
           className="resize-none min-h-[72px] max-h-[160px] overflow-y-auto"
         />
       </div>

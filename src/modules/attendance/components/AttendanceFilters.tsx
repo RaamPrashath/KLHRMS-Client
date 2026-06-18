@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,6 +23,7 @@ import type {
   AttendanceTimePreset,
 } from '@/modules/attendance/types/attendanceTypes';
 import { getTodayIST } from '@/modules/attendance/utils/attendanceFormatters';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface AttendanceFiltersProps {
   filters: AttendanceFiltersState;
@@ -131,6 +132,16 @@ export function AttendanceFilters({
   const presetOptions = selfScope ? SELF_PRESET_OPTIONS : PRESET_OPTIONS;
   const neutralPreset: AttendanceTimePreset = selfScope ? 'this_week' : 'all_time';
 
+  const [searchInput, setSearchInput] = useState<string>(filters.employeeNameSearch ?? '');
+  const debouncedSearch = useDebounce(searchInput, 350);
+
+  useEffect(() => {
+    const next = debouncedSearch || undefined;
+    if (next === filters.employeeNameSearch) return;
+    onFiltersChange({ ...filters, employeeNameSearch: next, page: 1 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
   function update(patch: Partial<AttendanceFiltersState>) {
     onFiltersChange({ ...filters, ...patch, page: 1 });
   }
@@ -224,8 +235,8 @@ export function AttendanceFilters({
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
           <Input
             placeholder={selfScope ? "Search logs…" : showMemberFilter ? "Search employee…" : "Search…"}
-            value={filters.employeeNameSearch ?? ''}
-            onChange={(e) => update({ employeeNameSearch: e.target.value || undefined })}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm"
           />
         </div>
@@ -283,8 +294,8 @@ export function AttendanceFilters({
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400 pointer-events-none" />
           <Input
             placeholder={selfScope ? "Search logs…" : showMemberFilter ? "Search employee…" : "Search…"}
-            value={filters.employeeNameSearch ?? ''}
-            onChange={(e) => update({ employeeNameSearch: e.target.value || undefined })}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="pl-9 bg-canvas border-0 focus:bg-surface focus:border focus:border-primary focus:ring-[3px] focus:ring-primary/10 text-sm h-9"
           />
         </div>

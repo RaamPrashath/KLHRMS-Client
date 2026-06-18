@@ -162,7 +162,7 @@ export default function FeedbackPage({
             <RichTextEditor
               content={feedback}
               onChange={setFeedback}
-              placeholder="Tell us about your interview experience..."
+              placeholder="Tell us about your interview experience"
               minHeight={200}
             />
           </div>

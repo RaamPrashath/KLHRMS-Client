@@ -121,7 +121,7 @@ export function LoginForm() {
                         <rect x="11" y="11" width="10" height="10" fill="#FFB900"/>
                     </svg>
                 )}
-                <span>{oauthLoading ? "Connecting..." : "Sign in with Microsoft"}</span>
+                <span>{oauthLoading ? "Connecting" : "Sign in with Microsoft"}</span>
             </button>
 
             {/* Divider */}
@@ -180,7 +180,7 @@ export function LoginForm() {
                     id="btn-login-submit"
                     disabled={isSubmitting || oauthLoading}
                 >
-                    {isSubmitting ? "Signing in..." : "Sign in"}
+                    {isSubmitting ? "Signing in" : "Sign in"}
                 </button>
             </form>
 

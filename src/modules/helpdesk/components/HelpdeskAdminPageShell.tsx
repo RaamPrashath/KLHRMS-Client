@@ -162,7 +162,7 @@ export function HelpdeskAdminPageShell({
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search requests..."
+                placeholder="Search requests"
                 className="h-auto border-0 bg-transparent px-0 py-0 text-[12px] shadow-none focus-visible:ring-0 placeholder:text-[#86868b]"
               />
             </div>

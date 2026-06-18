@@ -293,9 +293,26 @@ export function AttendancePivotView({
   onPageSizeChange,
 }: Readonly<AttendancePivotViewProps>) {
   const anchor = parseYMD(periodStart);
+
+  const _tDays0 = performance.now();
   const days = getDays(mode, anchor);
+  const _tDays1 = performance.now();
+  if (typeof window !== 'undefined') {
+    console.warn(`[timing] 5b-pivot-date-generation | mode=${mode} | duration=${(_tDays1 - _tDays0).toFixed(1)}ms | days=${days.length}`);
+  }
+
   const periodLabel = formatPeriodLabel(mode, days);
+
+  const _tBuild0 = performance.now();
   const employeeRows = buildEmployeeRows(records, days, showEmployeeColumn, currentMemberId, allEmployees);
+  const _tBuild1 = performance.now();
+  if (typeof window !== 'undefined') {
+    console.warn(
+      `[timing] 4-pivot-row-generation | mode=${mode} records=${records.length} days=${days.length} employees=${employeeRows.length} | ` +
+      `duration=${(_tBuild1 - _tBuild0).toFixed(1)}ms`,
+    );
+  }
+
   const holidayNames = holidayNamesProp ?? new Map<string, string>();
   const leaveNames = leaveNamesProp ?? new Map<string, string>();
   const totalRows = employeeRows.length;

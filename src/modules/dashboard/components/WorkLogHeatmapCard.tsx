@@ -21,6 +21,7 @@ import { useBulkAttendanceRangeQuery } from "@/modules/attendance/hooks/queries/
 import { useBulkAttendanceData } from "@/modules/attendance/hooks/use-bulk-attendance-data";
 import { useHolidays } from "@/modules/leave/hooks/useHolidays";
 import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
+import { dateOnlyToLocalDate } from "@/modules/leave/utils/dateOnly";
 import { WorkLogDialog } from "@/app/(authenticated)/[orgSlug]/timesheet/_components/WorkLogDialog";
 import { useProjectsForAttendance } from "@/modules/projects/hooks/useProjectsForAttendance";
 import type { WorkLogFormValues } from "@/app/(authenticated)/[orgSlug]/timesheet/_components/WorkLogForm";
@@ -160,8 +161,8 @@ export function WorkLogHeatmapCard({
     const set = new Set<string>();
     if (leaveData?.items) {
       for (const leave of leaveData.items) {
-        const start = new Date(leave.startDate);
-        const end = new Date(leave.endDate);
+        const start = dateOnlyToLocalDate(leave.startDate);
+        const end = dateOnlyToLocalDate(leave.endDate);
         for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
           set.add(format(day, "yyyy-MM-dd"));
         }

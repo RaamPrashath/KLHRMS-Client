@@ -37,7 +37,6 @@ import { EmployeePagination } from './EmployeePagination';
 import type {
   EmployeeListItem,
   EmployeeFilterOption,
-  AttendanceTodayStatus,
 } from '@/modules/employees/types/employeeTypes';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -56,12 +55,10 @@ interface EmployeeTableProps {
   // filters
   search: string;
   roleId: string | undefined;
-  attendanceStatus: AttendanceTodayStatus | undefined;
   roles: EmployeeFilterOption[];
   onSearchChange: (value: string) => void;
   onClearSearch: () => void;
   onRoleChange: (value: string | undefined) => void;
-  onAttendanceStatusChange: (value: AttendanceTodayStatus | undefined) => void;
   onClearAll: () => void;
   // role editing (inline)
   canEditRole?: boolean;
@@ -330,12 +327,10 @@ export function EmployeeTable({
   onPageSizeChange,
   search,
   roleId,
-  attendanceStatus,
   roles,
   onSearchChange,
   onClearSearch,
   onRoleChange,
-  onAttendanceStatusChange,
   onClearAll,
   canEditRole = false,
   onUpdateRole,
@@ -367,12 +362,10 @@ export function EmployeeTable({
             <EmployeeFilters
               search={search}
               roleId={roleId}
-              attendanceStatus={attendanceStatus}
               roles={roles}
               onSearchChange={onSearchChange}
               onClearSearch={onClearSearch}
               onRoleChange={onRoleChange}
-              onAttendanceStatusChange={onAttendanceStatusChange}
               onClearAll={onClearAll}
             />
           </div>

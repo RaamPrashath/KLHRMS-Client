@@ -18,6 +18,7 @@ import type {
   LocalWorkLog,
 } from '@/modules/attendance/types/bulkAttendanceTypes';
 import type { HolidayRecord, LeaveRequestRecord } from '@/modules/leave/types/leaveTypes';
+import { dateOnlyToLocalDate } from '@/modules/leave/utils/dateOnly';
 import type { ProjectForAttendance } from '@/modules/projects/types/projectTypes';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -288,8 +289,8 @@ export function BulkAttendanceCalendar({
   const leaveMap = useMemo(() => {
     const map = new Map<string, LeaveRequestRecord>();
     for (const leave of leaveRequests) {
-      const start = new Date(leave.startDate);
-      const end = new Date(leave.endDate);
+      const start = dateOnlyToLocalDate(leave.startDate);
+      const end = dateOnlyToLocalDate(leave.endDate);
       for (let current = start; current <= end; current = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1)) {
         map.set(dateToYMD(current), leave);
       }

@@ -7,6 +7,7 @@ import type { PlanLocationValue } from '@/types/weekly_plan';
 import type {
   ApiError,
   AttendanceClockContext,
+  AttendanceClockWidgetData,
   AttendanceRecord,
   AttendanceListResponse,
 } from '@/modules/attendance/types/attendanceTypes';
@@ -344,6 +345,33 @@ export async function fetchAttendanceClockContextAction(params: {
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────────
+
+export async function fetchAttendanceClockWidgetAction(params: {
+  orgSlug: string;
+  memberId: string;
+  date: string;
+}): Promise<AttendanceClockWidgetData> {
+  const [todayAttendance, profile, clockContext] = await Promise.all([
+    fetchMyAttendanceAction({
+      orgSlug: params.orgSlug,
+      memberId: params.memberId,
+      filters: {
+        date_from: params.date,
+        date_to: params.date,
+        page: 1,
+        page_size: 1,
+      },
+    }),
+    fetchMemberProfileAction({ memberId: params.memberId }),
+    fetchAttendanceClockContextAction(params),
+  ]);
+
+  return {
+    todayRecord: todayAttendance.items.find((record) => record.date === params.date) ?? null,
+    profile,
+    clockContext,
+  };
+}
 
 export interface AttendanceExportRow {
   id: string;
