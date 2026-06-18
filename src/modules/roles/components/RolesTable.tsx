@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import type { RoleResponse } from '@/modules/roles/types/role';
 import {
   ExpandableScreen,
@@ -15,6 +17,14 @@ import {
   AvatarGroup,
   AvatarGroupCount,
 } from '@/components/ui/avatar';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 interface RoleAssignee {
   memberId: string;
@@ -29,6 +39,8 @@ interface RolesTableProps {
   orgSlug: string;
   memberId: string;
 }
+
+const PAGE_SIZE = 12;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -107,35 +119,80 @@ function ExpandedRoleContent({
 }
 
 export function RolesTable({ roles, peopleByRoleId, orgSlug, memberId }: Readonly<RolesTableProps>) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(roles.length / PAGE_SIZE));
+
+  const paginatedRoles = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return roles.slice(start, start + PAGE_SIZE);
+  }, [roles, page]);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
-      {roles.map((role) => {
-        const assignees = peopleByRoleId[role.id] ?? [];
-        return (
-          <ExpandableScreen key={role.id} layoutId={`role-${role.id}`} contentRadius="8px">
-            <ExpandableScreenTrigger className="w-full">
-              <div className="p-6 bg-white rounded-lg border border-black/5 hover:border-indigo-500 hover:shadow-md transition-all duration-200 cursor-pointer h-28 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.01)] text-left">
-                <span className="text-[16px] font-bold text-neutral-900 truncate" title={role.name}>
-                  {role.name}
-                </span>
-                <div className="flex items-center pt-2 border-t border-black/5 w-full">
-                  <MembersCell assignees={assignees} />
+    <div className="mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {paginatedRoles.map((role) => {
+          const assignees = peopleByRoleId[role.id] ?? [];
+          return (
+            <ExpandableScreen key={role.id} layoutId={`role-${role.id}`} contentRadius="8px">
+              <ExpandableScreenTrigger className="w-full">
+                <div className="p-6 bg-white rounded-lg border border-black/5 hover:border-indigo-500 hover:shadow-md transition-all duration-200 cursor-pointer h-28 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.01)] text-left">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[16px] font-bold text-neutral-900 truncate" title={role.name}>
+                      {role.name}
+                    </span>
+                    <Pencil className="size-4 shrink-0 text-neutral-400" strokeWidth={1.8} />
+                  </div>
+                  <div className="flex items-center pt-2 border-t border-black/5 w-full">
+                    <MembersCell assignees={assignees} />
+                  </div>
                 </div>
-              </div>
-            </ExpandableScreenTrigger>
-            <ExpandableScreenContent
-              className="bg-white border border-[#e5e5ea] shadow-2xl rounded-lg max-w-4xl mx-auto my-auto h-[85vh] flex flex-col overflow-hidden"
-              closeButtonClassName="text-neutral-500 hover:text-neutral-800 bg-transparent hover:bg-transparent shadow-none cursor-pointer"
-            >
-              <ExpandedRoleContent
-                role={role}
-                orgSlug={orgSlug}
-                memberId={memberId}
-              />
-            </ExpandableScreenContent>
-          </ExpandableScreen>
-        );
-      })}
+              </ExpandableScreenTrigger>
+              <ExpandableScreenContent
+                className="bg-white border border-[#e5e5ea] shadow-2xl rounded-lg max-w-4xl mx-auto my-auto h-[85vh] flex flex-col overflow-hidden"
+                closeButtonClassName="text-neutral-500 hover:text-neutral-800 bg-transparent hover:bg-transparent shadow-none cursor-pointer"
+              >
+                <ExpandedRoleContent
+                  role={role}
+                  orgSlug={orgSlug}
+                  memberId={memberId}
+                />
+              </ExpandableScreenContent>
+            </ExpandableScreen>
+          );
+        })}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="mt-6 flex justify-center">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className={page === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <PaginationItem key={pageNum}>
+                  <PaginationLink
+                    onClick={() => setPage(pageNum)}
+                    isActive={page === pageNum}
+                    className="cursor-pointer"
+                  >
+                    {pageNum}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className={page === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   );
 }

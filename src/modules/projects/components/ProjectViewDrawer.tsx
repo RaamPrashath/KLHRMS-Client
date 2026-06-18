@@ -16,6 +16,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -63,10 +73,11 @@ function TabBar({
     setIndicatorStyle({ left: br.left - cr.left, width: br.width });
   }, [activeIdx]);
 
+  const gridCols = tabs.length === 2 ? 'grid-cols-2' : tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2';
   return (
     <div
       ref={containerRef}
-      className="grid grid-cols-2 w-full rounded-xl bg-neutral-50 p-1 border border-black/4 relative"
+      className={cn("grid w-full rounded-xl bg-neutral-50 p-1 border border-black/4 relative", gridCols)}
     >
       <div
         className="absolute top-1 bottom-1 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
@@ -143,8 +154,8 @@ export function ProjectViewDrawer({
   const queryClient = useQueryClient();
   const mutations = useProjectMutations(orgSlug, memberId);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'members'>('tasks');
-  const [memberTab, setMemberTab] = useState<'assigned' | 'unassigned'>('assigned');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'unassigned'>('tasks');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // Task state
   const [newTaskName, setNewTaskName] = useState('');
@@ -338,11 +349,11 @@ export function ProjectViewDrawer({
     }
   }
 
-  async function handleDelete() {
+  async function handleDeleteProjectConfirmed() {
     if (!project) return;
-    if (!confirm(`Delete "${project.name}"? This action cannot be undone.`)) return;
     try {
       await mutations.deleteProject.mutateAsync(project.id);
+      setDeleteConfirmOpen(false);
       onClose();
       toast.success('Project deleted');
     } catch (error) {
@@ -551,9 +562,7 @@ export function ProjectViewDrawer({
                     <span>
                       <span className="font-medium text-[#1d1d1f]">{project.memberCount}</span> assigned
                     </span>
-                    <span>
-                      <span className="font-medium text-[#1d1d1f]">{project.allocatedHours}h</span> allocated
-                    </span>
+
                     {project.clientName && (
                       <span>
                         Client: <span className="font-medium text-[#1d1d1f]">{project.clientName}</span>
@@ -566,16 +575,21 @@ export function ProjectViewDrawer({
 
             {/* Tabs with Edit/Delete buttons */}
             <div className="flex min-h-0 flex-1 flex-col">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'members')} className="flex min-h-0 flex-1 flex-col">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'members' | 'unassigned')} className="flex min-h-0 flex-1 flex-col">
                 <div className="mx-6 mt-4 mb-0 flex shrink-0 items-center gap-2">
                   <div className="flex-1">
                     <TabBar
                       tabs={[
                         { value: 'tasks', label: 'Tasks', count: project.tasks.length },
                         { value: 'members', label: 'Members', count: project.memberCount },
+                        {
+                          value: 'unassigned',
+                          label: 'Unassigned',
+                          count: allOrgMembers.filter((m) => !assignedMemberIds.has(m.id)).length,
+                        },
                       ]}
                       value={activeTab}
-                      onValueChange={(v) => setActiveTab(v as 'tasks' | 'members')}
+                      onValueChange={(v) => setActiveTab(v as 'tasks' | 'members' | 'unassigned')}
                     />
                   </div>
 
@@ -583,15 +597,15 @@ export function ProjectViewDrawer({
                     <div className="flex shrink-0 gap-1">
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="flex size-9 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                        className="flex size-9 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f] cursor-pointer"
                         aria-label="Edit project"
                       >
                         <Edit2 className="size-3.5" />
                       </button>
                       <button
-                        onClick={() => void handleDelete()}
+                        onClick={() => setDeleteConfirmOpen(true)}
                         disabled={mutations.deleteProject.isPending}
-                        className="flex size-9 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#fff0f0] hover:text-[#a12323] disabled:opacity-50"
+                        className="flex size-9 items-center justify-center rounded-xl text-[#6e6e73] transition-colors hover:bg-[#fff0f0] hover:text-[#a12323] disabled:opacity-50 cursor-pointer"
                         aria-label="Delete project"
                       >
                         <Trash2 className="size-3.5" />
@@ -666,143 +680,145 @@ export function ProjectViewDrawer({
 
                 {/* Members tab */}
                 <TabsContent value="members" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4 data-[state=active]:flex">
-                  <Tabs value={memberTab} onValueChange={(v) => setMemberTab(v as 'assigned' | 'unassigned')} className="flex min-h-0 flex-1 flex-col">
-                    <div className="mb-3 shrink-0">
-                      <TabBar
-                        tabs={[
-                          { value: 'assigned', label: 'Assigned', count: project.memberCount },
-                          {
-                            value: 'unassigned',
-                            label: 'Unassigned',
-                            count: allOrgMembers.filter((m) => !assignedMemberIds.has(m.id)).length,
-                          },
-                        ]}
-                        value={memberTab}
-                        onValueChange={(v) => setMemberTab(v as 'assigned' | 'unassigned')}
-                      />
-                    </div>
+                  <div className="relative mb-3 shrink-0">
+                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
+                    <Input
+                      value={assignedSearch}
+                      onChange={(e) => setAssignedSearch(e.target.value)}
+                      placeholder="Search assigned…"
+                      className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                  </div>
 
-                    {/* Assigned sub-tab */}
-                    <TabsContent value="assigned" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=active]:flex">
-                      <div className="relative mb-3 shrink-0">
-                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
-                        <Input
-                          value={assignedSearch}
-                          onChange={(e) => setAssignedSearch(e.target.value)}
-                          placeholder="Search assigned…"
-                          className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
-                        />
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    {assignedMembers.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Users className="size-8 text-[#86868b]" />
+                        <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
+                          {deferredAssignedSearch ? 'No results' : 'No employees assigned yet'}
+                        </p>
+                        <p className="mt-1 text-[13px] text-[#6e6e73]">
+                          {deferredAssignedSearch
+                            ? 'Try a different search term.'
+                            : 'Switch to the Unassigned tab to add people.'}
+                        </p>
                       </div>
+                    ) : (
+                      <ul className="space-y-1 pb-4">
+                        {assignedMembers.map((member) => (
+                          <AssignedMemberRow
+                            key={member.id}
+                            member={member}
+                            canManage={canManage}
+                            isRemoving={mutations.removeMember.isPending}
+                            onRemove={handleRemoveMember}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </TabsContent>
 
-                      <div className="min-h-0 flex-1 overflow-y-auto">
-                        {assignedMembers.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <Users className="size-8 text-[#86868b]" />
-                            <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
-                              {deferredAssignedSearch ? 'No results' : 'No employees assigned yet'}
-                            </p>
-                            <p className="mt-1 text-[13px] text-[#6e6e73]">
-                              {deferredAssignedSearch
-                                ? 'Try a different search term.'
-                                : 'Switch to the Unassigned tab to add people.'}
-                            </p>
-                          </div>
-                        ) : (
-                          <ul className="space-y-1 pb-4">
-                            {assignedMembers.map((member) => (
-                              <AssignedMemberRow
-                                key={member.id}
-                                member={member}
-                                canManage={canManage}
-                                isRemoving={mutations.removeMember.isPending}
-                                onRemove={handleRemoveMember}
+                {/* Unassigned tab */}
+                <TabsContent value="unassigned" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4 data-[state=active]:flex">
+                  <div className="relative mb-3 shrink-0">
+                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
+                    <Input
+                      value={unassignedSearch}
+                      onChange={(e) => setUnassignedSearch(e.target.value)}
+                      placeholder="Search employees…"
+                      className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                  </div>
+
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    {unassignedMembers.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Users className="size-8 text-[#86868b]" />
+                        <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
+                          {deferredUnassignedSearch ? 'No results' : 'All employees assigned'}
+                        </p>
+                        <p className="mt-1 text-[13px] text-[#6e6e73]">
+                          {deferredUnassignedSearch
+                            ? 'Try a different search term.'
+                            : 'Every org member is already on this project.'}
+                        </p>
+                      </div>
+                    ) : (
+                      <ul className="space-y-1 pb-4">
+                        {unassignedMembers.map((member) => (
+                          <li key={member.id}>
+                            <label
+                              className={cn(
+                                'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f7]',
+                                selectedIds.has(member.id) && 'bg-primary/5',
+                              )}
+                            >
+                              <Checkbox
+                                checked={selectedIds.has(member.id)}
+                                onCheckedChange={() => toggleSelect(member.id)}
+                                className="shrink-0 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+                                aria-label={`Select ${member.label}`}
                               />
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </TabsContent>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[14px] font-medium text-[#1d1d1f]">
+                                  {member.label}
+                                </p>
+                                {member.email && (
+                                  <p className="truncate text-[12px] text-[#6e6e73]">{member.email}</p>
+                                )}
+                              </div>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
 
-                    {/* Unassigned sub-tab */}
-                    <TabsContent value="unassigned" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=active]:flex">
-                      <div className="relative mb-3 shrink-0">
-                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
-                        <Input
-                          value={unassignedSearch}
-                          onChange={(e) => setUnassignedSearch(e.target.value)}
-                          placeholder="Search employees…"
-                          className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
-                        />
-                      </div>
-
-                      <div className="min-h-0 flex-1 overflow-y-auto">
-                        {unassignedMembers.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <Users className="size-8 text-[#86868b]" />
-                            <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
-                              {deferredUnassignedSearch ? 'No results' : 'All employees assigned'}
-                            </p>
-                            <p className="mt-1 text-[13px] text-[#6e6e73]">
-                              {deferredUnassignedSearch
-                                ? 'Try a different search term.'
-                                : 'Every org member is already on this project.'}
-                            </p>
-                          </div>
-                        ) : (
-                          <ul className="space-y-1 pb-4">
-                            {unassignedMembers.map((member) => (
-                              <li key={member.id}>
-                                <label
-                                  className={cn(
-                                    'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f7]',
-                                    selectedIds.has(member.id) && 'bg-primary/5',
-                                  )}
-                                >
-                                  <Checkbox
-                                    checked={selectedIds.has(member.id)}
-                                    onCheckedChange={() => toggleSelect(member.id)}
-                                    className="shrink-0 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
-                                    aria-label={`Select ${member.label}`}
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-[14px] font-medium text-[#1d1d1f]">
-                                      {member.label}
-                                    </p>
-                                    {member.email && (
-                                      <p className="truncate text-[12px] text-[#6e6e73]">{member.email}</p>
-                                    )}
-                                  </div>
-                                </label>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-
-                      {/* Assign button */}
-                      {canManage && selectedIds.size > 0 && (
-                        <div className="shrink-0 border-t border-[#e5e5ea] py-3">
-                          <Button
-                            onClick={() => void handleBulkAssign()}
-                            disabled={mutations.bulkAssignMembers.isPending}
-                            className="h-10 w-full rounded-lg text-[14px] font-medium text-white"
-                            style={{ backgroundColor: ACTION_GREEN }}
-                          >
-                            <UserCheck className="mr-2 size-4" />
-                            {mutations.bulkAssignMembers.isPending
-                              ? 'Assigning…'
-                              : `Assign ${selectedIds.size} employee${selectedIds.size > 1 ? 's' : ''}`}
-                          </Button>
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
+                  {/* Assign button */}
+                  {canManage && selectedIds.size > 0 && (
+                    <div className="shrink-0 border-t border-[#e5e5ea] py-3">
+                      <Button
+                        onClick={() => void handleBulkAssign()}
+                        disabled={mutations.bulkAssignMembers.isPending}
+                        className="h-10 w-full rounded-lg text-[14px] font-medium text-white"
+                        style={{ backgroundColor: ACTION_GREEN }}
+                      >
+                        <UserCheck className="mr-2 size-4" />
+                        {mutations.bulkAssignMembers.isPending
+                          ? 'Assigning…'
+                          : `Assign ${selectedIds.size} employee${selectedIds.size > 1 ? 's' : ''}`}
+                      </Button>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
           </>
         )}
       </div>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent className="border border-[#e5e5ea] bg-white shadow-2xl rounded-[18px] overflow-hidden">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[24px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+              Delete Project
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[14px] leading-6 text-[#6e6e73]">
+              This action cannot be undone. Are you sure to delete the project?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="px-6 py-4">
+            <AlertDialogCancel className="rounded-lg px-5">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleDeleteProjectConfirmed()}
+              className="rounded-lg px-6 bg-red-600 hover:bg-red-700 text-white border-0"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

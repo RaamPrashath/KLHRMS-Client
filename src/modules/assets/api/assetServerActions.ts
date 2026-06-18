@@ -611,6 +611,7 @@ export interface MaintenanceTicket {
   assetLifecycleStatus: string | null;
   assetLifecycleStatusLabel: string | null;
   swapPreview: AssetSwapPreview | null;
+  archivedAt: string | null;
 }
 
 export async function fetchMaintenanceTicketsAction(params: {
@@ -623,6 +624,42 @@ export async function fetchMaintenanceTicketsAction(params: {
     cache: 'no-store',
   });
   return handleResponse<MaintenanceTicket[]>(res);
+}
+
+export async function fetchArchivedTicketsAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<MaintenanceTicket[]> {
+  const res = await fetch(`${getApiUrl()}/assets/tickets?archived=true`, {
+    method: 'GET',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<MaintenanceTicket[]>(res);
+}
+
+export async function archiveTicketAction(params: {
+  orgSlug: string;
+  memberId: string;
+  ticketId: string;
+}): Promise<MaintenanceTicket> {
+  const res = await fetch(`${getApiUrl()}/assets/tickets/${params.ticketId}/archive`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<MaintenanceTicket>(res);
+}
+
+export async function unarchiveTicketAction(params: {
+  orgSlug: string;
+  memberId: string;
+  ticketId: string;
+}): Promise<MaintenanceTicket> {
+  const res = await fetch(`${getApiUrl()}/assets/tickets/${params.ticketId}/unarchive`, {
+    method: 'POST',
+    headers: buildHeaders(params.orgSlug, params.memberId),
+  });
+  return handleResponse<MaintenanceTicket>(res);
 }
 
 // ── My Tickets Actions ────────────────────────────────────────────────────────

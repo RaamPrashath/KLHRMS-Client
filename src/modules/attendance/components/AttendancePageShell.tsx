@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "framer-motion";
+import { toast } from "sonner";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
 import {
   useAttendanceQuery,
@@ -67,6 +73,20 @@ function getMonthStartIST(): Date {
   const parts = getTodayIST().split('-').map(Number);
   return new Date(parts[0]!, (parts[1] ?? 1) - 1, 1);
 }
+export function AttendancePageShell({
+    orgSlug,
+    memberId,
+}: Readonly<AttendancePageShellProps>) {
+    const shouldReduceMotion = useReducedMotion();
+    const queryClient = useQueryClient();
+
+    // ── Permission resolution ──────────────────────────────────────────────────
+    const { data: rawPermissions, isLoading: permissionsLoading } =
+        useMemberPermissionsQuery(orgSlug, memberId);
+
+    const permissions = resolveAttendancePermissions(rawPermissions ?? {});
+    const isOrgScope = permissions.view === "organization" || permissions.view === "department";
+    const isOperative = isOperativeScope(permissions.view) && !isOrgScope;
 
 function buildDefaultFilters(selfScope: boolean): AttendanceNonPaginationFilters {
   if (selfScope) {
@@ -220,6 +240,24 @@ export function AttendancePageShell({
       </div>
     );
   }
+        <>
+            <main className="min-h-full bg-canvas">
+                <div className="flex flex-col gap-6 flex-1 min-h-full">
+                    <div className="flex items-start justify-end md:justify-between ml-7 mt-7 mr-7">
+                        <h1 className="hidden md:block text-4xl font-semibold text-neutral-900 tracking-tight">
+                            Who&apos;s in today?
+                        </h1>
+
+                        {isOperativeScope(permissions.create) && (
+                            <Link
+                                href={`/${orgSlug}/timesheet`}
+                                className="btn-clockout-border h-10 rounded-lg px-5 text-[13px] font-medium inline-flex items-center"
+                            >
+                                <Plus className="mr-2 h-3.5 w-3.5" />
+                                Bulk attendance
+                            </Link>
+                        )}
+                    </div>
 
   async function handleDelete() {
     if (!deleteTarget) return;
