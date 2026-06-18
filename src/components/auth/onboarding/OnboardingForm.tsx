@@ -89,7 +89,7 @@ export function OnboardingForm() {
                     className="w-full mt-2"
                     disabled={isSubmitting}
                 >
-                    {isSubmitting ? "Saving..." : "Continue"}
+                    {isSubmitting ? "Saving" : "Continue"}
                 </Button>
             </form>
         </div>

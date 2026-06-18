@@ -450,7 +450,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
               disabled={!isDirty || saveMutation.isPending || isMonthLoading}
             >
               <Save className="mr-2 h-4 w-4 shrink-0" />
-              {saveMutation.isPending ? "Saving..." : "Save Changes"}
+              {saveMutation.isPending ? "Saving" : "Save Changes"}
             </Button>
           </div>
       </section>

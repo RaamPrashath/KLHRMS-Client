@@ -183,7 +183,7 @@ function BrandModelTable({ orgSlug, memberId, canManageAssets, members }: { orgS
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search brand or model..."
+              placeholder="Search brand or model"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -430,7 +430,7 @@ function OsDistributionTable({ orgSlug, memberId, canManageAssets, members }: { 
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search OS..."
+              placeholder="Search OS"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);

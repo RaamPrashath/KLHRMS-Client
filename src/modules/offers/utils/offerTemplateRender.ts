@@ -12,6 +12,14 @@ interface PreviewPage {
   html: string;
 }
 
+const PARAGRAPH_PATTERN = /<p\b[^>]*>(.*?)<\/p>/gis;
+const HEADING_PATTERN = /<h[1-6]\b[^>]*>(.*?)<\/h[1-6]>/gis;
+const TAG_PATTERN = /<[^>]+>/g;
+const DEFAULT_KOVAN_LOGO_SVG = (
+  'data:image/svg+xml;base64,'
+  + 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNzYiIGhlaWdodD0iNTYiIHZpZXdCb3g9IjAgMCAxNzYgNTYiPjxwYXRoIGQ9Ik0xIDFoMTl2NTRIMXoiIGZpbGw9IiMwMDg3NEEiLz48cGF0aCBkPSJNMzUgMTVoMTN2MjZIMzV6IiBmaWxsPSIjMDBBNjU0Ii8+PHBhdGggZD0iTTUwIDE1aDEzdjI2SDUweiIgZmlsbD0iI0VBNDMzNSIvPjxwYXRoIGQ9Ik02NSAxNWgxM3YyNkg2NXoiIGZpbGw9IiNGQkJDMDEiLz48cGF0aCBkPSJNNzcuNSAyOGwtMTIgMTNWMzNMMzUgNDFWMTVsMzAgMjYgMTItMTN6IiBmaWxsPSIjNDI4NUY0IiBvcGFjaXR5PSIuOTUiLz48dGV4dCB4PSI5MiIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgSGVsdmV0aWNhLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjNmU2ZTczIj5Lb3ZhbiBMYWJzPC90ZXh0Pjwvc3ZnPg=='
+);
+
 export interface PreviewSampleData {
   firstName: string;
   lastName: string;
@@ -20,6 +28,8 @@ export interface PreviewSampleData {
   salaryMax: string;
   currency: string;
 }
+
+export type OfferTemplateRenderData = PreviewSampleData;
 
 export const DEFAULT_PREVIEW_SAMPLE: PreviewSampleData = {
   firstName: 'Ananya',
@@ -43,23 +53,85 @@ export function escapeHtml(value: string): string {
     .replaceAll('"', '&quot;');
 }
 
-function replaceVariables(value: string, sample: PreviewSampleData): string {
-  return value
-    .replaceAll('{{candidate.firstName}}', sample.firstName)
-    .replaceAll('{{ candidate.firstName }}', sample.firstName)
-    .replaceAll('{{candidate.lastName}}', sample.lastName)
-    .replaceAll('{{ candidate.lastName }}', sample.lastName)
-    .replaceAll('{{offer.generatedDate}}', sample.generatedDate)
-    .replaceAll('{{ offer.generatedDate }}', sample.generatedDate)
-    .replaceAll('{{job.salaryMin}}', sample.salaryMin)
-    .replaceAll('{{ job.salaryMin }}', sample.salaryMin)
-    .replaceAll('{{job.salaryMax}}', sample.salaryMax)
-    .replaceAll('{{ job.salaryMax }}', sample.salaryMax)
-    .replaceAll('{{job.currency}}', sample.currency)
-    .replaceAll('{{ job.currency }}', sample.currency);
+function replaceVariables(value: string, sample: OfferTemplateRenderData): string {
+  const replacements: Record<string, string> = {
+    'candidate.firstName': sample.firstName,
+    'candidate.lastName': sample.lastName,
+    'offer.generatedDate': sample.generatedDate,
+    'job.salaryMin': sample.salaryMin,
+    'job.salaryMax': sample.salaryMax,
+    'job.currency': sample.currency,
+  };
+  return value.replace(
+    /\{\{\s*([a-zA-Z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)*)\s*\}\}/g,
+    (match, token: string) => replacements[token] ?? match,
+  );
 }
 
-function renderChildren(node: JsonNode, sample: PreviewSampleData): string {
+function decodeHtmlEntities(value: string): string {
+  if (typeof document === 'undefined') {
+    return value
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&amp;', '&');
+  }
+  const element = document.createElement('textarea');
+  element.innerHTML = value;
+  return element.value;
+}
+
+function htmlText(value: string): string {
+  return decodeHtmlEntities(value.replace(TAG_PATTERN, ' ')).split(/\s+/).filter(Boolean).join(' ');
+}
+
+function logoHtml(logoUrl: string | null): string {
+  const src = logoUrl?.trim() || DEFAULT_KOVAN_LOGO_SVG;
+  return `<img class="offer-letter-logo" src="${escapeHtml(src)}" alt="Kovan Labs" />`;
+}
+
+function normalizeMetadataHeaderHtml(html: string, template: OfferTemplate): string {
+  if (html.includes('offer-letter-header')) {
+    if (html.includes('offer-letter-logo')) return html;
+    return html.replace(
+      /(<div\b[^>]*class=["'][^"']*\boffer-letter-header-brand\b[^"']*["'][^>]*>)/i,
+      `$1${logoHtml(template.logoUrl)}`,
+    );
+  }
+
+  const paragraphs = Array.from(html.matchAll(PARAGRAPH_PATTERN)).map((match) => htmlText(match[1] ?? ''));
+  const headings = Array.from(html.matchAll(HEADING_PATTERN)).map((match) => htmlText(match[1] ?? ''));
+  const title = headings[0] || 'Offer Letter';
+  const generatedDate = paragraphs[0] ?? '';
+  const location = paragraphs[1] ?? '';
+
+  return [
+    '<div class="offer-letter-header">',
+    '<div class="offer-letter-header-brand">',
+    logoHtml(template.logoUrl),
+    '</div>',
+    '<div class="offer-letter-header-meta">',
+    `<p>${escapeHtml(generatedDate)}</p>`,
+    `<p>${escapeHtml(location)}</p>`,
+    '</div>',
+    `<h1>${escapeHtml(title)}</h1>`,
+    '</div>',
+  ].join('');
+}
+
+function repairFooterAssetHtml(html: string, template: OfferTemplate): string {
+  const signatureUrl = template.signatureUrl?.trim();
+  if (!signatureUrl || /<img\b/i.test(html)) return html;
+  const image = `<img src="${escapeHtml(signatureUrl)}" alt="" />`;
+  const repaired = html.replace(
+    /(<div\b[^>]*class=["'][^"']*\boffer-signature-slot\b[^"']*["'][^>]*>)/i,
+    `$1${image}`,
+  );
+  if (repaired !== html) return repaired;
+  return `<div class="offer-signature-slot">${image}</div>${html}`;
+}
+
+function renderChildren(node: JsonNode, sample: OfferTemplateRenderData): string {
   return (node.content ?? []).map((child) => renderNode(child, sample)).join('');
 }
 
@@ -75,11 +147,11 @@ function applyMarks(text: string, marks: JsonNode['marks']): string {
   }, text);
 }
 
-export function renderJsonToHtml(json: Record<string, unknown>, sample: PreviewSampleData = DEFAULT_PREVIEW_SAMPLE): string {
+export function renderJsonToHtml(json: Record<string, unknown>, sample: OfferTemplateRenderData = DEFAULT_PREVIEW_SAMPLE): string {
   return renderNode(json as JsonNode, sample);
 }
 
-function renderNode(node: JsonNode, sample: PreviewSampleData): string {
+function renderNode(node: JsonNode, sample: OfferTemplateRenderData): string {
   if (node.type === 'text') {
     return applyMarks(replaceVariables(escapeHtml(node.text ?? ''), sample), node.marks);
   }
@@ -103,21 +175,30 @@ function renderNode(node: JsonNode, sample: PreviewSampleData): string {
   return renderChildren(node, sample);
 }
 
-export function composeTemplateHtml(template: OfferTemplate, category: OfferTemplateCategory | null): string {
+export function composeTemplateHtml(
+  template: OfferTemplate,
+  category: OfferTemplateCategory | null,
+  renderData: OfferTemplateRenderData = DEFAULT_PREVIEW_SAMPLE,
+): string {
   if (!category) return '';
   const sections = template.sections
     .filter((section) => section.categoryId === category.id)
     .sort((left, right) => left.order - right.order)
     .map((section) => {
-      const body = Object.keys(section.tiptapJson).length > 0
-        ? renderJsonToHtml(section.tiptapJson)
-        : replaceVariables(section.html, DEFAULT_PREVIEW_SAMPLE);
+      let body = Object.keys(section.tiptapJson).length > 0
+        ? renderJsonToHtml(section.tiptapJson, renderData)
+        : replaceVariables(section.html, renderData);
+      if (section.sectionKey === 'metadata') {
+        body = normalizeMetadataHeaderHtml(body, template);
+      }
       if (!body.trim()) return '';
       return `<section data-section="${escapeHtml(section.sectionKey)}">${body}</section>`;
     })
     .join('');
 
-  const footer = template.footerHtml ? `<footer>${replaceVariables(template.footerHtml, DEFAULT_PREVIEW_SAMPLE)}</footer>` : '';
+  const footer = template.footerHtml
+    ? `<footer>${repairFooterAssetHtml(replaceVariables(template.footerHtml, renderData), template)}</footer>`
+    : '';
   return `${sections}${footer}`;
 }
 
