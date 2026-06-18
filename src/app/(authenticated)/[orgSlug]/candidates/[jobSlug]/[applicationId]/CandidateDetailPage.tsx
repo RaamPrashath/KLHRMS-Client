@@ -934,7 +934,7 @@ function NotesComposer({
           ref={textareaRef}
           className="min-h-[40px] max-h-48 resize-none border-0 p-0 text-sm leading-6 shadow-none focus-visible:ring-0 overflow-y-auto"
           rows={1}
-          placeholder="Add a note..."
+          placeholder="Add a note"
           value={value}
           maxLength={1000}
           onChange={(event) => onChange(event.target.value)}
@@ -1019,7 +1019,7 @@ function NotesTab({
             <Input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search by commentator name..."
+              placeholder="Search by commentator name"
               className="bg-neutral-50 pl-9"
             />
           </div>

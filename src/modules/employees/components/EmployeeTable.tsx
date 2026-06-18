@@ -377,6 +377,15 @@ export function EmployeeTable({
                 onClearAll={onClearAll}
               />
             </div>
+            <EmployeeFilters
+              search={search}
+              roleId={roleId}
+              roles={roles}
+              onSearchChange={onSearchChange}
+              onClearSearch={onClearSearch}
+              onRoleChange={onRoleChange}
+              onClearAll={onClearAll}
+            />
           </div>
 
           {/* ── Layer 2 & 3: Table (Flex) ─────────────────────────────────────────── */}

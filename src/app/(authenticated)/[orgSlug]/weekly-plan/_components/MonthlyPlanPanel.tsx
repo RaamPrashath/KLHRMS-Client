@@ -26,6 +26,7 @@ import { useSaveMonthlyPlanMutation } from "@/hooks/mutations/weekly_plan";
 import { useMyMonthlyPlanQuery, usePlanLocationsQuery } from "@/hooks/queries/weekly_plan";
 import { useHolidays } from "@/modules/leave/hooks/useHolidays";
 import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
+import { dateOnlyToLocalDate, localDateKey } from "@/modules/leave/utils/dateOnly";
 import {
   getCurrentMonthState,
   getMonthWeekRows,
@@ -236,8 +237,8 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
   const monthEnd = new Date(monthState.year, monthState.month, 0);
   const { data: leaveRequestsData } = useLeaveRequests(orgSlug, memberId, {
     status: "APPROVED",
-    fromDate: monthStart.toISOString().split("T")[0],
-    toDate: monthEnd.toISOString().split("T")[0],
+    fromDate: localDateKey(monthStart),
+    toDate: localDateKey(monthEnd),
     page: 1,
     pageSize: 100,
   }, { staleTime: 1000 * 60 * 5 });
@@ -275,10 +276,10 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
     const set = new Set<string>();
     if (leaveRequestsData?.items) {
       for (const leave of leaveRequestsData.items) {
-        const start = new Date(leave.startDate);
-        const end = new Date(leave.endDate);
+        const start = dateOnlyToLocalDate(leave.startDate);
+        const end = dateOnlyToLocalDate(leave.endDate);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          set.add(d.toISOString().split("T")[0]);
+          set.add(localDateKey(d));
         }
       }
     }
@@ -449,7 +450,7 @@ export function MonthlyPlanPanel({ orgSlug, orgId, memberId, userId, onDirtyChan
               disabled={!isDirty || saveMutation.isPending || isMonthLoading}
             >
               <Save className="mr-2 h-4 w-4 shrink-0" />
-              {saveMutation.isPending ? "Saving..." : "Save Changes"}
+              {saveMutation.isPending ? "Saving" : "Save Changes"}
             </Button>
           </div>
       </section>

@@ -58,7 +58,7 @@ export function OfferDownloadConfirmDialog({
                 </span>
               ) : (
                 <span className="shrink-0 rounded-full bg-success-bg px-2 py-0.5 text-xs font-medium text-success-text">
-                  Ready
+                  Included
                 </span>
               )}
             </div>

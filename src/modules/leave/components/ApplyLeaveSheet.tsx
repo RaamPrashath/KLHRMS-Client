@@ -23,6 +23,7 @@ import { leaveRequestSchema, type LeaveRequestInput } from '@/modules/leave/sche
 import { useCreateLeaveRequest } from '@/modules/leave/hooks/useCreateLeaveRequest';
 import { useHolidays } from '@/modules/leave/hooks/useHolidays';
 import type { LeaveTypeRecord, HolidayRecord } from '@/modules/leave/types/leaveTypes';
+import { dateOnlyToLocalDate, localDateKey } from '@/modules/leave/utils/dateOnly';
 import { getLeaveErrorMessage } from '@/modules/leave/utils/errorMessage';
 
 interface ApplyLeaveSheetProps {
@@ -36,7 +37,7 @@ interface ApplyLeaveSheetProps {
 type ApplyLeaveFormValues = z.input<typeof leaveRequestSchema>;
 
 function isWeekend(dateStr: string): boolean {
-  const day = new Date(`${dateStr}T00:00:00`).getDay();
+  const day = dateOnlyToLocalDate(dateStr).getDay();
   return day === 0 || day === 6;
 }
 
@@ -45,13 +46,14 @@ function isHoliday(dateStr: string, holidays: HolidayRecord[]): boolean {
 }
 
 function getExcludedInfo(startDate: string, endDate: string, holidays: HolidayRecord[]) {
-  const totalDays = Math.floor((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000) + 1;
+  const start = dateOnlyToLocalDate(startDate);
+  const end = dateOnlyToLocalDate(endDate);
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
   let weekends = 0;
   let holidaysCount = 0;
-  const current = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate}T00:00:00`);
+  const current = new Date(start);
   while (current <= end) {
-    const dateStr = current.toISOString().slice(0, 10);
+    const dateStr = localDateKey(current);
     if (isWeekend(dateStr)) weekends++;
     else if (isHoliday(dateStr, holidays)) holidaysCount++;
     current.setDate(current.getDate() + 1);

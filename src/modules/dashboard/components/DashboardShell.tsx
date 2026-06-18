@@ -36,6 +36,7 @@ import { resolveAttendancePermissions } from "@/modules/attendance/utils/attenda
 import { getTodayIST } from "@/modules/attendance/utils/attendanceFormatters";
 import { useApproveLeaveRequest } from "@/modules/leave/hooks/useApproveLeaveRequest";
 import { useRejectLeaveRequest } from "@/modules/leave/hooks/useRejectLeaveRequest";
+import { dateOnlyToLocalDate } from "@/modules/leave/utils/dateOnly";
 import { canApproveLeaves, resolveLeavePermissions } from "@/modules/leave/utils/leavePermissions";
 import { InviteEmployeeDialog } from "@/modules/employees/components/InviteEmployeeDialog";
 import { useDashboardOverviewQuery } from "@/modules/dashboard/hooks/useDashboardOverviewQuery";
@@ -308,19 +309,13 @@ function PendingLeaveRequestsSection({
               <tbody>
                 {requests.map((request) => {
                   const memberName = getDisplayName(request.member.name, "Unnamed member");
-                  const initials = memberName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "U";
-                  const startDate = new Date(`${request.startDate}T00:00:00`);
-                  const endDate = new Date(`${request.endDate}T00:00:00`);
+                  const startDate = dateOnlyToLocalDate(request.startDate);
+                  const endDate = dateOnlyToLocalDate(request.endDate);
 
                   return (
                     <tr key={request.id} className="border-b border-black/4 last:border-0">
                       <td className="truncate px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-[11px] font-medium text-primary">
-                            {initials}
-                          </div>
-                          <span className="truncate text-sm font-medium text-neutral-900">{memberName}</span>
-                        </div>
+                        <span className="truncate text-sm font-medium text-neutral-900">{memberName}</span>
                       </td>
                       <td className="truncate px-4 py-3 text-sm text-neutral-700">{request.leaveType.name}</td>
                       <td className="truncate px-4 py-3 text-sm text-neutral-700">{df.format(startDate)}</td>

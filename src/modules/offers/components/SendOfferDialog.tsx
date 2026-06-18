@@ -23,9 +23,10 @@ import {
 
 import { OfferSendConfirmDialog } from '@/modules/offers/components/OfferSendConfirmDialog';
 import { OfferDownloadConfirmDialog } from '@/modules/offers/components/OfferDownloadConfirmDialog';
+import { OfferPagedPreview } from '@/modules/offers/components/OfferPagedPreview';
 import { OfferTemplatePicker } from '@/modules/offers/components/OfferTemplatePicker';
 import type { OfferDownloadFormat } from '@/modules/offers/schema/offerSchemas';
-import { composeTemplateHtml } from '@/modules/offers/utils/offerTemplateRender';
+import { composeTemplateHtml, type OfferTemplateRenderData } from '@/modules/offers/utils/offerTemplateRender';
 import {
   useCreateOfferDispatch,
   useDownloadOfferLetters,
@@ -42,31 +43,6 @@ import type {
   OfferTemplateCategory,
   OfferWorkspaceCandidate,
 } from '@/modules/offers/types/offerTypes';
-import { cn } from '@/lib/utils';
-
-/* ── Preview styling constants (mirrors OfferTemplatePreview) ── */
-const PREVIEW_PAGE_W = 794;
-const PREVIEW_PADDING_X = 76;
-const PREVIEW_PADDING_Y = 90;
-const PREVIEW_CONTENT_CLASSES = cn(
-  'space-y-4 text-[15px] leading-[26px]',
-  '[&_a]:text-primary [&_a]:underline',
-  '[&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:leading-7 [&_h2]:text-neutral-900',
-  '[&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:leading-6 [&_h3]:text-neutral-900',
-  '[&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5',
-  '[&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-neutral-200 [&_td]:p-2 [&_th]:border [&_th]:border-neutral-200 [&_th]:bg-neutral-50 [&_th]:p-2',
-  '[&_.offer-letter-header]:relative [&_.offer-letter-header]:mb-8 [&_.offer-letter-header]:min-h-[116px]',
-  '[&_.offer-letter-header-brand]:absolute [&_.offer-letter-header-brand]:left-[var(--offer-header-brand-left)] [&_.offer-letter-header-brand]:top-[var(--offer-header-brand-top)]',
-  '[&_.offer-letter-logo]:max-h-14 [&_.offer-letter-logo]:max-w-44 [&_.offer-letter-logo]:object-contain',
-  '[&_.offer-letter-header-meta]:absolute [&_.offer-letter-header-meta]:right-0 [&_.offer-letter-header-meta]:top-12 [&_.offer-letter-header-meta]:text-right [&_.offer-letter-header-meta]:text-[13px] [&_.offer-letter-header-meta]:leading-6',
-  '[&_.offer-letter-header_h1]:absolute [&_.offer-letter-header_h1]:bottom-0 [&_.offer-letter-header_h1]:left-0 [&_.offer-letter-header_h1]:right-0 [&_.offer-letter-header_h1]:text-center [&_.offer-letter-header_h1]:whitespace-nowrap [&_.offer-letter-header_h1]:text-base [&_.offer-letter-header_h1]:font-semibold',
-  '[&_footer]:mt-[22px] [&_footer]:break-inside-avoid [&_footer]:pt-0 [&_footer]:text-[13px] [&_footer]:leading-[19px] [&_footer]:text-neutral-900 [&_footer_p]:mb-0 [&_footer_p]:leading-[19px]',
-  '[&_.offer-letter-footer]:grid [&_.offer-letter-footer]:grid-cols-[minmax(0,1fr)_auto] [&_.offer-letter-footer]:items-end [&_.offer-letter-footer]:gap-x-14',
-  '[&_.offer-signature-slot]:col-start-1 [&_.offer-signature-slot]:row-start-1 [&_.offer-signature-slot]:mb-3 [&_.offer-signature-slot]:break-inside-avoid [&_.offer-signature-slot_p]:mb-0 [&_.offer-signature-slot_p]:leading-[18px] [&_.offer-signature-slot_img]:mb-0 [&_.offer-signature-slot_img]:max-h-20 [&_.offer-signature-slot_img]:max-w-32 [&_.offer-signature-slot_img]:object-contain',
-  '[&_.offer-signature-name]:mb-0 [&_.offer-signature-name]:font-semibold [&_.offer-footer-address]:col-start-1 [&_.offer-footer-address]:row-start-2 [&_.offer-footer-address]:mt-0 [&_.offer-footer-address_p]:mb-0 [&_.offer-footer-address_p]:leading-[19px]',
-  '[&_.offer-footer-website]:col-start-2 [&_.offer-footer-website]:row-start-2 [&_.offer-footer-website]:self-center [&_.offer-footer-website]:whitespace-nowrap [&_.offer-footer-website]:text-[16px] [&_.offer-footer-website]:font-bold [&_.offer-footer-website]:leading-5 [&_.offer-footer-website]:!text-neutral-900 [&_.offer-footer-website]:!no-underline',
-);
-
 interface SendOfferDialogProps {
   readonly open: boolean;
   readonly orgSlug: string;
@@ -111,6 +87,15 @@ function formatExpiry(value: Date): string {
   }).format(value);
 }
 
+function formatOfferGeneratedDate(value: Date): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  }).format(value);
+}
+
 export function SendOfferDialog({
   open,
   orgSlug,
@@ -134,6 +119,8 @@ export function SendOfferDialog({
   const [validationResult, setValidationResult] = useState<OfferCandidateValidationResponse | null>(null);
   const [downloadValidationResult, setDownloadValidationResult] = useState<OfferCandidateValidationResponse | null>(null);
   const [downloadFormat, setDownloadFormat] = useState<OfferDownloadFormat | null>(null);
+  const [confirmationGeneratedDate, setConfirmationGeneratedDate] = useState(() => formatOfferGeneratedDate(new Date()));
+  const [candidateNameOverrides, setCandidateNameOverrides] = useState<Record<string, string>>({});
   const templatesQuery = useOfferTemplates(orgSlug, memberId, templateSearch);
   const selectedTemplateQuery = useOfferTemplate(orgSlug, memberId, selectedTemplateId);
   const validateDispatch = useValidateOfferDispatch(orgSlug, memberId, jobSlug, stageSlug);
@@ -156,6 +143,19 @@ export function SendOfferDialog({
     if (!selectedTemplate || !selectedCategory) return '';
     return composeTemplateHtml(selectedTemplate, selectedCategory);
   }, [selectedTemplate, selectedCategory]);
+  const confirmationRenderData = useMemo<OfferTemplateRenderData>(() => ({
+    firstName: '',
+    lastName: '',
+    generatedDate: confirmationGeneratedDate,
+    salaryMin: workspace.jobCompensationPreview?.salaryMin ?? '',
+    salaryMax: workspace.jobCompensationPreview?.salaryMax ?? '',
+    currency: workspace.jobCompensationPreview?.currency ?? '',
+  }), [
+    confirmationGeneratedDate,
+    workspace.jobCompensationPreview?.currency,
+    workspace.jobCompensationPreview?.salaryMax,
+    workspace.jobCompensationPreview?.salaryMin,
+  ]);
 
   useEffect(() => {
     if (!open || selectedTemplateId || templates.length === 0) return;
@@ -194,6 +194,8 @@ export function SendOfferDialog({
         toast.error('No selected candidates can receive offers');
         return;
       }
+      setCandidateNameOverrides({});
+      setConfirmationGeneratedDate(formatOfferGeneratedDate(new Date()));
       setConfirmOpen(true);
       if (validation.blockedCandidates.length > 0) {
         toast.warning(`${validation.blockedCandidates.length} blocked candidate${validation.blockedCandidates.length === 1 ? '' : 's'} will be skipped`);
@@ -211,6 +213,10 @@ export function SendOfferDialog({
         categoryId: selectedCategoryId,
         applicationIds: selectedCandidates.map((candidate) => candidate.applicationId),
         expiresAt: expiryDate.toISOString(),
+        candidateNameOverrides: Object.entries(candidateNameOverrides).map(([applicationId, displayName]) => ({
+          applicationId,
+          displayName,
+        })),
       });
       setConfirmOpen(false);
       onOpenChange(false);
@@ -319,41 +325,18 @@ export function SendOfferDialog({
                   </Select>
                 </div>
               ) : null}
-              <div className="min-h-0 flex-1 overflow-y-auto bg-canvas p-4">
-                {previewHtml ? (
-                  <div
-                    className="mx-auto bg-surface relative shadow-md"
-                    style={{
-                      width: PREVIEW_PAGE_W,
-                      paddingTop: 56,
-                      paddingBottom: PREVIEW_PADDING_Y,
-                      paddingLeft: PREVIEW_PADDING_X,
-                      paddingRight: PREVIEW_PADDING_X,
-                    }}
-                  >
-                    {/* Corner mark */}
-                    <div className="absolute bg-primary" style={{ top: 28, left: 28, height: 68, width: 19 }} />
-                    {/* Bottom bar */}
-                    <div className="absolute flex items-end gap-1" style={{ bottom: 32, right: PREVIEW_PADDING_X }}>
-                      <span className="block h-1.5 w-16 bg-neutral-900" />
-                      <span className="block h-1.5 w-8 bg-primary" />
+              <div className="min-h-0 flex-1 bg-canvas">
+                <OfferPagedPreview
+                  html={previewHtml}
+                  ariaLabel="Selected offer template preview"
+                  emptyState={(
+                    <div className="flex h-full items-center justify-center text-sm text-neutral-400">
+                      {selectedTemplate
+                        ? 'Select a category to preview'
+                        : 'Select a template to preview'}
                     </div>
-                    <div
-                      className={PREVIEW_CONTENT_CLASSES}
-                      style={{
-                        '--offer-header-brand-left': '-9px',
-                        '--offer-header-brand-top': '-22px',
-                      } as React.CSSProperties}
-                      dangerouslySetInnerHTML={{ __html: previewHtml }}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-neutral-400">
-                    {selectedTemplate
-                      ? 'Select a category to preview'
-                      : 'Select a template to preview'}
-                  </div>
-                )}
+                  )}
+                />
               </div>
             </div>
           </div>
@@ -415,7 +398,17 @@ export function SendOfferDialog({
         open={confirmOpen}
         validation={validationResult}
         sending={createDispatch.isPending}
+        template={selectedTemplate}
+        category={selectedCategory}
+        renderData={confirmationRenderData}
+        nameOverrides={candidateNameOverrides}
         onOpenChange={setConfirmOpen}
+        onNameOverrideSave={(applicationId, displayName) => {
+          setCandidateNameOverrides((current) => ({
+            ...current,
+            [applicationId]: displayName,
+          }));
+        }}
         onConfirm={() => void confirmDispatch()}
       />
 

@@ -52,6 +52,7 @@ import {
   fetchLeaveBalancesAction,
   fetchHolidaysAction,
 } from '@/modules/leave/api/leaveServerActions';
+import { dateOnlyMonth, dateOnlyYear } from '@/modules/leave/utils/dateOnly';
 import type {
   EmployeeLeaveSummary,
   HolidayRecord,
@@ -795,7 +796,7 @@ export function LeaveHolidaysView() {
   const filtered = React.useMemo(() => {
     let items = allHolidays;
     if (month > 0) {
-      items = items.filter((h) => new Date(h.holidayDate).getMonth() + 1 === month);
+      items = items.filter((h) => dateOnlyMonth(h.holidayDate) === month);
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -998,11 +999,11 @@ function SummaryTooltipContent({ items }: { readonly items: LeaveSummaryRequestI
 }
 
 function yearFromDate(dateStr: string): number {
-  return new Date(dateStr).getFullYear();
+  return dateOnlyYear(dateStr);
 }
 
 function monthFromDate(dateStr: string): number {
-  return new Date(dateStr).getMonth() + 1;
+  return dateOnlyMonth(dateStr);
 }
 
 const PAGE_SIZE = 10;

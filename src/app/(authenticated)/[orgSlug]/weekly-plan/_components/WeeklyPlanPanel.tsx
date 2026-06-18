@@ -17,6 +17,7 @@ import { useSession } from "@/hooks/useSession";
 import { useMyAttendanceQuery } from "@/modules/attendance/hooks/queries/attendance";
 import { useHolidays } from "@/modules/leave/hooks/useHolidays";
 import { useLeaveRequests } from "@/modules/leave/hooks/useLeaveRequests";
+import { dateOnlyToLocalDate, localDateKey } from "@/modules/leave/utils/dateOnly";
 import { getCurrentWeekState, getWeekDays, shiftWeek } from "@/modules/weekly-plan/date";
 import type {
   PlanLocationOption,
@@ -128,10 +129,10 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     const leaveDates = new Set<string>();
     if (leaveRequestsData?.items) {
       leaveRequestsData.items.forEach((leave) => {
-        const start = new Date(leave.startDate);
-        const end = new Date(leave.endDate);
+        const start = dateOnlyToLocalDate(leave.startDate);
+        const end = dateOnlyToLocalDate(leave.endDate);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          const dateStr = d.toISOString().split("T")[0];
+          const dateStr = localDateKey(d);
           leaveDates.add(dateStr);
         }
       });
@@ -294,10 +295,10 @@ export const WeeklyPlanPanel = memo(function WeeklyPlanPanel({
     const set = new Set<string>();
     if (leaveRequestsData?.items) {
       for (const leave of leaveRequestsData.items) {
-        const start = new Date(leave.startDate);
-        const end = new Date(leave.endDate);
+        const start = dateOnlyToLocalDate(leave.startDate);
+        const end = dateOnlyToLocalDate(leave.endDate);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-          set.add(d.toISOString().split("T")[0]);
+          set.add(localDateKey(d));
         }
       }
     }

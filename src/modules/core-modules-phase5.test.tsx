@@ -48,6 +48,7 @@ import {
     createOfferTemplateAction,
     validateOfferDispatchAction,
 } from "@/modules/offers/api/offerServerActions";
+import { OfferSendConfirmDialog } from "@/modules/offers/components/OfferSendConfirmDialog";
 import {
     fetchResumeParserHistoryAction,
     processResumeParserAction,
@@ -168,6 +169,11 @@ function installDomMocks() {
         configurable: true,
         value: vi.fn(),
     });
+    globalThis.ResizeObserver = class ResizeObserver {
+        observe = vi.fn();
+        unobserve = vi.fn();
+        disconnect = vi.fn();
+    };
 }
 
 beforeEach(() => {
@@ -515,6 +521,7 @@ describe("Phase 5 utility and component coverage", () => {
         const html = composeTemplateHtml(
             {
                 id: "template_standard",
+                organizationId: "org_1",
                 name: "Standard Offer",
                 description: null,
                 status: "ACTIVE",
@@ -522,14 +529,18 @@ describe("Phase 5 utility and component coverage", () => {
                 signatureUrl: null,
                 signatoryName: null,
                 signatoryTitle: null,
+                lastUsedAt: null,
                 footerHtml: "Welcome {{ candidate.firstName }}",
                 websiteUrl: null,
+                createdByMemberId: null,
+                updatedByMemberId: null,
                 createdAt: "2026-06-10T06:30:00.000Z",
                 updatedAt: "2026-06-10T06:30:00.000Z",
                 categories: [],
                 sections: [
                     {
                         id: "section_1",
+                        organizationId: "org_1",
                         templateId: "template_standard",
                         categoryId: "category_full_time",
                         sectionKey: "intro",
@@ -546,19 +557,136 @@ describe("Phase 5 utility and component coverage", () => {
                             ],
                         },
                         html: "",
+                        createdAt: "2026-06-10T06:30:00.000Z",
+                        updatedAt: "2026-06-10T06:30:00.000Z",
                     },
                 ],
             },
             {
                 id: "category_full_time",
+                organizationId: "org_1",
                 templateId: "template_standard",
                 name: "Full Time",
                 slug: "full-time",
                 order: 1,
-                sections: [],
+                createdAt: "2026-06-10T06:30:00.000Z",
+                updatedAt: "2026-06-10T06:30:00.000Z",
             },
         );
         expect(html).toContain("Hello Ananya");
+        const personalizedHtml = composeTemplateHtml(
+            {
+                id: "template_personalized",
+                organizationId: "org_1",
+                name: "Personalized Offer",
+                description: null,
+                status: "ACTIVE",
+                logoUrl: null,
+                signatureUrl: null,
+                signatoryName: null,
+                signatoryTitle: null,
+                lastUsedAt: null,
+                footerHtml: "<p>Generated {{ offer.generatedDate }}</p>",
+                websiteUrl: null,
+                createdByMemberId: null,
+                updatedByMemberId: null,
+                createdAt: "2026-06-10T06:30:00.000Z",
+                updatedAt: "2026-06-10T06:30:00.000Z",
+                categories: [],
+                sections: [
+                    {
+                        id: "section_personalized",
+                        organizationId: "org_1",
+                        templateId: "template_personalized",
+                        categoryId: "category_full_time",
+                        sectionKey: "intro",
+                        sectionName: "Intro",
+                        order: 1,
+                        tiptapJson: {},
+                        html: "<p>Dear {{ candidate.firstName }} {{candidate.lastName}}</p><p>{{job.salaryMin}} - {{ job.salaryMax }} {{job.currency}}</p>",
+                        createdAt: "2026-06-10T06:30:00.000Z",
+                        updatedAt: "2026-06-10T06:30:00.000Z",
+                    },
+                ],
+            },
+            {
+                id: "category_full_time",
+                organizationId: "org_1",
+                templateId: "template_personalized",
+                name: "Full Time",
+                slug: "full-time",
+                order: 1,
+                createdAt: "2026-06-10T06:30:00.000Z",
+                updatedAt: "2026-06-10T06:30:00.000Z",
+            },
+            {
+                firstName: "Rajaram",
+                lastName: "A",
+                generatedDate: "18 Jun 2026",
+                salaryMin: "12,00,000",
+                salaryMax: "16,00,000",
+                currency: "INR",
+            },
+        );
+        expect(personalizedHtml).toContain("Dear Rajaram A");
+        expect(personalizedHtml).toContain("12,00,000 - 16,00,000 INR");
+        expect(personalizedHtml).toContain("Generated 18 Jun 2026");
+        const htmlWithAssets = composeTemplateHtml(
+            {
+                id: "template_assets",
+                organizationId: "org_1",
+                name: "Asset Offer",
+                description: null,
+                status: "ACTIVE",
+                logoUrl: "https://cdn.example.com/logo.png",
+                signatureUrl: "https://cdn.example.com/signature.png",
+                signatoryName: "Asha Rao",
+                signatoryTitle: "HR",
+                lastUsedAt: null,
+                footerHtml: "<div><p>(Asha Rao)</p><p>HR</p></div>",
+                websiteUrl: null,
+                createdByMemberId: null,
+                updatedByMemberId: null,
+                createdAt: "2026-06-10T06:30:00.000Z",
+                updatedAt: "2026-06-10T06:30:00.000Z",
+                categories: [],
+                sections: [
+                    {
+                        id: "section_assets",
+                        organizationId: "org_1",
+                        templateId: "template_assets",
+                        categoryId: "category_assets",
+                        sectionKey: "metadata",
+                        sectionName: "Metadata",
+                        order: 1,
+                        tiptapJson: {},
+                        html: "<h2>Offer Letter</h2><p>{{offer.generatedDate}}</p><p>Coimbatore</p>",
+                        createdAt: "2026-06-10T06:30:00.000Z",
+                        updatedAt: "2026-06-10T06:30:00.000Z",
+                    },
+                ],
+            },
+            {
+                id: "category_assets",
+                organizationId: "org_1",
+                templateId: "template_assets",
+                name: "Assets",
+                slug: "assets",
+                order: 1,
+                createdAt: "2026-06-10T06:30:00.000Z",
+                updatedAt: "2026-06-10T06:30:00.000Z",
+            },
+            {
+                firstName: "Rajaram",
+                lastName: "A",
+                generatedDate: "18 Jun 2026",
+                salaryMin: "12,00,000",
+                salaryMax: "16,00,000",
+                currency: "INR",
+            },
+        );
+        expect(htmlWithAssets).toContain('class="offer-letter-logo" src="https://cdn.example.com/logo.png"');
+        expect(htmlWithAssets).toContain('class="offer-signature-slot"><img src="https://cdn.example.com/signature.png"');
         expect(splitPreviewPages(html)).toHaveLength(2);
         expect(findUnknownOfferTokens("{{ candidate.firstName }} {{ candidate.middleName }}"))
             .toEqual(["candidate.middleName"]);
@@ -584,6 +712,126 @@ describe("Phase 5 utility and component coverage", () => {
         expect(shiftWeek(2026, 1, -1)).toEqual({ year: 2025, week: 52 });
         expect(getMonthWeekdayDates(2026, 6)).not.toContain("2026-06-07");
         expect(PLAN_LOCATION_MAP.WFH.short_label).toBe("WFH");
+    });
+
+    it("opens candidate-specific offer previews from the send confirmation dialog", async () => {
+        const user = userEvent.setup();
+        const onConfirm = vi.fn();
+        const onNameOverrideSave = vi.fn();
+        const category = {
+            id: "category_full_time",
+            organizationId: "org_1",
+            templateId: "template_standard",
+            name: "Full Time",
+            slug: "full-time",
+            order: 1,
+            createdAt: "2026-06-10T06:30:00.000Z",
+            updatedAt: "2026-06-10T06:30:00.000Z",
+        };
+        const template = {
+            id: "template_standard",
+            organizationId: "org_1",
+            name: "Standard Offer",
+            description: null,
+            status: "ACTIVE",
+            logoUrl: "https://cdn.example.com/logo.png",
+            signatureUrl: "https://cdn.example.com/signature.png",
+            signatoryName: null,
+            signatoryTitle: null,
+            websiteUrl: null,
+            createdByMemberId: null,
+            updatedByMemberId: null,
+            lastUsedAt: null,
+            footerHtml: "<div><p>(Asha Rao)</p><p>HR</p></div>",
+            createdAt: "2026-06-10T06:30:00.000Z",
+            updatedAt: "2026-06-10T06:30:00.000Z",
+            categories: [category],
+            sections: [
+                {
+                    id: "section_1",
+                    organizationId: "org_1",
+                    templateId: "template_standard",
+                    categoryId: "category_full_time",
+                    sectionKey: "metadata",
+                    sectionName: "Metadata",
+                    order: 1,
+                    tiptapJson: {},
+                    html: "<h2>Offer Letter</h2><p>{{offer.generatedDate}}</p><p>Coimbatore</p>",
+                    createdAt: "2026-06-10T06:30:00.000Z",
+                    updatedAt: "2026-06-10T06:30:00.000Z",
+                },
+                {
+                    id: "section_2",
+                    organizationId: "org_1",
+                    templateId: "template_standard",
+                    categoryId: "category_full_time",
+                    sectionKey: "intro",
+                    sectionName: "Intro",
+                    order: 2,
+                    tiptapJson: {},
+                    html: "<p>Dear {{candidate.firstName}} {{candidate.lastName}}</p><p>{{job.salaryMin}} - {{job.salaryMax}} {{job.currency}}</p>",
+                    createdAt: "2026-06-10T06:30:00.000Z",
+                    updatedAt: "2026-06-10T06:30:00.000Z",
+                },
+            ],
+        };
+
+        render(
+            <OfferSendConfirmDialog
+                open
+                validation={{
+                    validCandidates: [
+                        {
+                            applicationId: "application_1",
+                            candidate: {
+                                id: "candidate_1",
+                                firstName: "Rajaram",
+                                lastName: "A",
+                                email: "candidate1@gmail.com",
+                                resumeUrl: null,
+                            },
+                            eligibility: { canSend: true, errors: [], warnings: [] },
+                        },
+                    ],
+                    blockedCandidates: [],
+                    warnings: [],
+                }}
+                sending={false}
+                template={template}
+                category={category}
+                renderData={{
+                    firstName: "",
+                    lastName: "",
+                    generatedDate: "18 Jun 2026",
+                    salaryMin: "12,00,000",
+                    salaryMax: "16,00,000",
+                    currency: "INR",
+                }}
+                nameOverrides={{}}
+                onOpenChange={vi.fn()}
+                onNameOverrideSave={onNameOverrideSave}
+                onConfirm={onConfirm}
+            />,
+        );
+
+        expect(screen.queryByText("Ready")).not.toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: /preview/i }));
+        expect(await screen.findByText("Offer letter preview")).toBeInTheDocument();
+        expect(screen.getByText("Dear Rajaram A")).toBeInTheDocument();
+        expect(screen.getByText("12,00,000 - 16,00,000 INR")).toBeInTheDocument();
+        const logo = document.querySelector('img.offer-letter-logo');
+        expect(logo).toHaveAttribute("src", "https://cdn.example.com/logo.png");
+        expect(document.querySelector('img[src="https://cdn.example.com/signature.png"]')).toBeInTheDocument();
+
+        const nameInput = screen.getByRole("textbox", { name: /offer preview candidate name/i });
+        await user.clear(nameInput);
+        await user.type(nameInput, "Raja Kumar");
+        expect(screen.getByText("Dear Raja Kumar")).toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: /^save$/i }));
+        expect(onNameOverrideSave).toHaveBeenCalledWith("application_1", "Raja Kumar");
+
+        await user.click(screen.getByRole("button", { name: /^send offers$/i }));
+        expect(onConfirm).toHaveBeenCalledTimes(1);
     });
 
     it("renders maintenance kanban columns and assigned issue cards", () => {

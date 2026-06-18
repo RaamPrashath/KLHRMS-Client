@@ -140,7 +140,7 @@ export function JobRequisitionTable({
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
               <Input
-                placeholder="Search requisitions..."
+                placeholder="Search requisitions"
                 value={globalFilter}
                 onChange={(event) => setGlobalFilter(event.target.value)}
                 className="border-0 bg-canvas pl-9 text-sm focus:bg-surface focus:border-primary focus:ring-[3px] focus:ring-primary/10"
