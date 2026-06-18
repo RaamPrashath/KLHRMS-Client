@@ -176,9 +176,8 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={() => router.push(`/${orgSlug}/employees/deactivated`)}
-            className="shrink-0 text-amber-600 border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+            className="btn-clockout-border h-9 rounded-lg px-4 text-[13px] font-semibold shrink-0"
           >
             <UserX className="size-4 mr-1.5" /> View Deactivated
           </Button>
