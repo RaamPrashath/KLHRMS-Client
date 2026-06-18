@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   ArrowRight,
+  Building2,
   CalendarDays,
   Check,
   FileText,
@@ -431,7 +432,15 @@ function EmployeeHeroBanner({
   );
 }
 
-function QuickShortcutsCard({ orgSlug }: { readonly orgSlug: string }) {
+function QuickShortcutsCard({
+  orgSlug,
+  overview,
+  isLoading,
+}: Readonly<{
+  orgSlug: string;
+  overview: DashboardOverviewResponse | undefined;
+  isLoading: boolean;
+}>) {
   const shortcuts = [
     {
       href: `/${orgSlug}/weekly-plan`,
@@ -458,7 +467,10 @@ function QuickShortcutsCard({ orgSlug }: { readonly orgSlug: string }) {
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-      <h2 className="mb-4 text-base font-semibold text-neutral-900">Quick Shortcuts</h2>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-neutral-900">Quick Shortcuts</h2>
+        <MyDepartmentFloatingPanel overview={overview} isLoading={isLoading} />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {shortcuts.map((s) => {
           const Icon = s.icon;
@@ -480,6 +492,92 @@ function QuickShortcutsCard({ orgSlug }: { readonly orgSlug: string }) {
         })}
       </div>
     </div>
+  );
+}
+
+function MyDepartmentFloatingPanel({
+  overview,
+  isLoading,
+}: Readonly<{
+  overview: DashboardOverviewResponse | undefined;
+  isLoading: boolean;
+}>) {
+  const departments = overview?.myDepartments ?? [];
+  const primaryDepartment = departments[0];
+
+  return (
+    <FloatingPanelRoot>
+      <FloatingPanelTrigger
+        title="My Department"
+        className="inline-flex shrink-0 items-center rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-medium text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 hover:bg-zinc-50 active:scale-[0.98]"
+      >
+        My Department
+      </FloatingPanelTrigger>
+
+      <FloatingPanelContent className="w-[min(calc(100vw-2rem),24rem)] max-h-[min(34rem,calc(100vh-2rem))] overflow-hidden rounded-[18px] border-neutral-200 shadow-[0_20px_70px_rgba(0,0,0,0.16)]">
+        <FloatingPanelBody className="max-h-[calc(min(34rem,100vh-2rem)-2.75rem)] overflow-y-auto px-4 pb-4 pt-1">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-[12px] font-medium text-neutral-400">My Department</p>
+            <FloatingPanelCloseButton className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f5f5f7]" />
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              <div className="h-5 w-44 animate-pulse rounded-full bg-neutral-100" />
+              <div className="h-4 w-32 animate-pulse rounded-full bg-neutral-100" />
+              <div className="h-16 animate-pulse rounded-xl bg-neutral-100" />
+            </div>
+          ) : primaryDepartment ? (
+            <div className="space-y-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xl font-semibold tracking-tight text-neutral-900">
+                    {primaryDepartment.name}
+                  </p>
+                  <span className={cn(
+                    "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                    primaryDepartment.role === "HEAD"
+                      ? "bg-purple-50 text-purple-700"
+                      : "bg-blue-50 text-blue-700",
+                  )}>
+                    {primaryDepartment.role === "HEAD" ? "Department Head" : "Member"}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-neutral-500">
+                  {primaryDepartment.memberCount} teammate{primaryDepartment.memberCount === 1 ? "" : "s"}
+                  {primaryDepartment.headMemberName ? ` · Head: ${primaryDepartment.headMemberName}` : ""}
+                </p>
+              </div>
+
+              {departments.length > 1 ? (
+                <div className="rounded-xl border border-neutral-100 bg-neutral-50/60 p-3">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                    Also assigned to
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {departments.slice(1).map((department) => (
+                      <span
+                        key={department.id}
+                        className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700"
+                      >
+                        {department.name} · {department.role === "HEAD" ? "Head" : "Member"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 px-4 py-6 text-center">
+              <p className="text-sm font-semibold text-neutral-800">No department assigned yet</p>
+              <p className="mt-1 text-xs leading-relaxed text-neutral-400">
+                Once HR assigns you to a department, it will appear here.
+              </p>
+            </div>
+          )}
+        </FloatingPanelBody>
+      </FloatingPanelContent>
+    </FloatingPanelRoot>
   );
 }
 
@@ -508,6 +606,17 @@ function HeatmapPanel({
   );
 }
 
+function RightDashboardColumn({
+  orgSlug,
+  memberId,
+}: Readonly<Pick<DashboardShellProps, "orgSlug" | "memberId">>) {
+  return (
+    <div className="flex flex-col gap-5">
+      <HeatmapPanel orgSlug={orgSlug} memberId={memberId} />
+    </div>
+  );
+}
+
 function MainDashboardLayout({
   orgSlug,
   memberId,
@@ -522,12 +631,15 @@ function MainDashboardLayout({
     <>
       <DashboardTopBar orgSlug={orgSlug} memberId={memberId} />
       <EmployeeHeroBanner orgSlug={orgSlug} memberId={memberId} roleName={roleName} />
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] items-start">
         <div className="flex flex-col gap-5">
-          <QuickShortcutsCard orgSlug={orgSlug} />
+          <QuickShortcutsCard orgSlug={orgSlug} overview={overview} isLoading={isDashboardLoading} />
           <OpenInternalPositionsCard overview={overview} isLoading={isDashboardLoading} />
         </div>
-        <HeatmapPanel orgSlug={orgSlug} memberId={memberId} />
+        <RightDashboardColumn
+          orgSlug={orgSlug}
+          memberId={memberId}
+        />
       </div>
     </>
   );

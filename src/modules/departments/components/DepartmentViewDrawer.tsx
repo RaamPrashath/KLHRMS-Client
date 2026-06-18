@@ -115,6 +115,12 @@ export function DepartmentViewDrawer({
   const [activeTab, setActiveTab] = useState<'heads' | 'members' | 'unassigned'>('heads');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
+  useEffect(() => {
+    if (!canManage && activeTab === 'unassigned') {
+      setActiveTab('heads');
+    }
+  }, [canManage, activeTab]);
+
   // Member state
   const [unassignedMemberSearch, setUnassignedMemberSearch] = useState('');
   const [assignedMemberSearch, setAssignedMemberSearch] = useState('');
@@ -419,19 +425,26 @@ export function DepartmentViewDrawer({
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'heads' | 'members' | 'unassigned')} className="flex min-h-0 flex-1 flex-col">
                 <div className="mx-6 mt-4 mb-0 flex shrink-0 items-center gap-2">
                   <div className="flex-1">
-                    <TabBar
-                      tabs={[
+                    {(() => {
+                      const tabs = [
                         { value: 'heads', label: 'Heads', count: department.heads.length },
                         { value: 'members', label: 'Members', count: department.members.length },
-                        {
+                      ];
+                      if (canManage) {
+                        tabs.push({
                           value: 'unassigned',
                           label: 'Unassigned',
                           count: allOrgMembers.filter((m) => !assignedMemberIds.has(m.id) && !headMemberIds.has(m.id)).length,
-                        },
-                      ]}
-                      value={activeTab}
-                      onValueChange={(v) => setActiveTab(v as 'heads' | 'members' | 'unassigned')}
-                    />
+                        });
+                      }
+                      return (
+                        <TabBar
+                          tabs={tabs}
+                          value={activeTab}
+                          onValueChange={(v) => setActiveTab(v as 'heads' | 'members' | 'unassigned')}
+                        />
+                      );
+                    })()}
                   </div>
 
                   {canManage && !isEditing && (
@@ -525,95 +538,96 @@ export function DepartmentViewDrawer({
                   </div>
                 </TabsContent>
 
-                {/* Unassigned members — checkbox select with docked bulk actions */}
-                <TabsContent value="unassigned" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
-                  <div className="relative mb-3 shrink-0">
-                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
-                    <Input
-                      value={unassignedMemberSearch}
-                      onChange={(e) => setUnassignedMemberSearch(e.target.value)}
-                      placeholder="Search Employees"
-                      className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
-                    />
-                  </div>
-
-                  <div className="min-h-0 flex-1 overflow-y-auto">
-                    {unassignedMembers.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <Users className="size-8 text-[#86868b]" />
-                        <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
-                          {deferredUnassignedMemberSearch ? 'No Results' : 'All Employees Assigned'}
-                        </p>
-                        <p className="mt-1 text-[13px] text-[#6e6e73]">
-                          {deferredUnassignedMemberSearch
-                            ? 'Try A Different Search Term.'
-                            : 'Every Org Member Is Already In This Department.'}
-                        </p>
-                      </div>
-                    ) : (
-                      <ul className="space-y-1 pb-4">
-                        {unassignedMembers.map((member) => (
-                          <li key={member.id}>
-                            <label
-                              className={cn(
-                                'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f7]',
-                                selectedUnassignedIds.has(member.id) && 'bg-primary/5',
-                              )}
-                            >
-                              <Checkbox
-                                checked={selectedUnassignedIds.has(member.id)}
-                                onCheckedChange={() => handleUnassignedToggle(member.id)}
-                                className="shrink-0 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
-                                aria-label={`Select ${member.label}`}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-[14px] font-medium text-[#1d1d1f]">
-                                  {member.label}
-                                </p>
-                                {member.email && (
-                                  <p className="truncate text-[12px] text-[#6e6e73]">{member.email}</p>
-                                )}
-                              </div>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  {canManage && selectedUnassignedIds.size > 0 && (
-                    <div className="shrink-0 border-t border-[#e5e5ea] py-3 flex gap-2">
-                      <Button
-                        onClick={() => {
-                          for (const id of selectedUnassignedIds) void handleAssignHead(id);
-                          setSelectedUnassignedIds(new Set());
-                        }}
-                        disabled={mutations.assignHead.isPending}
-                        className="flex-1 h-10 rounded-lg text-[14px] font-medium text-white"
-                        style={{ backgroundColor: ACTION_GREEN }}
-                      >
-                        <Crown className="mr-2 size-4" />
-                        {mutations.assignHead.isPending
-                          ? 'Assigning'
-                          : `Assign as Head${selectedUnassignedIds.size > 1 ? ` (${selectedUnassignedIds.size})` : ''}`}
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          void handleBulkAssignMembers(Array.from(selectedUnassignedIds));
-                          setSelectedUnassignedIds(new Set());
-                        }}
-                        disabled={mutations.bulkAssignMembers.isPending}
-                        variant="outline"
-                        className="flex-1 h-10 rounded-lg text-[14px] font-medium"
-                      >
-                        <UserPlus className="mr-2 size-4" />
-                        {mutations.bulkAssignMembers.isPending
-                          ? 'Assigning'
-                          : `Assign as Member${selectedUnassignedIds.size > 1 ? ` (${selectedUnassignedIds.size})` : ''}`}
-                      </Button>
+                {canManage && (
+                  <TabsContent value="unassigned" className="mt-0 flex min-h-0 flex-1 flex-col px-6 pt-4">
+                    <div className="relative mb-3 shrink-0">
+                      <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86868b]" />
+                      <Input
+                        value={unassignedMemberSearch}
+                        onChange={(e) => setUnassignedMemberSearch(e.target.value)}
+                        placeholder="Search Employees"
+                        className="h-10 rounded-lg border-[#e5e5ea] pl-9 text-[14px] shadow-none focus-visible:ring-1 focus-visible:ring-primary"
+                      />
                     </div>
-                  )}
-                </TabsContent>
+
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      {unassignedMembers.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <Users className="size-8 text-[#86868b]" />
+                          <p className="mt-3 text-[14px] font-medium text-[#1d1d1f]">
+                            {deferredUnassignedMemberSearch ? 'No Results' : 'All Employees Assigned'}
+                          </p>
+                          <p className="mt-1 text-[13px] text-[#6e6e73]">
+                            {deferredUnassignedMemberSearch
+                              ? 'Try A Different Search Term.'
+                              : 'Every Org Member Is Already In This Department.'}
+                          </p>
+                        </div>
+                      ) : (
+                        <ul className="space-y-1 pb-4">
+                          {unassignedMembers.map((member) => (
+                            <li key={member.id}>
+                              <label
+                                className={cn(
+                                  'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#f5f5f7]',
+                                  selectedUnassignedIds.has(member.id) && 'bg-primary/5',
+                                )}
+                              >
+                                <Checkbox
+                                  checked={selectedUnassignedIds.has(member.id)}
+                                  onCheckedChange={() => handleUnassignedToggle(member.id)}
+                                  className="shrink-0 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+                                  aria-label={`Select ${member.label}`}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[14px] font-medium text-[#1d1d1f]">
+                                    {member.label}
+                                  </p>
+                                  {member.email && (
+                                    <p className="truncate text-[12px] text-[#6e6e73]">{member.email}</p>
+                                  )}
+                                </div>
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {selectedUnassignedIds.size > 0 && (
+                      <div className="shrink-0 border-t border-[#e5e5ea] py-3 flex gap-2">
+                        <Button
+                          onClick={() => {
+                            for (const id of selectedUnassignedIds) void handleAssignHead(id);
+                            setSelectedUnassignedIds(new Set());
+                          }}
+                          disabled={mutations.assignHead.isPending}
+                          className="flex-1 h-10 rounded-lg text-[14px] font-medium text-white"
+                          style={{ backgroundColor: ACTION_GREEN }}
+                        >
+                          <Crown className="mr-2 size-4" />
+                          {mutations.assignHead.isPending
+                            ? 'Assigning'
+                            : `Assign as Head${selectedUnassignedIds.size > 1 ? ` (${selectedUnassignedIds.size})` : ''}`}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            void handleBulkAssignMembers(Array.from(selectedUnassignedIds));
+                            setSelectedUnassignedIds(new Set());
+                          }}
+                          disabled={mutations.bulkAssignMembers.isPending}
+                          variant="outline"
+                          className="flex-1 h-10 rounded-lg text-[14px] font-medium"
+                        >
+                          <UserPlus className="mr-2 size-4" />
+                          {mutations.bulkAssignMembers.isPending
+                            ? 'Assigning'
+                            : `Assign as Member${selectedUnassignedIds.size > 1 ? ` (${selectedUnassignedIds.size})` : ''}`}
+                        </Button>
+                      </div>
+                    )}
+                  </TabsContent>
+                )}
               </Tabs>
             </div>
           </>
