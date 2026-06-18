@@ -73,7 +73,6 @@ export function LeaveRequestDetailsDialog({
       <DialogContent className="sm:max-w-xl bg-surface">
         <DialogHeader>
           <DialogTitle>Leave Request Details</DialogTitle>
-          <DialogDescription>Review the request and take action if you have approval access.</DialogDescription>
         </DialogHeader>
 
         {isLoading || !data ? (

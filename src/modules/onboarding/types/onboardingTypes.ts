@@ -36,6 +36,17 @@ export interface OnboardingRecord {
   updatedAt: string;
 }
 
+export interface DocumentCollectionRequestSummary {
+  id: string;
+  templateId: string | null;
+  templateName: string;
+  status: string;
+  tokenSentAt: string | null;
+  submittedAt: string | null;
+  emailError: string | null;
+  createdAt: string;
+}
+
 export interface AcceptedOnboardingCandidate {
   applicationId: string;
   candidate: OnboardingCandidateSummary;
@@ -43,6 +54,7 @@ export interface AcceptedOnboardingCandidate {
   source: string;
   onboardingStatus: string;
   latestOnboarding: OnboardingRecord | null;
+  latestDocumentCollection: DocumentCollectionRequestSummary | null;
 }
 
 export interface AcceptedOnboardingWorkspace {

@@ -1,24 +1,25 @@
 'use client';
 
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { Download, FileText, Loader2 } from 'lucide-react';
 
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import type { OfferDownloadFormat } from '@/modules/offers/schema/offerSchemas';
 import type { OfferCandidateValidationResponse } from '@/modules/offers/types/offerTypes';
 
-interface OfferSendConfirmDialogProps {
+interface OfferDownloadConfirmDialogProps {
   readonly open: boolean;
   readonly validation: OfferCandidateValidationResponse | null;
-  readonly sending: boolean;
+  readonly downloadingFormat: OfferDownloadFormat | null;
   readonly onOpenChange: (open: boolean) => void;
-  readonly onConfirm: () => void;
+  readonly onConfirm: (format: OfferDownloadFormat) => void;
 }
 
 function candidateLabel(item: NonNullable<OfferCandidateValidationResponse['validCandidates'][number]>) {
@@ -27,23 +28,23 @@ function candidateLabel(item: NonNullable<OfferCandidateValidationResponse['vali
   return `${candidate.firstName} ${candidate.lastName}`.trim() || candidate.email || item.applicationId;
 }
 
-export function OfferSendConfirmDialog({
+export function OfferDownloadConfirmDialog({
   open,
   validation,
-  sending,
+  downloadingFormat,
   onOpenChange,
   onConfirm,
-}: OfferSendConfirmDialogProps) {
+}: OfferDownloadConfirmDialogProps) {
   const validCandidates = validation?.validCandidates ?? [];
   const blockedCandidates = validation?.blockedCandidates ?? [];
+  const isDownloading = downloadingFormat !== null;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="rounded-2xl bg-surface shadow-[var(--shadow-4)] sm:max-w-2xl">
         <AlertDialogHeader className="place-items-start text-left">
-          <AlertDialogTitle>Send offers</AlertDialogTitle>
+          <AlertDialogTitle>Download offer letters</AlertDialogTitle>
         </AlertDialogHeader>
-
         <div className="max-h-72 overflow-y-auto rounded-lg border border-neutral-100">
           {validCandidates.map((item) => (
             <div key={item.applicationId} className="flex items-start justify-between gap-3 border-b border-neutral-100 px-3 py-2 last:border-0">
@@ -71,17 +72,25 @@ export function OfferSendConfirmDialog({
         ) : null}
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={sending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(event) => {
-              event.preventDefault();
-              onConfirm();
-            }}
-            disabled={sending || validCandidates.length === 0}
+          <AlertDialogCancel disabled={isDownloading}>Cancel</AlertDialogCancel>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onConfirm('pdf')}
+            disabled={isDownloading || validCandidates.length === 0}
           >
-            {sending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Send offers
-          </AlertDialogAction>
+            {downloadingFormat === 'pdf' ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+            PDF
+          </Button>
+          <Button
+            type="button"
+            className="bg-primary hover:bg-primary-hover"
+            onClick={() => onConfirm('docx')}
+            disabled={isDownloading || validCandidates.length === 0}
+          >
+            {downloadingFormat === 'docx' ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            Word
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

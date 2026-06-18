@@ -3,12 +3,10 @@
 import { useQuery } from '@tanstack/react-query';
 import type { RefetchOptions } from '@tanstack/react-query';
 import {
-  fetchAttendanceAction,
-  fetchAttendanceClockContextAction,
-  fetchMemberPermissionsAction,
-  fetchMemberProfileAction,
-  fetchMyAttendanceAction,
-} from '@/modules/attendance/api/attendanceServerActions';
+  fetchAttendance,
+  fetchMyAttendance,
+} from '@/hooks/functions/attendance';
+import { fetchAttendanceClockContextAction, fetchMemberPermissionsAction, fetchMemberProfileAction } from '@/modules/attendance/api/attendanceServerActions';
 import { fetchBulkAttendanceRangeAction } from '@/modules/attendance/api/bulkAttendanceServerActions';
 import { resolveAttendancePermissions } from '@/modules/attendance/utils/attendancePermissions';
 import { getTodayIST } from '@/modules/attendance/utils/attendanceFormatters';
@@ -54,10 +52,9 @@ export function useAttendanceQuery(
   const query = useQuery<AttendanceListResponse, Error>({
     queryKey: attendanceQueryKeys.attendance(orgSlug, memberId, filters),
     queryFn: () =>
-      fetchAttendanceAction({
-        orgSlug,
-        memberId,
-        filters: {
+      fetchAttendance(
+        { orgSlug, memberId },
+        {
           target_member_id: filters?.targetMemberId,
           employee_name: filters?.employeeNameSearch,
           date_from: filters?.dateFrom,
@@ -66,7 +63,7 @@ export function useAttendanceQuery(
           page: filters?.page,
           page_size: filters?.pageSize,
         },
-      }),
+      ),
     enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
     staleTime: options?.staleTime,
   });
@@ -97,17 +94,16 @@ export function useMyAttendanceQuery(
   const query = useQuery<AttendanceListResponse, Error>({
     queryKey: attendanceQueryKeys.attendanceMe(orgSlug, memberId, filters),
     queryFn: () =>
-      fetchMyAttendanceAction({
-        orgSlug,
-        memberId,
-        filters: {
+      fetchMyAttendance(
+        { orgSlug, memberId },
+        {
           date_from: filters?.dateFrom,
           date_to: filters?.dateTo,
           status: filters?.status,
           page: filters?.page,
           page_size: filters?.pageSize,
         },
-      }),
+      ),
     enabled: !!orgSlug && !!memberId && (options?.enabled ?? true),
     staleTime: options?.staleTime,
   });
@@ -126,16 +122,15 @@ export function useAttendanceTodayQuery(orgSlug: string, memberId: string, today
   return useQuery<AttendanceListResponse, Error>({
     queryKey: attendanceQueryKeys.attendanceToday(orgSlug, memberId),
     queryFn: () =>
-      fetchMyAttendanceAction({
-        orgSlug,
-        memberId,
-        filters: {
+      fetchMyAttendance(
+        { orgSlug, memberId },
+        {
           date_from: todayIso,
           date_to: todayIso,
           page: 1,
           page_size: 1,
         },
-      }),
+      ),
     enabled: !!orgSlug && !!memberId,
   });
 }
