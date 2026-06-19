@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNo
 import { useRouter } from 'next/navigation';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
+  CalendarDays,
   ChevronLeft,
   Copy,
   FileImage,
@@ -27,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -38,7 +40,12 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 
 import { cn } from '@/lib/utils';
 import { OfferRichTextEditor, OFFER_VARIABLE_TOKENS } from '@/modules/offers/components/OfferRichTextEditor';
@@ -130,6 +137,17 @@ function formatDisplayDate(value: string): string {
     month: 'short',
     year: 'numeric',
   }).format(date).replaceAll(' ', '-');
+}
+
+function dateFromInputValue(value: string): Date | undefined {
+  if (!value) return undefined;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function inputValueFromDate(date: Date): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
 }
 
 function stripHtml(value: string | null | undefined): string {
@@ -302,6 +320,7 @@ function buildFooterHtml(draft: TemplateDraft, options: { includeTemporaryImages
       const imageUrl = options.includeTemporaryImages ? signature.imageUrl : persistedImageUrl(signature.imageUrl);
       return `
       <div class="offer-signature-slot">
+        <p class="offer-signature-closing">Sincerely,</p>
         ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="" />` : ''}
         ${signature.name ? `<p class="offer-signature-name">(${escapeHtml(signature.name)})</p>` : ''}
         ${signature.role ? `<p>${escapeHtml(signature.role)}</p>` : ''}
@@ -451,6 +470,7 @@ export function OfferTemplateBuilderPage({
   const [templateSave, setTemplateSave] = useState<SaveState>({ status: 'idle', message: 'Draft' });
   const [contentSave, setContentSave] = useState<SaveState>({ status: 'idle', message: 'Draft' });
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [headerDateOpen, setHeaderDateOpen] = useState(false);
 
   const createTemplate = useCreateOfferTemplate(orgSlug, memberId);
   const templateQuery = useOfferTemplate(orgSlug, memberId, templateId);
@@ -901,7 +921,29 @@ export function OfferTemplateBuilderPage({
                   </label>
                   <label className="grid gap-1.5 text-[13px] font-medium text-neutral-700">
                     Date
-                    <Input type="date" value={draft.headerDate} onChange={(event) => setDraft((current) => ({ ...current, headerDate: event.target.value }))} />
+                    <Popover open={headerDateOpen} onOpenChange={setHeaderDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn('w-full justify-start text-left font-normal', !draft.headerDate && 'text-neutral-400')}
+                        >
+                          <CalendarDays className="size-4" />
+                          {draft.headerDate ? formatDisplayDate(draft.headerDate) : 'Pick a date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dateFromInputValue(draft.headerDate)}
+                          onSelect={(date) => {
+                            if (!date) return;
+                            setDraft((current) => ({ ...current, headerDate: inputValueFromDate(date) }));
+                            setHeaderDateOpen(false);
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </label>
                   <label className="grid gap-1.5 text-[13px] font-medium text-neutral-700">
                     Location

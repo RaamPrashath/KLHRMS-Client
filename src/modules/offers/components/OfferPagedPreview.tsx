@@ -9,7 +9,7 @@ import { splitPreviewPages } from '@/modules/offers/utils/offerTemplateRender';
 const PAGE_WIDTH = 794;
 const PAGE_MIN_HEIGHT = 1123;
 const PAGE_GAP = 24;
-const PAGE_PADDING_TOP = 56;
+const PAGE_PADDING_TOP = 90;
 const PAGE_PADDING_BOTTOM = 90;
 const PAGE_PADDING_X = 76;
 const CORNER_MARK_TOP = 28;
@@ -22,6 +22,7 @@ const MIN_SCALE = 0.25;
 const MAX_SCALE = 3;
 const CONTENT_WIDTH = PAGE_WIDTH - PAGE_PADDING_X * 2;
 const CONTENT_HEIGHT = PAGE_MIN_HEIGHT - PAGE_PADDING_TOP - PAGE_PADDING_BOTTOM;
+const FOOTER_PIN_THRESHOLD = CONTENT_HEIGHT * 0.6;
 
 const CONTENT_CLASS_NAME = cn(
   'space-y-4 text-[15px] leading-[26px]',
@@ -36,8 +37,9 @@ const CONTENT_CLASS_NAME = cn(
   '[&_.offer-letter-header-meta]:absolute [&_.offer-letter-header-meta]:right-0 [&_.offer-letter-header-meta]:top-12 [&_.offer-letter-header-meta]:text-right [&_.offer-letter-header-meta]:text-[13px] [&_.offer-letter-header-meta]:leading-6',
   '[&_.offer-letter-header_h1]:absolute [&_.offer-letter-header_h1]:bottom-0 [&_.offer-letter-header_h1]:left-0 [&_.offer-letter-header_h1]:right-0 [&_.offer-letter-header_h1]:text-center [&_.offer-letter-header_h1]:whitespace-nowrap [&_.offer-letter-header_h1]:text-base [&_.offer-letter-header_h1]:font-semibold',
   '[&_footer]:mt-[22px] [&_footer]:break-inside-avoid [&_footer]:pt-0 [&_footer]:text-[13px] [&_footer]:leading-[19px] [&_footer]:text-neutral-900 [&_footer_p]:mb-0 [&_footer_p]:leading-[19px]',
+  '[&_footer.offer-footer-pinned]:absolute [&_footer.offer-footer-pinned]:bottom-0 [&_footer.offer-footer-pinned]:left-0 [&_footer.offer-footer-pinned]:right-0 [&_footer.offer-footer-pinned]:mt-0',
   '[&_.offer-letter-footer]:grid [&_.offer-letter-footer]:grid-cols-[minmax(0,1fr)_auto] [&_.offer-letter-footer]:items-end [&_.offer-letter-footer]:gap-x-14',
-  '[&_.offer-signature-slot]:col-start-1 [&_.offer-signature-slot]:row-start-1 [&_.offer-signature-slot]:mb-3 [&_.offer-signature-slot]:break-inside-avoid [&_.offer-signature-slot_p]:mb-0 [&_.offer-signature-slot_p]:leading-[18px] [&_.offer-signature-slot_img]:mb-0 [&_.offer-signature-slot_img]:max-h-20 [&_.offer-signature-slot_img]:max-w-32 [&_.offer-signature-slot_img]:object-contain',
+  '[&_.offer-signature-slot]:col-start-1 [&_.offer-signature-slot]:row-start-1 [&_.offer-signature-slot]:mb-4 [&_.offer-signature-slot]:break-inside-avoid [&_.offer-signature-slot_p]:mb-0 [&_.offer-signature-slot_p]:leading-[18px] [&_.offer-signature-slot_img]:mb-0 [&_.offer-signature-slot_img]:block [&_.offer-signature-slot_img]:max-h-20 [&_.offer-signature-slot_img]:max-w-32 [&_.offer-signature-slot_img]:object-contain',
   '[&_.offer-signature-name]:mb-0 [&_.offer-signature-name]:font-semibold [&_.offer-footer-address]:col-start-1 [&_.offer-footer-address]:row-start-2 [&_.offer-footer-address]:mt-0 [&_.offer-footer-address_p]:mb-0 [&_.offer-footer-address_p]:leading-[19px]',
   '[&_.offer-footer-website]:col-start-2 [&_.offer-footer-website]:row-start-2 [&_.offer-footer-website]:self-center [&_.offer-footer-website]:whitespace-nowrap [&_.offer-footer-website]:text-[16px] [&_.offer-footer-website]:font-bold [&_.offer-footer-website]:leading-5 [&_.offer-footer-website]:!text-neutral-900 [&_.offer-footer-website]:!no-underline',
 );
@@ -57,6 +59,8 @@ function contentStyle(): CSSProperties {
   return {
     '--offer-header-brand-left': `${CORNER_MARK_LEFT + CORNER_MARK_WIDTH + BRAND_GAP_FROM_CORNER_MARK - PAGE_PADDING_X}px`,
     '--offer-header-brand-top': `${CORNER_MARK_TOP + (CORNER_MARK_HEIGHT - LOGO_MAX_HEIGHT) / 2 - PAGE_PADDING_TOP}px`,
+    minHeight: `${CONTENT_HEIGHT}px`,
+    position: 'relative',
   } as CSSProperties;
 }
 
@@ -98,6 +102,36 @@ function htmlToFlowUnits(html: string): string[] {
   return units.filter((unit) => !isBlankHtml(unit));
 }
 
+function splitBodyAndFooterHtml(html: string): { bodyHtml: string; footerHtml: string | null } {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html;
+  const footer = wrapper.querySelector('footer');
+  if (!footer) return { bodyHtml: html, footerHtml: null };
+  const footerHtml = footer.outerHTML;
+  footer.remove();
+  return { bodyHtml: wrapper.innerHTML, footerHtml };
+}
+
+function footerWithPinnedClass(html: string): string {
+  const template = document.createElement('template');
+  template.innerHTML = html.trim();
+  const footer = template.content.firstElementChild;
+  if (!(footer instanceof HTMLElement)) return html;
+  footer.classList.add('offer-footer-pinned');
+  return footer.outerHTML;
+}
+
+function measureFooterHeight(root: HTMLElement, footerHtml: string): number {
+  const measure = document.createElement('div');
+  measure.className = CONTENT_CLASS_NAME;
+  Object.assign(measure.style, contentStyle(), { width: `${CONTENT_WIDTH}px`, minHeight: '0' });
+  measure.innerHTML = footerHtml;
+  root.appendChild(measure);
+  const height = measure.scrollHeight;
+  measure.remove();
+  return height;
+}
+
 function measuredPreviewPages(html: string): Array<{ html: string }> {
   const manualPages = splitPreviewPages(html).map((page) => page.html);
   const measurementRoot = document.createElement('div');
@@ -113,7 +147,7 @@ function measuredPreviewPages(html: string): Array<{ html: string }> {
     const pages: Array<{ html: string }> = [];
     const current = document.createElement('div');
     current.className = CONTENT_CLASS_NAME;
-    Object.assign(current.style, contentStyle(), { width: `${CONTENT_WIDTH}px` });
+    Object.assign(current.style, contentStyle(), { width: `${CONTENT_WIDTH}px`, minHeight: '0' });
     measurementRoot.appendChild(current);
 
     const flush = () => {
@@ -123,7 +157,8 @@ function measuredPreviewPages(html: string): Array<{ html: string }> {
     };
 
     for (const manualPage of manualPages) {
-      for (const unit of htmlToFlowUnits(manualPage)) {
+      const { bodyHtml, footerHtml } = splitBodyAndFooterHtml(manualPage);
+      for (const unit of htmlToFlowUnits(bodyHtml)) {
         const fragment = document.createElement('template');
         fragment.innerHTML = unit;
         const clone = fragment.content.cloneNode(true);
@@ -134,6 +169,26 @@ function measuredPreviewPages(html: string): Array<{ html: string }> {
           if (overflowNode) current.removeChild(overflowNode);
           flush();
           if (overflowNode) current.appendChild(overflowNode);
+        }
+      }
+      if (footerHtml) {
+        const bodyHeight = current.scrollHeight;
+        const footerHeight = measureFooterHeight(measurementRoot, footerHtml);
+        if (bodyHeight === 0 || bodyHeight > FOOTER_PIN_THRESHOLD) {
+          if (bodyHeight <= CONTENT_HEIGHT - footerHeight) {
+            current.insertAdjacentHTML('beforeend', footerWithPinnedClass(footerHtml));
+          } else {
+            flush();
+            current.insertAdjacentHTML('beforeend', footerWithPinnedClass(footerHtml));
+          }
+        } else {
+          current.insertAdjacentHTML('beforeend', footerHtml);
+          if (current.scrollHeight > CONTENT_HEIGHT && current.childNodes.length > 1) {
+            const footerNode = current.lastChild;
+            if (footerNode) current.removeChild(footerNode);
+            flush();
+            if (footerNode) current.appendChild(footerNode);
+          }
         }
       }
       flush();
@@ -280,7 +335,7 @@ export function OfferPagedPreview({
               style={{
                 width: PAGE_WIDTH,
                 minHeight: PAGE_MIN_HEIGHT,
-                padding: `${PAGE_PADDING_TOP}px ${PAGE_PADDING_X}px`,
+                padding: `${PAGE_PADDING_TOP}px ${PAGE_PADDING_X}px ${PAGE_PADDING_BOTTOM}px`,
               }}
             >
               <div

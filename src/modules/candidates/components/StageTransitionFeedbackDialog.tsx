@@ -91,21 +91,6 @@ export function StageTransitionFeedbackDialog({
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-neutral-700">Recommendation</label>
-            <Select value={recommendation} onValueChange={(v: 'STRONG_HIRE' | 'HIRE' | 'HOLD' | 'NO_HIRE') => setRecommendation(v)}>
-              <SelectTrigger className="w-52">
-                <SelectValue placeholder="Select..." />
-              </SelectTrigger>
-              <SelectContent className="min-w-52">
-                <SelectItem value="STRONG_HIRE">Strong Hire</SelectItem>
-                <SelectItem value="HIRE">Hire</SelectItem>
-                <SelectItem value="HOLD">Hold</SelectItem>
-                <SelectItem value="NO_HIRE">No Hire</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
             <label className="text-sm font-medium text-neutral-700">
               Notes <span className="text-destructive">*</span>
             </label>

@@ -2,10 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
-import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -73,20 +69,6 @@ function getMonthStartIST(): Date {
   const parts = getTodayIST().split('-').map(Number);
   return new Date(parts[0]!, (parts[1] ?? 1) - 1, 1);
 }
-export function AttendancePageShell({
-    orgSlug,
-    memberId,
-}: Readonly<AttendancePageShellProps>) {
-    const shouldReduceMotion = useReducedMotion();
-    const queryClient = useQueryClient();
-
-    // ── Permission resolution ──────────────────────────────────────────────────
-    const { data: rawPermissions, isLoading: permissionsLoading } =
-        useMemberPermissionsQuery(orgSlug, memberId);
-
-    const permissions = resolveAttendancePermissions(rawPermissions ?? {});
-    const isOrgScope = permissions.view === "organization" || permissions.view === "department";
-    const isOperative = isOperativeScope(permissions.view) && !isOrgScope;
 
 function buildDefaultFilters(selfScope: boolean): AttendanceNonPaginationFilters {
   if (selfScope) {
@@ -231,34 +213,6 @@ export function AttendancePageShell({
     });
   }, [effectiveFilters.page, effectiveFilters.pageSize, mode, pageIndex, pageSize]);
 
-  if (!isOperativeScope(permissions.view)) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-sm text-neutral-500">
-          You don&apos;t have permission to use this page.
-        </p>
-      </div>
-    );
-  }
-        <>
-            <main className="min-h-full bg-canvas">
-                <div className="flex flex-col gap-6 flex-1 min-h-full">
-                    <div className="flex items-start justify-end md:justify-between ml-7 mt-7 mr-7">
-                        <h1 className="hidden md:block text-4xl font-semibold text-neutral-900 tracking-tight">
-                            Who&apos;s in today?
-                        </h1>
-
-                        {isOperativeScope(permissions.create) && (
-                            <Link
-                                href={`/${orgSlug}/timesheet`}
-                                className="btn-clockout-border h-10 rounded-lg px-5 text-[13px] font-medium inline-flex items-center"
-                            >
-                                <Plus className="mr-2 h-3.5 w-3.5" />
-                                Bulk attendance
-                            </Link>
-                        )}
-                    </div>
-
   async function handleDelete() {
     if (!deleteTarget) return;
     try {
@@ -288,60 +242,90 @@ export function AttendancePageShell({
     }
   }
 
+  if (!isOperativeScope(permissions.view)) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-sm text-neutral-500">
+          You don&apos;t have permission to use this page.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
-      <AttendancePermissionGate scope={permissions.edit}>
-        <ManualAttendanceForm
-          orgSlug={orgSlug}
-          memberId={memberId}
-          open={manualFormOpen}
-          onOpenChange={setManualFormOpen}
-        />
-      </AttendancePermissionGate>
+      <main className="min-h-full bg-canvas">
+        <div className="flex flex-col gap-6 flex-1 min-h-full">
+          {/* <div className="flex items-start justify-end md:justify-between ml-7 mt-7 mr-7">
+            <h1 className="hidden md:block text-4xl font-semibold text-neutral-900 tracking-tight">
+              Who&apos;s in today?
+            </h1>
 
-      <div>
-        <AttendanceTable
-          orgSlug={orgSlug}
-          memberId={memberId}
-          mode={mode}
-          data={activeQuery.data}
-          isLoading={activeQuery.isLoading}
-          isError={activeQuery.isError}
-          onRetry={activeQuery.refetch}
-          filters={effectiveFilters}
-          onFiltersChange={handleFiltersChange}
-          onPageChange={(nextPage) => replacePagination(nextPage - 1)}
-          onPageSizeChange={(nextPageSize) => replacePagination(0, nextPageSize)}
-          onPageOutOfRange={(totalPages) => replacePagination(Math.max(0, totalPages - 1))}
-          canEdit={isOperativeScope(permissions.edit)}
-          canDelete={isOperativeScope(permissions.delete)}
-          showEmployeeColumn={isOrgScope}
-          onEdit={() => setManualFormOpen(true)}
-          onDelete={(record) => setDeleteTarget(record)}
-        />
-      </div>
+            {isOperativeScope(permissions.create) && (
+              <Link
+                href={`/${orgSlug}/timesheet`}
+                className="btn-clockout-border h-10 rounded-lg px-5 text-[13px] font-medium inline-flex items-center"
+              >
+                <Plus className="mr-2 h-3.5 w-3.5" />
+                Bulk attendance
+              </Link>
+            )}
+          </div> */}
 
-      <AlertDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete attendance record?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove the record for {deleteTarget?.date ?? ''}. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AttendancePermissionGate scope={permissions.edit}>
+            <ManualAttendanceForm
+              orgSlug={orgSlug}
+              memberId={memberId}
+              open={manualFormOpen}
+              onOpenChange={setManualFormOpen}
+            />
+          </AttendancePermissionGate>
+
+          <div>
+            <AttendanceTable
+              orgSlug={orgSlug}
+              memberId={memberId}
+              mode={mode}
+              data={activeQuery.data}
+              isLoading={activeQuery.isLoading}
+              isError={activeQuery.isError}
+              onRetry={activeQuery.refetch}
+              filters={effectiveFilters}
+              onFiltersChange={handleFiltersChange}
+              onPageChange={(nextPage) => replacePagination(nextPage - 1)}
+              onPageSizeChange={(nextPageSize) => replacePagination(0, nextPageSize)}
+              onPageOutOfRange={(totalPages) => replacePagination(Math.max(0, totalPages - 1))}
+              canEdit={isOperativeScope(permissions.edit)}
+              canDelete={isOperativeScope(permissions.delete)}
+              showEmployeeColumn={isOrgScope}
+              onEdit={() => setManualFormOpen(true)}
+              onDelete={(record) => setDeleteTarget(record)}
+            />
+          </div>
+
+          <AlertDialog
+            open={deleteTarget !== null}
+            onOpenChange={(open) => {
+              if (!open) setDeleteTarget(null);
+            }}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete attendance record?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove the record for {deleteTarget?.date ?? ''}. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} disabled={deleteMutation.isPending}>
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </main>
     </>
   );
 }

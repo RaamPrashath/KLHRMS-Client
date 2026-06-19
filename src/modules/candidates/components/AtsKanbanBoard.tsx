@@ -83,7 +83,8 @@ const EMPTY_STAGES: PipelineStage[] = [];
 type PendingGoogleAction =
   | { kind: 'create-stage'; data: CreatePipelineStageInput }
   | { kind: 'update-stage'; stageId: string; data: UpdatePipelineStageInput }
-  | { kind: 'accept-interview'; applicationId: string; eventId: string };
+  | { kind: 'accept-interview'; applicationId: string; eventId: string }
+  | { kind: 'start-interview'; applicationId: string; eventId: string };
 
 type AiCandidateFilter = 'all' | 'recommended' | 'flagged' | 'failed';
 
@@ -144,7 +145,7 @@ function buildStageUpdateInput(data: CreatePipelineStageInput): UpdatePipelineSt
 }
 
 function actionNeedsGoogle(action: PendingGoogleAction): boolean {
-  return action.kind === 'accept-interview';
+  return action.kind === 'accept-interview' || action.kind === 'start-interview';
 }
 
 function requiredGoogleScope(): string {
@@ -154,8 +155,8 @@ function requiredGoogleScope(): string {
 function permissionErrorForAction(action: PendingGoogleAction, permissions?: RolePermissions | null): string | null {
   if (!permissions) return null;
   const required =
-    action.kind === 'accept-interview'
-      ? { module: 'interviews', action: 'edit', label: 'accept interviews' }
+    action.kind === 'accept-interview' || action.kind === 'start-interview'
+      ? { module: 'interviews', action: 'edit', label: action.kind === 'start-interview' ? 'start interviews' : 'accept interviews' }
       : { module: 'candidates', action: 'edit', label: 'manage pipeline stages' };
 
   return permissions[required.module]?.[required.action] === 'organization'
@@ -203,6 +204,13 @@ function schedulingInterviewFromApplication(application: PipelineApplication, ev
     stageDueDate: null,
     proposedSlots: assignment?.proposedSlots ?? [],
   };
+}
+
+function fallbackForGoogleAction(action: PendingGoogleAction): string {
+  if (action.kind === 'create-stage') return 'Failed to create stage';
+  if (action.kind === 'update-stage') return 'Failed to update stage';
+  if (action.kind === 'start-interview') return 'Failed to start interview';
+  return 'Could not send slots';
 }
 
 function getStageReorderOrder(
@@ -390,6 +398,8 @@ export function AtsKanbanBoard({
     candidateName: string;
     jobPostingId: string;
     stageId: string;
+    stageSlug: string | null;
+    jobSlug: string | null;
   } | null>(null);
   const [completingApplication, setCompletingApplication] = useState<PipelineApplication | null>(null);
   const [completionNote, setCompletionNote] = useState('');
@@ -489,6 +499,17 @@ export function AtsKanbanBoard({
           return;
         }
 
+        if (action.kind === 'start-interview') {
+          const meeting = await startInterviewMeeting.mutateAsync({
+            applicationId: action.applicationId,
+            eventId: action.eventId,
+          });
+          if (meeting.meetingUrl) {
+            window.open(meeting.meetingUrl, '_blank', 'noopener,noreferrer');
+          }
+          return;
+        }
+
         await updateStage.mutateAsync({
           stageId: action.stageId,
           data: action.data,
@@ -499,10 +520,10 @@ export function AtsKanbanBoard({
           requestGoogleConnection(action);
           return;
         }
-        toast.error(readActionError(error, action.kind === 'create-stage' ? 'Failed to create stage' : 'Failed to update stage'));
+        toast.error(readActionError(error, fallbackForGoogleAction(action)));
       }
     },
-    [allBoardApplications, createStage, hasGoogleAccess, isReadOnly, permissions, requestGoogleConnection, updateStage],
+    [allBoardApplications, createStage, hasGoogleAccess, isReadOnly, permissions, requestGoogleConnection, startInterviewMeeting, updateStage],
   );
 
   useEffect(() => {
@@ -920,24 +941,7 @@ export function AtsKanbanBoard({
     if (isReadOnly) return;
     const meeting = application.interviewMeeting;
     if (!meeting || meeting.status !== 'PENDING') return;
-
-    startInterviewMeeting.mutate(
-      { applicationId: application.id, eventId: meeting.id },
-      {
-        onSuccess: (updatedMeeting) => {
-          if (updatedMeeting.meetingUrl) {
-            window.open(updatedMeeting.meetingUrl, '_blank', 'noopener,noreferrer');
-          }
-        },
-        onError: (error) => {
-          toast.error(readActionError(error, 'Failed to start interview'));
-          // Fallback: still open the meeting URL if available
-          if (meeting.meetingUrl) {
-            window.open(meeting.meetingUrl, '_blank', 'noopener,noreferrer');
-          }
-        },
-      },
-    );
+    void runStageAction({ kind: 'start-interview', applicationId: application.id, eventId: meeting.id });
   }
 
   function handleAcceptInterview(applicationId: string, eventId: string) {
@@ -995,12 +999,15 @@ export function AtsKanbanBoard({
       toast.error('Candidate could not be found. Refresh the pipeline and try again.');
       return;
     }
+    const stage = stages.find((item) => item.id === application.pipelineStageId);
     setRejectRequest({
       applicationId,
       eventId,
       candidateName: `${application.candidate.firstName} ${application.candidate.lastName}`.trim() || application.candidate.email,
       jobPostingId: application.jobPostingId,
       stageId: application.pipelineStageId,
+      stageSlug: stage?.slug ?? null,
+      jobSlug: currentPosting?.slug ?? null,
     });
   }
 

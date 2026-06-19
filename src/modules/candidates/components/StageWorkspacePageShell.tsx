@@ -38,6 +38,7 @@ import { CandidateCard } from '@/modules/candidates/components/CandidateCard';
 import { CandidateDrawer } from '@/modules/candidates/components/CandidateDrawer';
 import { CompleteInterviewDialog } from '@/modules/candidates/components/CompleteInterviewDialog';
 import { InterviewerSelectDialog } from '@/modules/candidates/components/InterviewerSelectDialog';
+import { StageWorkspaceSkeleton } from '@/modules/candidates/components/StageWorkspaceSkeleton';
 import {
   useAddHiringTeamMember,
   useAssignStageInterviews,
@@ -943,13 +944,7 @@ export function StageWorkspacePageShell({
   }
 
   if (workspaceQuery.isLoading) {
-    return (
-      <div className="min-h-full bg-canvas p-6">
-        <div className="rounded-xl border border-neutral-100 bg-surface p-8 text-sm text-neutral-500">
-          Loading stage workspace
-        </div>
-      </div>
-    );
+    return <StageWorkspaceSkeleton variant="interview" />;
   }
 
   if (!workspace) {
@@ -963,8 +958,8 @@ export function StageWorkspacePageShell({
   }
 
   return (
-    <div className="min-h-full bg-canvas px-6 sm:px-8">
-      <div className="mb-6">
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-canvas px-6 sm:px-8">
+      <div className="mb-6 shrink-0">
           <div className="flex items-center justify-between mt-7">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-900" onClick={handleBackToPipeline}>
@@ -1014,7 +1009,7 @@ export function StageWorkspacePageShell({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="text-warning-text border-warning-bg hover:bg-warning-bg"
+                  className="text-warning-text border-warning-bg hover:bg-warning-bg bg-white"
                   onClick={async () => {
                     if (!workspace) return;
                     try {
@@ -1044,7 +1039,7 @@ export function StageWorkspacePageShell({
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            className="mb-4 overflow-hidden"
+            className="mb-4 shrink-0 overflow-hidden"
           >
             <div className="rounded-xl border border-neutral-200 bg-neutral-100 p-4 text-sm text-neutral-600">
               <div className="flex items-center gap-3">
@@ -1062,9 +1057,9 @@ export function StageWorkspacePageShell({
           </motion.div>
         ) : null}
 
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
           {/* Stats bar */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid shrink-0 grid-cols-4 gap-3">
             {[
               { label: 'Total candidates', value: stats.total },
               { label: 'Assigned', value: stats.assigned },
@@ -1084,7 +1079,7 @@ export function StageWorkspacePageShell({
           </div>
 
           {/* Search + Filter pills */}
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
               <Input
@@ -1132,7 +1127,7 @@ export function StageWorkspacePageShell({
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -1182,12 +1177,10 @@ export function StageWorkspacePageShell({
               onDragEnd={handleBoardDragEnd}
               onDragCancel={() => setActiveApplicationId(null)}
             >
-            <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
-              style={{ maxHeight: 'calc(100dvh - 280px)' }}
-            >
+            <div className="flex min-h-0 flex-1 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar">
               {assignmentColumns.map((column, index) => (
                 <div key={column.id} className={cn(
-                  'flex shrink-0',
+                  'flex h-full shrink-0',
                   index < assignmentColumns.length - 1 ? 'border-r border-neutral-200/70' : '',
                 )}>
                   <AssignmentColumn
@@ -1214,12 +1207,10 @@ export function StageWorkspacePageShell({
             </DragOverlay>
           </DndContext>
           ) : (
-            <div className="flex flex-1 min-h-0 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar"
-              style={{ maxHeight: 'calc(100dvh - 280px)' }}
-            >
+            <div className="flex min-h-0 flex-1 items-stretch gap-0 overflow-x-auto overflow-y-hidden no-scrollbar">
               {assignmentColumns.map((column, index) => (
                 <div key={column.id} className={cn(
-                  'flex shrink-0',
+                  'flex h-full shrink-0',
                   index < assignmentColumns.length - 1 ? 'border-r border-neutral-200/70' : '',
                 )}>
                   <AssignmentColumn

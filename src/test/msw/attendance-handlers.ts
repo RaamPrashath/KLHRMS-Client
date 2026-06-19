@@ -147,6 +147,9 @@ export const attendanceReportOptions: AttendanceReportOptionsResponse = {
             ],
         },
     ],
+    departments: [
+        { id: "dept_engineering", name: "Engineering" },
+    ],
 };
 
 export const attendanceReportResponse: AttendanceReportListResponse = {

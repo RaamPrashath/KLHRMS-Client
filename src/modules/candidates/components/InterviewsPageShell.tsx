@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarPlus, Check, ChevronLeft, ChevronRight, Clock, Loader2, Play, RotateCcw, Search, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CalendarPlus, Check, ChevronLeft, ChevronRight, Loader2, Play, RotateCcw, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -63,6 +63,10 @@ import type { MyInterview, RejectInterviewRequest } from '@/modules/candidates/t
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 const GOOGLE_CONNECT_RETURN_PARAM = 'atsGoogleConnected';
 
+type PendingGoogleAction =
+  | { kind: 'schedule'; interview: MyInterview }
+  | { kind: 'start'; interview: MyInterview };
+
 function normalizeGoogleScopes(account: { scope?: unknown; scopes?: unknown }): string[] {
   if (Array.isArray(account.scopes)) {
     return account.scopes.filter((scope): scope is string => typeof scope === 'string');
@@ -80,6 +84,24 @@ function readAuthAccounts(data: unknown): Array<{ providerId?: unknown; scope?: 
   return Array.isArray(data)
     ? data.filter((item): item is { providerId?: unknown; scope?: unknown; scopes?: unknown } => typeof item === 'object' && item !== null)
     : [];
+}
+
+function readActionError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback;
+
+  try {
+    const parsed = JSON.parse(error.message) as { message?: unknown };
+    return typeof parsed.message === 'string' && parsed.message.trim()
+      ? parsed.message
+      : fallback;
+  } catch {
+    return error.message || fallback;
+  }
+}
+
+function isGoogleConnectError(error: unknown): boolean {
+  const message = readActionError(error, '').toLowerCase();
+  return message.includes('connect a google account') || message.includes('reconnect google');
 }
 
 function candidateName(firstName: string, lastName: string): string {
@@ -362,7 +384,11 @@ export function InterviewsPageShell({
   const [completionNote, setCompletionNote] = useState('');
   const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
-  const pendingSchedulingInterviewRef = useRef<MyInterview | null>(null);
+  const [pendingGoogleAction, setPendingGoogleAction] = useState<PendingGoogleAction | null>(null);
+  const pendingGoogleStorageKey = useMemo(
+    () => `interviews-google-pending:${orgSlug}:${memberId}`,
+    [memberId, orgSlug],
+  );
   const interviewsQuery = useFetchMyInterviews(orgSlug, memberId);
   const acceptInterview = useAcceptInterview(orgSlug, memberId);
   const bookCandidateSlot = useBookCandidateProposedSlot(orgSlug, memberId);
@@ -384,6 +410,13 @@ export function InterviewsPageShell({
     return normalizeGoogleScopes(googleAccount).includes(GOOGLE_CALENDAR_SCOPE);
   }, []);
 
+  const hasGoogleLinked = useCallback(async () => {
+    const result = await authClient.listAccounts();
+    if (result.error) return false;
+
+    return readAuthAccounts(result.data).some((account) => account.providerId === 'google');
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
@@ -391,14 +424,42 @@ export function InterviewsPageShell({
     url.searchParams.delete(GOOGLE_CONNECT_RETURN_PARAM);
     window.history.replaceState(null, '', url.toString());
     toast.success('Google Calendar connected');
-    const pending = pendingSchedulingInterviewRef.current;
-    if (pending) {
-      pendingSchedulingInterviewRef.current = null;
-      setSchedulingInterview(pending);
-    }
-  }, []);
 
-  const interviews = interviewsQuery.data?.items ?? [];
+    const storedAction = window.sessionStorage.getItem(pendingGoogleStorageKey);
+    if (!storedAction) return;
+    window.sessionStorage.removeItem(pendingGoogleStorageKey);
+
+    try {
+      const action = JSON.parse(storedAction) as PendingGoogleAction;
+      window.setTimeout(() => {
+        if (action.kind === 'schedule') {
+          setSchedulingInterview(action.interview);
+          return;
+        }
+        startInterview.mutate(
+          { applicationId: action.interview.applicationId, eventId: action.interview.eventId },
+          {
+            onSuccess: (meeting) => {
+              toast.success('Interview started');
+              const meetingUrl = meeting.meetingUrl ?? action.interview.meetingUrl;
+              if (meetingUrl) {
+                window.open(meetingUrl, '_blank', 'noopener,noreferrer');
+              } else {
+                toast.warning('Interview started, but no meeting link is available');
+              }
+            },
+            onError: (error) => {
+              toast.error(readActionError(error, 'Could not start this interview'));
+            },
+          },
+        );
+      }, 0);
+    } catch {
+      toast.error('Google connected, but the pending interview action could not be restored');
+    }
+  }, [pendingGoogleStorageKey, startInterview]);
+
+  const interviews = useMemo(() => interviewsQuery.data?.items ?? [], [interviewsQuery.data?.items]);
 
   const filteredInterviews = useMemo(() => {
     if (!search.trim()) return interviews;
@@ -497,15 +558,15 @@ export function InterviewsPageShell({
     pageCount: totalPages,
   });
 
-  async function promptGoogleConnect(interview: MyInterview) {
-    pendingSchedulingInterviewRef.current = interview;
+  async function promptGoogleConnect(action: PendingGoogleAction) {
+    setPendingGoogleAction(action);
     setGoogleConnectOpen(true);
   }
 
   async function handleAccept(interview: MyInterview) {
     const hasGoogle = await checkGoogleAccess();
     if (!hasGoogle) {
-      await promptGoogleConnect(interview);
+      await promptGoogleConnect({ kind: 'schedule', interview });
       return;
     }
     setSchedulingInterview(interview);
@@ -514,19 +575,37 @@ export function InterviewsPageShell({
   async function connectGoogle() {
     try {
       setIsConnectingGoogle(true);
+      if (pendingGoogleAction) {
+        window.sessionStorage.setItem(pendingGoogleStorageKey, JSON.stringify(pendingGoogleAction));
+      }
       const callbackUrl = new URL(window.location.href);
       callbackUrl.searchParams.set(GOOGLE_CONNECT_RETURN_PARAM, '1');
+      const alreadyLinked = await hasGoogleLinked();
       const result = await authClient.linkSocial({
         provider: 'google',
         callbackURL: callbackUrl.toString(),
         scopes: [GOOGLE_CALENDAR_SCOPE],
-        disableRedirect: false,
+        disableRedirect: true,
       });
-      if (result.error && !String(result.error.message ?? '').includes('already linked')) {
-        throw new Error(result.error.message);
+      if (result.error) {
+        if (alreadyLinked && result.error.message?.includes('already linked')) {
+          console.log('Requesting additional scopes for existing Google account');
+        } else {
+          throw new Error(result.error.message ?? 'Google connection failed');
+        }
       }
+
+      const data = result.data as { url?: string } | null;
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      toast.error('Google did not return a connection URL');
+      window.sessionStorage.removeItem(pendingGoogleStorageKey);
     } catch (error) {
-      pendingSchedulingInterviewRef.current = null;
+      window.sessionStorage.removeItem(pendingGoogleStorageKey);
+      setPendingGoogleAction(null);
       toast.error(error instanceof Error ? error.message : 'Failed to connect Google Calendar');
     } finally {
       setIsConnectingGoogle(false);
@@ -560,7 +639,7 @@ export function InterviewsPageShell({
   async function handleSchedule(interview: MyInterview) {
     const hasGoogle = await checkGoogleAccess();
     if (!hasGoogle) {
-      await promptGoogleConnect(interview);
+      await promptGoogleConnect({ kind: 'schedule', interview });
       return;
     }
     setSchedulingInterview(interview);
@@ -580,7 +659,11 @@ export function InterviewsPageShell({
           }
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Could not start this interview');
+          if (isGoogleConnectError(error)) {
+            void promptGoogleConnect({ kind: 'start', interview });
+            return;
+          }
+          toast.error(readActionError(error, 'Could not start this interview'));
         },
       },
     );
@@ -850,6 +933,8 @@ export function InterviewsPageShell({
           eventId: rejectRequest.eventId,
           jobPostingId: rejectRequest.jobPostingId,
           stageId: rejectRequest.stageId,
+          stageSlug: rejectRequest.stageSlug,
+          jobSlug: rejectRequest.jobSlug,
           candidateName: candidateName(rejectRequest.candidate.firstName, rejectRequest.candidate.lastName),
         } : null}
         orgSlug={orgSlug}
@@ -878,7 +963,8 @@ export function InterviewsPageShell({
               variant="outline"
               onClick={() => {
                 setGoogleConnectOpen(false);
-                pendingSchedulingInterviewRef.current = null;
+                setPendingGoogleAction(null);
+                window.sessionStorage.removeItem(pendingGoogleStorageKey);
               }}
               disabled={isConnectingGoogle}
             >
