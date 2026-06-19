@@ -42,9 +42,6 @@ export function EmployeeFilters({
   onClearAll,
 }: EmployeeFiltersProps) {
   const hasActiveFilters = !!roleId || !!source;
-  onClearAll,
-}: EmployeeFiltersProps) {
-  const hasActiveFilters = !!roleId;
 
   return (
     <div className="flex items-center gap-2 w-full">
