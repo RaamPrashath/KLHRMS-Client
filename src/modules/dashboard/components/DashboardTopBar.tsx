@@ -81,7 +81,7 @@ export function DashboardTopBar({
                 {visibleNotifications.map((notification, index) => (
                   <div key={notification.id}>
                     <Link
-                      href={notification.actionUrl || `/${orgSlug}/notifications`}
+                      href={`/${orgSlug}/notifications`}
                       onClick={() => {
                         if (notification.status === "UNREAD") {
                           markReadMutation.mutate(notification.id);

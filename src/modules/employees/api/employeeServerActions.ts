@@ -104,3 +104,63 @@ export async function deactivateEmployeeAction(params: {
   });
   return handleResponse<{ member_id: string; name: string; email: string; status: string }>(res);
 }
+
+export async function fetchDeactivatedEmployeesAction(params: {
+  orgSlug: string;
+  memberId: string;
+}): Promise<EmployeeListResponse> {
+  const { orgSlug, memberId } = params;
+  const res = await fetch(`${getApiUrl()}/employees/deactivated`, {
+    method: 'GET',
+    headers: buildHeaders(orgSlug, memberId),
+    cache: 'no-store',
+  });
+  const data = await handleResponse<EmployeeListResponse>(res);
+  return {
+    ...data,
+    items: data.items.map((employee) => ({
+      ...employee,
+      image: toAbsoluteApiUrl(employee.image),
+    })),
+  };
+}
+
+export async function reactivateEmployeeAction(params: {
+  orgSlug: string;
+  memberId: string;
+  targetMemberId: string;
+}): Promise<{ member_id: string; name: string; email: string; status: string }> {
+  const { orgSlug, memberId, targetMemberId } = params;
+  const res = await fetch(`${getApiUrl()}/employees/${targetMemberId}/reactivate`, {
+    method: 'PATCH',
+    headers: buildHeaders(orgSlug, memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<{ member_id: string; name: string; email: string; status: string }>(res);
+}
+
+export async function fetchDeactivationImpactAction(params: {
+  orgSlug: string;
+  memberId: string;
+  targetMemberId: string;
+}): Promise<{
+  member_id: string;
+  department_head_count: number;
+  pending_leave_count: number;
+  project_count: number;
+  active_asset_count: number;
+}> {
+  const { orgSlug, memberId, targetMemberId } = params;
+  const res = await fetch(`${getApiUrl()}/employees/${targetMemberId}/deactivate-impact`, {
+    method: 'GET',
+    headers: buildHeaders(orgSlug, memberId),
+    cache: 'no-store',
+  });
+  return handleResponse<{
+    member_id: string;
+    department_head_count: number;
+    pending_leave_count: number;
+    project_count: number;
+    active_asset_count: number;
+  }>(res);
+}

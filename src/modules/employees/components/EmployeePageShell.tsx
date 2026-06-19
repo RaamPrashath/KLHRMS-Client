@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { UserX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { getScope, type RolePermissions } from '@/lib/hrms-roles';
 import { useEmployeesQuery, useEmployeeRolesQuery } from '@/modules/employees/hooks/useEmployeesQuery';
 import { EmployeeTable } from './EmployeeTable';
@@ -18,10 +21,13 @@ interface EmployeePageShellProps {
 const SEARCH_DEBOUNCE_MS = 300;
 
 export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<EmployeePageShellProps>) {
+  const router = useRouter();
+
   // ── Filter state ────────────────────────────────────────────────────────────
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [roleId, setRoleId] = useState<string | undefined>(undefined);
+  const [source, setSource] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -41,7 +47,9 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
   // ── Role editing ───────────────────────────────────────────────────────────
   const queryClient = useQueryClient();
 
-  const canEditRole = permissions ? getScope(permissions, 'employees', 'edit') !== 'none' : false;
+  const canEditRole = permissions
+    ? getScope(permissions, 'employees', 'edit') !== 'none' && getScope(permissions, 'permission', 'edit') !== 'none'
+    : false;
 
   const handleUpdateRole = useCallback(
     async (targetMemberId: string, newRoleId: string) => {
@@ -80,6 +88,8 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
     const term = search.trim().toLowerCase();
     return allItems.filter((item) => {
       if (roleId && item.role?.id !== roleId) return false;
+      if (source === 'microsoft' && !item.microsoft_synced) return false;
+      if (source === 'credentials' && item.microsoft_synced) return false;
       if (term) {
         const haystack = [
           item.name,
@@ -96,7 +106,7 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
       }
       return true;
     });
-  }, [allItems, search, roleId]);
+  }, [allItems, search, roleId, source]);
 
   // ── Client-side pagination ─────────────────────────────────────────────────
   const total = filteredItems.length;
@@ -115,6 +125,11 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
     setPage(1);
   }, []);
 
+  const handleSourceChange = useCallback((value: string | undefined) => {
+    setSource(value);
+    setPage(1);
+  }, []);
+
   const handleClearSearch = useCallback(() => {
     setSearchInput('');
     setSearch('');
@@ -125,6 +140,7 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
     setSearchInput('');
     setSearch('');
     setRoleId(undefined);
+    setSource(undefined);
     setPage(1);
   }, []);
 
@@ -154,7 +170,19 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
 
   return (
     <div className="flex flex-col gap-6 flex-1 bg-canvas min-h-full">
-      <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight ml-7 mt-7">Employees</h1>
+      <div className="flex items-center justify-between ml-7 mt-7 mr-7">
+        <h1 className="text-4xl font-semibold text-neutral-900 tracking-tight">Employees</h1>
+        {canEditRole && orgSlug && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push(`/${orgSlug}/employees/deactivated`)}
+            className="btn-clockout-border h-9 rounded-lg px-4 text-[13px] font-semibold shrink-0"
+          >
+            <UserX className="size-4 mr-1.5" /> View Deactivated
+          </Button>
+        )}
+      </div>
       <EmployeeTable
         data={paginatedItems}
         isLoading={isLoading}
@@ -166,10 +194,12 @@ export function EmployeePageShell({ orgSlug, memberId, permissions }: Readonly<E
         onPageSizeChange={handlePageSizeChange}
         search={searchInput}
         roleId={roleId}
+        source={source}
         roles={roles}
         onSearchChange={handleSearchChange}
         onClearSearch={handleClearSearch}
         onRoleChange={handleRoleChange}
+        onSourceChange={handleSourceChange}
         onClearAll={handleClearAll}
         canEditRole={canEditRole}
         onUpdateRole={handleUpdateRole}

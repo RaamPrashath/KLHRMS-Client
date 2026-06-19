@@ -71,6 +71,9 @@ export function createEmployeePermissions(): RolePermissions {
   permissions.helpdesk.view = 'self';
   permissions.helpdesk.create = 'self';
   
+  // Departments — view own assigned departments
+  permissions.departments.view = 'self';
+  
   return permissions;
 }
 

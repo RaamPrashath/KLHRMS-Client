@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { toast } from "sonner";
-import Link from "next/link";
-import { Plus } from "lucide-react";
+import { toast } from 'sonner';
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
 
 import {
   useAttendanceQuery,
@@ -213,6 +213,15 @@ export function AttendancePageShell({
     });
   }, [effectiveFilters.page, effectiveFilters.pageSize, mode, pageIndex, pageSize]);
 
+  if (!isOperativeScope(permissions.view)) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-sm text-neutral-500">
+          You don&apos;t have permission to use this page.
+        </p>
+      </div>
+    );
+  }
   async function handleDelete() {
     if (!deleteTarget) return;
     try {
@@ -256,7 +265,7 @@ export function AttendancePageShell({
     <>
       <main className="min-h-full bg-canvas">
         <div className="flex flex-col gap-6 flex-1 min-h-full">
-          {/* <div className="flex items-start justify-end md:justify-between ml-7 mt-7 mr-7">
+          <div className="flex items-start justify-end md:justify-between ml-7 mt-7 mr-7">
             <h1 className="hidden md:block text-4xl font-semibold text-neutral-900 tracking-tight">
               Who&apos;s in today?
             </h1>
@@ -270,7 +279,7 @@ export function AttendancePageShell({
                 Bulk attendance
               </Link>
             )}
-          </div> */}
+          </div>
 
           <AttendancePermissionGate scope={permissions.edit}>
             <ManualAttendanceForm
@@ -302,6 +311,8 @@ export function AttendancePageShell({
               onDelete={(record) => setDeleteTarget(record)}
             />
           </div>
+        </div>
+      </main>
 
           <AlertDialog
             open={deleteTarget !== null}

@@ -11,13 +11,20 @@ import {
 } from '@/components/ui/select';
 import type { EmployeeFilterOption } from '@/modules/employees/types/employeeTypes';
 
+const SOURCE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'microsoft', label: 'Microsoft' },
+  { value: 'credentials', label: 'Credentials' },
+];
+
 interface EmployeeFiltersProps {
   search: string;
   roleId: string | undefined;
+  source: string | undefined;
   roles: EmployeeFilterOption[];
   onSearchChange: (value: string) => void;
   onClearSearch: () => void;
   onRoleChange: (value: string | undefined) => void;
+  onSourceChange: (value: string | undefined) => void;
   onClearAll: () => void;
 }
 
@@ -26,13 +33,15 @@ const ALL_VALUE = '__all__';
 export function EmployeeFilters({
   search,
   roleId,
+  source,
   roles,
   onSearchChange,
   onClearSearch,
   onRoleChange,
+  onSourceChange,
   onClearAll,
 }: EmployeeFiltersProps) {
-  const hasActiveFilters = !!roleId;
+  const hasActiveFilters = !!roleId || !!source;
 
   return (
     <div className="flex items-center gap-2 w-full">
@@ -49,6 +58,26 @@ export function EmployeeFilters({
 
       {/* Right-aligned controls */}
       <div className="flex items-center gap-2 shrink-0">
+        {/* Source filter */}
+        <Select
+          value={source ?? ALL_VALUE}
+          onValueChange={(v) => onSourceChange(v === ALL_VALUE ? undefined : v)}
+        >
+          <SelectTrigger className="h-9 w-36 text-sm border-0 bg-canvas">
+            <SelectValue placeholder="All Sources" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE} className="text-sm">
+              All Sources
+            </SelectItem>
+            {SOURCE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {/* Role filter */}
         <Select
           value={roleId ?? ALL_VALUE}
