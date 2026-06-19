@@ -120,15 +120,80 @@ function normalizeMetadataHeaderHtml(html: string, template: OfferTemplate): str
 }
 
 function repairFooterAssetHtml(html: string, template: OfferTemplate): string {
+  html = ensureFooterClosingHtml(html);
   const signatureUrl = template.signatureUrl?.trim();
-  if (!signatureUrl || /<img\b/i.test(html)) return html;
-  const image = `<img src="${escapeHtml(signatureUrl)}" alt="" />`;
-  const repaired = html.replace(
+  if (signatureUrl && !/<img\b/i.test(html)) {
+    const image = `<img src="${escapeHtml(signatureUrl)}" alt="" />`;
+    const repaired = html.replace(
+      /(<p\b[^>]*class=["'][^"']*\boffer-signature-closing\b[^"']*["'][^>]*>\s*Sincerely,\s*<\/p>)/i,
+      `$1${image}`,
+    );
+    html = repaired !== html
+      ? repaired
+      : `<div class="offer-signature-slot"><p class="offer-signature-closing">Sincerely,</p>${image}</div>${html}`;
+  }
+  return normalizeFooterLayoutHtml(html, template);
+}
+
+function ensureFooterClosingHtml(html: string): string {
+  if (/class=["'][^"']*\boffer-signature-closing\b/i.test(html)) return html;
+  return html.replace(
     /(<div\b[^>]*class=["'][^"']*\boffer-signature-slot\b[^"']*["'][^>]*>)/i,
-    `$1${image}`,
+    '$1<p class="offer-signature-closing">Sincerely,</p>',
   );
-  if (repaired !== html) return repaired;
-  return `<div class="offer-signature-slot">${image}</div>${html}`;
+}
+
+function normalizeFooterLayoutHtml(html: string, template: OfferTemplate): string {
+  if (typeof document === 'undefined') return html;
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html;
+  const layout = wrapper.querySelector<HTMLElement>('.offer-letter-footer');
+  const source = layout ?? wrapper;
+  const isCompleteLayout = Boolean(
+    layout?.querySelector('.offer-signature-slot')
+      && layout.querySelector('.offer-footer-address')
+      && (layout.querySelector('.offer-footer-website') || !template.websiteUrl?.trim()),
+  );
+  if (isCompleteLayout) return html;
+
+  const signature = source.querySelector<HTMLElement>('.offer-signature-slot');
+  if (!signature) return html;
+  signature.remove();
+
+  const address = source.querySelector<HTMLElement>('.offer-footer-address');
+  let addressHtml = '';
+  if (address) {
+    addressHtml = address.innerHTML.trim();
+    address.remove();
+  }
+
+  const website = source.querySelector<HTMLAnchorElement>('.offer-footer-website') ?? Array.from(source.querySelectorAll<HTMLAnchorElement>('a')).pop() ?? null;
+  let websiteHtml = '';
+  if (website) {
+    website.remove();
+    website.classList.add('offer-footer-website');
+    if (!website.getAttribute('href') && template.websiteUrl) website.href = template.websiteUrl;
+    websiteHtml = website.outerHTML;
+  } else if (template.websiteUrl?.trim()) {
+    const href = template.websiteUrl.trim();
+    websiteHtml = `<a class="offer-footer-website" href="${escapeHtml(href)}">${escapeHtml(href.replace(/^https?:\/\//, ''))}</a>`;
+  }
+
+  if (!addressHtml) {
+    addressHtml = Array.from(source.childNodes)
+      .map((node) => node instanceof HTMLElement ? node.outerHTML : node.textContent ?? '')
+      .join('')
+      .trim();
+  }
+
+  return [
+    '<div class="offer-letter-footer">',
+    signature.outerHTML,
+    addressHtml ? `<div class="offer-footer-address">${addressHtml}</div>` : '',
+    websiteHtml,
+    '</div>',
+  ].join('');
 }
 
 function renderChildren(node: JsonNode, sample: OfferTemplateRenderData): string {

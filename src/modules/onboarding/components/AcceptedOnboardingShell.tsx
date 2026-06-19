@@ -5,6 +5,7 @@ import { ChevronLeft, Loader2, RotateCcw, Search, Send, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
+import { StageWorkspaceSkeleton } from '@/modules/candidates/components/StageWorkspaceSkeleton';
 import {
   Dialog,
   DialogContent,
@@ -137,14 +138,7 @@ export function AcceptedOnboardingShell({
   }
 
   if (workspaceQuery.isLoading && !workspace) {
-    return (
-      <div className="flex min-h-full items-center justify-center bg-canvas p-6 text-sm text-neutral-500">
-        <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-100 bg-surface px-4 py-3 shadow-[var(--shadow-1)]">
-          <Loader2 className="size-4 animate-spin text-primary" />
-          Loading onboarding workspace
-        </div>
-      </div>
-    );
+    return <StageWorkspaceSkeleton variant="accepted" />;
   }
 
   if (!workspace) {

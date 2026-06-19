@@ -686,7 +686,62 @@ describe("Phase 5 utility and component coverage", () => {
             },
         );
         expect(htmlWithAssets).toContain('class="offer-letter-logo" src="https://cdn.example.com/logo.png"');
-        expect(htmlWithAssets).toContain('class="offer-signature-slot"><img src="https://cdn.example.com/signature.png"');
+        expect(htmlWithAssets).toContain('<p class="offer-signature-closing">Sincerely,</p><img src="https://cdn.example.com/signature.png"');
+        const footerLayoutHtml = composeTemplateHtml(
+            {
+                id: "template_footer_layout",
+                organizationId: "org_1",
+                name: "Footer Layout Offer",
+                description: null,
+                status: "ACTIVE",
+                logoUrl: null,
+                signatureUrl: null,
+                signatoryName: null,
+                signatoryTitle: null,
+                lastUsedAt: null,
+                footerHtml: (
+                    '<div class="offer-letter-footer">'
+                    + '<div class="offer-signature-slot"><p class="offer-signature-name">(Asha Rao)</p><p>HR</p></div>'
+                    + '<div class="offer-footer-address"><p>Kovan Technology Labs India Private Limited</p><p>Coimbatore</p></div>'
+                    + '<a class="offer-footer-website" href="http://www.kovanlabs.com">www.kovanlabs.com</a>'
+                    + "</div>"
+                ),
+                websiteUrl: "http://www.kovanlabs.com",
+                createdByMemberId: null,
+                updatedByMemberId: null,
+                createdAt: "2026-06-10T06:30:00.000Z",
+                updatedAt: "2026-06-10T06:30:00.000Z",
+                categories: [],
+                sections: [
+                    {
+                        id: "section_footer_layout",
+                        organizationId: "org_1",
+                        templateId: "template_footer_layout",
+                        categoryId: "category_assets",
+                        sectionKey: "intro",
+                        sectionName: "Intro",
+                        order: 1,
+                        tiptapJson: {},
+                        html: "<p>Hello {{candidate.firstName}}</p>",
+                        createdAt: "2026-06-10T06:30:00.000Z",
+                        updatedAt: "2026-06-10T06:30:00.000Z",
+                    },
+                ],
+            },
+            {
+                id: "category_assets",
+                organizationId: "org_1",
+                templateId: "template_footer_layout",
+                name: "Assets",
+                slug: "assets",
+                order: 1,
+                createdAt: "2026-06-10T06:30:00.000Z",
+                updatedAt: "2026-06-10T06:30:00.000Z",
+            },
+        );
+        expect(footerLayoutHtml).toContain('<p class="offer-signature-closing">Sincerely,</p><p class="offer-signature-name">(Asha Rao)</p><p>HR</p>');
+        expect(footerLayoutHtml).toContain('class="offer-footer-address"');
+        expect(footerLayoutHtml).toContain('class="offer-footer-website" href="http://www.kovanlabs.com"');
         expect(splitPreviewPages(html)).toHaveLength(2);
         expect(findUnknownOfferTokens("{{ candidate.firstName }} {{ candidate.middleName }}"))
             .toEqual(["candidate.middleName"]);

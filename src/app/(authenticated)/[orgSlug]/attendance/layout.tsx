@@ -45,7 +45,7 @@ export default async function AttendanceLayout({
             {isOperativeScope(permissions.create) && (
               <Link
                 href={`/${orgSlug}/timesheet`}
-                className="inline-flex h-9 shrink-0 items-center gap-2 rounded-md border border-primary px-4 text-sm font-medium text-primary transition-colors duration-100 hover:bg-primary-ghost"
+                className="btn-clockout-border h-10 rounded-lg px-5 text-[13px] font-medium inline-flex items-center"
               >
                 <CalendarDays className="size-4" strokeWidth={1.5} />
                 Bulk attendance

@@ -75,7 +75,7 @@ export function AddFieldDialog({ open, onOpenChange, onAdd }: AddFieldDialogProp
           <div className="space-y-1.5">
             <Label htmlFor="add-field-type">Field Type</Label>
             <Select value={type} onValueChange={setType}>
-              <SelectTrigger id="add-field-type">
+              <SelectTrigger id="add-field-type" className="w-full">
                 <SelectValue placeholder="Select type..." />
               </SelectTrigger>
               <SelectContent>
@@ -96,6 +96,7 @@ export function AddFieldDialog({ open, onOpenChange, onAdd }: AddFieldDialogProp
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Current Employer"
               autoFocus
+              className="w-full"
             />
           </div>
         </div>

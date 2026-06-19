@@ -1,9 +1,10 @@
 'use client';
 
-import { Loader2, RotateCcw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { StageWorkspacePageShell } from '@/modules/candidates/components/StageWorkspacePageShell';
+import { StageWorkspaceSkeleton, type StageWorkspaceSkeletonVariant } from '@/modules/candidates/components/StageWorkspaceSkeleton';
 import { usePipelineBoardByJobSlug, useStageWorkspaceByJobSlug } from '@/modules/candidates/hooks/useAtsPipeline';
 import { OfferStagePageShell } from '@/modules/offers/components/OfferStagePageShell';
 import { AcceptedOnboardingShell } from '@/modules/onboarding/components/AcceptedOnboardingShell';
@@ -37,6 +38,20 @@ function readErrorMessage(error: Error | null): string {
   } catch {
     return error.message || 'Stage workspace could not be loaded.';
   }
+}
+
+function skeletonVariantForStage(stageSlug: string, stageType?: string | null): StageWorkspaceSkeletonVariant {
+  const normalizedType = stageType?.toUpperCase();
+  if (normalizedType === 'OFFER') return 'offer';
+  if (normalizedType === 'HIRED') return 'accepted';
+  if (normalizedType === 'ONBOARDING') return 'onboarding';
+  if (normalizedType === 'INTERVIEW') return 'interview';
+
+  const normalizedSlug = stageSlug.toLowerCase();
+  if (normalizedSlug.includes('offer')) return 'offer';
+  if (normalizedSlug.includes('accepted') || normalizedSlug.includes('document')) return 'accepted';
+  if (normalizedSlug.includes('onboarding') || normalizedSlug.includes('onboard')) return 'onboarding';
+  return 'interview';
 }
 
 export function StageWorkspaceRouterShell({
@@ -97,13 +112,8 @@ export function StageWorkspaceRouterShell({
     />
   );
 
-  const renderLoading = (label = 'Loading stage workspace') => (
-    <div className="flex min-h-full items-center justify-center bg-canvas p-6 text-sm text-neutral-500">
-      <div className="inline-flex items-center gap-2 rounded-2xl bg-surface px-4 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-        <Loader2 className="size-4 animate-spin text-primary" />
-        {label}
-      </div>
-    </div>
+  const renderLoading = (variant = skeletonVariantForStage(stageSlug, stageType)) => (
+    <StageWorkspaceSkeleton variant={variant} />
   );
 
   const renderError = (error: Error | null, retry: () => void) => (
@@ -153,7 +163,7 @@ export function StageWorkspaceRouterShell({
         void offerWorkspaceQuery.refetch();
       });
     }
-    return renderLoading('Loading offer workspace');
+    return renderLoading('offer');
   }
 
   if (shouldLoadAcceptedOnboardingWorkspace) {
@@ -174,7 +184,7 @@ export function StageWorkspaceRouterShell({
         void acceptedOnboardingQuery.refetch();
       });
     }
-    return renderLoading('Loading onboarding workspace');
+    return renderLoading('accepted');
   }
 
   if (shouldLoadOnboardWorkspace) {
@@ -196,7 +206,7 @@ export function StageWorkspaceRouterShell({
         void onboardQuery.refetch();
       });
     }
-    return renderLoading('Loading onboard workspace');
+    return renderLoading('onboarding');
   }
 
   if (shouldLoadInterviewWorkspace) {

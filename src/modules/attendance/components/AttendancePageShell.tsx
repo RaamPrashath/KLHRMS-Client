@@ -251,6 +251,16 @@ export function AttendancePageShell({
     }
   }
 
+  if (!isOperativeScope(permissions.view)) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-sm text-neutral-500">
+          You don&apos;t have permission to use this page.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
       <main className="min-h-full bg-canvas">
@@ -304,27 +314,29 @@ export function AttendancePageShell({
         </div>
       </main>
 
-      <AlertDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete attendance record?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove the record for {deleteTarget?.date ?? ''}. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog
+            open={deleteTarget !== null}
+            onOpenChange={(open) => {
+              if (!open) setDeleteTarget(null);
+            }}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete attendance record?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove the record for {deleteTarget?.date ?? ''}. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} disabled={deleteMutation.isPending}>
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </main>
     </>
   );
 }

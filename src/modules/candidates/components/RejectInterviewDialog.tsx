@@ -13,17 +13,28 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { useFetchHiringTeams } from '@/modules/candidates/hooks/useAtsPipeline';
+import {
+  useFetchHiringTeams,
+  useStageWorkspace,
+  useStageWorkspaceByJobSlug,
+} from '@/modules/candidates/hooks/useAtsPipeline';
 import type { RejectInterviewRequest } from '@/modules/candidates/types/atsTypes';
 
 interface RejectInterviewTarget {
   eventId: string;
   jobPostingId: string;
   stageId: string;
+  stageSlug?: string | null;
+  jobSlug?: string | null;
   candidateName: string;
 }
 
 type RejectMode = RejectInterviewRequest['mode'];
+type ReassignableTeamMember = {
+  memberId: string;
+  name: string | null;
+  email: string | null;
+};
 
 export function RejectInterviewDialog({
   open,
@@ -45,12 +56,67 @@ export function RejectInterviewDialog({
   const [mode, setMode] = useState<RejectMode>('AUTO');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const teamsQuery = useFetchHiringTeams(orgSlug, memberId, interview?.jobPostingId ?? null, interview?.stageId ?? null);
+  const stageWorkspaceQuery = useStageWorkspace(orgSlug, memberId, interview?.jobSlug ? '' : (interview?.stageSlug ?? ''));
+  const jobStageWorkspaceQuery = useStageWorkspaceByJobSlug(
+    orgSlug,
+    memberId,
+    interview?.jobSlug ?? null,
+    interview?.stageSlug ?? null,
+  );
 
   const teamMembers = useMemo(() => {
-    const teams = teamsQuery.data?.items ?? [];
-    const stageTeam = teams.find((team) => team.members.length > 0) ?? null;
-    return (stageTeam?.members ?? []).filter((item) => item.memberId !== memberId);
-  }, [memberId, teamsQuery.data?.items]);
+    const membersById = new Map<string, ReassignableTeamMember>();
+    const workspaceMembers = interview?.jobSlug
+      ? (jobStageWorkspaceQuery.data?.teamMembers ?? [])
+      : (stageWorkspaceQuery.data?.teamMembers ?? []);
+    const workspaceCandidates = interview?.jobSlug
+      ? (jobStageWorkspaceQuery.data?.candidates ?? [])
+      : (stageWorkspaceQuery.data?.candidates ?? []);
+
+    for (const teamMember of workspaceMembers) {
+      if (teamMember.memberId === memberId) continue;
+      membersById.set(teamMember.memberId, {
+        memberId: teamMember.memberId,
+        name: teamMember.name,
+        email: teamMember.email,
+      });
+    }
+
+    for (const candidate of workspaceCandidates) {
+      const interviewer = candidate.currentAssignment?.interviewer;
+      if (!interviewer || interviewer.memberId === memberId) continue;
+      membersById.set(interviewer.memberId, {
+        memberId: interviewer.memberId,
+        name: interviewer.name,
+        email: interviewer.email,
+      });
+    }
+
+    for (const team of teamsQuery.data?.items ?? []) {
+      for (const teamMember of team.members) {
+        if (teamMember.memberId === memberId) continue;
+        if (membersById.has(teamMember.memberId)) continue;
+        membersById.set(teamMember.memberId, {
+          memberId: teamMember.memberId,
+          name: teamMember.name,
+          email: teamMember.email,
+        });
+      }
+    }
+    return Array.from(membersById.values()).sort((left, right) => {
+      const leftLabel = left.name ?? left.email ?? '';
+      const rightLabel = right.name ?? right.email ?? '';
+      return leftLabel.localeCompare(rightLabel);
+    });
+  }, [
+    interview?.jobSlug,
+    jobStageWorkspaceQuery.data?.candidates,
+    jobStageWorkspaceQuery.data?.teamMembers,
+    memberId,
+    stageWorkspaceQuery.data?.candidates,
+    stageWorkspaceQuery.data?.teamMembers,
+    teamsQuery.data?.items,
+  ]);
 
   function resetDialogState() {
     setMode('AUTO');
@@ -113,14 +179,14 @@ export function RejectInterviewDialog({
           {mode === 'REASSIGN' ? (
             <div className="rounded-xl border border-neutral-100 bg-canvas/40 p-3">
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-500">Interview team</p>
-              {teamsQuery.isLoading ? (
+              {teamsQuery.isLoading || stageWorkspaceQuery.isLoading || jobStageWorkspaceQuery.isLoading ? (
                 <div className="flex items-center gap-2 py-2 text-sm text-neutral-500">
                   <Loader2 className="size-4 animate-spin" />
                   Loading team
                 </div>
               ) : null}
-              {!teamsQuery.isLoading && teamMembers.length === 0 ? (
-                <p className="py-2 text-sm text-neutral-500">No other team members are available for reassignment.</p>
+              {!teamsQuery.isLoading && !stageWorkspaceQuery.isLoading && !jobStageWorkspaceQuery.isLoading && teamMembers.length === 0 ? (
+                <p className="py-2 text-sm text-neutral-500">No other team members are in this interview team.</p>
               ) : null}
               <div className="grid gap-2">
                 {teamMembers.map((teamMember) => {
