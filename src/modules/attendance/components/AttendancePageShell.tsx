@@ -335,8 +335,6 @@ export function AttendancePageShell({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </div>
-      </main>
     </>
   );
 }
