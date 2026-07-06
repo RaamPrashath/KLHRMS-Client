@@ -46,10 +46,8 @@ next-env.d.ts
 .vscode
 .agents
 .windsurf
-<<<<<<< HEAD
-=======
+# Rush local build state
+.rush/
 
 # Local Rush logs
 rush-logs/
->>>>>>> 7db64e0 (Ignore Rush local build artifacts)
-.rush
