@@ -6,7 +6,7 @@ import { Resend } from "resend";
 import { getAuthAllowedHosts, getPublicAppUrl, getTrustedOrigins } from "@/lib/deployment-env";
 import { getResendFromEmail } from "@/lib/resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key_for_build");
 const publicAppUrl = getPublicAppUrl();
 const authProtocol = publicAppUrl.startsWith("http://")
     ? "http"
