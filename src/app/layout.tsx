@@ -23,6 +23,8 @@ export const metadata: Metadata = {
     description: "HRMS tool for the organization",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
     children,
 }: Readonly<{
