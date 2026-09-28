@@ -4,6 +4,7 @@ import { getHrmsApiUrl } from "./src/lib/deployment-env";
 const API_URL = getHrmsApiUrl();
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   reactCompiler: true,
   async rewrites() {
     return [
