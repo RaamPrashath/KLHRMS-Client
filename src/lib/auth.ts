@@ -23,6 +23,7 @@ type MicrosoftProfile = {
 };
 
 export const auth = betterAuth({
+    secret: process.env.BETTER_AUTH_SECRET || "better-auth-secret-key-32-chars-long-dummy-build",
     baseURL: {
         allowedHosts: getAuthAllowedHosts(),
         fallback: publicAppUrl,
